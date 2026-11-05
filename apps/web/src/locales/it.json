@@ -113,37 +113,6 @@
       "submitting": "Invio in corso...",
       "submit": "Richiedi accesso"
     },
-    "2fa": {
-      "setupTitle": "Configura l'autenticazione a due fattori",
-      "setupSubtitle": "Scansiona questo codice QR con la tua app di autenticazione (Google Authenticator, Authy, ecc.)",
-      "step1": "Passo 1: scansiona il codice QR",
-      "step2": "Passo 2: verifica e abilita",
-      "cantScan": "Non riesci a scansionare? Inserisci manualmente",
-      "secretKey": "Chiave segreta",
-      "enterCode": "Inserisci il codice a 6 cifre della tua app",
-      "verifyAndEnable": "Verifica e abilita",
-      "verifying": "Verifica in corso...",
-      "disableTitle": "Disabilita l'autenticazione a due fattori",
-      "disableSubtitle": "Inserisci la password e un codice per disabilitare la 2FA",
-      "disableWarningTitle": "Attenzione: il tuo account sarà meno sicuro",
-      "disableWarning": "La disabilitazione dell'autenticazione a due fattori rimuove un importante livello di sicurezza dal tuo account. Chiunque conosca la tua password potrà accedere al tuo account.",
-      "currentPassword": "Password attuale",
-      "enterPassword": "Inserisci la tua password",
-      "codeOrBackup": "Codice TOTP o codice di backup",
-      "enterCodeOrBackup": "000000 o XXXX-XXXX",
-      "codeInvalid": "Codice troppo lungo",
-      "codeRequired": "Inserisci un codice a 6 cifre o un codice di backup",
-      "disableButton": "Disabilita 2FA",
-      "disabling": "Disabilitazione in corso...",
-      "backupCodesTitle": "Salva i tuoi codici di backup",
-      "backupCodesWarningTitle": "Importante: salva subito questi codici!",
-      "backupCodesWarning": "Questi codici sono l'unico modo per accedere al tuo account se perdi il dispositivo di autenticazione. Ogni codice può essere usato una sola volta.",
-      "backupCodesList": "Codici di backup",
-      "copyCodes": "Copia codici",
-      "downloadCodes": "Scarica",
-      "savedCodes": "Ho salvato i miei codici",
-      "lowBackupCodesWarning": "Hai solo {count} {count, plural, one {codice di backup rimanente} other {codici di backup rimanenti}}. Valuta di riattivare la 2FA dopo la disattivazione per generare nuovi codici di backup."
-    },
     "login": {
       "emailLabel": "Email",
       "emailPlaceholder": "tu@esempio.com",
@@ -547,7 +516,6 @@
       }
     },
     "footer": {
-      "copyright": "© 2025 MeepleAI. Progetto open source.",
       "demoAccounts": "Account Demo",
       "product": "Prodotto",
       "resources": "Risorse",
@@ -649,6 +617,76 @@
       "email": "Email",
       "newPassword": "Nuova password",
       "title": "Informazioni profilo"
+    },
+    "security": {
+      "backupCodes": {
+        "acknowledge": "Ho salvato i codici di backup in un posto sicuro",
+        "copied": "Copiato!",
+        "copyAll": "Copia tutti",
+        "downloadFileTitle": "MeepleAI · Codici di backup",
+        "downloadTxt": "Scarica .txt"
+      },
+      "disable": {
+        "cancel": "Annulla",
+        "codeHelp": "Le 6 cifre della tua app. Se non puoi usarla, va bene anche uno dei tuoi codici di backup (XXXX-XXXX); ciascuno può essere usato una sola volta.",
+        "codeLabel": "Codice dell'app o codice di backup",
+        "codePlaceholder": "123456 oppure ABCD-2345",
+        "confirm": "Disabilita 2FA",
+        "description": "Conferma con la tua password e un codice attuale dell'app di autenticazione, oppure con uno dei tuoi codici di backup.",
+        "errorFailed": "Impossibile disabilitare la 2FA",
+        "errorInvalidCode": "Inserisci un codice di 6 cifre o un codice di backup",
+        "errorWrongPassword": "La password non è corretta.",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "La password del tuo account",
+        "title": "Disabilita l'autenticazione a due fattori"
+      },
+      "otp": {
+        "digit": "Cifra {number}",
+        "group": "Codice di verifica a 6 cifre"
+      },
+      "sessions": {
+        "current": "ATTUALE",
+        "daysAgo": "{days} g fa",
+        "errorLoading": "Impossibile caricare le sessioni.",
+        "hoursAgo": "{hours} h fa",
+        "loading": "Caricamento",
+        "minutesAgo": "{minutes} min fa",
+        "now": "ora",
+        "revoke": "Revoca",
+        "signOutOthers": "Esci da tutte le altre sessioni",
+        "thisSession": "Questa sessione",
+        "title": "Sessioni attive",
+        "unknownDevice": "Dispositivo sconosciuto",
+        "unknownIp": "IP sconosciuto"
+      },
+      "setup": {
+        "description": "Completa tutti e tre i passaggi per abilitare la 2FA sul tuo account.",
+        "title": "Configura l'autenticazione a due fattori"
+      },
+      "statusCard": {
+        "disable": "Disabilita 2FA",
+        "disabledDescription": "Aggiungi un secondo livello di protezione: anche se la password viene compromessa, l'account resta al sicuro.",
+        "enabled": "Abilitata",
+        "enabledDescription": "Verificata tramite app di autenticazione. Disabilitala solo se hai perso l'accesso al dispositivo.",
+        "notEnabled": "Non abilitata",
+        "regenerateCodes": "Rigenera i codici di backup",
+        "regenerateCodesSoon": "Rigenera i codici di backup (in arrivo)",
+        "setUp": "Configura l'autenticazione a due fattori",
+        "title": "Autenticazione a due fattori"
+      },
+      "wizard": {
+        "back": "Indietro",
+        "codesIntro": "Copia o scarica i codici prima di continuare. Se perdi l'accesso all'app di autenticazione, potrai usarli per rientrare nel tuo account.",
+        "continue": "Continua",
+        "done": "Fatto",
+        "enterCode": "Inserisci il codice della tua app di autenticazione",
+        "invalidCode": "Codice non valido. Riprova.",
+        "manualEntry": "Oppure inserisci questo codice a mano:",
+        "qrAriaLabel": "Codice QR per la 2FA: scansionalo con la tua app di autenticazione",
+        "scanInstruction": "Scansiona questo codice QR con la tua app di autenticazione (Google Authenticator, Authy, ecc.)",
+        "verificationFailed": "Verifica non riuscita",
+        "verifying": "verifica in corso…"
+      }
     },
     "tabs": {
       "advanced": "Avanzate",
@@ -1434,6 +1472,11 @@
           "subText": "Questo invito non è più valido. Chiedi a {hostName} di rimandartelo.",
           "ctaContactHost": "Contatta l'organizzatore"
         },
+        "nightCancelled": {
+          "heading": "Serata annullata",
+          "subText": "{hostName} ha annullato questa serata.",
+          "subTextNoHost": "L'organizzatore ha annullato questa serata."
+        },
         "tokenInvalid": {
           "heading": "Invito non trovato",
           "subText": "Il link che hai aperto non corrisponde a nessun invito. Verifica che sia completo.",
@@ -1444,6 +1487,7 @@
           "subTextAccepted": "Hai accettato questo invito.",
           "subTextDeclined": "Hai declinato questo invito.",
           "rosterCount": "{accepted} di {expected} confermati",
+          "rosterCountNoLimit": "{accepted} confermati",
           "switchToDeclineCta": "Cambia in: declino",
           "switchToAcceptCta": "Cambia in: accetto"
         }
@@ -1464,6 +1508,7 @@
         "locationMissing": "Luogo da definire",
         "playersLabel": "Posti",
         "playersValue": "{accepted} / {expected}",
+        "playersValueNoLimit": "{accepted} confermati",
         "primaryGameLabel": "Gioco principale"
       },
       "host": {
@@ -1484,6 +1529,23 @@
           "respondSucceeded": "invite.respond_succeeded",
           "respondFailed": "invite.respond_failed"
         }
+      },
+      "unsubscribe": {
+        "heading": "Non vuoi più ricevere inviti?",
+        "intro": "Se confermi, MeepleAI non scriverà più a questo indirizzo per le serate di gioco: né inviti, né promemoria, né avvisi di annullamento. Chi organizza non sa che hai scelto di smettere.",
+        "confirmCta": "Smetti di ricevere queste email",
+        "submitting": "Un momento…",
+        "done": {
+          "heading": "Fatto.",
+          "body": "Non riceverai più email sulle serate di gioco a questo indirizzo, nemmeno la conferma di una risposta data a un invito che hai già. Se in futuro vuoi di nuovo partecipare, puoi sempre rispondere dalla pagina dell'invito."
+        },
+        "invalid": {
+          "heading": "Questo link non è valido",
+          "body": "Non riconosciamo questo link. Controlla di averlo copiato per intero, oppure apri di nuovo l'email e usa il link in fondo."
+        },
+        "rateLimited": "Troppi tentativi. Riprova tra {seconds} secondi.",
+        "error": "Non siamo riusciti a completare la richiesta. Riprova tra poco.",
+        "retryCta": "Riprova"
       }
     },
     "gameNightJoin": {
@@ -2157,6 +2219,10 @@
             "warning": "Operazione irreversibile — nessun backup disponibile",
             "deleteCta": "🗑 Elimina definitivamente",
             "cancelCta": "Annulla"
+          },
+          "deleteOutcome": {
+            "unlinked": "Il PDF non è stato cancellato perché è ancora usato da altri giochi. È stato scollegato da questo gioco.",
+            "kept": "Il PDF non è stato cancellato perché è ancora usato da altri giochi, e da questo gioco non c'è nessun collegamento da togliere."
           },
           "errors": {
             "loadFailed": "Impossibile caricare la knowledge base. Riprova.",
@@ -3574,8 +3640,14 @@
       "topBar": {
         "sessionTitleAriaLabel": "Sessione: {name}",
         "turnLabel": "{count, plural, =0 {Inizio} =1 {Turno 1/{total}} other {Turno #/{total}}}",
+        "turnLabelNoTotal": "{count, plural, =0 {Inizio} other {Turno #}}",
         "statusInProgress": "In corso",
         "statusPaused": "In pausa",
+        "statusCompleted": "Conclusa",
+        "statusNotStarted": "Non avviata",
+        "startCta": "Avvia partita",
+        "startErrorToast": "Impossibile avviare la partita. Riprova.",
+        "startNeedsPlayerToast": "Aggiungi almeno un giocatore per avviare la partita.",
         "pauseCta": "Pausa",
         "resumeCta": "Riprendi",
         "endgameCta": "Termina sessione",
@@ -4045,6 +4117,7 @@
           "session_state_invalid": "La partita è conclusa: l'assistente non risponde più.",
           "other": "L'assistente non è disponibile."
         },
+        "rulesMissing": "Per questo gioco non c'è ancora un regolamento pronto: posso segnare i punti e dirti a chi tocca, ma non posso rispondere sulle regole. Carica il PDF dalla scheda del gioco; se l'hai già caricato e l'avviso resta, controlla che l'indicizzazione sia finita senza errori.",
         "empty": "Dimmi un punteggio o chiedimi a chi tocca: io propongo, tu confermi.",
         "inputLabel": "Domanda all'assistente",
         "placeholder": "Es. «Marco fa 5 punti»",
@@ -4551,11 +4624,24 @@
     "participants": {
       "sectionTitle": "Partecipanti ({count})",
       "hostLabel": "host",
+      "guestByEmail": "Invitato per email",
+      "withdraw": {
+        "trigger": "Ritira",
+        "triggerAria": "Ritira l'invito a {email}",
+        "title": "Ritirare l'invito?",
+        "descriptionPending": "Il link inviato a {email} smetterà di funzionare. Non parte nessuna email.",
+        "descriptionAccepted": "{email} ha già accettato: se ritiri l'invito perde il posto e il link smette di funzionare. Non parte nessuna email.",
+        "confirm": "Ritira l'invito",
+        "confirming": "Ritiro…",
+        "cancel": "Annulla",
+        "error": "Non sono riuscito a ritirare l'invito. Riprova."
+      },
       "rsvpStatus": {
         "accepted": "Confermato",
         "declined": "Declinato",
         "maybe": "Forse",
         "pending": "In attesa",
+        "expired": "Scaduto",
         "tagged": "Da invitare"
       }
     },
@@ -4846,6 +4932,27 @@
       "previewLabel": "Anteprima invito"
     }
   },
+  "sessionScoreInput": {
+    "player": "Giocatore",
+    "round": "Round",
+    "roundNumber": "Round {round}",
+    "finalScore": "Punteggio finale",
+    "category": "Categoria",
+    "noCategory": "Nessuna categoria",
+    "score": "Punteggio",
+    "decreaseBy": "Diminuisci di {amount}",
+    "increaseBy": "Aumenta di {amount}",
+    "undo": "Annulla",
+    "saving": "Salvataggio...",
+    "synced": "Sincronizzato",
+    "syncError": "Errore",
+    "addScore": "Aggiungi punteggio",
+    "errors": {
+      "selectParticipant": "Seleziona un giocatore",
+      "invalidScore": "Inserisci un punteggio valido",
+      "saveFailed": "Salvataggio del punteggio non riuscito"
+    }
+  },
   "playRecords": {
     "stats": {
       "badge": {
@@ -4957,6 +5064,11 @@
       "error": {
         "saveFailed": "Salvataggio non riuscito",
         "saveFailedDescription": "Impossibile salvare la partita. Riprova fra un momento.",
+        "partialSaveFailed": "Partita creata, ma salvataggio incompleto. Riprova per completarla.",
+        "partialSaveFailedDescription": "Impossibile completare la partita. Riprova fra un momento.",
+        "strayRecord": "Una partita a metà è rimasta nell'elenco",
+        "strayRecordDescription": "Il salvataggio precedente si era fermato a metà e poi hai cambiato i dati della partita: quella è rimasta com'era.",
+        "strayRecordOpen": "Aprila",
         "retry": "↻ Riprova salvataggio"
       },
       "loading": {
@@ -5103,6 +5215,7 @@
         "description": "Qualcuno ha modificato questa partita mentre la stavi modificando. Ricarica i dati aggiornati o sovrascrivi con le tue modifiche.",
         "reload": "Ricarica",
         "overwrite": "Sovrascrivi comunque",
+        "continueEditing": "Continua a modificare",
         "stillConflict": "Anche il tuo salvataggio è stato battuto da un'altra modifica. Riprova."
       },
       "error": {
@@ -5111,6 +5224,11 @@
         "deleteFailed": "Eliminazione non riuscita",
         "saveFailed": "Salvataggio non riuscito",
         "saveFailedDescription": "Impossibile salvare la partita. Riprova fra un momento.",
+        "partialSaveFailed": "Partita creata, ma salvataggio incompleto. Riprova per completarla.",
+        "partialSaveFailedDescription": "Impossibile completare la partita. Riprova fra un momento.",
+        "strayRecord": "Una partita a metà è rimasta nell'elenco",
+        "strayRecordDescription": "Il salvataggio precedente si era fermato a metà e poi hai cambiato i dati della partita: quella è rimasta com'era.",
+        "strayRecordOpen": "Aprila",
         "retry": "↻ Riprova salvataggio"
       },
       "a11y": {

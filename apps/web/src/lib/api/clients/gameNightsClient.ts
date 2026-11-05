@@ -10,6 +10,7 @@ import {
   ConflictCheckDtoSchema,
   GameNightDtoSchema,
   GameNightLiveDtoSchema,
+  GameNightGuestInvitationDtoSchema,
   GameNightRsvpDtoSchema,
   GameNightPhotoDtoSchema,
   GameNightPhotoUploadResultSchema,
@@ -24,6 +25,7 @@ import {
   type GameNightLiveDto,
   type GameNightPhotoDto,
   type GameNightPhotoUploadResult,
+  type GameNightGuestInvitationDto,
   type GameNightRsvpDto,
   type GameNightShareLinkDto,
   type GameNightSummaryDto,
@@ -51,6 +53,10 @@ export interface GameNightsClient {
     gameTitle: string
   ): Promise<StartGameNightSessionResult>;
   getRsvps(id: string): Promise<GameNightRsvpDto[]>;
+  // #4706: guests invited by email, organizer only (403 for anyone else).
+  getGuestInvitations(id: string): Promise<GameNightGuestInvitationDto[]>;
+  // #4721: the organizer withdraws a pending or accepted emailed invitation (409 for a declined or expired one).
+  cancelGuestInvitation(id: string, invitationId: string): Promise<void>;
   create(data: CreateGameNightInput): Promise<string>;
   update(id: string, data: UpdateGameNightInput): Promise<void>;
   publish(id: string): Promise<void>;
@@ -144,6 +150,17 @@ export function createGameNightsClient({
     async getRsvps(id) {
       const data = await httpClient.get<GameNightRsvpDto[]>(`/api/v1/game-nights/${id}/rsvps`);
       return z.array(GameNightRsvpDtoSchema).parse(data ?? []);
+    },
+
+    async getGuestInvitations(id) {
+      const data = await httpClient.get<GameNightGuestInvitationDto[]>(
+        `/api/v1/game-nights/${id}/guest-invitations`
+      );
+      return z.array(GameNightGuestInvitationDtoSchema).parse(data ?? []);
+    },
+
+    async cancelGuestInvitation(id, invitationId) {
+      await httpClient.delete(`/api/v1/game-nights/${id}/guest-invitations/${invitationId}`);
     },
 
     async create(input) {

@@ -14,6 +14,8 @@ export interface DrawerErrorLabels {
   timeout: DrawerErrorLabelsForKind;
   /** #4510: the answer stopped before its end. */
   interrupted: DrawerErrorLabelsForKind;
+  /** #4388: two answers are already open for the user; the third was refused. */
+  busy: DrawerErrorLabelsForKind;
   server: DrawerErrorLabelsForKind;
 }
 
@@ -38,6 +40,7 @@ export function DrawerError({
     connection: '📡',
     timeout: '⏱️',
     interrupted: '⚠',
+    busy: '⏳',
     server: '⚙',
   } as const;
   // #4510: the words that arrived stay when the answer was interrupted. (The `partial` kind is gone:

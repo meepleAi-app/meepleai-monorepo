@@ -18,7 +18,7 @@
  * Pattern: Vitest + React Testing Library
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import React from 'react';
@@ -91,8 +91,8 @@ vi.mock('../RagEnhancementsBadge', () => ({
 // loaded, invoked `useTranslation()` without an `<IntlProvider>` ancestor, and
 // crashed the render. Found in #2010 PR CI 2026-06-08.
 vi.mock('@/components/chat-unified/ChatInfoPanel', () => ({
-  ChatInfoPanel: ({ citations, suggestedQuestions }: any) => (
-    <div data-testid="chat-info-panel">
+  ChatInfoPanel: ({ citations, suggestedQuestions, agent }: any) => (
+    <div data-testid="chat-info-panel" data-agent-typology={agent?.typology ?? ''}>
       <span data-testid="citation-count">{citations?.length ?? 0}</span>
       <span data-testid="question-count">{suggestedQuestions?.length ?? 0}</span>
     </div>
@@ -102,25 +102,32 @@ vi.mock('@/components/chat-unified/ChatInfoPanel', () => ({
 // Mock AgentSelector (Issue #4465)
 vi.mock('@/components/agent/AgentSelector', () => ({
   AgentSelector: ({ value, onChange, disabled }: any) => (
-    <select
-      data-testid="agent-selector"
-      value={value}
-      onChange={(e: any) => onChange(e.target.value)}
-      disabled={disabled}
-    >
-      <option value="auto">Auto</option>
-      <option value="tutor">Tutor</option>
-      <option value="arbitro">Arbitro</option>
-      <option value="stratega">Stratega</option>
-      <option value="narratore">Narratore</option>
-    </select>
+    <>
+      <select
+        data-testid="agent-selector"
+        data-value={value}
+        value={value}
+        onChange={(e: any) => onChange(e.target.value)}
+        disabled={disabled}
+      >
+        <option value="auto">Auto</option>
+        <option value="tutor">Tutor</option>
+        <option value="secca">Risposta secca</option>
+      </select>
+      {/* A select does not fire onChange for the value it already shows; this does. */}
+      <button
+        type="button"
+        data-testid="agent-selector-choose-auto"
+        onClick={() => onChange('auto')}
+      >
+        choose auto
+      </button>
+    </>
   ),
   AGENT_NAMES: {
-    auto: 'Auto (Orchestrator)',
+    auto: 'Auto',
     tutor: 'Tutor',
-    arbitro: 'Arbitro',
-    stratega: 'Stratega',
-    narratore: 'Narratore',
+    secca: 'Risposta secca',
   },
 }));
 
@@ -246,6 +253,30 @@ describe('ChatThreadView', () => {
   it('shows loading state initially', () => {
     renderView();
     expect(screen.getByTestId('chat-loading')).toBeInTheDocument();
+  });
+
+  // A conversation without a game saves what the user writes and never answers (there is nothing to scope the
+  // retrieval by, and the per-agent chat route does not exist, #4139). It said so nowhere: the message just sat there.
+  describe('conversation without a game', () => {
+    it('says that messages are saved but not answered, and what to do', async () => {
+      (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+        ...mockThread,
+        gameId: null,
+        agentId: null,
+      });
+      await renderView();
+
+      const notice = await screen.findByTestId('chat-no-game-notice');
+      expect(notice).toHaveTextContent(/non ricevono risposta/i);
+      expect(notice).toHaveTextContent(/scegliendo un gioco/i);
+    });
+
+    it('does not show it when the conversation has a game', async () => {
+      await renderView();
+      await screen.findByTestId('chat-thread-view');
+
+      expect(screen.queryByTestId('chat-no-game-notice')).not.toBeInTheDocument();
+    });
   });
 
   it('loads and renders thread', async () => {
@@ -564,6 +595,95 @@ describe('ChatThreadView', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Benvenuto nel mondo di Catan/)).toBeInTheDocument();
+    });
+  });
+
+  describe('the intent of the answers (#4404)', () => {
+    it.each([
+      ['Arbitro', 'auto'],
+      ['decisore', 'auto'],
+      ['Stratega', 'auto'],
+      ['whatever', 'auto'],
+      ['Tutor', 'tutor'],
+      ['secca', 'secca'],
+    ])(
+      'a thread stored with %j shows %j in the selector, never an empty one',
+      async (stored, shown) => {
+        (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+          ...mockThread,
+          messages: [],
+          agentType: stored,
+        });
+
+        await renderView();
+
+        await waitFor(() => {
+          expect(screen.getByTestId('agent-selector')).toHaveAttribute('data-value', shown);
+        });
+      }
+    );
+
+    it.each([
+      ['Arbitro', 'auto'],
+      ['secca', 'secca'],
+    ])(
+      'the info panel shows the same intent as the selector for a thread stored with %j',
+      async (stored, shown) => {
+        // The panel used to print the stored value as it came («Tipo: ARBITRO» next to a selector on Auto).
+        (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+          ...mockThread,
+          messages: [],
+          agentType: stored,
+        });
+
+        await renderView();
+
+        await waitFor(() => {
+          expect(screen.getByTestId('chat-info-panel')).toHaveAttribute(
+            'data-agent-typology',
+            shown
+          );
+        });
+      }
+    );
+
+    it('choosing what the selector already shows is not a change, even when the stored value is a retired id', async () => {
+      (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+        ...mockThread,
+        messages: [],
+        agentType: 'Arbitro',
+      });
+      await renderView();
+      await screen.findByTestId('agent-selector');
+
+      fireEvent.click(screen.getByTestId('agent-selector-choose-auto'));
+
+      expect(screen.queryByTestId('agent-switch-confirm')).not.toBeInTheDocument();
+      expect(apiMock.chat.switchThreadAgent).not.toHaveBeenCalled();
+    });
+
+    it('switching to the secca intent asks first, names it, and then tells the server its id', async () => {
+      (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+        ...mockThread,
+        messages: [],
+        agentType: 'Arbitro',
+      });
+      (apiMock.chat.switchThreadAgent as Mock).mockResolvedValue(undefined);
+      await renderView();
+      const selector = await screen.findByTestId('agent-selector');
+
+      fireEvent.change(selector, { target: { value: 'secca' } });
+
+      const dialog = await screen.findByTestId('agent-switch-confirm');
+      expect(dialog).toHaveTextContent('Risposta secca');
+      expect(apiMock.chat.switchThreadAgent).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByTestId('agent-switch-confirm-btn'));
+
+      await waitFor(() => {
+        expect(apiMock.chat.switchThreadAgent).toHaveBeenCalledWith('thread-1', 'secca');
+      });
+      expect(screen.getByTestId('agent-selector')).toHaveAttribute('data-value', 'secca');
     });
   });
 

@@ -67,12 +67,12 @@ Scenario U4-01 [Flow]: Lista thread chat raggruppati per agente
 ```
 
 ```gherkin
-Scenario U4-02 [Flow]: Nuova chat dal picker gioco + agente
+Scenario U4-02 [Flow]: Nuova chat dal picker gioco
   Given sono loggato come marco@meepleai.test
     And ho in libreria Azul con PDF regole indicizzato
   When apro /chat/new
-  Then vedo la schermata di avvio con selezione gioco e agente (griglia MeepleCard)
-    And seleziono il gioco "Azul" e un agente/tipo
+  Then vedo la schermata di avvio con la selezione del gioco (griglia MeepleCard) e «Inizia Chat» disattivato
+    And seleziono il gioco "Azul" (il pulsante si attiva)
     And avvio la conversazione (crea thread)
   Then vengo portato in un thread /chat/{threadId} pronto a ricevere il primo messaggio
   Osservabile ✅: griglia di selezione visibile · dopo la creazione URL = /chat/{id} · input messaggio presente e abilitato

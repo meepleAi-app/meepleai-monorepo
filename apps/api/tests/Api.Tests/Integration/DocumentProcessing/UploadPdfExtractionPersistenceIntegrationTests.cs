@@ -63,6 +63,7 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     /// <summary>#4443 R1: holds the background task at its first read of the aggregate.</summary>
     private readonly BackgroundTaskGate _gate = new();
     private Mock<IPdfTextExtractor>? _extractorMock;
+    private readonly List<ExtractedDocument> _chunkedDocuments = new();
 
     /// <summary>
     /// Issue #3846: when true the blob double reports a successful <c>StoreAsync</c> but keeps
@@ -185,6 +186,7 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((ExtractedDocument doc, ChunkingConfiguration? _, CancellationToken _) =>
             {
+                _chunkedDocuments.Add(doc);
                 var parent = HierarchicalChunk.CreateParent(
                     "Setup section content",
                     new ChunkMetadata { Page = 1, Heading = "Setup", ElementType = "Title", DocumentId = doc.Id });
@@ -445,6 +447,61 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         persisted.StructuredElementsJson.Should().NotBeNull(
             "StructuredElementsJson must durably persist for Upload-originated PDFs (re-index " +
             "parity: IndexPdfCommandHandler reads it to rebuild headings)");
+        // Compared as a map, not as text: jsonb stores it re-formatted ("[[1, 0]]").
+        PageSpans.Parse(persisted.PageSpansJson).Should().Equal(
+            [new PageSpan(1, 0)],
+            "#4782: the page map lives next to ExtractedText and goes through the same tracked re-write, or a " +
+            "re-index of a flat document has nothing to tell its pages apart");
+    }
+
+    /// <summary>
+    /// #4782: a document the extractor returned without structured elements is flat. With the pages it measured, the
+    /// upload path keeps the page map in the row (for a re-index) and hands it to the chunker. That the chunks then sit
+    /// on those pages is not shown here, where the chunker is a double: <c>FlatDocumentPagesTests</c> runs the real one.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    public async Task ProcessPdfAsync_FlatDocumentWithMeasuredPages_PersistsThePageMap_AndHandsItToTheChunker()
+    {
+        const string firstPage = "Setup the board with three tiles before the first round.";
+        const string secondPage = "Scoring happens at the end of every round for each player.";
+        _extractorMock!
+            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedTextExtractionResult.CreateSuccess(
+                pageChunks:
+                [
+                    new PageTextChunk(1, firstPage, 0, firstPage.Length),
+                    new PageTextChunk(2, secondPage, firstPage.Length + 2, firstPage.Length + 2 + secondPage.Length),
+                ],
+                totalPages: 2,
+                totalCharacters: firstPage.Length + secondPage.Length,
+                ocrTriggered: false,
+                structuredElements: null));
+
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        var result = await handler.Handle(
+            new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+                GameId: testGame.Id.ToString(),
+                Metadata: null,
+                PrivateGameId: null,
+                UserId: testUser.Id,
+                File: CreateMockFormFile("flat-two-pages.pdf", CreateValidPdfBytes(1024))),
+            TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        var pdfDocId = Guid.Parse(result.Document!.Id.ToString());
+        var persisted = await _dbContext.PdfDocuments.AsNoTracking().FirstAsync(p => p.Id == pdfDocId, TestCancellationToken);
+        persisted.ProcessingState.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready),
+            $"ProcessingError='{persisted.ProcessingError}'");
+        persisted.StructuredElementsJson.Should().BeNull("the extractor gave no structured elements: the document is flat");
+        PageSpans.Parse(persisted.PageSpansJson).Should().Equal(new PageSpan(1, 0), new PageSpan(2, firstPage.Length + 2));
+
+        // The harness mocks the chunker (FlatDocumentPagesTests runs the real one): what matters here is what the upload
+        // path hands it, i.e. the page map of the pages the extractor measured.
+        _chunkedDocuments.Should().ContainSingle().Which.PageSpans
+            .Should().Equal(new PageSpan(1, 0), new PageSpan(2, firstPage.Length + 2));
     }
 
     /// <summary>
@@ -552,9 +609,12 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         persisted.ErrorCategory.Should().Be(
             nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing),
             "an absent object does not reappear on retry, so RetryFailedPdfsJob must skip it");
-        persisted.ProcessingError.Should().Contain(
-            "not found in storage at key",
-            "the error must name the bucket key that was looked up, not a filesystem path derived from it");
+        // #4660: the key that was looked up is in the log (the handler logs the exception that names it), not in the
+        // column: pdf-status serves that column to users, and a bucket key is not theirs to see.
+        persisted.ProcessingError.Should().Be(
+            Api.BoundedContexts.DocumentProcessing.Application.Services.PdfFailureText.For(
+                Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing));
+        persisted.ProcessingError.Should().NotContain("not found in storage at key");
     }
 
     /// <summary>
@@ -819,7 +879,8 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         public Task<IReadOnlyList<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default) => inner.GetByIdsAsync(ids, cancellationToken);
         public Task<IReadOnlyList<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument>> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => inner.FindByUserIdAsync(userId, cancellationToken);
         public Task<bool> ExistsByContentHashAsync(string contentHash, Guid? gameId, Guid? privateGameId, CancellationToken cancellationToken = default) => inner.ExistsByContentHashAsync(contentHash, gameId, privateGameId, cancellationToken);
-        public Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> FindByContentHashAsync(string contentHash, CancellationToken cancellationToken = default) => inner.FindByContentHashAsync(contentHash, cancellationToken);
+        public Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> FindByContentHashForCatalogGameAsync(string contentHash, Guid sharedGameId, CancellationToken cancellationToken = default) => inner.FindByContentHashForCatalogGameAsync(contentHash, sharedGameId, cancellationToken);
+        public Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> FindByContentHashForPrivateGameAsync(string contentHash, Guid userId, Guid privateGameId, CancellationToken cancellationToken = default) => inner.FindByContentHashForPrivateGameAsync(contentHash, userId, privateGameId, cancellationToken);
         public Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> FindByContentHashForUserAsync(string contentHash, Guid userId, CancellationToken cancellationToken = default) => inner.FindByContentHashForUserAsync(contentHash, userId, cancellationToken);
     }
 

@@ -159,6 +159,89 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
         doc.IndexerVersion.Should().Be(IndexerVersionRegistry.Current.Version);
     }
 
+    // #4782: no structured elements = a flat document. The pages the extractor measured are the only thing that
+    // tells the chunker where each one begins, and a re-index will need them again from the stored map.
+    [Fact]
+    public async Task ProcessAsync_FlatDocumentWithMeasuredPages_ChunksPageByPage_AndStoresThePageMap()
+    {
+        SeedPdfDocument();
+        SetupExtractorToReturn("chunk1. chunk2.", 2, structured: false);
+        SetupBlobStorageToReturn();
+        SetupHierarchicalChunking(out _);
+        SetupEmbeddingsToReturn(2);
+
+        await CreatePipelineService(languageCode: "en")
+            .ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        var chunked = ChunkedDocument();
+        chunked.PageSpans.Should().Equal(new PageSpan(1, 0), new PageSpan(2, 13));
+        var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
+        doc!.ExtractedText.Should().Be("chunk1 text\n\nchunk2 text");
+        doc.PageSpansJson.Should().Be("[[1,0],[2,13]]");
+    }
+
+    [Fact]
+    public async Task ProcessAsync_FlatDocumentWithEstimatedPages_GivesTheChunkerNoMap_AndStoresNone()
+    {
+        SeedPdfDocument();
+        SetupExtractorToReturn("chunk1. chunk2.", 2, structured: false, pagesAreEstimated: true);
+        SetupBlobStorageToReturn();
+        SetupHierarchicalChunking(out _);
+        SetupEmbeddingsToReturn(2);
+
+        await CreatePipelineService(languageCode: "en")
+            .ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        ChunkedDocument().PageSpans.Should().BeNull();
+        var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
+        doc!.PageSpansJson.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ProcessAsync_ReprocessingARow_ReplacesTheOldPageMap_NotKeepsIt()
+    {
+        // Quartz and the stale-recovery service run a row again: the map of the previous extraction describes a text
+        // that is gone, and next to the new one it would put chunks on pages they are not on.
+        var seeded = SeedPdfDocument();
+        seeded.PageSpansJson = "[[1,0],[9,99]]";
+        await _db.SaveChangesAsync();
+        SetupExtractorToReturn("chunk1. chunk2.", 2, structured: false, pagesAreEstimated: true);
+        SetupBlobStorageToReturn();
+        SetupHierarchicalChunking(out _);
+        SetupEmbeddingsToReturn(2);
+
+        await CreatePipelineService(languageCode: "en")
+            .ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
+        doc!.PageSpansJson.Should().BeNull();
+        ChunkedDocument().PageSpans.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ProcessAsync_StructuredDocument_KeepsItsSectionsAndStillStoresThePageMap()
+    {
+        SeedPdfDocument();
+        SetupExtractorToReturn("chunk1. chunk2.", 2);
+        SetupBlobStorageToReturn();
+        SetupHierarchicalChunking(out _);
+        SetupEmbeddingsToReturn(2);
+
+        await CreatePipelineService(languageCode: "en")
+            .ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        var chunked = ChunkedDocument();
+        chunked.Sections.Should().ContainSingle().Which.Heading.Should().Be("Setup");
+        chunked.PageSpans.Should().BeNull("a structured document has its pages from its elements");
+        var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
+        doc!.PageSpansJson.Should().Be("[[1,0],[2,13]]");
+    }
+
+    private ExtractedDocument ChunkedDocument() =>
+        _advancedChunkingMock.Invocations
+            .Single(i => i.Method.Name == nameof(IAdvancedChunkingService.ChunkDocumentAsync))
+            .Arguments[0].Should().BeOfType<ExtractedDocument>().Subject;
+
     private PdfProcessingPipelineService CreatePipelineService(string languageCode)
     {
         var languageDetectorMock = new Mock<ILanguageDetector>();
@@ -210,21 +293,24 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
             .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 })); // %PDF header
     }
 
-    private void SetupExtractorToReturn(string fullText, int pageCount)
+    private void SetupExtractorToReturn(string fullText, int pageCount, bool structured = true, bool pagesAreEstimated = false)
     {
         var pageChunks = Enumerable.Range(1, pageCount)
             .Select(p => new PageTextChunk(
                 PageNumber: p,
                 Text: $"chunk{p} text",
                 CharStartIndex: (p - 1) * 50,
-                CharEndIndex: p * 50))
+                CharEndIndex: p * 50,
+                PageIsEstimated: pagesAreEstimated))
             .ToList();
 
-        var structuredElements = new List<ExtractedElement>
-        {
-            new("Setup", 1, "Title"),
-            new("Place the tiles.", 1, "NarrativeText")
-        };
+        var structuredElements = structured
+            ? new List<ExtractedElement>
+            {
+                new("Setup", 1, "Title"),
+                new("Place the tiles.", 1, "NarrativeText")
+            }
+            : null;
 
         var result = PagedTextExtractionResult.CreateSuccess(
             pageChunks: pageChunks,

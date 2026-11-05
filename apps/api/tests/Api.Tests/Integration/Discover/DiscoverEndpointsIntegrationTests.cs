@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -177,6 +178,38 @@ public sealed class DiscoverEndpointsIntegrationTests
         var items = body.GetProperty("items");
         items.GetArrayLength().Should().Be(1);
         items[0].GetProperty("name").GetString().Should().Be("Visible");
+    }
+
+    /// <summary>
+    /// #4659. Un utente autenticato qualunque apre la rail, e la card porta a un dettaglio che risponde 404
+    /// per ciò che non è pubblicato: bozze, giochi in approvazione e archiviati restano fuori. Prima la rail
+    /// filtrava solo i cancellati.
+    /// </summary>
+    [Fact]
+    public async Task NewGames_ExcludesGamesThatAreNotPublished()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var now = DateTime.UtcNow;
+        await SeedSharedGameAsync(dbContext, "Published", createdAt: now.AddDays(-4));
+        await SeedSharedGameAsync(dbContext, "Draft", createdAt: now.AddDays(-1), status: GameStatus.Draft);
+        await SeedSharedGameAsync(dbContext, "Pending", createdAt: now.AddDays(-2), status: GameStatus.PendingApproval);
+        await SeedSharedGameAsync(dbContext, "Archived", createdAt: now.AddDays(-3), status: GameStatus.Archived);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            "/api/v1/catalog/games/new?limit=10",
+            sessionToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items");
+        items.GetArrayLength().Should().Be(1);
+        items[0].GetProperty("name").GetString().Should().Be("Published");
     }
 
     [Fact]
@@ -671,7 +704,8 @@ public sealed class DiscoverEndpointsIntegrationTests
         DateTime createdAt,
         int yearPublished = 0,
         string? imageUrl = null,
-        bool isDeleted = false)
+        bool isDeleted = false,
+        GameStatus status = GameStatus.Published)
     {
         var id = Guid.NewGuid();
         dbContext.SharedGames.Add(new SharedGameEntity
@@ -686,7 +720,7 @@ public sealed class DiscoverEndpointsIntegrationTests
             MaxPlayers = 4,
             PlayingTimeMinutes = 45,
             MinAge = 8,
-            Status = 1,
+            Status = (int)status,
             CreatedBy = Guid.NewGuid(),
             CreatedAt = createdAt,
             IsDeleted = isDeleted

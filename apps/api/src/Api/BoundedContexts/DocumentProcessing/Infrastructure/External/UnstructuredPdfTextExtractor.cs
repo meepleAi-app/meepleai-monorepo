@@ -455,7 +455,9 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
                 PageNumber: i + 1,  // 1-indexed
                 Text: pageText,
                 CharStartIndex: startIndex,
-                CharEndIndex: endIndex));
+                CharEndIndex: endIndex,
+                // #4782: equal slices of the text, not the pages of the PDF.
+                PageIsEstimated: true));
         }
 
         return pageChunks;

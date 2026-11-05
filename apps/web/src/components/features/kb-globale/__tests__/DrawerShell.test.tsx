@@ -41,6 +41,11 @@ const labels = {
       alt: "Fai un'altra domanda",
     },
     server: { title: 'Errore del server', body: 'Riprova', action: 'Riprova' },
+    busy: {
+      title: 'Troppe richieste',
+      body: 'Hai già due risposte in corso. Aspetta che una finisca, poi riprova.',
+      action: 'Riprova',
+    },
     interrupted: {
       title: 'Risposta interrotta',
       body: 'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.',
@@ -231,6 +236,41 @@ describe('DrawerShell — FSM state rendering', () => {
     expect(screen.getByText(/RBAC_RESOLUTION_FAILED/)).toBeInTheDocument();
     // Un guasto si può riprovare.
     expect(screen.getByRole('button', { name: /Riprova/ })).toBeInTheDocument();
+  });
+
+  /**
+   * #4388: la terza domanda con due risposte già aperte riceve 429. Non è un guasto del server:
+   * il riquadro dice di aspettare, con la frase della chat, e offre di riprovare.
+   */
+  it('renders error[busy]: says to wait for an answer in progress, and offers to try again', async () => {
+    const onRetry = vi.fn();
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: { kind: 'busy', message: labels.error.busy.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={onRetry}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('drawer-state-error-busy')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Troppe richieste');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Hai già due risposte in corso. Aspetta che una finisca, poi riprova.'
+    );
+    expect(screen.queryByTestId('drawer-state-error-server')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Riprova/ }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
   /**
@@ -689,5 +729,57 @@ describe('DrawerShell — FSM state rendering', () => {
       page: 14,
       chunkId: 'doc-1_3',
     });
+  });
+});
+
+describe('DrawerShell — citazione senza pagina (#4819)', () => {
+  const renderCompleted = (partialText: string, page: number | null) => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'completed',
+      partialText,
+      citations: [{ docId: 'd1', source: 'd1', page, snippet: 'cite uno', score: 0.9 }],
+      totalTokens: 100,
+      elapsedMs: 500,
+    };
+    return render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+  };
+
+  it('lists the citation without a page in the fallback list', () => {
+    renderCompleted('Risposta semplice senza marker.', null);
+
+    const row = screen.getByTestId('citation-list').querySelector('li');
+    expect(row).not.toBeNull();
+    expect(row?.textContent).toContain('cite uno');
+    expect(row?.textContent).not.toContain('p.');
+    expect(row).not.toHaveAttribute('data-citation-page');
+  });
+
+  it('still lists the page of a citation that has one', () => {
+    renderCompleted('Risposta semplice senza marker.', 14);
+
+    const row = screen.getByTestId('citation-list').querySelector('li');
+    expect(row?.textContent).toContain('p.14 · cite uno');
+    expect(row).toHaveAttribute('data-citation-page', '14');
+  });
+
+  it('names an inline pill "Fonte" when its citation has no page', () => {
+    renderCompleted('La classe Scout [1].', null);
+
+    const pill = screen.getByRole('button', { name: /citation 1/i });
+    expect(pill).toHaveTextContent('Fonte');
+    expect(pill).toHaveAttribute('aria-label', 'Citation 1, document d1');
   });
 });

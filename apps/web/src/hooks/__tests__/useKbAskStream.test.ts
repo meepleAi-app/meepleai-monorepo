@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { sseEvent, steppedFetch, type SteppedFetch } from '@/test-utils/sse-stepped-stream';
+import {
+  QA_TOO_MANY_REQUESTS_MESSAGE,
+  QaTooManyRequestsError,
+} from '@/components/chat-unified/qaStreamErrors';
 import { useKbAskStream } from '../useKbAskStream';
 import { kbAskClient } from '../../lib/api/clients/kbAskClient';
 import { KbAskEventSchema, type KbAskEvent } from '../../lib/api/schemas/kb-ask.schemas';
@@ -384,6 +388,36 @@ describe('useKbAskStream — transitions', () => {
     expect(result.current.state.status).toBe('completed');
     expect(result.current.state.error).toBeNull();
     vi.useRealTimers();
+  });
+
+  /**
+   * #4388: il backend tiene aperte al massimo due risposte per utente e rifiuta la terza con 429.
+   * Non è una connessione caduta (nessuna ripetizione, che arriverebbe mentre le altre due sono
+   * ancora in corso) né un errore del server: il pannello deve dire di aspettare.
+   */
+  it('maps a 429 to kind=busy, with the message to wait, and does not retry it', async () => {
+    vi.useFakeTimers();
+    try {
+      const askGlobal = vi.spyOn(kbAskClient, 'askGlobal').mockImplementation(() => {
+        throw new QaTooManyRequestsError();
+      });
+
+      const { result } = renderHook(() => useKbAskStream());
+      act(() => {
+        result.current.ask('q');
+      });
+      await vi.runAllTimersAsync();
+
+      expect(askGlobal).toHaveBeenCalledTimes(1);
+      expect(result.current.state.retryCount).toBe(0);
+      expect(result.current.state.status).toBe('error');
+      expect(result.current.state.error).toEqual({
+        kind: 'busy',
+        message: QA_TOO_MANY_REQUESTS_MESSAGE,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('retries exactly 3 times then surfaces final error on persistent connection failure', async () => {

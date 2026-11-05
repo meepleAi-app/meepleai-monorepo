@@ -163,16 +163,34 @@ public sealed class CreateChatThreadCommandHandlerTests
         NothingWasStored();
     }
 
+    /// <summary>
+    /// #4730. A thread answers from the rulebook of a game: with none, the conversation opens as a dead end
+    /// («i messaggi vengono salvati ma non ricevono risposta», #4139). The web start (#4715) and the agent cards
+    /// (#4857) already refuse to offer it; this is the server saying the same, instead of storing the thread.
+    /// This test used to be <c>Handle_WithNoGameId_CreatesThreadWithNullGameId</c>: it pinned the defect.
+    /// </summary>
     [Fact]
-    public async Task Handle_WithNoGameId_CreatesThreadWithNullGameId()
+    public async Task Handle_WithNoGame_IsRefused_AndStoresNothing()
     {
-        var userId = Guid.NewGuid();
-        var command = new CreateChatThreadCommand(UserId: userId);
+        var command = new CreateChatThreadCommand(UserId: Guid.NewGuid(), Title: "Senza gioco");
 
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var act = () => _handler.Handle(command, CancellationToken.None);
 
-        result.Should().NotBeNull();
-        result.GameId.Should().BeNull();
+        var refusal = await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
+        refusal.Which.Message.Should().Contain("game");
+        NothingWasStored();
+    }
+
+    [Fact]
+    public async Task Handle_WithNoGame_IsRefused_EvenWhenAnAgentIsGiven()
+    {
+        // An agent is not a game: the cards used to send only this (agentId and a title) and got a dead end.
+        var command = new CreateChatThreadCommand(UserId: Guid.NewGuid(), AgentId: Guid.NewGuid(), AgentType: "tutor");
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
+        NothingWasStored();
     }
 
     [Fact]
@@ -180,7 +198,8 @@ public sealed class CreateChatThreadCommandHandlerTests
     {
         var userId = Guid.NewGuid();
         var agentId = Guid.NewGuid();
-        var command = new CreateChatThreadCommand(UserId: userId, AgentId: agentId, AgentType: "tutor");
+        var gameId = await SeedSharedGameAsync();
+        var command = new CreateChatThreadCommand(UserId: userId, GameId: gameId, AgentId: agentId, AgentType: "tutor");
 
         var result = await _handler.Handle(command, CancellationToken.None);
 

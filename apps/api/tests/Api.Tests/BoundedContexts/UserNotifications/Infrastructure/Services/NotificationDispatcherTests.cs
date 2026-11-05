@@ -649,10 +649,32 @@ public class NotificationDispatcherTests
         _queueRepoMock.Verify(
             r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()),
             Times.Once);
+        _queueRepoMock.Verify(r => r.DiscardUnsavedAdditions(), Times.Never);
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenAddAndCommitLosesRace_SwallowsAndSkipsQueueItems()
+    public async Task DispatchAsync_StagesTheQueueItemsBeforeCommittingTheInAppRow()
+    {
+        // #4841: one save must persist the row that carries SourceEventId together with its deliveries.
+        // Staged after the commit, nobody saved them and a redelivery of the same event skipped on the marker.
+        var userId = Guid.NewGuid();
+        var order = new List<string>();
+        _queueRepoMock
+            .Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("stage-queue-items"))
+            .Returns(Task.CompletedTask);
+        _notificationRepoMock
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("commit-in-app-row"))
+            .ReturnsAsync(true);
+
+        await CreateSut().DispatchAsync(CreateMessage(recipientUserId: userId) with { SourceEventId = Guid.NewGuid() });
+
+        order.Should().Equal("stage-queue-items", "commit-in-app-row");
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenAddAndCommitLosesRace_SwallowsAndDiscardsTheStagedQueueItems()
     {
         // Arrange — race-window: pre-check passes, but a concurrent caller commits
         // first; AddAndCommitAsync detects 23505 internally and returns false.
@@ -674,10 +696,31 @@ public class NotificationDispatcherTests
         await act.Should().NotThrowAsync(
             "23505 surfacing in the calling MediatR handler is exactly the bug we are fixing");
 
-        // Assert — channel queue items skipped (no notification was committed for this caller)
+        // Assert — the items were staged with the in-app row and the refused save took them down with it:
+        // they are dropped so that no later save of this context creates deliveries for a notification
+        // that belongs to the other caller
         _queueRepoMock.Verify(
-            r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+            r => r.DiscardUnsavedAdditions(),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenAddAndCommitThrows_DiscardsTheStagedQueueItemsAndPropagates()
+    {
+        // #4841: a save that fails for any reason other than the unique index took the staged deliveries down
+        // with the in-app row. They are dropped here (the repository detaches the row itself) and the failure
+        // is the caller's to retry.
+        var userId = Guid.NewGuid();
+        var failure = new InvalidOperationException("the database went away");
+        _notificationRepoMock
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(failure);
+
+        var act = async () => await CreateSut().DispatchAsync(
+            CreateMessage(recipientUserId: userId) with { SourceEventId = Guid.NewGuid() });
+
+        (await act.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(failure);
+        _queueRepoMock.Verify(r => r.DiscardUnsavedAdditions(), Times.Once);
     }
 
     [Fact]

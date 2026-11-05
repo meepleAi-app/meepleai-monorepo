@@ -125,7 +125,7 @@ internal sealed class RecordingSessionHub
     public void Reset() => _methods.Clear();
 }
 
-internal sealed record LiveTable(Guid SessionId, IReadOnlyDictionary<string, Guid> Players);
+internal sealed record LiveTable(Guid SessionId, IReadOnlyDictionary<string, Guid> Players, Guid? GameId = null);
 
 /// <summary>
 /// Un cancello sulla porta di scrittura dell'assistente: un test può fermare la prossima scrittura un
@@ -274,7 +274,7 @@ internal static class SessionAssistantTestData
         }
 
         await SendAsync(factory, new StartLiveSessionCommand(sessionId, ownerId, UserTier.Free, Role.User), ct);
-        return new LiveTable(sessionId, ids);
+        return new LiveTable(sessionId, ids, gameId);
     }
 
     /// <summary>
@@ -314,7 +314,8 @@ internal static class SessionAssistantTestData
             c.Name, c.Description, c.Persona, c.PrimaryModelId, c.FallbackModelId, c.Temperature, c.MaxResponseTokens,
             c.CitationStyle, c.SystemPrompts, c.FallbackLanguage, c.CandidatePoolSize, c.FinalTopK, c.MinScore,
             c.VectorWeight, c.KeywordWeight, c.RerankerEnabled, c.AllowedCategories.ToList(),
-            assistant));
+            assistant,
+            c.IntentInstructions));
         var toolCallingModels = await services.GetRequiredService<IToolCallingModelCatalog>().GetToolCallingModelIdsAsync(ct);
         var version = profile.PublishDraft(AgentProfileTests.PricingTheModelsOf(profile.Draft!.Content, toolCallingModels));
         await services.GetRequiredService<IUnitOfWork>().SaveChangesAsync(ct);

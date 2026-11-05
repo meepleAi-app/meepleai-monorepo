@@ -11,6 +11,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { toast } from 'sonner';
+import { QA_TOO_MANY_REQUESTS_MESSAGE } from '@/components/chat-unified/qaStreamErrors';
 import { steppedFetch } from '@/test-utils/sse-stepped-stream';
 import { useAgentChatStream } from '../useAgentChatStream';
 
@@ -293,6 +294,70 @@ describe('useAgentChatStream', () => {
     // The connection goes to 'disconnected' and schedules a retry
     expect(result.current.state.connectionStatus).toBe('disconnected');
     expect(result.current.state.isStreaming).toBe(true); // still trying
+  });
+
+  describe('a 429 on the answer route (#4388)', () => {
+    // Un test rosso non deve lasciare orologio e fetch finti a quelli che seguono.
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    /**
+     * #4388: il backend tiene aperte al massimo due risposte per utente e rifiuta la terza con 429.
+     * Non è una connessione caduta: ritentare dopo due secondi arriverebbe mentre le altre due sono
+     * ancora in corso, e «HTTP 429» non dice all'utente che cosa fare.
+     */
+    it('does not retry a 429, and tells the user to wait for an answer in progress', async () => {
+      vi.useFakeTimers();
+      const fetch429 = vi.fn(async () => ({ ok: false, status: 429 }));
+      vi.stubGlobal('fetch', fetch429);
+      const onError = vi.fn();
+
+      const { result } = renderHook(() => useAgentChatStream({ onError }));
+      act(() => {
+        result.current.sendMessage('game-1', 'Quante carte si pescano?');
+      });
+      await vi.runAllTimersAsync();
+
+      expect(fetch429).toHaveBeenCalledTimes(1);
+      expect(result.current.state.retryCount).toBe(0);
+      expect(result.current.state.error).toBe(QA_TOO_MANY_REQUESTS_MESSAGE);
+      expect(result.current.state.isStreaming).toBe(false);
+      expect(result.current.state.connectionStatus).toBe('error');
+      expect(onError).toHaveBeenCalledWith(QA_TOO_MANY_REQUESTS_MESSAGE, NOTHING_ARRIVED);
+    });
+
+    it('lets the next question through after a 429', async () => {
+      vi.useFakeTimers();
+      const fetchSequence = vi
+        .fn()
+        .mockResolvedValueOnce({ ok: false, status: 429 })
+        .mockResolvedValueOnce({
+          ok: true,
+          body: createSSEStream([
+            sseEvent(EventType.Token, { token: 'Sette carte.' }),
+            sseEvent(EventType.Complete, { totalTokens: 1 }),
+          ]),
+        });
+      vi.stubGlobal('fetch', fetchSequence);
+
+      const { result } = renderHook(() => useAgentChatStream());
+      act(() => {
+        result.current.sendMessage('game-1', 'prima');
+      });
+      await vi.runAllTimersAsync();
+      expect(result.current.state.error).toBe(QA_TOO_MANY_REQUESTS_MESSAGE);
+
+      act(() => {
+        result.current.sendMessage('game-1', 'seconda');
+      });
+      await vi.runAllTimersAsync();
+
+      expect(fetchSequence).toHaveBeenCalledTimes(2);
+      expect(result.current.state.error).toBeNull();
+      expect(result.current.state.currentAnswer).toBe('Sette carte.');
+    });
   });
 
   it('handles SSE error events', async () => {

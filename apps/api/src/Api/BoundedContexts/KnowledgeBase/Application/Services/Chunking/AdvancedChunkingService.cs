@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Services;
@@ -99,7 +100,7 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
             // Create parent chunk for the section
             var parentMetadata = new ChunkMetadata
             {
-                Page = section.Page,
+                Page = PageOf(document.PageSpans, section.Content, 0, section.CharStart, section.Page),
                 Heading = section.Heading,
                 ElementType = section.ElementType,
                 GameId = document.GameId,
@@ -122,7 +123,8 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
                 section.Heading,
                 section.CharStart,
                 section.BBox,
-                config);
+                config,
+                document.PageSpans);
 
             // Link children to parent
             foreach (var child in childChunks)
@@ -229,7 +231,8 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
         string? heading,
         int baseCharStart,
         BoundingBox? baseBBox,
-        ChunkingConfiguration config)
+        ChunkingConfiguration config,
+        IReadOnlyList<PageSpan>? pageSpans = null)
     {
         var childChunks = new List<HierarchicalChunk>();
 
@@ -243,7 +246,7 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
         {
             var childMetadata = new ChunkMetadata
             {
-                Page = basePage,
+                Page = PageOf(pageSpans, content, textChunk.CharStart, baseCharStart, basePage),
                 Heading = heading,
                 ElementType = "text",
                 GameId = gameId,
@@ -263,6 +266,38 @@ internal sealed class AdvancedChunkingService : IAdvancedChunkingService
         }
 
         return childChunks;
+    }
+
+    /// <summary>
+    /// The page of a chunk (#4782). With a page map (a flat document whose extractor measured its pages) it is the page
+    /// that holds the first non-blank character of the chunk; without one it is <paramref name="fallbackPage"/>, the
+    /// page of the section, which is how every chunk got its page before.
+    /// </summary>
+    /// <param name="pageSpans">The page map of the document, or null when there is none.</param>
+    /// <param name="source">The text the chunk was cut from (the content of its section).</param>
+    /// <param name="offsetInSource">Where the cut span begins in <paramref name="source"/>.</param>
+    /// <param name="sourceStart">Where <paramref name="source"/> begins in the text of the document, which is what the map is over.</param>
+    /// <param name="fallbackPage">The page to use when there is no map.</param>
+    /// <remarks>
+    /// The blanks are skipped in <paramref name="source"/>, not in the text of the chunk: TextChunkingService trims the
+    /// text of a chunk but reports the start of the span before trimming, so a chunk cut inside the blank line between
+    /// two pages has a start on the previous page and a text that no longer begins with a blank.
+    /// </remarks>
+    private static int PageOf(
+        IReadOnlyList<PageSpan>? pageSpans, string source, int offsetInSource, int sourceStart, int fallbackPage)
+    {
+        if (pageSpans is null)
+        {
+            return fallbackPage;
+        }
+
+        var first = offsetInSource;
+        while (first < source.Length && char.IsWhiteSpace(source[first]))
+        {
+            first++;
+        }
+
+        return PageSpans.PageAt(pageSpans, sourceStart + first);
     }
 
     private static readonly string[] ParagraphSeparators = { "\r\n\r\n", "\n\n" };

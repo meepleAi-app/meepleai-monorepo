@@ -15,6 +15,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import { QA_TOO_MANY_REQUESTS_MESSAGE } from '@/components/chat-unified/qaStreamErrors';
+
 import { AgentChatPanel, type ChatMessage, type AgentMode, type GamePdf } from '../AgentChatPanel';
 
 // Mock MeeplePdfReferenceCard (migrated from PdfReferenceCard)
@@ -543,6 +545,31 @@ describe('AgentChatPanel', () => {
       await waitFor(() => {
         expect(screen.getByText(/errore nella comunicazione/i)).toBeInTheDocument();
       });
+    });
+
+    /**
+     * #4388: il backend tiene aperte al massimo due risposte per utente e rifiuta la terza con 429.
+     * Il pannello dice di aspettare, invece del guasto generico di comunicazione.
+     */
+    it('should say to wait for an answer in progress on a 429', async () => {
+      const user = userEvent.setup();
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+      } as Response);
+
+      renderPanel();
+
+      const input = screen.getByPlaceholderText(/fai una domanda/i);
+      const sendButton = screen.getByRole('button', { name: /invia/i });
+
+      await user.type(input, 'Question');
+      await user.click(sendButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(QA_TOO_MANY_REQUESTS_MESSAGE)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/errore nella comunicazione/i)).not.toBeInTheDocument();
     });
 
     it('should display error message on network failure', async () => {

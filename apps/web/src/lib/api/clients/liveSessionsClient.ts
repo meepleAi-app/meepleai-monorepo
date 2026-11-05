@@ -551,9 +551,15 @@ export function createLiveSessionsClient({
     // ========== Game Night Improvvisata ==========
 
     async submitDispute(sessionId, description, raisedByPlayerName) {
+      // #4751: every attempt is a paid model call, and not an idempotent one. The server answers 503
+      // when the arbitro gave no verdict or the AI gateway refused the call, and the HTTP client retries
+      // 502/503 by default: one click would cost several model calls and a minute of spinner before the
+      // message arrives. The player asks again with the button, if they want to.
       const response = await httpClient.post<RuleDisputeResponse>(
         `${GAME_NIGHT_BASE}/sessions/${encodeURIComponent(sessionId)}/disputes`,
-        { description, raisedByPlayerName }
+        { description, raisedByPlayerName },
+        undefined,
+        { retry: { skipRetry: true } }
       );
       if (!response) throw new Error('Dispute submission failed');
       return RuleDisputeResponseSchema.parse(response);

@@ -43,7 +43,11 @@ internal sealed class GetGameNightByIdQueryHandler : IQueryHandler<GetGameNightB
 
         var organizerName = await GetUserDisplayNameAsync(gameNight.OrganizerId, cancellationToken).ConfigureAwait(false);
 
-        return GameNightMapperHelper.MapToDto(gameNight, organizerName);
+        // #4706: guests invited by email are not in the RSVP rows; add them to the counts.
+        var guests = await GuestInvitationCounts.LoadAsync(_context, [gameNight.Id], cancellationToken).ConfigureAwait(false);
+
+        return GameNightMapperHelper.MapToDto(
+            gameNight, organizerName, guests: guests.GetValueOrDefault(gameNight.Id));
     }
 
     private async Task<string> GetUserDisplayNameAsync(Guid userId, CancellationToken cancellationToken)

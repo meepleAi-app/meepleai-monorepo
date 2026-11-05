@@ -37,6 +37,12 @@ public class PdfDocumentEntity
     // rebuild the heading-aware document without re-running the extractor.
     public string? StructuredElementsJson { get; set; }
 
+    // #4782: where each page of the PDF begins in ExtractedText, as [[page,start],…]. A re-index rebuilds the
+    // chunks from ExtractedText alone, so without this the page of every passage of a flat document (no structured
+    // elements) is lost there. Null when the extractor did not measure its pages, and for every document extracted
+    // before this column existed.
+    public string? PageSpansJson { get; set; }
+
     // Issue #4215: Granular 7-state tracking
     public string ProcessingState { get; set; } = "Pending"; // Enum stored as string: Pending, Uploading, Extracting, Chunking, Embedding, Indexing, Ready, Failed
 
@@ -47,7 +53,7 @@ public class PdfDocumentEntity
 
     // Issue #4216: Retry mechanism tracking
     public int RetryCount { get; set; }
-    public string? ErrorCategory { get; set; } // ErrorCategory enum: Network, Parsing, Quota, Service, PayloadTooLarge, Unknown
+    public string? ErrorCategory { get; set; } // ErrorCategory enum: Network, Parsing, Quota, Service, PayloadTooLarge, StorageObjectMissing, Cancelled, Unknown
     public string? FailedAtState { get; set; } // PdfProcessingState where failure occurred
 
     // PDF-03: Structured data extraction fields

@@ -8,6 +8,7 @@
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { KbHubContent } from '../_content';
@@ -59,6 +60,12 @@ vi.mock('@/components/library/PdfUploadModal', () => ({
         </button>
       </div>
     ) : null,
+}));
+
+// La pagina dice all'utente cosa e' successo al PDF (cancellato, scollegato, tenuto); il doppio permette
+// di asserire il messaggio senza montare un Toaster.
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
 }));
 
 // Mock useTranslation with a lightweight lookup in MESSAGES dict (defined below).
@@ -183,6 +190,9 @@ const MESSAGES: Record<string, string> = {
   'pages.library.gameDetail.kb.errors.reindexFailed': 'Reindex fallito',
   'pages.library.gameDetail.kb.errors.raptorFailed': 'Raptor fallito',
   'pages.library.gameDetail.kb.errors.deleteFailed': 'Delete fallito',
+  'pages.library.gameDetail.kb.deleteOutcome.unlinked':
+    'PDF scollegato da questo gioco, non cancellato',
+  'pages.library.gameDetail.kb.deleteOutcome.kept': 'PDF non cancellato: lo usano altri giochi',
 };
 
 function renderWithIntl(node: ReactNode): ReturnType<typeof render> {
@@ -554,7 +564,7 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
   });
 
   it('triggers delete mutation when DeleteDialog confirmed', async () => {
-    const deleteMutateAsync = vi.fn().mockResolvedValue(undefined);
+    const deleteMutateAsync = vi.fn().mockResolvedValue({ outcome: 'deleted' });
     mockUseDeletePdf.mockReturnValue({ mutateAsync: deleteMutateAsync });
     mockUseUserKbStatus.mockReturnValue({
       isLoading: false,
@@ -589,5 +599,79 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
     expect(confirmBtn).toBeInTheDocument();
     if (confirmBtn) fireEvent.click(confirmBtn);
     await waitFor(() => expect(deleteMutateAsync).toHaveBeenCalledWith('pdf-to-delete'));
+  });
+
+  describe('esito della cancellazione di un PDF usato anche da altri giochi', () => {
+    const CONFIRM = '[data-slot="kb-hub-delete-confirm"]';
+
+    /** Monta la pagina con un PDF e porta il flusso fino al click su "conferma cancellazione". */
+    const confirmDeleteWith = async (mutateAsync: ReturnType<typeof vi.fn>): Promise<void> => {
+      mockUseDeletePdf.mockReturnValue({ mutateAsync });
+      mockUseUserKbStatus.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: {
+          gameId: GAME_ID,
+          isIndexed: true,
+          documentCount: 1,
+          coverageScore: 50,
+          coverageLevel: 'Basic',
+          suggestedQuestions: [],
+        },
+      });
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [pdfFixture({ id: 'pdf-shared' })],
+      });
+      renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+      fireEvent.click(screen.getByRole('button', { name: /Apri Rulebook v2/i }));
+      const deleteAction = document.querySelector(
+        '[data-slot="kb-hub-actions-menu-delete"]'
+      ) as HTMLElement | null;
+      expect(deleteAction).toBeInTheDocument();
+      if (deleteAction) fireEvent.click(deleteAction);
+      const confirmBtn = document.querySelector(CONFIRM) as HTMLButtonElement | null;
+      expect(confirmBtn).toBeInTheDocument();
+      if (confirmBtn) fireEvent.click(confirmBtn);
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith('pdf-shared'));
+    };
+
+    it("dice che il PDF e' stato scollegato, non cancellato, quando l'esito e' unlinked", async () => {
+      await confirmDeleteWith(vi.fn().mockResolvedValue({ outcome: 'unlinked' }));
+
+      await waitFor(() =>
+        expect(toast.info).toHaveBeenCalledWith('PDF scollegato da questo gioco, non cancellato')
+      );
+      expect(toast.error).not.toHaveBeenCalled();
+      // L'operazione e' andata a buon fine: il dialog si chiude come dopo una cancellazione.
+      await waitFor(() => expect(document.querySelector(CONFIRM)).not.toBeInTheDocument());
+    });
+
+    it("dice che il PDF non e' stato cancellato perche' lo usano altri giochi, quando l'esito e' kept", async () => {
+      await confirmDeleteWith(vi.fn().mockResolvedValue({ outcome: 'kept' }));
+
+      await waitFor(() =>
+        expect(toast.info).toHaveBeenCalledWith('PDF non cancellato: lo usano altri giochi')
+      );
+      expect(toast.error).not.toHaveBeenCalled();
+      await waitFor(() => expect(document.querySelector(CONFIRM)).not.toBeInTheDocument());
+    });
+
+    it("non aggiunge messaggi quando il PDF e' stato davvero cancellato", async () => {
+      await confirmDeleteWith(vi.fn().mockResolvedValue({ outcome: 'deleted' }));
+
+      await waitFor(() => expect(document.querySelector(CONFIRM)).not.toBeInTheDocument());
+      expect(toast.info).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it("mostra l'errore e lascia il dialog aperto quando la chiamata fallisce", async () => {
+      await confirmDeleteWith(vi.fn().mockRejectedValue(new Error('boom')));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Delete fallito'));
+      expect(toast.info).not.toHaveBeenCalled();
+      expect(document.querySelector(CONFIRM)).toBeInTheDocument();
+    });
   });
 });

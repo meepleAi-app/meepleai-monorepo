@@ -231,7 +231,7 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IVectorDocumentRepository>());
 
         // Real IPdfIndexingPipeline (#2244 / epic #2242 Sub #2): the production write
-        // path that UploadPdfCommandHandler.UpdateVectorDocumentAsync now resolves at
+        // path that UploadPdfCommandHandler.IndexInVectorStoreAsync (BeginIndexingAsync, then IndexAsync) resolves at
         // runtime via scope.ServiceProvider.GetRequiredService. Without this binding
         // the resolver would throw InvalidOperationException and the handler's outer
         // general catch would silently mark the PDF Failed — which is exactly the

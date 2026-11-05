@@ -157,6 +157,7 @@ public partial class StreamQaQueryHandlerTests
             Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(CreatePermissiveRagAccessServiceMock()),
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             Mock.Of<Api.Services.IFeatureFlagService>(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved(),
             _loggerMock.Object,
             _fakeTimeProvider
         ));
@@ -376,6 +377,117 @@ public partial class StreamQaQueryHandlerTests
         snippet.regions.Should().BeNull();
         snippet.charStart.Should().BeNull();
         snippet.charEnd.Should().BeNull();
+    }
+
+    // ─── #4819: un documento che non sa dire la pagina dei suoi passaggi si cita senza pagina ───
+
+    private async Task<(Snippet Citation, string? UserPrompt)> AskCitingADocumentAsync(
+        Guid vectorDocumentId, int page, Api.BoundedContexts.KnowledgeBase.Application.Services.ICitedPageTrust trust,
+        Guid? pdfDocumentId = null)
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "how do I score?", TestUserId, "User", ThreadId: null);
+        SetupHappyPathMocks(gameId, query.Query);
+        if (pdfDocumentId is { } pdfId)
+        {
+            // The search result is about the vector document and the citation about the PDF: the pipeline maps one
+            // to the other, and the question about the page has to be asked about the PDF.
+            _vectorDocumentRepositoryMock
+                .Setup(x => x.GetByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<VectorDocument> { new(vectorDocumentId, Guid.Parse(gameId), pdfId, "en", 10) });
+        }
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>(),
+                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<float>(), It.IsAny<float>()))
+            .Returns(new List<DomainSearchResult>
+            {
+                new(id: Guid.NewGuid(), vectorDocumentId: vectorDocumentId, textContent: "Sample rule text",
+                    pageNumber: page, relevanceScore: new Confidence(0.9), rank: 1, searchMethod: "hybrid"),
+            });
+        string? userPrompt = null;
+        _llmServiceMock
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((request, _) => userPrompt = request.UserPrompt)
+            .Returns(StreamTokensAsync(new[] { "This", " is", " the", " answer", "." }));
+
+        var handler = CreateHandlerWith(CreatePermissiveRagAccessServiceMock(), pageTrust: trust);
+        var events = new List<RagStreamingEvent>();
+        await foreach (var e in handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(e);
+        }
+
+        return (FirstCitation(events), userPrompt);
+    }
+
+    [Fact]
+    public async Task Handle_CitesADocumentThatCannotVouchForItsPagesWithoutOne_AndDoesNotNameItToTheModel()
+    {
+        var flat = Guid.NewGuid();
+        var flatVector = Guid.NewGuid();
+
+        var (citation, prompt) = await AskCitingADocumentAsync(
+            flatVector, page: 4, Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage(flat.ToString()), pdfDocumentId: flat);
+
+        citation.page.Should().BeNull();
+        citation.text.Should().Be("Sample rule text");
+        // The same list grounds the prompt: the passage is still there, and says its page is not known instead of
+        // being read as part of the passage before it, or with an empty marker.
+        prompt.Should().Contain("[Page unknown] Sample rule text");
+        prompt.Should().NotContain("[Page 4]");
+        prompt.Should().NotContain("[Page ] ");
+    }
+
+    [Fact]
+    public async Task Handle_CitesTheDeclaredPageOfADocumentThatCanVouchForIt_AndNamesItToTheModel()
+    {
+        var measured = Guid.NewGuid();
+        var measuredVector = Guid.NewGuid();
+
+        var (citation, prompt) = await AskCitingADocumentAsync(
+            measuredVector, page: 4, Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage(Guid.NewGuid().ToString()), pdfDocumentId: measured);
+
+        citation.page.Should().Be(4);
+        prompt.Should().Contain("[Page 4] Sample rule text");
+    }
+
+    [Fact]
+    public async Task Handle_CachedResponse_LeavesOutThePageOfADocumentThatCannotVouchForIt()
+    {
+        // The cache outlives the decision: an entry written before it carries the false page for a day.
+        var gameId = Guid.NewGuid().ToString();
+        var flat = Guid.NewGuid();
+        var measured = Guid.NewGuid();
+        var query = new StreamQaQuery(gameId, "cached with pages?", TestUserId, "User", ThreadId: null);
+        var cachedResponse = new QaResponse(
+            answer: "cached answer",
+            snippets: new List<Snippet>
+            {
+                new Snippet("flat text", $"PDF:{flat}", 1, 0, 0.9f),
+                new Snippet("measured text", $"PDF:{measured}", 7, 0, 0.8f),
+            },
+            promptTokens: 10, completionTokens: 5, totalTokens: 15, confidence: 0.85, metadata: null);
+        _cacheMock
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("test-cache-key");
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+        var handler = CreateHandlerWith(
+            CreatePermissiveRagAccessServiceMock(), pageTrust: Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage(flat.ToString()));
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var e in handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(e);
+        }
+
+        var citations = ((StreamingCitations)events.First(e => e.Type == StreamingEventType.Citations).Data!).citations;
+        citations.Select(c => (c.text, c.page)).Should().Equal(("flat text", (int?)null), ("measured text", (int?)7));
     }
 
     private void SetupFusedResultWithRegion()
@@ -1038,6 +1150,126 @@ public partial class StreamQaQueryHandlerTests
         _llmServiceMock.Verify(
             x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ─── Intento della risposta (#4404, ADR-098 §5) ──────────────────────────────
+
+    /// <summary>
+    /// The system prompt of the one model call a question to <paramref name="thread"/> makes.
+    /// <paramref name="withHistory"/> makes the thread one whose history joins the prompt: the pipeline has two
+    /// returns that carry the intent, with and without history, and the mock of the history policy answers «no»
+    /// unless told otherwise, so without it only the second is ever reached.
+    /// </summary>
+    private async Task<string> SystemPromptOfAnAnswerInAsync(ChatThread thread, string gameId, bool withHistory = false)
+    {
+        var query = new StreamQaQuery(gameId, "Quante carte si pescano?", TestUserId, "User", ThreadId: thread.Id);
+        _chatThreadRepositoryMock
+            .Setup(x => x.GetByIdAsync(thread.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(thread);
+        if (withHistory)
+        {
+            _chatContextServiceMock.Setup(x => x.ShouldIncludeChatHistory(thread)).Returns(true);
+            _chatContextServiceMock.Setup(x => x.BuildChatHistoryContext(thread)).Returns("Earlier in this chat");
+            _chatContextServiceMock
+                .Setup(x => x.EnrichPromptWithHistory(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns<string, string>((prompt, history) => $"{history}\n{prompt}");
+        }
+
+        SetupHappyPathMocks(gameId, query.Query);
+
+        await foreach (var _ in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+        }
+
+        var request = _llmServiceMock.Invocations
+            .Where(i => i.Method.Name == nameof(ILlmService.GenerateAnswerStreamAsync))
+            .Select(i => (LlmAnswerRequest)i.Arguments[0])
+            .Should().ContainSingle("the question went all the way to the model").Subject;
+        return request.SystemPrompt;
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Handle_AThreadOnTheTutorIntent_AsksTheModelForTheTutorShape_WithOrWithoutHistory(bool withHistory)
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var tutorThread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
+        tutorThread.SwitchAgent("tutor");
+
+        var tutorPrompt = await SystemPromptOfAnAnswerInAsync(tutorThread, gameId, withHistory);
+
+        tutorPrompt.Should().Contain(AnswerIntent.DefaultInstructionFor("tutor")!);
+        tutorPrompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("secca")!);
+    }
+
+    [Fact]
+    public async Task Handle_AThreadOnTheSeccaIntent_AsksTheModelForOneLineAndTheCitation()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var thread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
+        thread.SwitchAgent("secca");
+
+        var prompt = await SystemPromptOfAnAnswerInAsync(thread, gameId);
+
+        prompt.Should().Contain(AnswerIntent.DefaultInstructionFor("secca")!);
+        prompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("tutor")!);
+    }
+
+    [Theory]
+    [InlineData("auto")]
+    [InlineData("arbitro")]
+    [InlineData("decisore")]
+    public async Task Handle_AThreadOnAutoOrOnARetiredId_AnswersAsToday_WithNoIntentSection(string stored)
+    {
+        var gameId = Guid.NewGuid().ToString();
+        // Created with the stored value, not switched to it: the retired ids are no longer written, only read.
+        var thread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1, agentType: stored);
+
+        var prompt = await SystemPromptOfAnAnswerInAsync(thread, gameId);
+
+        prompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("tutor")!);
+        prompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("secca")!);
+    }
+
+    [Fact]
+    public async Task Handle_TheIntentOfSomeoneElsesThread_IsNotLentToTheAsker()
+    {
+        // The same rule as for the history (#4242): a thread that is not the asker's does not shape their answer.
+        var gameId = Guid.NewGuid().ToString();
+        var someoneElses = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1, ownerId: Guid.NewGuid());
+        someoneElses.SwitchAgent("secca");
+
+        var prompt = await SystemPromptOfAnAnswerInAsync(someoneElses, gameId);
+
+        prompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("secca")!);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Handle_TheCacheKey_SeparatesTheAnswersOfTwoIntents(bool withHistory)
+    {
+        // The cache is shared by every user: what enters the prompt and not the key is an answer served to someone
+        // who asked for another shape. Without the intent in the key, a tutor answer replays to an auto asker.
+        var gameId = Guid.NewGuid().ToString();
+        var shapes = new List<string>();
+        _cacheMock
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string>((_, shape) => shapes.Add(shape))
+            .Returns<string, string>((game, shape) => $"{game}:{shape.GetHashCode()}");
+
+        foreach (var intent in new[] { "auto", "tutor", "secca" })
+        {
+            var thread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
+            thread.SwitchAgent(intent);
+            _llmServiceMock.Invocations.Clear();
+            await SystemPromptOfAnAnswerInAsync(thread, gameId, withHistory);
+        }
+
+        shapes.Should().HaveCount(3);
+        shapes.Select(s => s.Split('|').Single(p => p.StartsWith("intent:", StringComparison.Ordinal)))
+            .Should().Equal("intent:auto", "intent:tutor", "intent:secca");
     }
 
     [Fact]
@@ -2120,13 +2352,15 @@ public partial class StreamQaQueryHandlerTests
     // #4242: the thread belongs to the user who asks, unless a test says otherwise. It used to be
     // created for a random user, so Handle_WithThreadId_IncludesChatHistory asserted that a
     // stranger's history entered the prompt.
-    private ChatThread CreateChatThread(Guid threadId, string gameId, int messageCount, Guid? ownerId = null)
+    private ChatThread CreateChatThread(
+        Guid threadId, string gameId, int messageCount, Guid? ownerId = null, string? agentType = null)
     {
         var thread = new ChatThread(
             id: threadId,
             userId: ownerId ?? TestUserId,
             gameId: Guid.Parse(gameId),
-            title: "Test Thread"
+            title: "Test Thread",
+            agentType: agentType
         );
 
         // Add messages if needed for testing
@@ -2153,7 +2387,8 @@ public partial class StreamQaQueryHandlerTests
         IRagAccessService ragAccessService,
         Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
         Api.Services.IFeatureFlagService? featureFlags = null,
-        Api.SharedKernel.Services.ITierEnforcementService? tiers = null)
+        Api.SharedKernel.Services.ITierEnforcementService? tiers = null,
+        Api.BoundedContexts.KnowledgeBase.Application.Services.ICitedPageTrust? pageTrust = null)
     {
         return new StreamQaQueryHandler(new AnswerPipeline(
             Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.PassageSearch(Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
@@ -2173,6 +2408,7 @@ public partial class StreamQaQueryHandlerTests
             Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(ragAccessService, tiers),
             mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),
+            pageTrust ?? Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved(),
             _loggerMock.Object,
             _fakeTimeProvider));
     }
@@ -2196,5 +2432,6 @@ public partial class StreamQaQueryHandlerTests
         keywordWeight: 0.3m,
         rerankerEnabled: true,
         Enum.GetValues<DocumentCategory>(),
-            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
+            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled,
+            AgentProfileContent.NoIntentInstructions);
 }

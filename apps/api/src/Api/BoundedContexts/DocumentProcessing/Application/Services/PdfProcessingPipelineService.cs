@@ -511,7 +511,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 "[PdfPipeline] Text extraction failed for PDF {PdfId} (permanent={IsPermanentFailure})",
                 pdfId, ex.IsPermanentFailure);
             var category = ex.IsPermanentFailure ? ErrorCategory.PayloadTooLarge : (ErrorCategory?)null;
-            await TryMarkFailedAsync(pdfDocumentId, ex.Message, category).ConfigureAwait(false);
+            await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(category ?? ErrorCategory.Unknown), category).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
         catch (PdfEmbeddingFailedException ex)
@@ -520,7 +520,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             // task records it: transient, so RetryFailedPdfsJob retries it. This pipeline left the
             // category NULL, and since ADR-100 it processes every admin upload.
             _logger.LogError(ex, "[PdfPipeline] Embedding failed for PDF {PdfId}", pdfId);
-            await TryMarkFailedAsync(pdfDocumentId, ex.Message, ErrorCategory.Service).ConfigureAwait(false);
+            await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(ErrorCategory.Service), ErrorCategory.Service).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
         catch (PdfStorageObjectMissingException ex)
@@ -528,16 +528,18 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             // #3846: the object is not at the key FilePath records. Retrying cannot conjure it back,
             // so it gets a category RetryFailedPdfsJob excludes — unlike the NULL category the
             // generic catch below leaves, which is treated as retriable.
+            // #4660: the key is named here, in the log at Error level, with the exception; the column and the
+            // progress, which users are served, carry only the fixed text of the category.
             _logger.LogError(ex,
                 "[PdfPipeline] PDF {PdfId} is not in storage at key pdf/{ResourceKey}/{FileId}",
                 pdfId, ex.ResourceKey, ex.FileId);
-            await TryMarkFailedAsync(pdfDocumentId, ex.Message, ErrorCategory.StorageObjectMissing).ConfigureAwait(false);
+            await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(ErrorCategory.StorageObjectMissing), ErrorCategory.StorageObjectMissing).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PdfPipeline] Processing FAILED for PDF {PdfId}", pdfId);
-            await TryMarkFailedAsync(pdfDocumentId, ex.Message).ConfigureAwait(false);
+            await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(ErrorCategory.Unknown)).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
 #pragma warning restore CA1031
@@ -633,14 +635,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     extractResult.IsPermanentFailure);
             }
 
-            var fullText = string.Join("\n\n", extractResult.PageChunks
-                .Where(pc => !pc.IsEmpty)
-                .Select(pc => pc.Text));
+            var joinedText = PageTextJoiner.Join(extractResult.PageChunks);
+            var fullText = joinedText.Text;
 
             pdfDoc.ExtractedText = fullText;
             pdfDoc.StructuredElementsJson = extractResult.StructuredElements is null
                 ? null
                 : JsonSerializer.Serialize(extractResult.StructuredElements);
+            pdfDoc.PageSpansJson = joinedText.Spans is null ? null : PageSpans.Serialize(joinedText.Spans);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
             try
@@ -851,7 +853,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 documentId,
                 gameId,
                 _advancedChunking,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                // #4782: the pages of a flat document (no structured elements) come from here.
+                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans).ConfigureAwait(false);
             return HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
         }
 
@@ -998,13 +1002,21 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // in IPdfIndexingPipeline (#2244 / epic #2242). The pipeline handles the
         // DbUpdateConcurrencyException internally with the same "Quartz must see
         // success" semantics this path needs.
-        await _indexingPipeline.IndexAsync(
+        //
+        // #4609: two steps, not one. The row has to exist first so the pgvector rows can point at it, but
+        // only as "processing"; IndexAsync, which writes "completed" and publishes
+        // VectorDocumentIndexedEvent (that raises shared_games.has_knowledge_base), runs LAST, after the
+        // embeddings are saved. Called first, a failure while saving them left a "completed" document with
+        // no vector rows and a game claiming a knowledge base.
+        var language = string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language;
+        var totalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
+        await _indexingPipeline.BeginIndexingAsync(
             pdfDocumentId: pdfDoc.Id,
             gameId: pdfDoc.SharedGameId,
             sharedGameId: pdfDoc.SharedGameId,
             chunkCount: chunkCount,
-            totalCharacters: pdfDoc.ExtractedText?.Length ?? 0,
-            language: string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language,
+            totalCharacters: totalCharacters,
+            language: language,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Re-read the (now persisted) entity so the pgvector block below has
@@ -1029,11 +1041,33 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 nameof(PdfProcessingPipelineService),
                 MeepleAiMetrics.PdfConcurrencyCategories.B);
             _logger.LogWarning(
-                "PdfPipeline: VectorDocument row for PDF {PdfId} missing after IndexAsync — pipeline swallowed a concurrency conflict, pgvector embeddings skipped. PDF will need re-index.",
+                "PdfPipeline: VectorDocument row for PDF {PdfId} missing after BeginIndexingAsync — pipeline swallowed a concurrency conflict, pgvector embeddings skipped. PDF will need re-index.",
                 pdfDoc.Id);
             return;
         }
 
+        await IndexEmbeddingsAsync(pdfDoc, translatedChunks, embeddings, vectorDoc, cancellationToken).ConfigureAwait(false);
+
+        // #4609: LAST. Every path of IndexEmbeddingsAsync that returns normally (including the ones that skip
+        // the pgvector step because there is no vector store or no game) still completes the document, as
+        // when IndexAsync came first; only a failure while saving leaves it in "processing".
+        await _indexingPipeline.IndexAsync(
+            pdfDocumentId: pdfDoc.Id,
+            gameId: pdfDoc.SharedGameId,
+            sharedGameId: pdfDoc.SharedGameId,
+            chunkCount: chunkCount,
+            totalCharacters: totalCharacters,
+            language: language,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task IndexEmbeddingsAsync(
+        PdfDocumentEntity pdfDoc,
+        List<(DocumentChunkInput chunk, string lang, bool isTranslation)> translatedChunks,
+        List<float[]> embeddings,
+        VectorDocumentEntity vectorDoc,
+        CancellationToken cancellationToken)
+    {
         // Index embeddings in pgvector for semantic search
         if (_vectorStore != null && embeddings.Count == translatedChunks.Count)
         {
@@ -1050,10 +1084,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             // Ensure pgvector table + HNSW index exist (idempotent)
             var dimension = embeddings[0].Length;
             await _vectorStore.EnsureCollectionExistsAsync(gameId, dimension, cancellationToken)
-                .ConfigureAwait(false);
-
-            // Delete old embeddings for this document (re-processing support)
-            await _vectorStore.DeleteByVectorDocumentIdAsync(vectorDoc.Id, cancellationToken)
                 .ConfigureAwait(false);
 
             // Build Embedding domain objects and bulk-insert via pgvector COPY.
@@ -1096,7 +1126,13 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     roleTags: (int)(tc?.RoleTags ?? GameBookRole.None));
             }).ToList();
 
-            await _vectorStore.IndexBatchAsync(embeddingEntities, cancellationToken)
+            // #4660: replaces the embeddings this document already had (re-processing) with the new ones in ONE
+            // transaction. The old code deleted them first, outside any transaction, and then inserted: an
+            // insert that failed left a vector document that a re-index keeps "completed" (decision of
+            // 2026-10-25) with no embeddings at all. Now a failed insert leaves the old embeddings in place.
+            // Only the embeddings: the text chunks of this run were saved above, so until the retry the old
+            // embeddings' source_chunk_id may point at chunks that no longer exist.
+            await _vectorStore.ReplaceByVectorDocumentIdAsync(vectorDoc.Id, embeddingEntities, cancellationToken)
                 .ConfigureAwait(false);
 
             _logger.LogInformation(
@@ -1213,8 +1249,60 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     }
 
     /// <summary>
+    /// Drops what a failed save left unsaved in the change tracker, except the rows of the Quartz job that owns this
+    /// run: added entities are detached, modified ones go back to the values they last had in the database (loaded or
+    /// saved), deleted ones are kept (their rows stay in the database).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Not <c>ChangeTracker.Clear()</c> (as the upload path does, #4395): <c>PdfProcessingQuartzJob</c> shares this
+    /// context and saves the failure of its job and steps through the entities it tracks, after the pipeline
+    /// returns. Cleared, that save would be a no-op and the job would stay in Processing, holding a worker slot.
+    /// </para>
+    /// <para>
+    /// No database access, on purpose: the database may be what failed, and a reload would also refresh the
+    /// concurrency token (xmin) of a row someone else has since changed, so the write that follows would overwrite
+    /// that change instead of losing to it (the "admin mutation wins" rule of the Category B handlers).
+    /// </para>
+    /// </remarks>
+    private void DiscardUnsavedChanges()
+    {
+#pragma warning disable CA1031 // Failure handlers call this: it must not throw (Entries() runs DetectChanges)
+        try
+        {
+            var entries = _db.ChangeTracker.Entries()
+                .Where(e => e.State != EntityState.Unchanged
+                    && e.State != EntityState.Detached
+                    && e.Entity is not (Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity
+                        or Api.Infrastructure.Entities.DocumentProcessing.ProcessingStepEntity))
+                .ToList();
+
+            foreach (var entry in entries)
+            {
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        entry.State = EntityState.Detached;
+                        break;
+                    case EntityState.Modified:
+                    case EntityState.Deleted:
+                        // Unchanged again: for a Modified entity EF restores the values it last had in the database
+                        // (the contract test EfCore_AModifiedEntityPutBackToUnchanged_HasItsLastSavedValues guards it).
+                        entry.State = EntityState.Unchanged;
+                        break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[PdfPipeline] Could not discard the unsaved changes left by a failed save");
+        }
+#pragma warning restore CA1031
+    }
+
+    /// <summary>
     /// Detaches Added/Modified entities of a given type from the change tracker.
-    /// Used in catch blocks of optional, non-blocking enhancement steps so a
+    /// Used in catch blocks of the optional, non-blocking enhancement steps so a
     /// failed SaveChangesAsync does not poison subsequent saves with the same
     /// unflushed entities (and thus the same error).
     /// </summary>
@@ -1309,7 +1397,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// the original DbContext may be in a bad state.
     /// </summary>
     /// <param name="pdfDocumentId">The PDF document to mark as failed.</param>
-    /// <param name="errorMessage">Persisted (truncated to 500 chars) as ProcessingError.</param>
+    /// <param name="errorMessage">
+    /// Persisted (truncated to 500 chars) as ProcessingError. #4660: a fixed text (<see cref="PdfFailureText"/>),
+    /// never an exception message: that column is served to users by pdf-status.
+    /// </param>
     /// <param name="category">
     /// #3589: when provided, persisted as PdfDocument.ErrorCategory so RetryFailedPdfsJob can
     /// exclude permanent failures from automatic retry. Omitted (null) preserves the
@@ -1317,6 +1408,13 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// </param>
     private async Task TryMarkFailedAsync(Guid pdfDocumentId, string errorMessage, ErrorCategory? category = null)
     {
+        // Whatever failed may have left unsaved changes in the tracker: the vector document that IndexAsync already set
+        // to "completed" in memory before its save failed (#4609), the text chunks of a failed chunk save, or the PDF
+        // itself left Modified (or Ready) by a failed save of its own (#4660). The save below flushes the whole
+        // context, so without this it would write the "completed" next to the failed PDF, or fail again on the same
+        // chunks and never mark the PDF Failed, or skip the PDF because the tracker still says Ready.
+        DiscardUnsavedChanges();
+
         try
         {
             // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
@@ -1352,13 +1450,27 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogWarning(ex,
                 "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                 pdfDocumentId, nameof(PdfProcessingPipelineService));
+
+            // The PDF stays Modified with the old concurrency token: PdfProcessingQuartzJob shares this context and
+            // saves the failure of its job through it right after, so the same stale row would fail that save too and
+            // leave the job in Processing. Admin wins: drop our write.
+            DiscardUnsavedChanges();
         }
 #pragma warning disable CA1031 // Best-effort error marking must not throw
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PdfPipeline] Failed to mark PDF {PdfId} as failed", pdfDocumentId);
+
+            // Same reason: do not leave our unsaved write in the tracker for the job's own save to trip on.
+            DiscardUnsavedChanges();
         }
 #pragma warning restore CA1031
+
+        // #4609 follow-up: the PDF failed, so its vector document (created "processing" by BeginIndexingAsync)
+        // must not stay in flight. A PDF that failed before the indexing phase has none: a no-op. The text is the
+        // category, not the exception message: this column is served to users by pdf-status.
+        await _indexingPipeline.MarkIndexingFailedAsync(
+            pdfDocumentId, PdfFailureText.For(category ?? ErrorCategory.Unknown), CancellationToken.None).ConfigureAwait(false);
     }
 
     /// <summary>

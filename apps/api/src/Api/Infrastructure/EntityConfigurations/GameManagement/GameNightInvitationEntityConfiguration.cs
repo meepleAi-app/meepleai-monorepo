@@ -48,8 +48,22 @@ internal class GameNightInvitationEntityConfiguration
         builder.Property(i => i.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(i => i.CreatedBy).HasColumnName("created_by").IsRequired();
 
+        // #4744: optimistic concurrency via PostgreSQL's xmin system column (ADR-060). Server-owned and
+        // collision-safe (xmin is the id of the transaction that last wrote the row); there is no column to create.
+        builder.Property(i => i.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         builder.HasIndex(i => i.Token)
             .HasDatabaseName("IX_game_night_invitations_token")
+            .IsUnique();
+
+        // #4846: the opt-out looks the invitation up by this key. Unique, and NULLs do not collide in Postgres, so a row
+        // older than the column does not get in the way.
+        builder.HasIndex(i => i.UnsubscribeKey)
+            .HasDatabaseName("IX_game_night_invitations_unsubscribe_key")
             .IsUnique();
 
         builder.HasIndex(i => new { i.GameNightId, i.Email, i.Status })

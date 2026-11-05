@@ -65,6 +65,7 @@ internal static class AnswerPromptBuilder
     /// <param name="continuationContext">La risposta parziale da continuare, se c'è.</param>
     /// <param name="hasVerifiedRules">Se il contesto comincia con le regole verificate.</param>
     /// <param name="houseRule">La regola del gruppo che corrisponde alla domanda, se c'è.</param>
+    /// <param name="intent">L'intento della chat (#4404): <c>auto</c>, <c>tutor</c>, <c>secca</c>; fuori elenco o <c>null</c> vale <c>auto</c>.</param>
     internal static AnswerPrompt Build(
         AgentProfileContent profile,
         string answerLanguage,
@@ -73,7 +74,8 @@ internal static class AnswerPromptBuilder
         string? responseStyle,
         string? continuationContext,
         bool hasVerifiedRules,
-        string? houseRule = null)
+        string? houseRule = null,
+        string? intent = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -87,6 +89,14 @@ internal static class AnswerPromptBuilder
         if (responseStyle is not null)
         {
             system.Append('\n').Append(ResponseStyleInstruction(responseStyle));
+        }
+
+        // #4404 (ADR-098 §5): la forma della risposta scelta nella chat. Viene DOPO lo stile e dice di prevalere:
+        // lo stile predefinito chiede fino a 200 parole con elenchi, la risposta secca ne vuole una riga. È la
+        // sezione della versione del profilo, o l'istruzione predefinita; «auto» non aggiunge nulla.
+        if (profile.InstructionForIntent(intent ?? AnswerIntent.Auto) is { } intentInstruction)
+        {
+            system.Append('\n').Append(intentInstruction);
         }
 
         if (hasVerifiedRules)

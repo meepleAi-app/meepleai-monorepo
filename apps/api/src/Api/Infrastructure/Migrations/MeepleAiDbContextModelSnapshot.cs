@@ -812,6 +812,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("preferences_json");
 
+                    b.Property<string>("ProcessedSessionIdsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("processed_session_ids");
+
                     b.Property<string>("StatsJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("stats_json");
@@ -859,6 +863,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid?>("LastProcessedEventId")
                         .HasColumnType("uuid")
                         .HasColumnName("last_processed_event_id");
+
+                    b.Property<string>("ProcessedSessionIdsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("processed_session_ids");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1488,7 +1496,12 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("SourceEntityType", "SourceEntityId", "TargetEntityType", "TargetEntityId", "LinkType")
                         .IsUnique()
                         .HasDatabaseName("uq_entity_links_source_target_type")
-                        .HasFilter("is_deleted = false");
+                        .HasFilter("is_deleted = false AND scope = 'Shared'");
+
+                    b.HasIndex("SourceEntityType", "SourceEntityId", "TargetEntityType", "TargetEntityId", "LinkType", "OwnerUserId")
+                        .IsUnique()
+                        .HasDatabaseName("uq_entity_links_user_source_target_type_owner")
+                        .HasFilter("is_deleted = false AND scope = 'User'");
 
                     b.ToTable("entity_links", "entity_relationships");
                 });
@@ -5666,6 +5679,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("test_run_id");
 
+                    b.Property<string>("TimeZoneId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("time_zone_id");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -5702,11 +5720,44 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("game_night_events", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightGuestEmailOptOutEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTimeOffset>("OptedOutAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("opted_out_at");
+
+                    b.Property<Guid>("SourceInvitationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_invitation_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("IX_game_night_guest_email_opt_outs_email");
+
+                    b.ToTable("game_night_guest_email_opt_outs", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightInvitationEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CancellationNoticeSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancellation_notice_sent_at");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -5729,6 +5780,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid>("GameNightId")
                         .HasColumnType("uuid")
                         .HasColumnName("game_night_id");
+
+                    b.Property<DateTimeOffset?>("Reminder24hSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reminder_24h_sent_at");
 
                     b.Property<DateTimeOffset?>("RespondedAt")
                         .HasColumnType("timestamp with time zone")
@@ -5764,11 +5819,26 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("token");
 
+                    b.Property<string>("UnsubscribeKey")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("unsubscribe_key");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Token")
                         .IsUnique()
                         .HasDatabaseName("IX_game_night_invitations_token");
+
+                    b.HasIndex("UnsubscribeKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_game_night_invitations_unsubscribe_key");
 
                     b.HasIndex("GameNightId", "Status")
                         .HasDatabaseName("IX_game_night_invitations_event_status");
@@ -9749,6 +9819,10 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<int?>("PageCount")
                         .HasColumnType("integer");
+
+                    b.Property<string>("PageSpansJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("page_spans_json");
 
                     b.Property<Guid?>("PrivateGameId")
                         .HasMaxLength(64)

@@ -159,8 +159,15 @@ public class RedisBackgroundTaskOrchestratorTests
         var taskId = "cancellable-task";
         var taskName = "Cancellable Task";
         var taskCancelled = false;
+        // Same synchronization as ScheduleAsync_ValidTask_SchedulesSuccessfully (#2710). ScheduleAsync hands Task.Run the
+        // cancellation token, so a cancel that lands before the delegate starts means the factory never runs and
+        // nothing is observed as cancelled: a fixed delay to "give the task time to start" loses that race on a
+        // loaded thread pool. Wait for the factory to be running, and for it to see the cancellation.
+        var taskStartedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskCancelledTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         Func<CancellationToken, Task> taskFactory = async ct =>
         {
+            taskStartedTcs.TrySetResult(true);
             try
             {
                 await Task.Delay(TestConstants.Timing.ShortTimeout, ct); // Long-running task
@@ -168,6 +175,7 @@ public class RedisBackgroundTaskOrchestratorTests
             catch (OperationCanceledException)
             {
                 taskCancelled = true;
+                taskCancelledTcs.TrySetResult(true);
                 throw;
             }
         };
@@ -182,15 +190,20 @@ public class RedisBackgroundTaskOrchestratorTests
 
         // Act
         await _orchestrator.ScheduleAsync(taskId, taskName, taskFactory, TestCancellationToken);
-        await Task.Delay(TestConstants.Timing.TinyDelay, TestCancellationToken); // Give task time to start
+        var startedInTime = await Task.WhenAny(
+            taskStartedTcs.Task,
+            Task.Delay(TestConstants.Timing.ShortTimeout, TestCancellationToken)) == taskStartedTcs.Task;
+        startedInTime.Should().BeTrue("the task must be running before it is cancelled");
 
         var cancelResult = await _orchestrator.CancelAsync(taskId);
 
-        // Wait for cancellation to complete
-        await Task.Delay(TestConstants.Timing.SmallDelay, TestCancellationToken);
+        var cancelledInTime = await Task.WhenAny(
+            taskCancelledTcs.Task,
+            Task.Delay(TestConstants.Timing.ShortTimeout, TestCancellationToken)) == taskCancelledTcs.Task;
 
         // Assert
         cancelResult.Should().BeTrue();
+        cancelledInTime.Should().BeTrue("the running task should observe the cancellation");
         taskCancelled.Should().BeTrue();
     }
 

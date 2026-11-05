@@ -55,6 +55,12 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         public const string LlmGenerationFailed = "llm_generation_failed";
         public const string ValidationFailedBeyondRetry = "validation_failed_beyond_retry";
         public const string PipelineCrashed = "pipeline_crashed";
+
+        /// <summary>
+        /// The analysis sat in <see cref="MechanicAnalysisStatus.Draft"/> past the configured age, so the pipeline
+        /// that owned it is presumed dead (a restart loses the in-memory background task). Issue #4503.
+        /// </summary>
+        public const string StaleDraftExpired = "stale_draft_expired";
     }
 
     // === Core identity / lineage ===

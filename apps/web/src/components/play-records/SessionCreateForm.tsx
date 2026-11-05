@@ -45,6 +45,7 @@ import type { PlayRecordDraftState } from '@/lib/play-records/draft-types';
 import { usePlayRecordDraftPersist } from '@/lib/play-records/hooks/usePlayRecordDraftPersist';
 import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 import { cn } from '@/lib/utils';
+import { isoToDatetimeLocalValue } from '@/lib/utils/datetimeLocal';
 
 import { DraftAutosaveIndicator } from './DraftAutosaveIndicator';
 
@@ -56,9 +57,15 @@ export interface SessionCreateFormProps {
    * component state (not a react-hook-form field), so it is passed as a second
    * argument — the create flow persists players + their scores + location, which
    * the form-data alone omitted. `onSubmit` may be async; the form waits for it
-   * before clearing the draft/state so a failed create keeps the entered data.
+   * before clearing the draft/state. Answer `false` when the data was NOT saved
+   * (the caller has already told the user why): the form then keeps what was
+   * typed, for a retry. Any other answer, `undefined` included, means saved.
+   * Rejecting is not the way: `form.handleSubmit` would rethrow it unhandled.
    */
-  onSubmit: (data: SessionCreateFormData, players: PlayerEntry[]) => void | Promise<void>;
+  onSubmit: (
+    data: SessionCreateFormData,
+    players: PlayerEntry[]
+  ) => void | boolean | Promise<void | boolean>;
   onCancel?: () => void;
   isSubmitting?: boolean;
   /**
@@ -451,9 +458,26 @@ function Step2Quando({ form, t }: Step2Props) {
             <FormControl>
               <Input
                 type="datetime-local"
-                value={field.value instanceof Date ? field.value.toISOString().slice(0, 16) : ''}
-                onChange={e => field.onChange(new Date(e.target.value))}
-                max={new Date().toISOString().slice(0, 16)}
+                // #4785: a datetime-local string is a wall clock, and `onChange` reads it as local time,
+                // so the value and the cap are written as local time too.
+                value={
+                  field.value instanceof Date
+                    ? isoToDatetimeLocalValue(field.value.toISOString())
+                    : ''
+                }
+                // #4788: what is not a date is «no date» — `''` for an emptied input, `NaN` for a year of
+                // more than four digits (`new Date('20271-10-30T20:00')`) — never an invalid `Date`, which is
+                // still `instanceof Date` and made the line above throw. `z.date()` then asks for one.
+                // `null`, not `undefined`: react-hook-form answers an `undefined` value with the field's
+                // default (today), so the field would refill itself while the step said the date was missing.
+                // The form validates on «Avanti», not on change: a date chosen takes the message away here.
+                onChange={e => {
+                  const date = new Date(e.target.value);
+                  const isDate = !Number.isNaN(date.getTime());
+                  field.onChange(isDate ? date : null);
+                  if (isDate) form.clearErrors('sessionDate');
+                }}
+                max={isoToDatetimeLocalValue(new Date().toISOString())}
               />
             </FormControl>
             <FormMessage />
@@ -809,8 +833,10 @@ export function SessionCreateForm({
     }
     // Issue #2847 (#BB): pass the roster so the create flow can persist players +
     // scores + location. Await the (possibly async) submit BEFORE clearing so a
-    // failed create leaves the entered data intact for a retry.
-    await onSubmit(data, players);
+    // failed save leaves the entered data intact for a retry. The pages catch their own errors and
+    // resolve, so «failed» is the answer `false`: both pages give it (#4793 edit, #4800 create).
+    const saved = await onSubmit(data, players);
+    if (saved === false) return;
     clear();
     resetSessionCreation();
     form.reset();
@@ -877,13 +903,17 @@ export function SessionCreateForm({
       </div>
 
       <div className="flex gap-2">
+        {/* Distinct keys on purpose: with the same element in the same slot React reuses one DOM node and flips its
+            `type` from "button" to "submit" while the click that advanced the wizard is still being dispatched, so the
+            browser's activation behaviour for that click submits the form on the final step and creates an empty
+            record (Punteggi is never shown). A new node means the clicked one is detached and cannot submit. */}
         {currentStep < STEP_COUNT - 1 ? (
-          <Button type="button" onClick={handleNext} disabled={isSubmitting}>
+          <Button key="wizard-next" type="button" onClick={handleNext} disabled={isSubmitting}>
             {t('actions.next')}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         ) : (
-          <Button type="submit" form={formId} disabled={isSubmitting}>
+          <Button key="wizard-save" type="submit" form={formId} disabled={isSubmitting}>
             {isSubmitting ? (
               <>{t('actions.saving')}</>
             ) : (

@@ -52,6 +52,7 @@ export function OwnershipDeclarationDialog({
     try {
       const result = await api.library.declareOwnership(gameId);
       onOwnershipDeclared(result);
+      setConfirmed(false);
       onOpenChange(false);
     } catch (error) {
       // #4155: il 404 significa che il gioco non è (più) in libreria, e il messaggio del
@@ -78,7 +79,10 @@ export function OwnershipDeclarationDialog({
     <AlertDialog
       open={open}
       onOpenChange={v => {
-        if (!isLoading) onOpenChange(v);
+        if (isLoading) return;
+        // #4756: whichever way it closes (Escape included), the next offer starts unticked.
+        if (!v) setConfirmed(false);
+        onOpenChange(v);
       }}
     >
       <AlertDialogContent className="bg-card/70 backdrop-blur-md">

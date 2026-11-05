@@ -65,6 +65,10 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         var entity = MapToEntity(sharedGame);
         AddChildRows(entity, sharedGame);
         await DbContext.Set<SharedGameEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+
+        // #4566: senza questa chiamata gli eventi registrati dall'aggregato (SharedGameCreatedEvent, ...) non
+        // arrivavano mai al collector e SaveChangesAsync non li metteva in coda: nessun handler li vedeva.
+        CollectDomainEvents(sharedGame);
     }
 
     /// <summary>
@@ -97,6 +101,9 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         }
 
         await DbContext.Set<SharedGameEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+
+        // #4566: vedi l'overload senza nomi.
+        CollectDomainEvents(sharedGame);
     }
 
     /// <summary>
@@ -286,6 +293,11 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             quickQuestionsRead,
             sharedGame.QuickQuestions.ToDictionary(q => q.Id, MapQuickQuestionToEntity),
             CopyOf);
+
+        // #4566: gli eventi che il comando ha fatto registrare all'aggregato (archiviato, eliminato, inviato in
+        // approvazione, errata e FAQ aggiunte, ...) passano al collector; senza questa riga restavano nella
+        // lista dell'aggregato e si perdevano con lui.
+        CollectDomainEvents(sharedGame);
     }
 
     /// <summary>

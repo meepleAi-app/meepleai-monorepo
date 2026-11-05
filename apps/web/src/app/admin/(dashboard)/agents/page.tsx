@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
+import { formatExecutionQuery } from '@/lib/format/rag-execution-query';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -477,7 +478,9 @@ export default function MissionControlPage() {
                       key={exec.id}
                       className="border-b border-border/60 dark:border-zinc-800/40 last:border-0"
                     >
-                      <td className="py-2 pr-4 max-w-[280px] truncate">{exec.query}</td>
+                      <td className="py-2 pr-4 max-w-[280px] truncate">
+                        {formatExecutionQuery(exec.query)}
+                      </td>
                       <td className="py-2 pr-4">
                         <Badge variant="secondary" className="text-xs">
                           {exec.strategy}

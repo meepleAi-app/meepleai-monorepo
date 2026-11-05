@@ -25,6 +25,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// </list>
 /// The web client sends a private game's id in <c>gameId</c>, so both request fields go through
 /// the same check.
+/// <para>
+/// <b>A thread needs a game (#4730).</b> A chat answers from the rulebook of a game; created without one it
+/// opens as a dead end (the view says «i messaggi vengono salvati ma non ricevono risposta», #4139). The web
+/// start (#4715) and the agent cards (#4857) no longer offer it, and this is the server saying the same: a
+/// request with neither <c>gameId</c> nor <c>privateGameId</c> is a 400 (<c>validation_error</c>), and nothing
+/// is stored. The check comes first, before any query.
+/// </para>
 /// </remarks>
 internal sealed class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThreadCommand, ChatThreadDto>
 {
@@ -46,9 +53,14 @@ internal sealed class CreateChatThreadCommandHandler : ICommandHandler<CreateCha
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var gameId = command.PrivateGameId ?? command.GameId;
-        var gameIsPrivate = gameId.HasValue
-            && await IsCallersPrivateGameAsync(gameId.Value, command.UserId, cancellationToken).ConfigureAwait(false);
+        var requestedGameId = command.PrivateGameId ?? command.GameId;
+        if (requestedGameId is not { } gameId)
+        {
+            throw new Api.SharedKernel.Domain.Exceptions.ValidationException(
+                "A chat thread needs a game: it answers from the rulebook of one. Send gameId (or privateGameId).");
+        }
+
+        var gameIsPrivate = await IsCallersPrivateGameAsync(gameId, command.UserId, cancellationToken).ConfigureAwait(false);
 
         var thread = new ChatThread(
             id: Guid.NewGuid(),

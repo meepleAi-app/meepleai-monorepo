@@ -40,7 +40,7 @@ export interface RegisterPageContentProps {
 
 export function RegisterPageContent({ oauthDisabled = false }: RegisterPageContentProps) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   // #4190: AuthProvider, non l'hook omonimo di @/hooks/useAuth, che teneva l'utente in uno stato
   // suo e lasciava AuthProvider fermo all'anonimo letto al montaggio di /register.
   const { register } = useAuth();
@@ -92,6 +92,9 @@ export function RegisterPageContent({ oauthDisabled = false }: RegisterPageConte
           // #2954 F1: the form only submits when the required ToS checkbox is checked,
           // so acceptance is always true here. The backend records + stamps it server-side.
           termsAccepted: true,
+          // #4783: the language the page is shown in. Without it every account was born English, and
+          // an Italian speaker invited their friends in English until they opened Preferences.
+          locale,
         });
         trackSignUp({ method: 'email' });
 
@@ -110,7 +113,7 @@ export function RegisterPageContent({ oauthDisabled = false }: RegisterPageConte
         setIsAuthenticating(false);
       }
     },
-    [register, router, t]
+    [register, router, t, locale]
   );
 
   const handleOAuthLogin = useCallback((provider: 'google' | 'discord' | 'github') => {

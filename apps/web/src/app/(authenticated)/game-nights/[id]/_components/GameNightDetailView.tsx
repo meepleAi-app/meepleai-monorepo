@@ -34,6 +34,7 @@ import {
   GameNightDetailHero,
   GameNightRsvpActionBar,
   GameNightRsvpRow,
+  GuestInvitationWithdraw,
 } from '@/components/features/game-night-detail';
 import { VotingPanel } from '@/components/features/game-night-detail/voting/VotingPanel';
 import { GameNightActions } from '@/components/game-night/GameNightActions';
@@ -51,7 +52,12 @@ import { useSharedGames, useSharedGamesByIds } from '@/hooks/queries/useSharedGa
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { GameNightStatus } from '@/lib/api/schemas/game-nights.schemas';
+import type {
+  GameNightStatus,
+  GuestInvitationStatus,
+  RsvpStatus,
+} from '@/lib/api/schemas/game-nights.schemas';
+import { useGameNightSessions } from '@/lib/game-nights/hooks/useGameNightSessions';
 import type { RsvpResponse } from '@/lib/game-nights/rsvp-state-machine';
 import { cn } from '@/lib/utils';
 import { useGameNightStore } from '@/stores/game-night';
@@ -89,6 +95,16 @@ function MobileStickyBar({
   );
 }
 
+/**
+ * #4706: the row of a guest invited by email reuses the member row, which draws four states. An
+ * expired invitation is drawn as waiting (the label says "scaduto"): nobody declined.
+ */
+function guestRsvpStatus(status: GuestInvitationStatus): RsvpStatus {
+  if (status === 'Accepted') return 'Accepted';
+  if (status === 'Declined') return 'Declined';
+  return 'Pending';
+}
+
 export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -102,7 +118,16 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const publishMutation = usePublishGameNight();
   const cancelMutation = useCancelGameNight();
 
-  const { event, rsvps, actor, isLoading, isError, currentResponse, pendingResponse } = detail;
+  const {
+    event,
+    rsvps,
+    guestInvitations,
+    actor,
+    isLoading,
+    isError,
+    currentResponse,
+    pendingResponse,
+  } = detail;
 
   const isDraft = event?.status === 'Draft';
   const needsCatalog = isDraft || event?.status === 'Published';
@@ -124,7 +149,18 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
     true
   );
 
-  const { addPlayer, addGame, reset, activeSessions } = useGameNightStore();
+  const { addPlayer, addGame, reset } = useGameNightStore();
+
+  // #4752: the games of the night come from the night-live read — the one source that knows each sitting's
+  // status and its live game. They used to come from the planning store's `activeSessions`, which no
+  // production code ever filled: the list was always empty, `hasActiveSession` always false and «Concludi
+  // serata» always off. Once the first game starts the night is InProgress, not Published, so the read is
+  // enabled for every state in which games exist. A viewer the read refuses (403) just sees an empty list.
+  const hasGames =
+    event?.status === 'Published' ||
+    event?.status === 'InProgress' ||
+    event?.status === 'Completed';
+  const { data: sessions = [] } = useGameNightSessions(id, hasGames);
 
   // Sync accepted RSVPs and game IDs from the event into the planning store
   // (preserves legacy behaviour for Draft events).
@@ -259,6 +295,10 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
 
   const isCancelled = event.status === 'Cancelled';
   const isCompleted = event.status === 'Completed';
+  // `isLive` is Published (the night is open for RSVPs and voting); `isInProgress` is a night whose first
+  // game has started — the page must keep showing the games and «Aggiungi partita» / «Concludi serata» then
+  // (#4752: both used to vanish the moment the first game started).
+  const isInProgress = event.status === 'InProgress';
   const isLive = event.status === 'Published';
 
   // #2723: Published events surface a Dettagli|Votazione tab strip (ADR-061 tab-canonical),
@@ -266,7 +306,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   // shows the RSVP / session / roster body.
   const votingTabActive = isLive && searchParams.get('tab') === 'voting';
   const showDetailsContent = !votingTabActive;
-  const hasActiveSession = activeSessions.some(s => s.status === 'in_progress');
+  const hasActiveSession = sessions.some(s => s.status === 'in_progress');
 
   // Explicit status → i18n key map. Deriving the key via toLowerCase() produced
   // 'inprogress' for the 'InProgress' status, which did not match the camelCase
@@ -339,6 +379,11 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         return 0;
       })
     : [];
+
+  // #4706: guests invited by email, listed after the members. Only the host receives them. A cancelled
+  // invitation is a guest the organizer withdrew, so it is not a participant any more.
+  const guestRows = (guestInvitations ?? []).filter(g => g.status !== 'Cancelled');
+  const participantCount = sortedRsvps.length + guestRows.length;
 
   const cancelledBannerLabels = {
     title: t('gameNightDetail.cancelled.title'),
@@ -502,34 +547,33 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         <VotingPanel gameNightId={id} isOrganizer={isHost} gameTitleById={gameTitleById} />
       )}
 
-      {/* Live / Completed: session flow sections under hero (details tab). */}
-      {(isLive || isCompleted) && showDetailsContent && (
+      {/* Live / In progress / Completed: session flow sections under hero (details tab). */}
+      {(isLive || isInProgress || isCompleted) && showDetailsContent && (
         <>
-          <GameNightActions
-            gameNightId={id}
-            hasActiveSession={hasActiveSession}
-            sessionCount={activeSessions.length}
-            isCompleted={isCompleted}
-          />
-          <GameNightSessionsList
-            sessions={activeSessions}
-            gameNightId={id}
-            isCompleted={isCompleted}
-          />
+          {/* Organizer-only on the server (403 for anyone else): a guest would only meet the error after clicking. */}
+          {isHost && (
+            <GameNightActions
+              gameNightId={id}
+              hasActiveSession={hasActiveSession}
+              sessionCount={sessions.length}
+              isCompleted={isCompleted}
+            />
+          )}
+          <GameNightSessionsList sessions={sessions} gameNightId={id} isCompleted={isCompleted} />
           <GameNightDiaryPanel gameNightId={id} />
         </>
       )}
 
       {/* Roster (details tab) */}
-      {sortedRsvps.length > 0 && showDetailsContent && (
+      {participantCount > 0 && showDetailsContent && (
         <section
           aria-label={t('gameNightDetail.participants.sectionTitle', {
-            count: sortedRsvps.length,
+            count: participantCount,
           })}
           className="space-y-2"
         >
           <h2 className="font-display text-base font-extrabold text-foreground">
-            {t('gameNightDetail.participants.sectionTitle', { count: sortedRsvps.length })}
+            {t('gameNightDetail.participants.sectionTitle', { count: participantCount })}
           </h2>
           <ul className="space-y-2">
             {sortedRsvps.map(rsvp => (
@@ -545,6 +589,37 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
                 />
               </li>
             ))}
+            {guestRows.map(guest => {
+              const byEmail = t('gameNightDetail.participants.guestByEmail');
+              return (
+                <li key={guest.id}>
+                  <GameNightRsvpRow
+                    userId={guest.id}
+                    userName={guest.respondedByName?.trim() || guest.email}
+                    status={guestRsvpStatus(guest.status)}
+                    statusLabel={
+                      guest.status === 'Expired'
+                        ? t('gameNightDetail.participants.rsvpStatus.expired')
+                        : rsvpStatusLabel(guest.status, false)
+                    }
+                    subtitle={
+                      guest.respondedByName?.trim() ? `${guest.email} · ${byEmail}` : byEmail
+                    }
+                    // #4721: pending and accepted invitations can be withdrawn; declined and expired are history.
+                    action={
+                      guest.status === 'Pending' || guest.status === 'Accepted' ? (
+                        <GuestInvitationWithdraw
+                          gameNightId={id}
+                          invitationId={guest.id}
+                          email={guest.email}
+                          accepted={guest.status === 'Accepted'}
+                        />
+                      ) : undefined
+                    }
+                  />
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

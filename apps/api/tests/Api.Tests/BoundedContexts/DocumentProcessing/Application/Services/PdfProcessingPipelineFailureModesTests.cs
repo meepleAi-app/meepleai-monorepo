@@ -38,6 +38,7 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
     private readonly Mock<IBlobStorageService> _blobs = new();
     private readonly Mock<IAdvancedChunkingService> _advancedChunking = new();
     private readonly Guid _pdfId = Guid.NewGuid();
+    private readonly Api.Tests.TestHelpers.RecordingLogger<PdfProcessingPipelineService> _log = new();
     private readonly Guid _gameId = Guid.NewGuid();
 
     public PdfProcessingPipelineFailureModesTests()
@@ -92,7 +93,11 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
         outcome.Should().Be(PdfPipelineOutcome.Failed);
         var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
         pdf.ProcessingState.Should().Be("Failed", "un guasto di embedding non deve lasciare il documento in Embedding");
-        pdf.ProcessingError.Should().Contain("embedding service down");
+        pdf.ProcessingError.Should().Be(
+            PdfFailureText.For(ErrorCategory.Service),
+            "#4660: the text is fixed by the category, the service's own message stays in the log");
+        pdf.ProcessingError.Should().NotContain("embedding service down");
+        _log.Entries.Should().Contain(l => l.Contains("embedding service down", StringComparison.Ordinal), "the detail is in the log");
         pdf.FailedAtState.Should().Be("Embedding");
         pdf.ErrorCategory.Should().Be(nameof(ErrorCategory.Service),
             "#4443: transitorio, come lo registra il task in background, così RetryFailedPdfsJob lo ritenta");
@@ -113,7 +118,58 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
         var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
         pdf.FailedAtState.Should().Be("Embedding");
         pdf.ErrorCategory.Should().Be(nameof(ErrorCategory.Service));
-        pdf.ProcessingError.Should().Contain("Connection refused");
+        pdf.ProcessingError.Should().Be(PdfFailureText.For(ErrorCategory.Service));
+        pdf.ProcessingError.Should().NotContain("Connection refused");
+        _log.Entries.Should().Contain(l => l.Contains("Connection refused", StringComparison.Ordinal), "the detail is in the log");
+    }
+
+    /// <summary>
+    /// #4660: l'eccezione imprevista (il ramo generico) porta un testo fisso, non il suo messaggio: quella colonna
+    /// la serve pdf-status agli utenti. Il messaggio resta nel log, che il ramo scrive con l'eccezione.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4660")]
+    public async Task ProcessAsync_WhenSomethingUnexpectedThrows_StoresTheFixedTextNotTheMessage()
+    {
+        SeedPendingPdf();
+        _advancedChunking
+            .Setup(s => s.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidCastException("secret-host.internal:5432 /var/data/pdfs/rules.pdf"));
+
+        var outcome = await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        outcome.Should().Be(PdfPipelineOutcome.Failed);
+        var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
+        pdf.ProcessingState.Should().Be("Failed");
+        pdf.ProcessingError.Should().Be(PdfFailureText.For(ErrorCategory.Unknown));
+        pdf.ProcessingError.Should().NotContain("secret-host");
+        _log.Entries.Should().Contain(l => l.Contains("secret-host.internal", StringComparison.Ordinal), "the detail is in the log");
+    }
+
+    /// <summary>
+    /// #4660: l'estrattore fallisce con un messaggio che nomina un servizio interno. La colonna porta il testo fisso
+    /// della categoria: <c>PayloadTooLarge</c> se il fallimento è permanente, altrimenti nessuna categoria (ritentabile)
+    /// e il testo di <c>Unknown</c>.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4660")]
+    [InlineData(true, nameof(ErrorCategory.PayloadTooLarge))]
+    [InlineData(false, null)]
+    public async Task ProcessAsync_WhenTheExtractorFails_StoresTheFixedTextOfTheCategory(bool permanent, string? expectedCategory)
+    {
+        SeedPendingPdf();
+        _extractor.Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedTextExtractionResult.CreateFailure(
+                "unstructured-service at http://10.0.0.5:8000 answered 413", isPermanentFailure: permanent));
+
+        var outcome = await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        outcome.Should().Be(PdfPipelineOutcome.Failed);
+        var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
+        pdf.ErrorCategory.Should().Be(expectedCategory);
+        pdf.ProcessingError.Should().Be(PdfFailureText.For(permanent ? ErrorCategory.PayloadTooLarge : ErrorCategory.Unknown));
+        pdf.ProcessingError.Should().NotContain("10.0.0.5");
+        _log.Entries.Should().Contain(l => l.Contains("10.0.0.5", StringComparison.Ordinal), "the detail is in the log");
     }
 
     [Fact]
@@ -153,7 +209,7 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
             _embeddings.Object,
             _blobs.Object,
             TimeProvider.System,
-            NullLogger<PdfProcessingPipelineService>.Instance,
+            _log,
             language.Object,
             Mock.Of<IChunkTranslationService>(),
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.IPdfIndexingPipeline>(),

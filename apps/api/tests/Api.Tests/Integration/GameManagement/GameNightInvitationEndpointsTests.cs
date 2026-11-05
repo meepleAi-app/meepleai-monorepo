@@ -55,7 +55,7 @@ public sealed class GameNightInvitationHostFixture(SharedTestcontainersFixture s
             .Setup(s => s.SendGameNightInvitationEmailAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -116,7 +116,7 @@ public sealed class GameNightInvitationEndpointsTests
     // Helpers
     // ────────────────────────────────────────────────────────────────────
 
-    private async Task<Guid> SeedGameNightAsync(Guid organizerId, string title = "Test Night")
+    private async Task<Guid> SeedGameNightAsync(Guid organizerId, string title = "Test Night", string status = "Published")
     {
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -131,7 +131,7 @@ public sealed class GameNightInvitationEndpointsTests
             Location = "Home",
             MaxPlayers = 6,
             GameIdsJson = "[]",
-            Status = "Published",
+            Status = status,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
@@ -155,6 +155,7 @@ public sealed class GameNightInvitationEndpointsTests
         {
             Id = Guid.NewGuid(),
             Token = GenerateToken(),
+            UnsubscribeKey = GenerateToken(),
             GameNightId = gameNightId,
             Email = email.Trim().ToLowerInvariant(),
             Status = status,
@@ -239,6 +240,78 @@ public sealed class GameNightInvitationEndpointsTests
         var dto = await response.Content.ReadFromJsonAsync<PublicGameNightInvitationDto>();
         dto!.Status.Should().Be("Accepted");
         dto.AlreadyRespondedAs.Should().Be("Accepted");
+    }
+
+    // A link that is no longer alive shows nothing of the night (#4745, #4856).
+
+    [Theory]
+    [InlineData("Cancelled")]
+    [InlineData("Expired")]
+    public async Task GetInvitationByToken_AnInvitationNoLongerAlive_ShowsOnlyItsStateAndTheHost(string status)
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId, title: "Secret Night");
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId, status: status);
+
+        var response = await _client.GetAsync($"/api/v1/game-nights/invitations/{invitation.Token}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().NotContain("Secret Night", "the title of the night is not shown to a link that is not alive");
+        var dto = await response.Content.ReadFromJsonAsync<PublicGameNightInvitationDto>();
+        dto!.Status.Should().Be(status);
+        dto.Title.Should().BeEmpty();
+        dto.Location.Should().BeNull("the place of the night is not shown either");
+        dto.ScheduledAt.Should().Be(default(DateTimeOffset));
+        dto.GameNightId.Should().Be(Guid.Empty);
+        dto.ExpectedPlayers.Should().Be(0);
+        dto.AcceptedSoFar.Should().Be(0);
+        dto.NightCancelled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetInvitationByToken_ACancelledNight_SaysSo_AndShowsNothingOfTheNight()
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId, title: "Secret Night", status: "Cancelled");
+        var invitation = await SeedInvitationAsync(
+            gameNightId, organizerId, status: "Accepted", respondedAt: DateTimeOffset.UtcNow);
+
+        var response = await _client.GetAsync($"/api/v1/game-nights/invitations/{invitation.Token}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().NotContain("Secret Night");
+        var dto = await response.Content.ReadFromJsonAsync<PublicGameNightInvitationDto>();
+        dto!.Location.Should().BeNull();
+        dto.ScheduledAt.Should().Be(default(DateTimeOffset));
+        dto.NightCancelled.Should().BeTrue();
+        dto.Status.Should().Be("Accepted", "the invitation keeps its own state: it is the night that was cancelled");
+        dto.AlreadyRespondedAs.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("Pending", "Accepted")]
+    [InlineData("Accepted", "Accepted")]
+    [InlineData("Accepted", "Declined")]
+    public async Task RespondByToken_ACancelledNight_Returns410_AndLeavesTheInvitationAsItWas(string stored, string answer)
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId, status: "Cancelled");
+        var invitation = await SeedInvitationAsync(
+            gameNightId, organizerId,
+            status: stored,
+            respondedAt: stored == "Pending" ? null : DateTimeOffset.UtcNow);
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/game-nights/invitations/{invitation.Token}/respond",
+            new { Response = answer });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Gone);
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var after = await dbContext.GameNightInvitations.AsNoTracking().SingleAsync(i => i.Id == invitation.Id);
+        after.Status.Should().Be(stored);
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -746,5 +819,123 @@ public sealed class GameNightInvitationEndpointsTests
         // FluentValidation pipeline surfaces invalid email as 400 BadRequest or 422 UnprocessableEntity
         // depending on configuration; both indicate validation failure.
         ((int)response.StatusCode).Should().BeOneOf(400, 422);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // POST /game-nights/guest-unsubscribe/{key} — #4846
+    // ────────────────────────────────────────────────────────────────────
+
+    private async Task<string[]> OptedOutAddressesAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await dbContext.GameNightGuestEmailOptOuts
+            .AsNoTracking()
+            .Select(o => o.Email)
+            .ToArrayAsync();
+    }
+
+    [Theory]
+    [InlineData("Pending")]
+    [InlineData("Accepted")]
+    [InlineData("Declined")]
+    [InlineData("Cancelled")]
+    [InlineData("Expired")]
+    public async Task UnsubscribeByToken_Anonymous_Returns204AndPutsTheAddressOnTheList_WhateverTheInvitationState(
+        string status)
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(
+            gameNightId, organizerId,
+            email: "Stop.Me@Example.com",
+            status: status,
+            expiresAt: status == "Expired" ? DateTimeOffset.UtcNow.AddDays(-1) : null);
+
+        var response = await _client.PostAsync(
+            $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await OptedOutAddressesAsync()).Should().Equal("stop.me@example.com");
+    }
+
+    [Fact]
+    public async Task UnsubscribeByToken_TwiceForTheSameAddress_StaysOnSuccessAndKeepsOneEntry()
+    {
+        var organizerId = Guid.NewGuid();
+        var firstNight = await SeedGameNightAsync(organizerId, "First");
+        var secondNight = await SeedGameNightAsync(organizerId, "Second");
+        var first = await SeedInvitationAsync(firstNight, organizerId, email: "guest@example.com");
+        var second = await SeedInvitationAsync(secondNight, organizerId, email: "guest@example.com");
+
+        var one = await _client.PostAsync($"/api/v1/game-nights/guest-unsubscribe/{first.UnsubscribeKey}", content: null);
+        var two = await _client.PostAsync($"/api/v1/game-nights/guest-unsubscribe/{second.UnsubscribeKey}", content: null);
+
+        one.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        two.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await OptedOutAddressesAsync()).Should().Equal("guest@example.com");
+    }
+
+    [Fact]
+    public async Task UnsubscribeByToken_UnknownToken_Returns404AndStoresNothing()
+    {
+        var response = await _client.PostAsync(
+            "/api/v1/game-nights/guest-unsubscribe/UnknownKeyAbcdef1234567", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await OptedOutAddressesAsync()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UnsubscribeByToken_DoesNotTouchTheInvitationItself()
+    {
+        // «Stop writing to me» is not «decline»: a guest who accepted and then stopped the emails still holds
+        // their seat, and the organizer's view of the night does not change.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(
+            gameNightId, organizerId, status: "Accepted", respondedAt: DateTimeOffset.UtcNow);
+
+        var response = await _client.PostAsync(
+            $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var persisted = await dbContext.GameNightInvitations.AsNoTracking().FirstAsync(i => i.Id == invitation.Id);
+        persisted.Status.Should().Be("Accepted");
+    }
+
+    [Fact]
+    public async Task UnsubscribeByKey_TheRsvpToken_IsNotTheKey_TheOrganizerHoldsIt()
+    {
+        // The token comes back to the organizer in the 201 of the creation. If it opted the address out, any member
+        // could silence any address for every organizer by inviting it and calling this endpoint.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+
+        var response = await _client.PostAsync(
+            $"/api/v1/game-nights/guest-unsubscribe/{invitation.Token}", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await OptedOutAddressesAsync()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UnsubscribeByKey_TwoTapsAtTheSameTime_BothSucceed_AndTheListHasOneEntry()
+    {
+        // Both can read «not yet on the list»; the unique index lets one insert win and the other must still end
+        // as the success the guest asked for. (Whether the two really collide depends on the timing; the unit test
+        // of the handler fakes the 23505. This is the same path against the real index.)
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+        var url = $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}";
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 6).Select(_ => _client.PostAsync(url, content: null)));
+
+        responses.Select(r => r.StatusCode).Should().AllBeEquivalentTo(HttpStatusCode.NoContent);
+        (await OptedOutAddressesAsync()).Should().Equal("guest@example.com");
     }
 }

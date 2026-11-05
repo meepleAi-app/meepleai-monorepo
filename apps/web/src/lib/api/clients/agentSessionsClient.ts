@@ -25,15 +25,6 @@ export const LaunchSessionAgentResponseSchema = z.object({
   agentSessionId: z.string().uuid(),
 });
 
-export const UpdateAgentSessionConfigRequestSchema = z.object({
-  agentSessionId: z.string().uuid(),
-  modelType: z.string(),
-  temperature: z.number().min(0).max(2),
-  maxTokens: z.number().min(1).max(128000),
-  ragStrategy: z.string(),
-  ragParams: z.record(z.string(), z.unknown()).optional(),
-});
-
 export const EndSessionAgentRequestSchema = z.object({
   agentSessionId: z.string().uuid(),
 });
@@ -42,7 +33,6 @@ export const EndSessionAgentRequestSchema = z.object({
 
 export type LaunchSessionAgentRequest = z.infer<typeof LaunchSessionAgentRequestSchema>;
 export type LaunchSessionAgentResponse = z.infer<typeof LaunchSessionAgentResponseSchema>;
-export type UpdateAgentSessionConfigRequest = z.infer<typeof UpdateAgentSessionConfigRequestSchema>;
 
 export interface CreateAgentSessionsClientParams {
   httpClient: HttpClient;
@@ -77,24 +67,6 @@ export function createAgentSessionsClient({ httpClient }: CreateAgentSessionsCli
       }
 
       return response;
-    },
-
-    /**
-     * Update agent session configuration
-     * PATCH /api/v1/game-sessions/{gameSessionId}/agent/config
-     *
-     * @param gameSessionId The game session ID
-     * @param config Configuration update
-     */
-    async updateConfig(
-      gameSessionId: string,
-      config: UpdateAgentSessionConfigRequest
-    ): Promise<void> {
-      await httpClient.patch<void>(
-        `/api/v1/game-sessions/${encodeURIComponent(gameSessionId)}/agent/config`,
-        config,
-        undefined
-      );
     },
 
     /**

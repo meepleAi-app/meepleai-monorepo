@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QaTooManyRequestsError } from '@/components/chat-unified/qaStreamErrors';
 import { kbAskClient } from '../kbAskClient';
 import type { KbAskEvent } from '../../schemas/kb-ask.schemas';
 
@@ -59,6 +60,22 @@ describe('kbAskClient.askGlobal', () => {
       expect.stringContaining('/api/v1/knowledge-base/ask/global'),
       expect.objectContaining({ method: 'POST' })
     );
+  });
+
+  /** #4388: due risposte aperte per utente; la terza riceve 429 e la vista deve poterlo dire. */
+  it('throws the too-many-requests error on a 429', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce(new Response('{}', { status: 429 }));
+
+    const failure = await (async () => {
+      for await (const _ of kbAskClient.askGlobal({ query: 'q' }, new AbortController().signal)) {
+        /* drain */
+      }
+    })().then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(failure).toBeInstanceOf(QaTooManyRequestsError);
   });
 
   it('throws on non-200 HTTP status', async () => {

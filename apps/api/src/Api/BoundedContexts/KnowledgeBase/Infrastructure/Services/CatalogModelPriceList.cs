@@ -63,12 +63,17 @@ internal sealed class CatalogModelPriceList : IModelPriceList, IHostedService, I
     /// <inheritdoc/>
     public LlmModelPricing? Find(string modelId)
     {
+        // #4765: read the snapshot BEFORE scheduling the refresh. The refresh runs on another thread
+        // and swaps `_prices`; read afterwards, a fast refresh could be what this very call returns,
+        // so «serve the old snapshot while reloading» held only if the thread was not descheduled
+        // between the two lines.
+        var prices = _prices;
+
         if (_timeProvider.GetUtcNow().UtcTicks >= Interlocked.Read(ref _nextRefreshUtcTicks))
         {
             ScheduleRefresh();
         }
 
-        var prices = _prices;
         if (prices is null || string.IsNullOrEmpty(modelId))
         {
             return null;

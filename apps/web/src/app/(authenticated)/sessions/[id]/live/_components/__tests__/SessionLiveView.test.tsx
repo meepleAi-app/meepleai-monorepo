@@ -245,6 +245,7 @@ vi.mock('@/lib/session-live/use-resolve-play-record', () => ({
 
 const getHistoryMock = vi.hoisted(() => vi.fn());
 const resumeSessionMock = vi.hoisted(() => vi.fn());
+const startSessionMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -253,6 +254,7 @@ vi.mock('@/lib/api', () => ({
     },
     liveSessions: {
       resumeSession: resumeSessionMock,
+      startSession: startSessionMock,
     },
   },
 }));
@@ -298,8 +300,15 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.topBar.sessionTitleAriaLabel': 'Sessione: {name}',
   'pages.sessionLive.topBar.turnLabel':
     '{count, plural, =0 {Inizio} =1 {Turno 1/{total}} other {Turno #/{total}}}',
+  'pages.sessionLive.topBar.turnLabelNoTotal': '{count, plural, =0 {Inizio} other {Turno #}}',
   'pages.sessionLive.topBar.statusInProgress': 'In corso',
   'pages.sessionLive.topBar.statusPaused': 'In pausa',
+  'pages.sessionLive.topBar.statusCompleted': 'Conclusa',
+  'pages.sessionLive.topBar.statusNotStarted': 'Non avviata',
+  'pages.sessionLive.topBar.startCta': 'Avvia partita',
+  'pages.sessionLive.topBar.startErrorToast': 'Impossibile avviare la partita. Riprova.',
+  'pages.sessionLive.topBar.startNeedsPlayerToast':
+    'Aggiungi almeno un giocatore per avviare la partita.',
   'pages.sessionLive.topBar.pauseCta': 'Pausa',
   'pages.sessionLive.topBar.resumeCta': 'Riprendi',
   'pages.sessionLive.topBar.endgameCta': 'Termina sessione',
@@ -917,6 +926,35 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
     // Verify no raw template strings leaked (no literal '{count}' or '{total}' in DOM)
     expect(container.textContent).not.toContain('{count}');
     expect(container.textContent).not.toContain('{total}');
+  });
+
+  // A free-form session has no turn limit (the composed state carries totalTurns 0), and the top bar read "Turno 1/0".
+  it('turn label has no "/total" part when the session has no turn limit', () => {
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    // Turn 0 reads "Inizio" whatever the total, so the case that showed "Turno 1/0" needs a started turn.
+    useLiveSessionMock.mockReturnValue({
+      data: { ...MOCK_SESSION_DTO, currentTurnIndex: 1 },
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const topBar = container.querySelector('[data-slot="session-live-top-bar"]');
+    expect(topBar).toBeInTheDocument();
+    const text = topBar?.textContent ?? '';
+    expect(text).toContain('Turno 1');
+    expect(text).not.toMatch(/Turno 1\s*\/\s*0/);
+  });
+
+  it('turn label keeps "/total" when the session does have a turn limit', () => {
+    IS_VISUAL_TEST_BUILD_MOCK = true;
+    // Visual fixture: currentTurn=12, totalTurns=18
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="session-live-top-bar"]')?.textContent).toContain(
+      'Turno 12/18'
+    );
   });
 
   it('Gate A: rosterLabels playerCount ICU plural resolved (no raw template in DOM)', () => {
@@ -2382,5 +2420,310 @@ describe('SessionLiveView — #4373: only the owner of the session gets the assi
     const { container } = renderWithIntl(<SessionLiveView />);
 
     expect(panels(container)).toHaveLength(0);
+  });
+});
+
+// ─── #4750 — the creator is the host; a concluded session says so ─────────────
+
+describe('SessionLiveView — #4750: creator as host, concluded session', () => {
+  // MOCK_SESSION_DTO players carry `userId: null`, like the ones /sessions/new writes by name,
+  // so no player is linked to any account.
+  const CREATOR_ID = '44444444-4444-4444-4444-444444444444';
+
+  function mountWith(dto: LiveSessionDto, userId: string | null) {
+    useCurrentUserMock.mockReturnValue({ data: userId == null ? null : { id: userId } });
+    useLiveSessionMock.mockReturnValue({
+      data: dto,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+    return renderWithIntl(<SessionLiveView />);
+  }
+
+  const topBarOf = (container: HTMLElement) =>
+    container.querySelector('[data-slot="session-live-top-bar"]');
+  const slotIn = (container: HTMLElement, slot: string) =>
+    container.querySelector(`[data-slot="session-live-top-bar-${slot}"]`);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useCurrentUserMock.mockReturnValue({ data: null });
+  });
+
+  it('the creator is the host even when no player is linked to their account', () => {
+    const { container } = mountWith(MOCK_SESSION_DTO, CREATOR_ID);
+
+    expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Host');
+    expect(slotIn(container, 'endgame')).toBeInTheDocument();
+    expect(slotIn(container, 'endgame')).not.toHaveAttribute('aria-disabled');
+    // The bar never gets `onPause`/`onResume` from this view (follow-up): the button shows, dimmed
+    // and inert. Pinned as such, so it is not read as a working control.
+    expect(slotIn(container, 'pause')).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('a user who did not create the session and is linked to no player stays a player', () => {
+    const { container } = mountWith(MOCK_SESSION_DTO, 'someone-else');
+
+    expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Player');
+    expect(slotIn(container, 'endgame')).not.toBeInTheDocument();
+    expect(slotIn(container, 'pause')).not.toBeInTheDocument();
+  });
+
+  it('without a signed-in user nobody is the host', () => {
+    const { container } = mountWith(MOCK_SESSION_DTO, null);
+
+    expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Player');
+    expect(slotIn(container, 'endgame')).not.toBeInTheDocument();
+  });
+
+  describe('once the session is concluded', () => {
+    // 30 minutes after the start MOCK_SESSION_DTO declares; "now" is an hour after it.
+    const completedAt = new Date(
+      Date.parse(MOCK_SESSION_DTO.startedAt as string) + 30 * 60 * 1000
+    ).toISOString();
+    const COMPLETED_DTO = {
+      ...MOCK_SESSION_DTO,
+      status: 'Completed',
+      completedAt,
+    } as unknown as LiveSessionDto;
+
+    it('the header reads «Conclusa», not «In corso»', () => {
+      const { container } = mountWith(COMPLETED_DTO, CREATOR_ID);
+
+      expect(topBarOf(container)).toHaveAttribute('data-status', 'Completed');
+      expect(topBarOf(container)?.textContent).toContain('Conclusa');
+      expect(topBarOf(container)?.textContent).not.toContain('In corso');
+    });
+
+    it('not even its creator is offered pause or end', () => {
+      const { container } = mountWith(COMPLETED_DTO, CREATOR_ID);
+
+      expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Host');
+      expect(slotIn(container, 'pause')).not.toBeInTheDocument();
+      expect(slotIn(container, 'resume')).not.toBeInTheDocument();
+      expect(slotIn(container, 'endgame')).not.toBeInTheDocument();
+    });
+
+    it('the timer stops at completedAt instead of counting on', () => {
+      const { container } = mountWith(COMPLETED_DTO, CREATOR_ID);
+
+      expect(slotIn(container, 'timer')?.textContent).toBe('00:30:00');
+    });
+  });
+
+  describe('while the session has not been started (#4781)', () => {
+    // `Created` is what a session is until someone starts it: scores, rule disputes and the end of
+    // the game all answer 409 from there, so the header must not say it is running.
+    const CREATED_DTO = {
+      ...MOCK_SESSION_DTO,
+      status: 'Created',
+      startedAt: null,
+    } as unknown as LiveSessionDto;
+
+    it('the header reads «Non avviata», not «In corso»', () => {
+      const { container } = mountWith(CREATED_DTO, CREATOR_ID);
+
+      expect(topBarOf(container)).toHaveAttribute('data-status', 'NotStarted');
+      expect(topBarOf(container)?.textContent).toContain('Non avviata');
+      expect(topBarOf(container)?.textContent).not.toContain('In corso');
+    });
+
+    it('not even its creator is offered pause or end, which would both answer 409', () => {
+      const { container } = mountWith(CREATED_DTO, CREATOR_ID);
+
+      expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Host');
+      expect(slotIn(container, 'pause')).not.toBeInTheDocument();
+      expect(slotIn(container, 'resume')).not.toBeInTheDocument();
+      expect(slotIn(container, 'endgame')).not.toBeInTheDocument();
+    });
+
+    it('has no running timer, because nothing has started', () => {
+      const { container } = mountWith(CREATED_DTO, CREATOR_ID);
+
+      expect(slotIn(container, 'timer')).not.toBeInTheDocument();
+    });
+  });
+
+  // #4787: a session left `Created` (the start failed after the retry, a player did not get in)
+  // had no way to start from the live page. The server lets only its creator start it.
+  describe('starting a session that has not been started (#4787)', () => {
+    const CREATED_DTO = {
+      ...MOCK_SESSION_DTO,
+      status: 'Created',
+      startedAt: null,
+    } as unknown as LiveSessionDto;
+    const refetchMock = vi.fn();
+
+    function mountStartable(dto: LiveSessionDto, userId: string | null) {
+      useCurrentUserMock.mockReturnValue({ data: userId == null ? null : { id: userId } });
+      useLiveSessionMock.mockReturnValue({
+        data: dto,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        error: null,
+        refetch: refetchMock,
+      } as unknown as MockSessionReturn);
+      return renderWithIntl(<SessionLiveView />);
+    }
+
+    beforeEach(() => {
+      startSessionMock.mockReset();
+      startSessionMock.mockResolvedValue(undefined);
+      refetchMock.mockReset();
+      refetchMock.mockResolvedValue(undefined);
+    });
+
+    it('the creator starts it with one call, and the view is refreshed afterwards', async () => {
+      const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+      expect(slotIn(container, 'start')).toHaveTextContent('Avvia partita');
+
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+
+      expect(startSessionMock).toHaveBeenCalledTimes(1);
+      expect(startSessionMock).toHaveBeenCalledWith('session-abc-123');
+      expect(refetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('whoever only holds the first seat is not offered it: the server answers 403 to them', () => {
+      // Linked to a player with the Host role, but not the creator: `viewerRole` reads `Host`.
+      const seatHolderDto = {
+        ...CREATED_DTO,
+        players: [
+          { ...CREATED_DTO.players[0], userId: 'seat-holder', role: 'Host' },
+          ...CREATED_DTO.players.slice(1),
+        ],
+      } as unknown as LiveSessionDto;
+
+      const { container } = mountStartable(seatHolderDto, 'seat-holder');
+
+      expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Host');
+      expect(slotIn(container, 'start')).not.toBeInTheDocument();
+    });
+
+    it('a plain player, and a visitor, are not offered it', () => {
+      expect(slotIn(mountStartable(CREATED_DTO, 'someone-else').container, 'start')).toBeNull();
+    });
+
+    it('is not offered once the session runs', () => {
+      const { container } = mountStartable(
+        { ...MOCK_SESSION_DTO, status: 'InProgress' } as unknown as LiveSessionDto,
+        CREATOR_ID
+      );
+
+      expect(slotIn(container, 'start')).not.toBeInTheDocument();
+    });
+
+    it('a second tap while the start is in flight does not send another', async () => {
+      let finishStart: () => void = () => undefined;
+      startSessionMock.mockReturnValue(
+        new Promise<void>(resolve => {
+          finishStart = resolve;
+        })
+      );
+      const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+
+      // Both taps in the same frame: neither has seen the re-render the first one causes, so the
+      // bar's own «pending» guard cannot help; only the handler's in-flight ref does.
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+      expect(startSessionMock).toHaveBeenCalledTimes(1);
+      expect(slotIn(container, 'start')).toHaveAttribute('aria-disabled', 'true');
+
+      await act(async () => {
+        finishStart();
+      });
+      expect(refetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('a 409 is not an error when the session turns out started: an answer that was lost', async () => {
+      const { ConflictError } = await import('@/lib/api/core/errors');
+      startSessionMock.mockRejectedValue(new ConflictError({ message: 'already started' }));
+      refetchMock.mockResolvedValue({ data: { ...CREATED_DTO, status: 'InProgress' } });
+      const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+
+      const { toast } = await import('sonner');
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(refetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['Created', 'Setup'])(
+      'a 409 IS an error when the session is still %s afterwards: the start was refused',
+      async status => {
+        // The server answers 409 for a wrong status and also for "no active players" (a session opened
+        // from a typed game name). Swallowing it left a button that did nothing and said nothing.
+        const { ConflictError } = await import('@/lib/api/core/errors');
+        startSessionMock.mockRejectedValue(
+          new ConflictError({ message: 'Cannot start session without any active players' })
+        );
+        refetchMock.mockResolvedValue({ data: { ...CREATED_DTO, status } });
+        const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+
+        await act(async () => {
+          fireEvent.click(slotIn(container, 'start') as HTMLElement);
+        });
+
+        const { toast } = await import('sonner');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Impossibile avviare la partita. Riprova.',
+          expect.anything()
+        );
+        expect(slotIn(container, 'start')).not.toHaveAttribute('aria-disabled');
+      }
+    );
+
+    it('with no active player it says so, without asking the server', async () => {
+      const emptyDto = {
+        ...CREATED_DTO,
+        players: CREATED_DTO.players.map(p => ({ ...p, isActive: false })),
+      } as unknown as LiveSessionDto;
+      const { container } = mountStartable(emptyDto, CREATOR_ID);
+
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+
+      const { toast } = await import('sonner');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Aggiungi almeno un giocatore per avviare la partita.',
+        expect.anything()
+      );
+      expect(startSessionMock).not.toHaveBeenCalled();
+    });
+
+    it('any other failure reads in Italian, and the command stays available', async () => {
+      startSessionMock.mockRejectedValue(new Error('Internal Server Error'));
+      const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+
+      const { toast } = await import('sonner');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Impossibile avviare la partita. Riprova.',
+        expect.anything()
+      );
+      expect(slotIn(container, 'start')).toBeInTheDocument();
+      expect(slotIn(container, 'start')).not.toHaveAttribute('aria-disabled');
+      // A start that failed is not a start that went through: nothing to refresh.
+      expect(refetchMock).not.toHaveBeenCalled();
+      // The server's own text never reaches the user.
+      expect(document.body.textContent).not.toContain('Internal Server Error');
+    });
   });
 });

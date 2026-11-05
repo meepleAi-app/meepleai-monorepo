@@ -20,7 +20,7 @@
 
 'use client';
 
-import { useCallback, useMemo, useState, type JSX } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore, type JSX } from 'react';
 
 import Image from 'next/image';
 import Link from 'next/link';
@@ -77,6 +77,11 @@ function initialsFrom(displayName: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+// `false` on the server and during hydration, `true` afterwards: lets the first client render match the server HTML.
+const subscribeNever = (): (() => void) => () => {};
+const readHydrated = (): boolean => true;
+const readNotHydrated = (): boolean => false;
+
 // --------------------------------------------------------------------------
 // Component
 // --------------------------------------------------------------------------
@@ -93,6 +98,11 @@ export function InvitesTokenPageClient({
   initialBannerState,
 }: InvitesTokenPageClientProps): JSX.Element {
   const { t, formatDate, formatTime, formatMessage } = useTranslation();
+  // The server does not know the guest's timezone. The HTML it sends, and the first client render (which must match
+  // it), are formatted in UTC and say so; the guest's own time replaces them once mounted. Formatting both in the
+  // runtime's own zone made the server say 20:00 and the browser 21:00: a hydration mismatch (React #418) and an
+  // hour-off first paint for anyone outside the server's zone.
+  const hydrated = useSyncExternalStore(subscribeNever, readHydrated, readNotHydrated);
   const searchParams = useSearchParams();
   const stateOverride = parseStateOverride(searchParams?.get('state') ?? null, {
     enabled: STATE_OVERRIDE_ENABLED,
@@ -127,9 +137,11 @@ export function InvitesTokenPageClient({
   const handleAccept = useCallback(async (): Promise<void> => {
     setLastSubmittedAction('Accepted');
     const result = await respond.submit('Accepted');
-    if (result?.kind === 'conflict-state-switch') {
+    if (result?.kind === 'conflict-state-switch' || result?.kind === 'gone') {
       // Refetch to surface fresh `alreadyRespondedAs` so the banner copy
-      // matches the server state (not just our optimistic view).
+      // matches the server state (not just our optimistic view). After a 410 it is how the page learns WHY the
+      // link is gone: the 410 carries no reason, and a cancelled night is told apart from an expired invitation by
+      // the fresh `nightCancelled` (#4856).
       await refetch();
     }
   }, [refetch, respond]);
@@ -137,7 +149,7 @@ export function InvitesTokenPageClient({
   const handleDecline = useCallback(async (): Promise<void> => {
     setLastSubmittedAction('Declined');
     const result = await respond.submit('Declined');
-    if (result?.kind === 'conflict-state-switch') {
+    if (result?.kind === 'conflict-state-switch' || result?.kind === 'gone') {
       await refetch();
     }
   }, [refetch, respond]);
@@ -171,10 +183,12 @@ export function InvitesTokenPageClient({
       month: 'short',
       year: 'numeric',
       weekday: 'short',
+      ...(hydrated ? {} : { timeZone: 'UTC' }),
     });
     const timeLabel = formatTime(scheduledDate, {
       hour: '2-digit',
       minute: '2-digit',
+      ...(hydrated ? {} : { timeZone: 'UTC', timeZoneName: 'short' as const }),
     });
 
     const items: SessionMetaItem[] = [
@@ -217,14 +231,18 @@ export function InvitesTokenPageClient({
       key: 'players',
       icon: '👥',
       label: t('pages.invites.session.playersLabel'),
-      value: t('pages.invites.session.playersValue', {
-        accepted: invitation.acceptedSoFar,
-        expected: invitation.expectedPlayers,
-      }),
+      // `expectedPlayers` is 0 when the night has no player limit: "1 / 0" is not a count of seats.
+      value:
+        invitation.expectedPlayers > 0
+          ? t('pages.invites.session.playersValue', {
+              accepted: invitation.acceptedSoFar,
+              expected: invitation.expectedPlayers,
+            })
+          : t('pages.invites.session.playersValueNoLimit', { accepted: invitation.acceptedSoFar }),
     });
 
     return items;
-  }, [invitation, formatDate, formatTime, formatMessage, t]);
+  }, [invitation, hydrated, formatDate, formatTime, formatMessage, t]);
 
   // ---- Derive header pieces ---------------------------------------------
   const heroDate = useMemo(() => {
@@ -233,15 +251,17 @@ export function InvitesTokenPageClient({
       day: 'numeric',
       month: 'short',
       weekday: 'short',
+      ...(hydrated ? {} : { timeZone: 'UTC' }),
     });
-  }, [invitation, formatDate]);
+  }, [invitation, hydrated, formatDate]);
   const heroTime = useMemo(() => {
     if (!invitation) return '';
     return formatTime(new Date(invitation.scheduledAt), {
       hour: '2-digit',
       minute: '2-digit',
+      ...(hydrated ? {} : { timeZone: 'UTC', timeZoneName: 'short' as const }),
     });
-  }, [invitation, formatTime]);
+  }, [invitation, hydrated, formatTime]);
 
   const hostHue = invitation ? hueFromHostId(invitation.hostUserId) : 0;
   const hostInitials = invitation ? initialsFrom(invitation.hostDisplayName) : '';
@@ -299,7 +319,11 @@ export function InvitesTokenPageClient({
           {state === 'token-invalid' ? (
             <TokenInvalidShell t={t} />
           ) : state === 'token-expired' ? (
-            <TokenExpiredShell t={t} hostName={invitation?.hostDisplayName ?? ''} />
+            <TokenExpiredShell
+              t={t}
+              hostName={invitation?.hostDisplayName ?? ''}
+              nightCancelled={invitation?.nightCancelled === true}
+            />
           ) : state === 'accepted-success' && invitation ? (
             <AcceptedSuccessSurface
               invitation={invitation}
@@ -561,9 +585,11 @@ function DeclinedSurface({
 interface TokenExpiredShellProps {
   readonly t: T;
   readonly hostName: string;
+  /** #4856: the NIGHT was cancelled (not the invitation withdrawn or expired): say so. */
+  readonly nightCancelled: boolean;
 }
 
-function TokenExpiredShell({ t, hostName }: TokenExpiredShellProps): JSX.Element {
+function TokenExpiredShell({ t, hostName, nightCancelled }: TokenExpiredShellProps): JSX.Element {
   return (
     <div data-slot="invite-expired" className="flex flex-col items-center px-5 py-8 text-center">
       <div
@@ -573,12 +599,18 @@ function TokenExpiredShell({ t, hostName }: TokenExpiredShellProps): JSX.Element
         ⌛
       </div>
       <h2 className="m-0 mb-1.5 font-display text-[18px] font-bold text-foreground">
-        {t('pages.invites.states.tokenExpired.heading')}
+        {nightCancelled
+          ? t('pages.invites.states.nightCancelled.heading')
+          : t('pages.invites.states.tokenExpired.heading')}
       </h2>
       <p className="m-0 mb-4 text-[12px] leading-relaxed text-[hsl(var(--text-muted))]">
-        {hostName.length > 0
-          ? t('pages.invites.states.tokenExpired.subText', { hostName })
-          : t('pages.invites.banners.goneExpired')}
+        {nightCancelled
+          ? hostName.length > 0
+            ? t('pages.invites.states.nightCancelled.subText', { hostName })
+            : t('pages.invites.states.nightCancelled.subTextNoHost')
+          : hostName.length > 0
+            ? t('pages.invites.states.tokenExpired.subText', { hostName })
+            : t('pages.invites.banners.goneExpired')}
       </p>
       <Link
         href="/"
@@ -653,10 +685,14 @@ function AlreadyRespondedSurface({
             ? t('pages.invites.states.alreadyAccepted.subTextAccepted')
             : t('pages.invites.states.alreadyAccepted.subTextDeclined')}
           {' · '}
-          {t('pages.invites.states.alreadyAccepted.rosterCount', {
-            accepted: invitation.acceptedSoFar,
-            expected: invitation.expectedPlayers,
-          })}
+          {invitation.expectedPlayers > 0
+            ? t('pages.invites.states.alreadyAccepted.rosterCount', {
+                accepted: invitation.acceptedSoFar,
+                expected: invitation.expectedPlayers,
+              })
+            : t('pages.invites.states.alreadyAccepted.rosterCountNoLimit', {
+                accepted: invitation.acceptedSoFar,
+              })}
         </ErrorBanner>
         <InviteHostCard
           hostDisplayName={invitation.hostDisplayName}

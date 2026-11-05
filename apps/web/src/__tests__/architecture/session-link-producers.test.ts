@@ -54,14 +54,19 @@ const PRODUCERS: Readonly<Record<string, readonly Site[]>> = {
   'components/library/SessionDrawerSheet.tsx': [{ live: D4 }],
   'components/session/BackToSessionFAB.tsx': [{ live: D4 }],
   'lib/library/hybrid-hub.mappers.ts': [{ live: D4 }],
+  'lib/game-nights/liveGameHref.ts': [
+    {
+      live: 'GameNightSessionDto.liveSessionId e StartGameNightSessionResult.liveSessionId, la live creata con la partita della serata (#4752)',
+    },
+  ],
   'app/(authenticated)/play-records/[id]/edit/page.tsx': [
     { live: 'liveSessionId della partita registrata' },
   ],
   'app/(authenticated)/sessions/new/page.tsx': [
     { live: 'id restituito dal wizard desktop, che crea la live' },
   ],
+  // One site since #4787: a player that cannot get in no longer sends the user to the live page on its own.
   'app/(authenticated)/sessions/new/session-wizard-mobile.tsx': [
-    { live: 'api.liveSessions.createSession' },
     { live: 'api.liveSessions.createSession' },
   ],
   'app/(authenticated)/sessions/join/page.tsx': [{ live: 'api.liveSessions.getByCode' }],
@@ -86,15 +91,6 @@ const PRODUCERS: Readonly<Record<string, readonly Site[]>> = {
     { live: DRAWER },
     { live: DRAWER },
     { live: DRAWER },
-  ],
-
-  // ── debito: id di un altro aggregato ──
-  'components/session/GamePickerDialog.tsx': [
-    {
-      pending:
-        'fuori da #4156: id di SessionTracking, ma il link si raggiunge solo dopo ' +
-        'sessionFlow.createSession, che chiama una rotta che il backend non ha',
-    },
   ],
 
   // ── codice che nessuno monta ──

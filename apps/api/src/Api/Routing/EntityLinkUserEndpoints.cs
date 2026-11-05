@@ -77,7 +77,7 @@ internal static class EntityLinkUserEndpoints
         .Produces(401)
         .WithTags("EntityLinks")
         .WithSummary("Get entity links (user scope)")
-        .WithDescription("Returns all user-scope links where the entity appears as source or target of a bidirectional link. Supports optional targetEntityType filter (Issue #5188). Issue #5137.");
+        .WithDescription("Returns the caller's own user-scope links where the entity appears as source or target of a bidirectional link: a user-scope link is personal (#4637). Supports optional targetEntityType filter (Issue #5188). Issue #5137.");
     }
 
     private static void MapGetEntityLinkCountEndpoint(RouteGroupBuilder group)
@@ -96,7 +96,7 @@ internal static class EntityLinkUserEndpoints
             if (!Enum.TryParse<MeepleEntityType>(entityType, ignoreCase: true, out var parsedEntityType))
                 return Results.BadRequest(new { error = $"Invalid entityType: {entityType}" });
 
-            var query = new GetEntityLinkCountQuery(parsedEntityType, entityId);
+            var query = new GetEntityLinkCountQuery(parsedEntityType, entityId, RequestingUserId: userId);
             var count = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(new { count });
         })
@@ -106,7 +106,7 @@ internal static class EntityLinkUserEndpoints
         .Produces(401)
         .WithTags("EntityLinks")
         .WithSummary("Get entity link count (badge)")
-        .WithDescription("Returns the total count of links for an entity (as source or bidirectional target). Used by MeepleCard badge. Issue #5137.");
+        .WithDescription("Returns the count of links the caller can see for an entity (as source or bidirectional target): shared links and the caller's own user-scope links (#4637). Used by MeepleCard badge. Issue #5137.");
     }
 
     // POST /library/entity-links
@@ -122,16 +122,15 @@ internal static class EntityLinkUserEndpoints
             if (userId == Guid.Empty)
                 return Results.Unauthorized();
 
-            var command = new CreateEntityLinkCommand(
+            // #4325: the request of a user, so the entities have to exist and be ones the caller may link.
+            var command = new CreateUserEntityLinkCommand(
                 SourceEntityType: request.SourceEntityType,
                 SourceEntityId: request.SourceEntityId,
                 TargetEntityType: request.TargetEntityType,
                 TargetEntityId: request.TargetEntityId,
                 LinkType: request.LinkType,
-                Scope: EntityLinkScope.User,
                 OwnerUserId: userId,
-                Metadata: request.Metadata,
-                IsBggImported: false);
+                Metadata: request.Metadata);
 
             try
             {
@@ -151,10 +150,11 @@ internal static class EntityLinkUserEndpoints
         .Produces<EntityLinkDto>(201)
         .Produces(400)
         .Produces(401)
+        .Produces(404)
         .Produces(409)
         .WithTags("EntityLinks")
         .WithSummary("Create entity link (user scope)")
-        .WithDescription("Creates a new user-scope link between two entities. Scope=User, IsAdminApproved=true automatically (BR-04). Returns 409 for duplicates. Issue #5137.");
+        .WithDescription("Creates a new user-scope link between two entities. Scope=User, IsAdminApproved=true automatically (BR-04). Returns 404 when a Game or KbCard does not exist or is not one the caller may link (#4325), 409 for duplicates. Issue #5137.");
     }
 
     // DELETE /library/entity-links/{linkId}

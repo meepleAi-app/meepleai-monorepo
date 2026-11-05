@@ -10,7 +10,7 @@
  * @see docs/superpowers/specs/2026-06-14-issue-2281-session-skeleton-g2-g4-g7-scope.md §G4
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { LiveTopBarLabels, LiveTopBarProps } from '../LiveTopBar';
@@ -23,6 +23,9 @@ const LABELS: LiveTopBarLabels = {
   turnLabelResolved: 'Turno 3/8',
   statusInProgress: 'In corso',
   statusPaused: 'In pausa',
+  statusCompleted: 'Conclusa',
+  statusNotStarted: 'Non avviata',
+  startCta: 'Avvia partita',
   pauseCta: 'Pausa',
   resumeCta: 'Riprendi',
   endgameCta: 'Termina partita',
@@ -68,6 +71,93 @@ describe('LiveTopBar — backward compat (no G4 props)', () => {
   it('preserves existing TopBar slot + status', () => {
     renderTopBar();
     expect(document.querySelector('[data-slot="session-live-top-bar"]')).not.toBeNull();
+  });
+});
+
+// ─── #4750 — a concluded session ──────────────────────────────────────────────
+
+describe('LiveTopBar — #4750: a concluded session', () => {
+  it('says «Conclusa», not «In corso», and carries the status on the slot', () => {
+    renderTopBar({ status: 'Completed' });
+    const topBar = document.querySelector('[data-slot="session-live-top-bar"]');
+    expect(topBar).toHaveAttribute('data-status', 'Completed');
+    expect(screen.getByText('Conclusa')).toBeInTheDocument();
+    expect(screen.queryByText('In corso')).toBeNull();
+  });
+
+  it('offers the host neither pause, resume nor end — only the way out', () => {
+    renderTopBar({ status: 'Completed', viewerRole: 'Host' });
+    expect(document.querySelector('[data-slot="session-live-top-bar-pause"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-resume"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-exit"]')).not.toBeNull();
+  });
+
+  it('still offers the host pause and end while the session runs', () => {
+    renderTopBar({ status: 'InProgress', viewerRole: 'Host' });
+    expect(document.querySelector('[data-slot="session-live-top-bar-pause"]')).not.toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).not.toBeNull();
+  });
+});
+
+// ─── #4781 — a session not started yet ────────────────────────────────────────
+
+describe('LiveTopBar — #4781: a session not started yet', () => {
+  it('says «Non avviata», not «In corso», and carries the status on the slot', () => {
+    renderTopBar({ status: 'NotStarted' });
+    const topBar = document.querySelector('[data-slot="session-live-top-bar"]');
+    expect(topBar).toHaveAttribute('data-status', 'NotStarted');
+    expect(screen.getByText('Non avviata')).toBeInTheDocument();
+    expect(screen.queryByText('In corso')).toBeNull();
+  });
+
+  it('offers the host neither pause, resume nor end — they would all answer 409', () => {
+    renderTopBar({ status: 'NotStarted', viewerRole: 'Host' });
+    expect(document.querySelector('[data-slot="session-live-top-bar-pause"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-resume"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-exit"]')).not.toBeNull();
+  });
+});
+
+describe('LiveTopBar — #4787: starting a session that has not started', () => {
+  const startSlot = () => document.querySelector('[data-slot="session-live-top-bar-start"]');
+
+  it('offers «Avvia partita» when it has not started and the caller can start it', () => {
+    renderTopBar({ status: 'NotStarted', onStart: vi.fn() });
+    expect(startSlot()).not.toBeNull();
+    expect(startSlot()).toHaveTextContent('Avvia partita');
+    expect(startSlot()).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('calls onStart once per click', () => {
+    const onStart = vi.fn();
+    renderTopBar({ status: 'NotStarted', onStart });
+    fireEvent.click(startSlot() as HTMLElement);
+    expect(onStart).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers nothing to start without onStart: who may start is the caller’s call, not the role’s', () => {
+    // `viewerRole` Host also covers whoever merely holds the first seat; the server lets only the
+    // creator start, so the bar shows the command only to a caller that passes the handler.
+    renderTopBar({ status: 'NotStarted', viewerRole: 'Host' });
+    expect(startSlot()).toBeNull();
+  });
+
+  it.each(['InProgress', 'Paused', 'Completed'] as const)(
+    'does not offer it once the session is %s',
+    status => {
+      renderTopBar({ status, onStart: vi.fn() });
+      expect(startSlot()).toBeNull();
+    }
+  );
+
+  it('while the start is pending it is inert: a second tap does not send another', () => {
+    const onStart = vi.fn();
+    renderTopBar({ status: 'NotStarted', onStart, startPending: true });
+    expect(startSlot()).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(startSlot() as HTMLElement);
+    expect(onStart).not.toHaveBeenCalled();
   });
 });
 

@@ -223,7 +223,7 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
                 .ThenByDescending(e => e.WinRate)
                 .Take(MaxTopGames)
                 .Select(e => new DashboardTopGameDto(
-                    e.GameId,
+                    e.SharedGameId ?? Guid.Empty, // #4749: GameId is a compatibility property outside the EF model
                     e.SharedGame!.Title,
                     e.SharedGame!.ImageUrl,
                     e.WinRate ?? 0,

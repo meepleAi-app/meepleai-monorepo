@@ -216,3 +216,49 @@ describe('KbAskEventSchema — il filo vero del backend (#4168)', () => {
     expect(parsed.data).not.toHaveProperty('tierLimit');
   });
 });
+
+describe('KbCitationSchema — pagina assente (#4819)', () => {
+  // Un campo obbligatorio che il server smette di mandare (o manda null) fa fallire la validazione
+  // dell'intero evento, e `kbAskClient` lo scarta in silenzio: ordine «frontend tollerante, poi server».
+  const noPage = { docId: 'd', source: 'PDF:d', page: null, snippet: 't', score: 0.5 };
+
+  it('accepts a citation in the page shape whose page is null', () => {
+    expect(KbCitationSchema.parse(noPage).page).toBeNull();
+  });
+
+  it('accepts a citation in the page shape that does not carry the page at all', () => {
+    const { page: _page, ...withoutKey } = noPage;
+    expect(KbCitationSchema.parse(withoutKey).page).toBeNull();
+  });
+
+  it('accepts a wire citation that does not carry the page at all, and reads it as no page', () => {
+    const wire = { text: 'rules', source: 'PDF:d', line: 0, score: 0.5 };
+    const parsed = KbAskEventSchema.parse({ type: 1, data: { citations: [wire] } }) as Extract<
+      KbAskEvent,
+      { type: 1 }
+    >;
+
+    expect(parsed.data.citations[0]?.page).toBeNull();
+  });
+
+  it('accepts a Citations event whose wire citation has a null page, in both shapes', () => {
+    const wire = { text: 'rules', source: 'PDF:d', page: null, line: 0, score: 0.5 };
+    const parsed = KbAskEventSchema.parse({
+      type: 1,
+      data: { citations: [wire, noPage] },
+    }) as Extract<KbAskEvent, { type: 1 }>;
+
+    expect(parsed.data.citations.map(c => c.page)).toEqual([null, null]);
+    expect(parsed.data.citations[0]?.docId).toBe('d');
+  });
+
+  it('still reads a citation that has a page', () => {
+    const wire = { text: 'rules', source: 'PDF:d', page: 14, line: 0, score: 0.5 };
+    const parsed = KbAskEventSchema.parse({ type: 1, data: { citations: [wire] } }) as Extract<
+      KbAskEvent,
+      { type: 1 }
+    >;
+
+    expect(parsed.data.citations[0]?.page).toBe(14);
+  });
+});

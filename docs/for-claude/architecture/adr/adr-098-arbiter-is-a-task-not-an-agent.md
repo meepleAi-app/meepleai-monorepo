@@ -38,7 +38,7 @@ La landing promette «Il tuo arbitro AI per le serate giochi da tavolo».
 5. **Il selettore della chat diventa una scelta d'intento**, che cambia la forma della risposta e non l'agente:
    - `auto` — default, la risposta di oggi;
    - `tutor` — spiega la regola passo passo, con un esempio di gioco;
-   - **risposta secca** — una riga e la citazione, pensata per il tavolo (prende il posto di `decisore`, che il dominio accetta e nessuno offre).
+   - **risposta secca** (id `secca`) — una riga e la citazione, pensata per il tavolo. Prende il posto di `decisore` **nell'elenco dei valori accettati**, non nel concetto: `decisore` indica già altro nel repo, i suggerimenti strategici di mossa (`DecisoreMoveFeedback`), cioè proprio le risposte senza fonti che questa decisione tiene fuori dalla chat. Per questo l'id nuovo è `secca`, e un `decisore` già salvato su un thread si legge come `auto`: non deve cominciare a rispondere in una riga.
 
    `arbitro` esce (l'arbitrato è nella partita), `stratega` e `narratore` escono (consigli di gioco e ambientazione non stanno nel regolamento: una pipeline che risponde con fonti non ha niente da citare). Il dominio e il frontend hanno **lo stesso** elenco, la pipeline legge l'intento e applica la sezione del profilo corrispondente. I valori già salvati fuori elenco si leggono come `auto` fino al contract (expand → contract, ADR-094).
 

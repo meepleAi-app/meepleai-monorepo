@@ -10,6 +10,8 @@
  * @see apps/web/src/lib/api/schemas/kb-ask.schemas.ts (KbAskEventSchema)
  */
 
+import { throwIfQaTooManyRequests } from '@/components/chat-unified/qaStreamErrors';
+
 import { KbAskEventSchema, type KbAskEvent, type KbAskRequest } from '../schemas/kb-ask.schemas';
 
 const ENDPOINT = '/api/v1/knowledge-base/ask/global';
@@ -71,6 +73,8 @@ export const kbAskClient = {
       body: JSON.stringify(body),
       signal,
     });
+    // #4388: due risposte aperte per utente; la terza riceve 429 e il pannello lo dice.
+    throwIfQaTooManyRequests(response);
     if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
     yield* parseSseStream(response, signal);
   },

@@ -93,8 +93,8 @@ public sealed class VectorDocumentReadyStateHandlerTests
     }
 
     /// <summary>
-    /// Il caso per cui la compensazione esiste: l'indice è scritto (gli embedding ci sono), ma il
-    /// PDF è rimasto in <c>Indexing</c> perché la pipeline si è fermata prima di finalizzare.
+    /// Il caso per cui la compensazione esiste ancora: l'indice è scritto (gli embedding ci sono), ma il
+    /// PDF è in uno stato non finale diverso da <c>Indexing</c>, che nessuna pipeline sta per finalizzare.
     /// </summary>
     [Fact]
     public async Task Handle_StateIsProcessing_PdfFound_UpdatesToReady()
@@ -108,14 +108,14 @@ public sealed class VectorDocumentReadyStateHandlerTests
             FileName = "test-rulebook.pdf",
             FilePath = "/test/test-rulebook.pdf",
             FileSizeBytes = 1024,
-            ProcessingState = "Indexing",
+            ProcessingState = "Embedding",
         };
         dbContext.PdfDocuments.Add(pdfEntity);
         dbContext.PgVectorEmbeddings.Add(AnEmbeddingOf(_documentId));
         await dbContext.SaveChangesAsync();
 
         var sut = new VectorDocumentReadyStateHandler(dbContext, _logger.Object);
-        var evt = CreateEvent("Indexing");
+        var evt = CreateEvent("Embedding");
 
         // Act
         await sut.Handle(evt, CancellationToken.None);
@@ -128,11 +128,38 @@ public sealed class VectorDocumentReadyStateHandlerTests
     }
 
     /// <summary>
-    /// #4339: l'evento arriva in modo sincrono da <c>IPdfIndexingPipeline.IndexAsync</c>, che le
-    /// pipeline chiamano PRIMA di scrivere passaggi ed embedding. Un PDF in <c>Indexing</c> senza
-    /// embedding non è rimasto indietro: è a metà, e la pipeline lo porterà a <c>Ready</c> da sé.
-    /// Portarcelo qui faceva fallire la finalizzazione di ogni caricamento («Cannot transition from
-    /// Ready state»).
+    /// #4609: l'evento arriva in modo sincrono da <c>IPdfIndexingPipeline.IndexAsync</c>, che le pipeline
+    /// chiamano per ULTIMA, dopo aver scritto passaggi ed embedding. Un PDF in <c>Indexing</c> con l'indice
+    /// già scritto non è rimasto indietro: la pipeline che ha chiamato <c>IndexAsync</c> sta per
+    /// finalizzarlo da sé. Portarlo a <c>Ready</c> qui fa fallire quella finalizzazione («Cannot transition
+    /// from Ready state»), che è il difetto di #4339 tornato per la via opposta.
+    /// </summary>
+    [Fact]
+    public async Task Handle_StateIsIndexing_TheIndexIsWritten_LeavesThePdfToThePipeline()
+    {
+        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
+        dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = _pdfDocumentId,
+            UploadedByUserId = _userId,
+            FileName = "test-rulebook.pdf",
+            FilePath = "/test/test-rulebook.pdf",
+            FileSizeBytes = 1024,
+            ProcessingState = "Indexing",
+        });
+        dbContext.PgVectorEmbeddings.Add(AnEmbeddingOf(_documentId));
+        await dbContext.SaveChangesAsync();
+        var sut = new VectorDocumentReadyStateHandler(dbContext, _logger.Object);
+
+        await sut.Handle(CreateEvent("Indexing"), CancellationToken.None);
+
+        var pdf = await dbContext.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId);
+        pdf.ProcessingState.Should().Be("Indexing");
+    }
+
+    /// <summary>
+    /// #4339: un PDF in <c>Indexing</c> con un indice senza embedding è comunque lasciato stare (prima di
+    /// #4609 era l'unico modo per distinguere un PDF a metà da uno rimasto indietro).
     /// </summary>
     [Fact]
     public async Task Handle_StateIsIndexing_TheIndexIsNotWrittenYet_LeavesThePdfToThePipeline()

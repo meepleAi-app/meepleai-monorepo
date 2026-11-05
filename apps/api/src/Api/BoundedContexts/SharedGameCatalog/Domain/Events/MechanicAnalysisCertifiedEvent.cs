@@ -33,8 +33,8 @@ public sealed record MechanicAnalysisCertifiedEvent(
     DateTimeOffset CertifiedAt) : IDomainEvent
 {
     /// <inheritdoc />
-    public DateTime OccurredAt { get; } = TimeProvider.System.GetUtcNow().UtcDateTime;
+    public DateTime OccurredAt { get; init; } = TimeProvider.System.GetUtcNow().UtcDateTime;
 
     /// <inheritdoc />
-    public Guid EventId { get; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.NewGuid();
 }

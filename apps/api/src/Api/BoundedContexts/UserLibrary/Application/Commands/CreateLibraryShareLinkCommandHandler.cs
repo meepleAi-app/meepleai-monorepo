@@ -6,8 +6,8 @@ using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands;
 
@@ -19,7 +19,7 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
 {
     private readonly ILibraryShareLinkRepository _shareLinkRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IConfiguration _configuration;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly ILogger<CreateLibraryShareLinkCommandHandler> _logger;
 
     private const int MaxShareLinksPerDay = 10;
@@ -31,12 +31,12 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
     public CreateLibraryShareLinkCommandHandler(
         ILibraryShareLinkRepository shareLinkRepository,
         IUnitOfWork unitOfWork,
-        IConfiguration configuration,
+        IPublicBaseUrlProvider publicBaseUrl,
         ILogger<CreateLibraryShareLinkCommandHandler> logger)
     {
         _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -51,6 +51,11 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
             _logger.LogWarning("Rate limit exceeded for user {UserId}: {Count} share links in last 24h", command.UserId, recentCount);
             throw new DomainException($"Maximum {MaxShareLinksPerDay} share links per day allowed");
         }
+
+        // #4774: resolved before the existing link is revoked and the new one saved: with no address configured
+        // (a deployed host) the call fails here, not after the person's working link has been revoked for a new
+        // one whose URL cannot be written.
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
 
         // Revoke any existing active share link
         await RevokeActiveLinkAsync(command.UserId, cancellationToken).ConfigureAwait(false);
@@ -78,7 +83,7 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
             "Created library share link {LinkId} for user {UserId} with privacy {Privacy}",
             shareLink.Id, command.UserId, privacyLevel);
 
-        return MapToDto(shareLink);
+        return MapToDto(shareLink, baseUrl);
     }
 
     private async Task RevokeActiveLinkAsync(Guid userId, CancellationToken cancellationToken)
@@ -133,10 +138,8 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
         }
     }
 
-    private LibraryShareLinkDto MapToDto(LibraryShareLink link)
+    private static LibraryShareLinkDto MapToDto(LibraryShareLink link, string baseUrl)
     {
-        var baseUrl = _configuration["App:BaseUrl"]
-            ?? throw new InvalidOperationException("App:BaseUrl configuration is not set");
         var shareUrl = $"{baseUrl}/library/shared/{link.ShareToken}";
 
         return new LibraryShareLinkDto(

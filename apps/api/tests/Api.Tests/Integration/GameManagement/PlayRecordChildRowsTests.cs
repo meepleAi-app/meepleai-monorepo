@@ -8,6 +8,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using MediatR;
@@ -351,7 +352,8 @@ public sealed class PlayRecordChildRowsTests(PlayRecordMigratedDatabase database
                 scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>(),
                 NullLogger<LiveSessionCompletedEventHandler>.Instance,
                 database.Time,
-                scope.ServiceProvider.GetRequiredService<IPlayRecordRepository>());
+                scope.ServiceProvider.GetRequiredService<IPlayRecordRepository>(),
+                scope.ServiceProvider.GetRequiredService<IDomainEventCollector>());
             await handler.Handle(liveEvent, Ct);
         }
 
@@ -360,7 +362,7 @@ public sealed class PlayRecordChildRowsTests(PlayRecordMigratedDatabase database
         {
             // Il gestore inghiotte gli errori di scrittura: se la partita non c'è, il difetto è prima di questo test.
             recordId = await db.PlayRecords.AsNoTracking()
-                .Where(r => r.SourceEventId == liveEvent.EventId)
+                .Where(r => r.SourceEventId == liveEvent.SessionId)
                 .Select(r => r.Id)
                 .SingleAsync(Ct);
         }

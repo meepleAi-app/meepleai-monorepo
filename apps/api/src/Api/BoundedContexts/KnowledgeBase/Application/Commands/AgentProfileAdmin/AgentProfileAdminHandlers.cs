@@ -50,7 +50,8 @@ internal sealed class SaveAgentProfileDraftCommandHandler : ICommandHandler<Save
             kept.KeywordWeight,
             kept.RerankerEnabled,
             kept.AllowedCategories.ToList(),
-            kept.SessionAssistant);
+            kept.SessionAssistant,
+            kept.IntentInstructions);
 
         if (profile.Draft is null)
         {

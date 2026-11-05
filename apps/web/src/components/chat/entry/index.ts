@@ -8,9 +8,6 @@
 export { GameSelector } from './GameSelector';
 export type { GameSelectorProps } from './GameSelector';
 
-export { AgentSelector } from './AgentSelector';
-export type { AgentSelectorProps } from './AgentSelector';
-
 export { QuickStartSuggestions } from './QuickStartSuggestions';
 export type { QuickStartSuggestionsProps } from './QuickStartSuggestions';
 
@@ -20,5 +17,5 @@ export type { CreateThreadParams, CreateThreadResult } from './ThreadCreator';
 export { ChatEntryOrchestrator } from './ChatEntryOrchestrator';
 export type { ChatEntryOrchestratorProps } from './ChatEntryOrchestrator';
 
-export { DEFAULT_AGENTS, getQuickStartSuggestions } from './constants';
-export type { AgentOption, QuickStartSuggestion, PromptType } from './types';
+export { getQuickStartSuggestions } from './constants';
+export type { QuickStartSuggestion, PromptType } from './types';

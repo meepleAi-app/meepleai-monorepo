@@ -40,7 +40,7 @@ internal static class RulebookEndpoints
              .WithTags("Rulebook")
              .WithName("GetGamesWithKb")
              .WithSummary("List games with knowledge base documents")
-             .WithDescription("Returns all games that have at least one uploaded PDF for the authenticated user.");
+             .WithDescription("Returns the games of the authenticated user's library that have at least one PDF and whose knowledge base the user can use: an admin, a game whose RAG is public, or a game whose ownership the user declared.");
     }
 
     private static async Task<IResult> HandleUploadRulebook(

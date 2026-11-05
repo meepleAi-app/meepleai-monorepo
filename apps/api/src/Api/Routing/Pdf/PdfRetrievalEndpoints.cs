@@ -282,6 +282,37 @@ internal static class PdfRetrievalEndpoints
             return Results.BadRequest(new { error = result.Message });
         }
 
+        // #4627: a PDF another game still uses is not deleted (#2949), and the answer must not read as if it were. The
+        // game it belongs to lets go of it ("unlinked"), or there was nothing left to unlink ("kept"): 200 with the
+        // outcome, and an audit entry that says what happened. 204 stays for the PDF that is really gone.
+        if (result.Outcome != PdfDeleteOutcome.Deleted)
+        {
+            var unlinked = result.Outcome == PdfDeleteOutcome.Unlinked;
+            logger.LogInformation(
+                "User {UserId} asked to delete PDF {PdfId}: {Outcome}",
+                session.Principal!.Subject.Id, pdfId, result.Outcome);
+
+            await auditService.LogAsync(
+                session.Principal!.Subject.Id.ToString(),
+                unlinked ? "UNLINK" : "DELETE",
+                "PdfDocument",
+                pdfId.ToString(),
+                unlinked ? "Success" : "Skipped",
+                unlinked
+                    ? $"PDF unlinked from its game by user with role: {session.Principal!.EffectiveActor.Role}; the file stays because other games use it"
+                    : $"PDF kept on request of user with role: {session.Principal!.EffectiveActor.Role}; other games use it and the game has no link left to remove",
+                null,
+                null,
+                ct).ConfigureAwait(false);
+
+            return Results.Ok(new
+            {
+                outcome = unlinked ? "unlinked" : "kept",
+                message = result.Message,
+                pdfId,
+            });
+        }
+
         logger.LogInformation("User {UserId} deleted PDF {PdfId}", session.Principal!.Subject.Id, pdfId);
 
         await auditService.LogAsync(

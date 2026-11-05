@@ -57,7 +57,7 @@ internal sealed class GenerateLabelingCandidatesCommandHandler
                 .Take(request.TopN)
                 .Select(s => new LabelingCandidate(
                     ChunkId: s.source,
-                    Page: s.page,
+                    Page: s.page ?? 0,
                     Score: s.score,
                     Snippet: s.text,
                     Relevant: null))

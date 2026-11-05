@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
@@ -35,6 +36,9 @@ public sealed class SessionAssistantRegistrationTests
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IAnswerPreconditions>());
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.ITieredPassageSearch>());
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.IGroundedAnswerService>());
+        // #4729: la sonda del regolamento legge i giochi del catalogo dal database.
+        services.AddScoped(_ => Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>());
+        services.AddDbContext<Api.Infrastructure.MeepleAiDbContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString()));
         services.AddSingleton(TimeProvider.System);
         services.AddSessionAssistant();
 
@@ -48,6 +52,7 @@ public sealed class SessionAssistantRegistrationTests
         scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Domain.Services.IToolCallingModelCatalog>()
             .Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<IAssistantSessionDirectory>().Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<IAssistantRulesReadiness>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn.AssistantTurnRunner>()
             .Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Confirmation.IAssistantProposalApplier>()

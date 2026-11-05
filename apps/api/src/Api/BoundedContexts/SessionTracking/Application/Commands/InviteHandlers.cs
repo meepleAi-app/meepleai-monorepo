@@ -8,10 +8,10 @@ using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 
 using MediatR;
 
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -87,24 +87,20 @@ public sealed class GenerateInviteTokenCommandHandler : IRequestHandler<Generate
 {
     // QR code generation uses a simple text-based approach
     // In production, use a library like QRCoder or ZXing.Net
-#pragma warning disable S1075 // URIs should not be hardcoded - this is a fallback default
-    private const string DefaultBaseUrl = "https://meepleai.com";
-#pragma warning restore S1075
-
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IConfiguration _configuration;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly ILogger<GenerateInviteTokenCommandHandler> _logger;
 
     public GenerateInviteTokenCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
-        IConfiguration configuration,
+        IPublicBaseUrlProvider publicBaseUrl,
         ILogger<GenerateInviteTokenCommandHandler> logger)
     {
         _sessionRepository = sessionRepository;
         _unitOfWork = unitOfWork;
-        _configuration = configuration;
+        _publicBaseUrl = publicBaseUrl;
         _logger = logger;
     }
 
@@ -123,6 +119,10 @@ public sealed class GenerateInviteTokenCommandHandler : IRequestHandler<Generate
             throw new ForbiddenException("Only the session owner can generate invite links.");
         }
 
+        // The link needs the public front-end URL: ask for it before the token is persisted, so a host
+        // without one fails here and not after a token nobody can be handed (#4774).
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
+
         // Generate the invite token
         var token = session.GenerateInviteToken(request.ExpiresInHours);
 
@@ -132,7 +132,6 @@ public sealed class GenerateInviteTokenCommandHandler : IRequestHandler<Generate
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        var baseUrl = _configuration["App:BaseUrl"] ?? DefaultBaseUrl;
         var inviteUrl = $"{baseUrl}/sessions/join/{token}";
 
         // Generate QR code as data URL

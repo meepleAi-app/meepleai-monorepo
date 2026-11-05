@@ -7,6 +7,7 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from '@/components/ui/drawer';
+import { useTranslation } from '@/hooks/useTranslation';
 
 import { TwoFactorWizardBody } from './TwoFactorWizardBody';
 
@@ -29,6 +30,7 @@ export function TwoFactorBottomSheet({
   onClose,
   onEnabled,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   if (!setupData) return <></>;
 
   function handleEnabled(): void {
@@ -46,10 +48,8 @@ export function TwoFactorBottomSheet({
     >
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle>Set up two-factor authentication</DrawerTitle>
-          <DrawerDescription>
-            Complete all three steps to enable 2FA on your account.
-          </DrawerDescription>
+          <DrawerTitle>{t('settings.security.setup.title')}</DrawerTitle>
+          <DrawerDescription>{t('settings.security.setup.description')}</DrawerDescription>
         </DrawerHeader>
         <div className="px-4 pb-6">
           <TwoFactorWizardBody setupData={setupData} onEnabled={handleEnabled} resetKey={open} />

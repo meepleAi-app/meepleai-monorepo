@@ -31,8 +31,8 @@ namespace Api.BoundedContexts.Administration.Application.EventHandlers;
 /// rilegge l'istante, quindi serve la voce vecchia (dalla sua L1, poi dalla L2) finché la voce in L2 scade
 /// o qualcuno la riscrive. Oggi non pesa: l'API gira a istanza singola per contratto
 /// (<c>infra/docker-compose.yml</c>, allarme <c>MultipleApiInstances</c>). Per più istanze serve il pub/sub
-/// (<c>IHybridCacheService.RemoveByTagAcrossReplicasAsync</c>), che però raggiungerà le voci scritte con
-/// <see cref="HybridCache"/> grezzo solo dopo #4561. Il test
+/// (<c>IHybridCacheService.RemoveByTagAcrossReplicasAsync</c>), che dopo #4561 raggiunge anche le voci scritte
+/// con <see cref="HybridCache"/> grezzo. Il test
 /// <c>Handle_UserActivity_AnotherInstanceThatReadTheTag_KeepsServingTheOldL2Entry</c> documenta il limite.
 /// </para>
 /// </remarks>

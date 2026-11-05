@@ -201,7 +201,8 @@ export class AuthHelper {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true }),
+        // The real answer on success (#4806).
+        body: JSON.stringify({ message: 'Two-factor authentication disabled successfully' }),
       });
     });
 

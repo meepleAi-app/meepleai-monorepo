@@ -154,7 +154,7 @@ export const FrameD2_SecuritySection2FaOff: Story = {
     docs: {
       description: {
         story:
-          'URL: /settings/security. TwoFactorStatusCard in the "Not enabled" state with the "Set up two-factor authentication" CTA, plus the Active sessions card. SettingsSubNav marks the active section with aria-current="page" on the row button — no role="tab" anywhere in the hub.',
+          'URL: /settings/security. TwoFactorStatusCard in the "Non abilitata" state with the "Configura l\'autenticazione a due fattori" CTA, plus the "Sessioni attive" card (the Storybook provider is Italian). SettingsSubNav marks the active section with aria-current="page" on the row button — no role="tab" anywhere in the hub.',
       },
     },
   },
@@ -194,7 +194,7 @@ export const FrameD4_Wizard2FaStep2Verify: Story = {
     docs: {
       description: {
         story:
-          'Step 2: 6-digit PIN input with auto-focus + Backspace nav. Reached through the same click a user makes — "Continue" on step 1 is local state, no request — so the frame walks the real wizard transition rather than describing it.',
+          'Step 2: 6-digit PIN input with auto-focus + Backspace nav. Reached through the same click a user makes — "Continua" on step 1 is local state, no request — so the frame walks the real wizard transition rather than describing it.',
       },
     },
   },
@@ -207,7 +207,7 @@ export const FrameD4_Wizard2FaStep2Verify: Story = {
   play: async () => {
     // The dialog lives in a portal, outside canvasElement.
     const dialog = within(await within(document.body).findByRole('dialog'));
-    await userEvent.click(dialog.getByRole('button', { name: 'Continue' }));
+    await userEvent.click(dialog.getByRole('button', { name: 'Continua' }));
   },
 };
 
@@ -220,7 +220,7 @@ export const FrameD5_Wizard2FaStep3Codes: Story = {
     docs: {
       description: {
         story:
-          'Step 3: the 10 recovery codes (1-time view), "Copy all" / "Download .txt", and the "Ho salvato i recovery codes in un posto sicuro" checkbox that gates the wizard\'s Done button. Mounts the step body alone — so the Done button, which lives in TwoFactorWizardBody, is out of frame: the wizard enters this step only after POST /api/v1/auth/2fa/enable returns an Enable2FAResult, and the fixture answers a different endpoint with the setup payload, so walking the frame through the network would render the verify error instead of the codes.',
+          'Step 3: the 10 recovery codes (1-time view), "Copia tutti" / "Scarica .txt", and the "Ho salvato i codici di backup in un posto sicuro" checkbox that gates the wizard\'s "Fatto" button. Mounts the step body alone — so the "Fatto" button, which lives in TwoFactorWizardBody, is out of frame: the wizard enters this step only after POST /api/v1/auth/2fa/enable returns an Enable2FAResult, and the fixture answers a different endpoint with the setup payload, so walking the frame through the network would render the verify error instead of the codes.',
       },
     },
   },
@@ -238,7 +238,7 @@ export const FrameD6_SecuritySection2FaOn: Story = {
     docs: {
       description: {
         story:
-          'Intended stage: 2FA ON — "✓ Enabled · <date>" pill with "Regenerate recovery codes" (disabled, coming soon) + "Disable 2FA". KNOWN GAP, the frame still renders the OFF state: mswForSp5State("tfa-on") answers GET /api/v1/auth/2fa/status while the client reads GET /api/v1/users/me/2fa/status, and the mock payload carries recoveryCodesCount/trustedDevices where TwoFactorStatusDtoSchema expects unusedBackupCodesCount. The fix belongs in the fixture, not here. (The mockup also showed a trusted-devices list: no component renders one — ActiveSessionsCard shows sessions.)',
+          'Intended stage: 2FA ON — "✓ Abilitata · <date>" pill with "Rigenera i codici di backup" (disabled, coming soon) + "Disabilita 2FA". KNOWN GAP, the frame still renders the OFF state: mswForSp5State("tfa-on") answers GET /api/v1/auth/2fa/status while the client reads GET /api/v1/users/me/2fa/status, and the mock payload carries recoveryCodesCount/trustedDevices where TwoFactorStatusDtoSchema expects unusedBackupCodesCount. The fix belongs in the fixture, not here. (The mockup also showed a trusted-devices list: no component renders one — ActiveSessionsCard shows sessions.)',
       },
     },
   },

@@ -117,8 +117,8 @@ export function useAgentThreads(agentId: string): UseQueryResult<ChatThreadPrevi
       // among them, and ASP.NET drops unknown query parameters silently — so this
       // returns the caller's threads UNFILTERED, not the agent's.
       //
-      // Not fixed here: the three remaining callers (AgentCharacterSheet,
-      // AgentChatDrawerLayout, AgentExtraMeepleCard) are agent-detail surfaces outside
+      // Not fixed here: the remaining callers (AgentChatDrawerLayout,
+      // AgentExtraMeepleCard) are agent-detail surfaces outside
       // the scope of this retirement, and "filter by agent" may not be expressible at
       // all once there is one system agent. `useGameThreads` below is the correct
       // scoping for anything that asks about a GAME.

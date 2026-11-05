@@ -42,6 +42,27 @@ Parametri opzionali:
 | `SEED_INDEX_FAILURE_PCT` | `15` | soglia fail% oltre la quale abort |
 | `SEED_INDEX_ALLOW_PARTIAL` | `false` | permette dump con failures oltre soglia |
 
+#### Pagine dei frammenti: cosa aspettarsi dal bake (#4782)
+
+Il bake avvia `smoldocling-service` ma **non** `unstructured-service` (`infra/Makefile`, target `seed-index`): senza Unstructured l'estrazione ricade su SmolDocling o Docnet, e i documenti escono dal percorso a testo piatto, senza titoli né riquadri. Le pagine dei frammenti dipendono da come è stato estratto il documento:
+
+- **Pagine misurate** (Docnet, SmolDocling): l'estrazione salva una mappa delle pagine accanto al testo (`pdf_documents.page_spans_json`, #4823) e ogni frammento prende la pagina del suo primo carattere non bianco.
+- **Pagine stimate** (Unstructured): restano marcate `PageIsEstimated` ed escluse dalla mappa; per questi documenti non c'è una pagina creduta.
+- **Documenti estratti prima della mappa**, o con una mappa non coerente col testo: i frammenti restano tutti a pagina 1. Rifare solo l'indicizzazione non basta, serve rifare l'**estrazione**; per uno snapshot vuol dire rigenerarlo con `make seed-index`.
+
+Le citazioni non mostrano «p. N» per i documenti le cui pagine non sono credute (`GetDocumentsWithUnreliablePageNumbersQuery`, `ICitedPageTrust`): su uno snapshot costruito prima della mappa si legge «Fonte» senza pagina, non una pagina sbagliata. Per controllare un database (colonne reali):
+
+```sql
+select case when pagine <= 1 then 'una pagina'
+            when pagine_distinte = 1 then 'più pagine, un solo numero'
+            else 'numeri variabili' end, count(*)
+  from (select d."Id", d."PageCount" as pagine, count(distinct c."PageNumber") as pagine_distinte
+          from pdf_documents d join text_chunks c on c."PdfDocumentId" = d."Id" group by 1, 2) t
+ group by 1;
+```
+
+«Più pagine, un solo numero» è il difetto di #4782: se compare dopo un bake recente, l'estrazione non ha prodotto la mappa. Scrivere «pagina ignota» al posto di `1` per questi documenti (invece di nasconderla in lettura) resta aperto: dipende dalle altre superfici di citazione (#4819, #4827).
+
 ### Fase consume — usare lo snapshot
 
 Default per qualunque developer.

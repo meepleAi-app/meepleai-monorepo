@@ -1,5 +1,5 @@
 using Api.BoundedContexts.UserNotifications.Application.Services;
-using Microsoft.Extensions.Configuration;
+using Api.SharedKernel.Services;
 
 namespace Api.BoundedContexts.UserNotifications.Infrastructure.Services;
 
@@ -10,13 +10,11 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.Services;
 /// </summary>
 internal sealed class EmailTemplateService : IEmailTemplateService
 {
-    private readonly string _frontendBaseUrl;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
 
-    public EmailTemplateService(IConfiguration configuration)
+    public EmailTemplateService(IPublicBaseUrlProvider publicBaseUrl)
     {
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
-        _frontendBaseUrl = configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
-#pragma warning restore S1075
+        _publicBaseUrl = publicBaseUrl;
     }
 
     public string RenderDocumentReady(string userName, string fileName, string documentUrl)
@@ -53,7 +51,7 @@ internal sealed class EmailTemplateService : IEmailTemplateService
 
     public string RenderDocumentFailed(string userName, string fileName, string errorMessage)
     {
-        var supportUrl = $"{_frontendBaseUrl}/support";
+        var supportUrl = $"{_publicBaseUrl.GetBaseUrl()}/support";
 
         var content = $@"
         <div style=""background-color: #f8d7da; padding: 20px; border-radius: 8px; border: 2px solid #dc3545; margin-bottom: 20px;"">
@@ -141,7 +139,7 @@ internal sealed class EmailTemplateService : IEmailTemplateService
         var cta = string.Empty;
         if (!string.IsNullOrWhiteSpace(deepLinkPath))
         {
-            var url = $"{_frontendBaseUrl.TrimEnd('/')}{deepLinkPath}";
+            var url = $"{_publicBaseUrl.GetBaseUrl()}{deepLinkPath}";
             cta = $@"
         <div style=""text-align: center; margin: 30px 0;"">
             <a href=""{Escape(url)}"" style=""background-color: #2c3e50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">Open in MeepleAI</a>
@@ -166,7 +164,7 @@ internal sealed class EmailTemplateService : IEmailTemplateService
 
     private string WrapInBaseTemplate(string title, string content)
     {
-        var preferencesUrl = $"{_frontendBaseUrl}/settings/notifications";
+        var preferencesUrl = $"{_publicBaseUrl.GetBaseUrl()}/settings/notifications";
 
         return $@"<!DOCTYPE html>
 <html>

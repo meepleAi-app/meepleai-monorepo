@@ -63,6 +63,8 @@ jobs:
               - '.github/workflows/dev-async.yml'
               - '.github/actions/setup-frontend/**'
               - '.github/actions/setup-playwright/**'
+              # #4404: il test di parita' dell'elenco degli intenti legge questo file (vedi dev-fast.yml).
+              - 'apps/api/src/Api/BoundedContexts/KnowledgeBase/Domain/ValueObjects/AnswerIntent.cs'
             backend:
               - 'apps/api/**'
               - 'global.json'

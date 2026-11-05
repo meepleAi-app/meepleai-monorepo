@@ -211,6 +211,16 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // Context: Covers unforeseen errors after specific exception handlers above
             _logger.LogError(ex, "Unexpected error indexing PDF {PdfId}", pdfId);
 
+            // #4609 follow-up: whatever failed may have left rows in the change tracker, among them the vector
+            // document that IndexAsync already set to "completed" in memory before its save failed. The save below
+            // flushes the whole context, so without this it would write that "completed" next to the failed PDF
+            // (the upload path does the same, #4395). Clearing is safe here only because nobody who sends
+            // IndexPdfCommand keeps other entities on this context: the HTTP endpoint reads only the result, and
+            // KbReindexProcessorService rebuilds its job entity in UpdateAsync. A caller that does (as
+            // PdfProcessingQuartzJob does with the pipeline, which is why TryMarkFailedAsync discards the unsaved
+            // changes except those of the job) must not be added without changing this.
+            _db.ChangeTracker.Clear();
+
             // Persist failed state so the PDF doesn't remain stuck in "Indexing"
             try
             {
@@ -220,7 +230,8 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 if (failedPdf != null)
                 {
                     failedPdf.ProcessingState = nameof(PdfProcessingState.Failed);
-                    failedPdf.ProcessingError = $"Unexpected error: {ex.Message}";
+                    // #4660: fixed text; the exception is logged above, and this column is served to users by pdf-status.
+                    failedPdf.ProcessingError = PdfFailureText.For(ErrorCategory.Unknown);
                     try
                     {
                         await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
@@ -239,6 +250,16 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             catch (Exception dbEx)
             {
                 _logger.LogError(dbEx, "Failed to persist error state for PDF {PdfId}", pdfId);
+            }
+
+            // #4609: the vector document this handler created (or reset) in "processing" must not outlive the
+            // failed PDF. Outside the try above on purpose: a failure to save the PDF must not skip it. A no-op
+            // when the failure came before the row existed; never throws. The text is fixed, not the exception
+            // message or type: this column is served to users by pdf-status.
+            if (Guid.TryParse(pdfId, out var failedPdfGuid))
+            {
+                await _pipeline.MarkIndexingFailedAsync(
+                    failedPdfGuid, "Unexpected error", CancellationToken.None).ConfigureAwait(false);
             }
 
             return IndexingResultDto.CreateFailure($"Unexpected error: {ex.Message}", PdfIndexingErrorCode.UnexpectedError);
@@ -378,7 +399,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             Guid.Parse(pdfId),
             pdf.PrivateGameId ?? pdf.SharedGameId,
             _advancedChunkingService,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            // #4782: this is the only place a re-index can learn where the pages of a flat document begin.
+            pageSpans: PageSpans.Parse(pdf.PageSpansJson)).ConfigureAwait(false);
 
         if (chunks.Count == 0)
         {
@@ -622,7 +645,11 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         CancellationToken cancellationToken)
     {
         vectorDoc.IndexingStatus = "failed";
-        vectorDoc.IndexingError = errorMessage;
+        // #4660: this column is served to the authenticated user by the pdf-status poll
+        // (GetGamePdfIndexingStatusQueryHandler), so it holds a fixed text built from the error code, never
+        // errorMessage: for an embedding failure that is the text of an internal service (address, path,
+        // exception). The caller of the command still gets the full message in the result, and the log has it.
+        vectorDoc.IndexingError = $"Indexing failed ({errorCode})";
         try
         {
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

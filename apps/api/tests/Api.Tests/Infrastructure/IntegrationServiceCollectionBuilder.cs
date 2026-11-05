@@ -181,6 +181,11 @@ internal static class IntegrationServiceCollectionBuilder
         // TimeProvider — required by handlers like SubmitValidationFeedbackCommandHandler
         services.AddSingleton(TimeProvider.System);
 
+        // #4774: the one resolver of the public front-end URL, needed by the handlers that write links
+        // (share links, invitations). It reads IConfiguration at call time, so a test that registers its own
+        // configuration after this call is still honoured.
+        services.AddPublicBaseUrl();
+
         // AuditService — required by handlers/workers that emit audit log entries
         // (e.g. MechanicRecalcBackgroundService.WriteCompletionAuditAsync — ADR-051 Sprint 2 / Task 12).
         // The service writes to the AuditLogs table which already exists via migrations, so the

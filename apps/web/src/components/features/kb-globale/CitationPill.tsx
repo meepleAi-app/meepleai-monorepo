@@ -21,8 +21,8 @@ export interface CitationPillProps {
   readonly refText: string;
   /** PdfDocumentId (D-E deep-link target) */
   readonly docId: string;
-  /** Page number (D-E deep-link target) */
-  readonly page: number;
+  /** Page number (D-E deep-link target); `null` when the citation has no page (#4819) */
+  readonly page: number | null;
   /**
    * Optional chunk identifier (#1702). Composite "{docId}_{chunkIndex}".
    * When provided as an empty string, treated as absent (page-only payload).
@@ -33,7 +33,7 @@ export interface CitationPillProps {
   /** Required accessible label (full sentence, i18n-injected by caller) */
   readonly ariaLabel: string;
   /** Click handler receiving deep-link payload */
-  readonly onClick?: (link: { docId: string; page: number; chunkId?: string }) => void;
+  readonly onClick?: (link: { docId: string; page: number | null; chunkId?: string }) => void;
   readonly className?: string;
 }
 

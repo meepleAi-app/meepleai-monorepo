@@ -104,17 +104,20 @@ internal partial class UploadPdfCommandHandler
             await FinalizeProcessingAsync(pdfId, pdfDoc, userId, db, quotaService, scopedMediator, pdfRepo, startTime, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("✅ [PDF-DEBUG] ProcessPdfAsync COMPLETE for {PdfId}", pdfId);
         }
-        catch (OperationCanceledException)
+        // Only a cancellation OF THE TASK'S TOKEN is the user's (CancelPdfProcessingCommand → CancelTask). A
+        // TaskCanceledException from an HttpClient timeout leaves that token alone: it falls through to the
+        // generic catch below, is recorded as a transient failure and stays retriable (#4610).
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await HandleProcessingCancellationAsync(pdfId, userId, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
+            await HandleProcessingCancellationAsync(pdfId, userId, db, scope, quotaService, startTime).ConfigureAwait(false);
         }
         catch (InvalidOperationException ex)
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, "Invalid operation", cancellationToken).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateException ex)
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, "Database error occurred", cancellationToken).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
@@ -124,7 +127,7 @@ internal partial class UploadPdfCommandHandler
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, ex.Message, cancellationToken).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -254,16 +257,20 @@ internal partial class UploadPdfCommandHandler
             // #3846: under S3 `filePath` is an object KEY, not a path — opening it blindly resolved it
             // against the working directory and reported "Could not find a part of the path
             // '/app/pdfs/<gameId>/…'", a location that never existed, under a NULL error category that
-            // RetryFailedPdfsJob keeps retrying. Name the key instead, and mark it non-retriable.
+            // RetryFailedPdfsJob keeps retrying. Name the key instead (in the log: #4660 keeps it out of the column
+            // and the progress, which users are served), and mark it non-retriable.
             if (!File.Exists(filePath))
             {
                 var missing = new PdfStorageObjectMissingException(fileId, resourceKey, filePath);
                 _logger.LogError(missing,
                     "[PDF-DEBUG] PDF {PdfId} is not in storage at key pdf/{ResourceKey}/{FileId}",
                     pdfId, resourceKey, fileId);
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, missing.Message, cancellationToken).ConfigureAwait(false);
+                // #4660: the key stays in the log above; the progress and the column, which users are served, get the
+                // fixed text of the category.
+                var missingText = PdfFailureText.For(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, missingText, cancellationToken).ConfigureAwait(false);
                 await TransitionToFailedAsync(
-                    scope, db, pdfDoc.Id, missing.Message,
+                    scope, db, pdfDoc.Id, missingText,
                     Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing,
                     PdfProcessingState.Extracting, cancellationToken).ConfigureAwait(false);
                 return (false, null, null);
@@ -281,21 +288,25 @@ internal partial class UploadPdfCommandHandler
             if (!extractResult.Success)
             {
                 RecordPipelineMetricSafely("extraction_error", 0);
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, cancellationToken).ConfigureAwait(false);
+                // #4660: the extractor's message goes to the log; the progress and the column, which users are served,
+                // get the fixed text of the category.
+                _logger.LogError("Text extraction failed for PDF {PdfId}: {Error}", pdfId, extractResult.ErrorMessage);
+                var extractionText = PdfFailureText.For(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Parsing);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractionText, cancellationToken).ConfigureAwait(false);
                 // #2284 follow-up: TD2 — transition Failed via domain (raises
                 // PdfStateChangedEvent(Extracting → Failed) + PdfFailedEvent).
                 await TransitionToFailedAsync(
-                    scope, db, Guid.Parse(pdfId), extractResult.ErrorMessage ?? "Extraction failed",
+                    scope, db, Guid.Parse(pdfId), extractionText,
                     Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Parsing,
                     PdfProcessingState.Extracting, cancellationToken).ConfigureAwait(false);
                 return (false, null, null);
             }
 
-            var fullText = string.Join("\n\n", extractResult.PageChunks
-                .Where(pc => !pc.IsEmpty)
-                .Select(pc => pc.Text));
+            var joinedText = PageTextJoiner.Join(extractResult.PageChunks);
+            var fullText = joinedText.Text;
 
             pdfDoc.ExtractedText = fullText;
+            pdfDoc.PageSpansJson = joinedText.Spans is null ? null : PageSpans.Serialize(joinedText.Spans);
             // Issue #3281: keep StructuredElementsJson in-memory on the (AsNoTracking) pdfDoc so the
             // tracked re-write in FinalizeProcessingAsync can copy it after the Ready transition. This
             // assignment + the SaveChangesAsync below are a no-op on the DB for this column (see the
@@ -430,7 +441,9 @@ internal partial class UploadPdfCommandHandler
                 pdfDoc.Id,
                 pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
                 advancedChunking,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                // #4782: the pages of a flat document (no structured elements) come from here.
+                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans).ConfigureAwait(false);
             allDocumentChunks = HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
         }
         else
@@ -517,15 +530,21 @@ internal partial class UploadPdfCommandHandler
             _logger.LogInformation("📦 [BATCH-EMBED] Processing batch {Current}/{Total}: {ChunkCount} chunks",
                 batchIndex + 1, batchCount, batchTexts.Count);
 
+            // #4531: the token goes down to the call. Without it a cancelled upload kept waiting for the
+            // embedding service to answer this batch, and noticed the cancellation only afterwards.
             var batchResult = await embeddingService.GenerateEmbeddingsAsync(
-                batchTexts, pdfDoc.Language ?? "en").ConfigureAwait(false);
+                batchTexts, pdfDoc.Language ?? "en", cancellationToken).ConfigureAwait(false);
+
+            // EmbeddingService turns every provider exception, cancellation included, into a failed result. Without
+            // this line a cancelled batch would be logged as «BATCH-EMBED FAILED» at Error level and handed to
+            // HandleEmbeddingFailureAsync as a service failure, when it is the user's cancellation.
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (!batchResult.Success)
             {
                 _logger.LogError("❌ [BATCH-EMBED] Batch {Current}/{Total} FAILED: {Error}",
                     batchIndex + 1, batchCount, batchResult.ErrorMessage);
-                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime,
-                    $"Embedding generation failed at batch {batchIndex + 1}/{batchCount}: {batchResult.ErrorMessage}", cancellationToken).ConfigureAwait(false);
+                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
                 return (false, null);
             }
 
@@ -533,7 +552,7 @@ internal partial class UploadPdfCommandHandler
             {
                 var mismatch = $"Batch {batchIndex + 1} returned {batchResult.Embeddings?.Count ?? 0} embeddings for {batchTexts.Count} texts";
                 _logger.LogError("❌ [BATCH-EMBED] {Mismatch}", mismatch);
-                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, mismatch, cancellationToken).ConfigureAwait(false);
+                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
                 return (false, null);
             }
 
@@ -544,7 +563,7 @@ internal partial class UploadPdfCommandHandler
                 {
                     var error = $"Invalid embedding detected in batch {batchIndex + 1}";
                     _logger.LogError("❌ [BATCH-EMBED] {Error}", error);
-                    await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, error, cancellationToken).ConfigureAwait(false);
+                    await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
                     return (false, null);
                 }
             }
@@ -583,7 +602,7 @@ internal partial class UploadPdfCommandHandler
         {
             var mismatch = $"Total embeddings {allEmbeddings.Count} != total chunks {allDocumentChunks.Count}";
             _logger.LogError("❌ [BATCH-EMBED] {Mismatch}", mismatch);
-            await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, mismatch, cancellationToken).ConfigureAwait(false);
+            await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
             return (false, null);
         }
 
@@ -591,7 +610,9 @@ internal partial class UploadPdfCommandHandler
     }
 
     /// <summary>
-    /// Handles embedding generation or validation failure with consistent error handling.
+    /// Handles embedding generation or validation failure with consistent error handling. The caller has already
+    /// logged what went wrong (the service's message, the count that did not match); #4660: the progress and the
+    /// column, which users are served, get the fixed text of the category, not that detail.
     /// </summary>
     private async Task HandleEmbeddingFailureAsync(
         string pdfId,
@@ -601,9 +622,9 @@ internal partial class UploadPdfCommandHandler
         IServiceScope scope,
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
-        string errorMessage,
         CancellationToken cancellationToken)
     {
+        var errorMessage = PdfFailureText.For(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Service);
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
         // #2284 follow-up: TD2 — transition Failed via domain. ErrorCategory.Service
@@ -635,8 +656,15 @@ internal partial class UploadPdfCommandHandler
 
         var indexingStopwatch = Stopwatch.StartNew();
 
-        // Create/update VectorDocument row FIRST so the pgvector rows can hang off it
-        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, scope, cancellationToken).ConfigureAwait(false);
+        // The VectorDocument row has to exist FIRST so the chunks and the pgvector rows can hang off it, but
+        // only as "processing": it becomes "completed", and VectorDocumentIndexedEvent raises
+        // has_knowledge_base, LAST, once the saves below are done (#4609). Declaring the index before the
+        // saves left a "completed" document with no vector rows whenever one of them failed or was cancelled.
+        var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
+        var links = await ResolveIndexingLinksAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
+        await pipeline.BeginIndexingAsync(
+            links.PdfGuid, links.GameId, pdfDoc.SharedGameId, links.ChunkCount, links.TotalCharacters, links.Language,
+            cancellationToken).ConfigureAwait(false);
 
         // #4395: both writes go through PdfChunkPersistence, shared with the chunked upload.
         // #4384: text chunks BEFORE the pgvector rows, which point at them — moving this after the
@@ -648,39 +676,39 @@ internal partial class UploadPdfCommandHandler
             scope.ServiceProvider.GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>(),
             _timeProvider, _logger, nameof(UploadPdfCommandHandler), cancellationToken).ConfigureAwait(false);
 
+        await pipeline.IndexAsync(
+            links.PdfGuid, links.GameId, pdfDoc.SharedGameId, links.ChunkCount, links.TotalCharacters, links.Language,
+            cancellationToken).ConfigureAwait(false);
+
         indexingStopwatch.Stop();
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
     }
 
     /// <summary>
-    /// Updates or creates VectorDocument record after successful indexing.
-    /// Delegates to <see cref="IPdfIndexingPipeline"/> (#2244 / epic #2242) so the
-    /// VectorDocumentIndexedEvent fires structurally and shared_games.has_knowledge_base
-    /// projection updates — replaces the direct EF write that bypassed the domain event.
+    /// The arguments both <see cref="IPdfIndexingPipeline"/> steps take (#2244 / epic #2242 / #4609):
+    /// <c>BeginIndexingAsync</c> first, so the VectorDocument row exists, and <c>IndexAsync</c> last, so
+    /// VectorDocumentIndexedEvent fires structurally and shared_games.has_knowledge_base updates only for an
+    /// index that was actually written. Resolved once.
     /// </summary>
-    private async Task UpdateVectorDocumentAsync(
+    private readonly record struct IndexingLinks(Guid PdfGuid, Guid? GameId, int ChunkCount, int TotalCharacters, string Language);
+
+    private static async Task<IndexingLinks> ResolveIndexingLinksAsync(
         string pdfId,
         PdfDocumentEntity pdfDoc,
         int indexedCount,
         MeepleAiDbContext db,
-        IServiceScope scope,
         CancellationToken cancellationToken)
     {
-        var pdfGuid = Guid.Parse(pdfId);
-
         // vector_documents.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
         var resolvedGameId = await PdfGameIdResolver.ResolveAsync(db, pdfDoc, cancellationToken)
             .ConfigureAwait(false);
 
-        var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
-        await pipeline.IndexAsync(
-            pdfDocumentId: pdfGuid,
-            gameId: resolvedGameId,
-            sharedGameId: pdfDoc.SharedGameId,
-            chunkCount: indexedCount,
-            totalCharacters: pdfDoc.ExtractedText?.Length ?? 0,
-            language: string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return new IndexingLinks(
+            Guid.Parse(pdfId),
+            resolvedGameId,
+            indexedCount,
+            pdfDoc.ExtractedText?.Length ?? 0,
+            string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language);
     }
 
     /// <summary>
@@ -785,6 +813,19 @@ internal partial class UploadPdfCommandHandler
             // Swallow: the caller already records the upstream failure reason; the
             // missing event is a tolerable observability gap relative to throwing here.
         }
+
+        // #4609 follow-up: the PDF failed, so its vector document (created "processing" by BeginIndexingAsync) must
+        // not stay in flight. Best effort and optional, on purpose: a PDF can fail before the indexing phase, which
+        // never needed the pipeline, so resolving it with GetRequiredService here would throw inside the failure
+        // handler of a host that does not register it (production does; some test hosts do not). Production resolves
+        // it with GetRequiredService where the indexing phase starts. CancellationToken.None: the cancellation
+        // handler calls here with a token that is already signalled.
+        var pipeline = scope.ServiceProvider.GetService<IPdfIndexingPipeline>();
+        if (pipeline is not null)
+        {
+            // The category, not the message: this column is served to users by pdf-status.
+            await pipeline.MarkIndexingFailedAsync(pdfGuid, PdfFailureText.For(category), CancellationToken.None).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
@@ -868,6 +909,7 @@ internal partial class UploadPdfCommandHandler
         {
             tracked.ExtractedText = pdfDoc.ExtractedText;
             tracked.StructuredElementsJson = pdfDoc.StructuredElementsJson;
+            tracked.PageSpansJson = pdfDoc.PageSpansJson;
             tracked.PageCount = pdfDoc.PageCount;
             tracked.CharacterCount = pdfDoc.CharacterCount;
             tracked.ExtractedTables = pdfDoc.ExtractedTables;
@@ -909,34 +951,74 @@ internal partial class UploadPdfCommandHandler
     /// <summary>
     /// Handles processing cancellation with cleanup.
     /// </summary>
+    /// <remarks>
+    /// <para>The token that triggered this branch is already signalled, so none of the writes below can use it
+    /// (#4531). The progress update did, and <see cref="UpdateProgressAsync"/> rethrows
+    /// <see cref="OperationCanceledException"/>: it threw at once, out of this method, and neither the quota
+    /// release nor the Failed transition ran. The document stayed in the step it was in (Embedding,
+    /// Indexing…) and the reservation was not given back.</para>
+    /// <para>The document ends <c>Failed</c> with <see cref="ErrorCategory.Cancelled"/>: <c>RetryFailedPdfsJob</c>
+    /// does not retry it and <c>PdfNotificationEventHandler</c> does not tell the user their own cancellation
+    /// failed (#4610).</para>
+    /// </remarks>
     private async Task HandleProcessingCancellationAsync(
         string pdfId,
         Guid userId,
         MeepleAiDbContext db,
         IServiceScope scope,
         IPdfUploadQuotaService quotaService,
-        DateTime startTime,
-        CancellationToken cancellationToken)
+        DateTime startTime)
     {
         _logger.LogInformation("PDF processing cancelled for {PdfId}", pdfId);
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Processing cancelled by user", cancellationToken).ConfigureAwait(false);
+
+        // The step that was cancelled can leave work behind that must not be saved now that the token no longer
+        // stops the saves: rows in the change tracker (text chunks or pgvector rows of a save that never went
+        // through), and the domain events queued in the collector for a save that never committed (the
+        // collector is drained only after a successful save). Same rule as TransitionToFailedAsync (#4395).
+        // The collector is cleared as well: otherwise the next save writes to the outbox a state change that
+        // the database never saw.
+        db.ChangeTracker.Clear();
+        scope.ServiceProvider.GetRequiredService<Api.SharedKernel.Application.Services.IDomainEventCollector>().Clear();
+
+        var hasPdfGuid = Guid.TryParse(pdfId, out var cancelledPdfGuid);
+
+        // The cancellation can arrive after the Ready commit, in the tail of FinalizeProcessingAsync (cache
+        // invalidation, quota confirmation). The document is then done and indexed: marking it Failed would
+        // rewrite its progress, give back a quota it consumed, and MarkAsFailed throws on a Ready aggregate.
+        if (hasPdfGuid)
+        {
+            var currentState = await db.PdfDocuments.AsNoTracking()
+                .Where(p => p.Id == cancelledPdfGuid)
+                .Select(p => p.ProcessingState)
+                .FirstOrDefaultAsync(CancellationToken.None).ConfigureAwait(false);
+            if (string.Equals(currentState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal))
+            {
+                _logger.LogInformation(
+                    "PDF {PdfId} was cancelled after it became Ready: nothing to clean up", pdfId);
+                return;
+            }
+        }
+
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Processing cancelled by user", CancellationToken.None).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
 
         // #2284 follow-up: TD2 — transition Failed via domain. failedAtState=null →
         // resolved to current pdfDomain.ProcessingState (whatever step the cancellation
         // hit). Use CancellationToken.None because the cancellation token that triggered
         // this branch is already signalled; we still want to persist the Failed state.
-        if (Guid.TryParse(pdfId, out var cancelledPdfGuid))
+        if (hasPdfGuid)
         {
             await TransitionToFailedAsync(
                 scope, db, cancelledPdfGuid, "Processing cancelled by user",
-                Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Unknown,
+                Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Cancelled,
                 failedAtState: null, CancellationToken.None).ConfigureAwait(false);
         }
     }
 
     /// <summary>
-    /// Handles processing errors with consistent logging and cleanup.
+    /// Handles processing errors with consistent logging and cleanup. #4660: the exception is logged here; the
+    /// progress and the column, which users are served, get the fixed text of the <c>Unknown</c> category, whatever
+    /// the exception (an invalid operation, a database error, anything else), not its message.
     /// </summary>
     private async Task HandleProcessingErrorAsync(
         string pdfId,
@@ -946,11 +1028,11 @@ internal partial class UploadPdfCommandHandler
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
         Exception ex,
-        string errorMessage,
         CancellationToken cancellationToken = default
         )
     {
         _logger.LogError(ex, "Error during PDF processing for {PdfId}: {ErrorType}", pdfId, ex.GetType().Name);
+        var errorMessage = PdfFailureText.For(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Unknown);
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, cancellationToken).ConfigureAwait(false);
 

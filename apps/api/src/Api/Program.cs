@@ -16,6 +16,7 @@ using Api.Routing.AdministrationDiscover;
 using Api.Routing.GameManagement;
 using Api.Routing.GameToolkit;
 using Api.Routing.KnowledgeBase;
+using Api.SharedKernel.Services; // #4774: AddPublicBaseUrl
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
@@ -336,6 +337,9 @@ builder.Services.Configure<AiProviderSettings>(builder.Configuration.GetSection(
 builder.Services.AddSingleton<IValidateOptions<AiProviderSettings>, AiProviderValidator>();
 builder.Services.AddOptions<AiProviderSettings>().ValidateOnStart(); // Trigger validation on startup
 
+// #4774: the one resolver of the public front-end URL, behind every link the API writes for people to open.
+builder.Services.AddPublicBaseUrl();
+
 // Infrastructure services (DB, Cache, HTTP clients)
 builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
 
@@ -651,6 +655,12 @@ using (var scope = app.Services.CreateScope())
             "slug (e.g. 'anthropic/claude-3.5-haiku'), a 'deepseek-*' id, or a local Ollama model.",
             Api.BoundedContexts.KnowledgeBase.Domain.AgentDefaults.DefaultModel);
     }
+
+    // #4774: outside a local environment, a public front-end URL that is missing or points at this machine
+    // makes every invitation, share link and e-mail button useless. Logged as an error, never a startup failure.
+    Api.SharedKernel.Services.PublicBaseUrlStartupCheck.LogIfMisconfigured(
+        scope.ServiceProvider.GetRequiredService<Api.SharedKernel.Services.IPublicBaseUrlProvider>(),
+        app.Logger);
 
     // #4168 (ADR-095 D3): senza una versione pubblicata del profilo la pipeline rifiuta ogni risposta.
     if (db != null)

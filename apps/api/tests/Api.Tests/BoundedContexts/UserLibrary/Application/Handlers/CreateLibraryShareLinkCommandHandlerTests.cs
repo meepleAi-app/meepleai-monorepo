@@ -6,6 +6,7 @@ using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -32,12 +33,12 @@ public class CreateLibraryShareLinkCommandHandlerTests
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockConfiguration = new Mock<IConfiguration>();
 
-        _mockConfiguration.Setup(c => c["App:BaseUrl"]).Returns("https://meepleai.com");
+        _mockConfiguration.Setup(c => c["Frontend:BaseUrl"]).Returns("https://meepleai.com");
 
         _handler = new CreateLibraryShareLinkCommandHandler(
             _mockShareLinkRepository.Object,
             _mockUnitOfWork.Object,
-            _mockConfiguration.Object,
+            PublicBaseUrlTestSupport.ProviderFor(_mockConfiguration.Object),
             NullLogger<CreateLibraryShareLinkCommandHandler>.Instance);
     }
 
@@ -317,7 +318,7 @@ public class CreateLibraryShareLinkCommandHandlerTests
             true,
             null);
 
-        _mockConfiguration.Setup(c => c["App:BaseUrl"]).Returns((string?)null);
+        _mockConfiguration.Setup(c => c["Frontend:BaseUrl"]).Returns((string?)null);
 
         _mockShareLinkRepository
             .Setup(r => r.CountRecentByUserIdAsync(userId, It.IsAny<CancellationToken>()))

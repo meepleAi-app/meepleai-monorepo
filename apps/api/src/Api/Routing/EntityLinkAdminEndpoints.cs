@@ -50,7 +50,8 @@ internal static class EntityLinkAdminEndpoints
                 parsedLinkType = lt;
             }
 
-            // Admin queries with no scope restriction (sees all scopes)
+            // Admin queries with no scope restriction (sees all scopes). #4637: RequestingUserId null is what keeps the
+            // listing unfiltered; with a user, the User-scope links of other users would be left out.
             var query = new GetEntityLinksQuery(
                 EntityType: parsedEntityType,
                 EntityId: sourceId,

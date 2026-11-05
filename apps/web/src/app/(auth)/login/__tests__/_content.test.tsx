@@ -220,6 +220,27 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
+  it('lets the second step take a backup code and sends the server the form it compares (#4817)', async () => {
+    loginMock.mockResolvedValueOnce({
+      user: null,
+      requiresTwoFactor: true,
+      tempSessionToken: 'temp-token-abc',
+    });
+    verify2FAMock.mockResolvedValueOnce({ id: 'u1', email: 'user@example.com', role: 'User' });
+
+    render(<LoginPageContent />);
+    fillAndSubmit();
+
+    const input = await screen.findByTestId('2fa-code-input');
+    fireEvent.change(input, { target: { value: 'abcd 2345' } });
+    expect(input).toHaveValue('ABCD2345');
+    fireEvent.click(screen.getByTestId('2fa-verify-button'));
+
+    await waitFor(() => {
+      expect(verify2FAMock).toHaveBeenCalledWith('temp-token-abc', 'ABCD-2345', false);
+    });
+  });
+
   it('redirects admins to /library (user app) after successful login', async () => {
     // Issue #893 demo follow-up: admins/superadmins land on the user app by default.
     loginMock.mockResolvedValueOnce({

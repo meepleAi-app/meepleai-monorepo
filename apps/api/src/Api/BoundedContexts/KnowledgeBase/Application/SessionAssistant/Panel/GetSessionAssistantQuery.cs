@@ -23,12 +23,15 @@ internal sealed record SessionAssistantMessageDto(
 /// <summary>
 /// Ciò che il pannello dell'assistente mostra al montaggio e dopo un ricaricamento (#4372): disponibilità,
 /// conversazione e proposte del thread, nell'ordine in cui sono nate. Una proposta porta il
-/// <c>MessageId</c> del messaggio dell'assistente che l'ha prodotta.
+/// <c>MessageId</c> del messaggio dell'assistente che l'ha prodotta. <c>RulesLoaded</c> (#4729) dice se il gioco
+/// della sessione ha un regolamento indicizzato che <c>cerca_regole</c> può consultare: <c>false</c> se no,
+/// <c>null</c> se la sessione non ha un gioco.
 /// </summary>
 internal sealed record SessionAssistantPanelDto(
     SessionAssistantAvailabilityDto Availability,
     IReadOnlyList<SessionAssistantMessageDto> Messages,
-    IReadOnlyList<AssistantProposalDto> Proposals);
+    IReadOnlyList<AssistantProposalDto> Proposals,
+    bool? RulesLoaded = null);
 
 /// <summary>
 /// La lettura del pannello dell'assistente in partita (#4372). Solo il proprietario della sessione, come il
@@ -44,17 +47,20 @@ internal sealed class GetSessionAssistantQueryHandler : IQueryHandler<GetSession
     private readonly SessionAssistantAvailability _availability;
     private readonly IChatThreadRepository _threads;
     private readonly IAssistantProposalRepository _proposals;
+    private readonly IAssistantRulesReadiness _rules;
 
     public GetSessionAssistantQueryHandler(
         IAssistantSessionDirectory directory,
         SessionAssistantAvailability availability,
         IChatThreadRepository threads,
-        IAssistantProposalRepository proposals)
+        IAssistantProposalRepository proposals,
+        IAssistantRulesReadiness rules)
     {
         _directory = directory ?? throw new ArgumentNullException(nameof(directory));
         _availability = availability ?? throw new ArgumentNullException(nameof(availability));
         _threads = threads ?? throw new ArgumentNullException(nameof(threads));
         _proposals = proposals ?? throw new ArgumentNullException(nameof(proposals));
+        _rules = rules ?? throw new ArgumentNullException(nameof(rules));
     }
 
     public async Task<SessionAssistantPanelDto> Handle(GetSessionAssistantQuery query, CancellationToken cancellationToken)
@@ -68,11 +74,16 @@ internal sealed class GetSessionAssistantQueryHandler : IQueryHandler<GetSession
         }
 
         var availability = await AvailabilityAsync(access, query.Language, cancellationToken).ConfigureAwait(false);
+        // The notice only means something while the assistant answers: with it off or the game over, the panel
+        // shows the reason instead and ignores the flag, so the probe's queries are not spent.
+        bool? rulesLoaded = availability.Enabled
+            ? await _rules.HasIndexedRulesAsync(access.GameId, cancellationToken).ConfigureAwait(false)
+            : null;
 
         var thread = await _threads.FindByLiveSessionIdAsync(query.LiveSessionId, cancellationToken).ConfigureAwait(false);
         if (thread is null)
         {
-            return new SessionAssistantPanelDto(availability, [], []);
+            return new SessionAssistantPanelDto(availability, [], [], rulesLoaded);
         }
 
         var messages = thread.Messages
@@ -81,7 +92,8 @@ internal sealed class GetSessionAssistantQueryHandler : IQueryHandler<GetSession
             .Select(m => new SessionAssistantMessageDto(m.Id, m.Role, m.Content, m.Timestamp, AssistantCitations.Read(m.CitationsJson)))
             .ToList();
         var proposals = await _proposals.ListByThreadAsync(thread.Id, cancellationToken).ConfigureAwait(false);
-        return new SessionAssistantPanelDto(availability, messages, proposals.Select(AssistantProposalDto.From).ToList());
+        return new SessionAssistantPanelDto(
+            availability, messages, proposals.Select(AssistantProposalDto.From).ToList(), rulesLoaded);
     }
 
     /// <summary>Nell'ordine dei controlli del turno: prima lo stato della sessione, poi il profilo.</summary>

@@ -34,7 +34,7 @@ public class GoLiveSessionCommandHandlerTests
         _mockMediator = new Mock<IMediator>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         // #3636: senza questo setup il mock non esegue il delegate della transazione.
-        _mockUnitOfWork.SetupExecuteInTransaction<StartGameNightSessionResult>();
+        _mockUnitOfWork.SetupExecuteInTransaction();
         _handler = new GoLiveSessionCommandHandler(
             _mockRepository.Object,
             _mockMediator.Object,
@@ -74,9 +74,15 @@ public class GoLiveSessionCommandHandlerTests
         Assert.Equal(1, result.PlayOrder);
         Assert.Equal(GameNightSessionStatus.InProgress, gameNight.Sessions[0].Status);
 
-        // Persisted then opened live LAST (phase 3), exactly once each.
+        // Persisted then opened live LAST (phase 3), exactly once each. #4752: the promotion is written inside the
+        // transaction the UoW runs (which also commits it), together with the live game — the handler no longer
+        // calls SaveChanges itself.
         _mockRepository.Verify(r => r.UpdateAsync(gameNight, It.IsAny<CancellationToken>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockUnitOfWork.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(
             It.Is<OpenSessionLiveModeCommand>(c => c.SessionId == sessionId), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -94,7 +100,7 @@ public class GoLiveSessionCommandHandlerTests
         await Assert.ThrowsAsync<NotFoundException>(
             () => _handler.Handle(new GoLiveSessionCommand(sessionId, Guid.NewGuid()), CancellationToken.None));
 
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -118,7 +124,7 @@ public class GoLiveSessionCommandHandlerTests
         // The blocked caller must not promote the draft or open live mode.
         Assert.Equal(GameNightSessionStatus.Pending, gameNight.Sessions[0].Status);
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -141,7 +147,7 @@ public class GoLiveSessionCommandHandlerTests
         await Assert.ThrowsAsync<MaxLiveSessionsExceededException>(
             () => _handler.Handle(new GoLiveSessionCommand(secondSessionId, gameNight.OrganizerId), CancellationToken.None));
 
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -168,7 +174,7 @@ public class GoLiveSessionCommandHandlerTests
         _mockRepository.Verify(r => r.UpdateAsync(
             It.IsAny<Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightEvent>(),
             It.IsAny<CancellationToken>()), Times.Never);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -204,7 +210,7 @@ public class GoLiveSessionCommandHandlerTests
         _mockRepository.Verify(r => r.UpdateAsync(
             It.IsAny<Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightEvent>(),
             It.IsAny<CancellationToken>()), Times.Never);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(
             It.Is<OpenSessionLiveModeCommand>(c => c.SessionId == sessionId), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -236,7 +242,7 @@ public class GoLiveSessionCommandHandlerTests
         _mockRepository.Verify(r => r.UpdateAsync(
             It.IsAny<Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightEvent>(),
             It.IsAny<CancellationToken>()), Times.Never);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(
             It.Is<OpenSessionLiveModeCommand>(c => c.SessionId == sessionId), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -246,14 +252,16 @@ public class GoLiveSessionCommandHandlerTests
     public async Task Handle_ConcurrentXminLoser_Maps409MaxLive_DoesNotOpenLiveMode()
     {
         // Arrange — two concurrent go-lives both pass the in-memory guard; the xmin loser's aggregate
-        // SaveChanges throws DbUpdateConcurrencyException. It must map to the blocked-modal 409, and
-        // MUST NOT open live mode on a promotion that never committed.
+        // write throws DbUpdateConcurrencyException (raised by the SaveChanges inside the transaction, which
+        // also rolls the live game back). It must map to the blocked-modal 409, and MUST NOT open live mode
+        // on a promotion that never committed.
         var sessionId = Guid.NewGuid();
         var gameNight = CreatePublishedEventWithDraft(sessionId, out _);
 
         _mockRepository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(gameNight);
-        _mockUnitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+        _mockUnitOfWork.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new DbUpdateConcurrencyException());
 
         // Act & Assert

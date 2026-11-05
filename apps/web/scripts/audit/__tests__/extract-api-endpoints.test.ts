@@ -10,9 +10,14 @@
  * Spec: docs/for-developers/specs/2026-08-26-full-feature-audit-design.md
  */
 
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
+  extractApiEndpoints,
   parseGroupPrefixes,
   parseProgramPrefixes,
   parseRoutingFile,
@@ -57,6 +62,11 @@ describe('registrarName', () => {
 });
 
 describe('parseGroupPrefixes', () => {
+  it('risolve il prefisso anche se .MapGroup va a capo dopo il ricevente', () => {
+    const source = ['var group = app', '    .MapGroup("/a")', '    .WithTags("A");'].join('\n');
+    expect(parseGroupPrefixes(source).get('group')?.prefix).toBe('/a');
+  });
+
   it('risolve i prefissi annidati per variabile', () => {
     const source = `
       var group = app.MapGroup("/admin");
@@ -116,6 +126,39 @@ describe('parseRoutingFile', () => {
     expect(parseRoutingFile(source, 'f.cs', '/api/v1')[0].path).toBe(
       '/api/v1/admin/agent-definitions/'
     );
+  });
+
+  // ASP.NET combina il prefisso del gruppo e il pattern inserendo la '/': `MapGet("{id:guid}")` sotto
+  // `/evaluations` è `/evaluations/{id:guid}`. Senza, l'estrattore produceva `/evaluations{id:guid}`.
+  it('inserisce la barra fra il prefisso e un pattern relativo senza barra iniziale', () => {
+    const source = `
+      var group = app.MapGroup("/admin/kb/docs/{docId:guid}/evaluations");
+      group.MapPost("", H);
+      group.MapGet("{evaluationId:guid}", H);
+    `;
+    const paths = parseRoutingFile(source, 'f.cs', '/api/v1').map(e => e.path);
+    expect(paths).toEqual([
+      '/api/v1/admin/kb/docs/{docId:guid}/evaluations',
+      '/api/v1/admin/kb/docs/{docId:guid}/evaluations/{evaluationId:guid}',
+    ]);
+  });
+
+  // #4752 (revisione): `AdminKbQualityEndpoints` scrive `var group = app` e va a capo prima di `.MapGroup(...)`.
+  // La regex non ammetteva spazi prima del punto: il gruppo si perdeva e le tre rotte uscivano come
+  // `POST /api/v1`, `GET /api/v1` e `GET /api/v1/{evaluationId}`.
+  it('riconosce una dichiarazione di gruppo con .MapGroup a capo', () => {
+    const source = `
+      var group = app
+          .MapGroup("/admin/kb/docs/{docId:guid}/evaluations")
+          .RequireAuthorization("RequireAdminOrAbove");
+
+      group.MapPost("", H);
+      group.MapGet("{evaluationId:guid}", H);
+    `;
+    expect(parseRoutingFile(source, 'f.cs', '/api/v1').map(e => `${e.method} ${e.path}`)).toEqual([
+      'POST /api/v1/admin/kb/docs/{docId:guid}/evaluations',
+      'GET /api/v1/admin/kb/docs/{docId:guid}/evaluations/{evaluationId:guid}',
+    ]);
   });
 
   it('usa il prefisso del gruppo ricevente, non del primo dichiarato nel file', () => {
@@ -263,5 +306,51 @@ describe('parseRoutingFile', () => {
       '    .RequireAdminSession();',
     ].join('\n');
     expect(parseRoutingFile(source, 'f.cs', '')[0].auth).toBe('admin');
+  });
+});
+
+describe('extractApiEndpoints — radici da leggere', () => {
+  // #4752 (revisione): oltre a Routing/ ci sono rotte vere in BoundedContexts/*/Routing (KbQuality,
+  // GameManagement). Con la sola radice Routing risultavano «sconosciute» chiamate a rotte che esistono.
+  const withTree = (run: (apiDir: string) => void): void => {
+    const apiDir = mkdtempSync(path.join(tmpdir(), 'api-routes-'));
+    try {
+      writeFileSync(
+        path.join(apiDir, 'Program.cs'),
+        ['var v1Api = app.MapGroup("/api/v1");', 'v1Api.MapKbQualityEndpoints();', ''].join('\n')
+      );
+      mkdirSync(path.join(apiDir, 'Routing'), { recursive: true });
+      writeFileSync(
+        path.join(apiDir, 'Routing', 'A.cs'),
+        'public static class A { public static void MapAEndpoints(this RouteGroupBuilder group) { group.MapGet("/a", H); } }'
+      );
+      const bc = path.join(apiDir, 'BoundedContexts', 'KbQuality', 'Routing');
+      mkdirSync(bc, { recursive: true });
+      writeFileSync(
+        path.join(bc, 'B.cs'),
+        'public static class B { public static void MapKbQualityEndpoints(this RouteGroupBuilder group) { group.MapPost("/b", H); } }'
+      );
+      run(apiDir);
+    } finally {
+      rmSync(apiDir, { recursive: true, force: true });
+    }
+  };
+
+  it('legge solo Routing se non si indicano altre radici (l’audit non cambia)', () => {
+    withTree(apiDir => {
+      expect(extractApiEndpoints(apiDir).map(e => `${e.method} ${e.path}`)).toEqual([
+        'GET /api/v1/a',
+      ]);
+    });
+  });
+
+  it('legge anche le altre radici indicate, con il prefisso del loro registrar', () => {
+    withTree(apiDir => {
+      const found = extractApiEndpoints(apiDir, ['Routing', 'BoundedContexts']);
+      expect(found.map(e => `${e.method} ${e.path}`).sort()).toEqual([
+        'GET /api/v1/a',
+        'POST /api/v1/b',
+      ]);
+    });
   });
 });

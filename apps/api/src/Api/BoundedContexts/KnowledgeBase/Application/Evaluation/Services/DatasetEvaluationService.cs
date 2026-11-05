@@ -160,8 +160,10 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
             // validity is a separate trust floor (well-formed PDF:guid + existing doc + page in range).
             var snippets = ragResponse.snippets ?? [];
             var inlineMatches = _citationMatcher.Match(ragResponse.answer ?? string.Empty, snippets);
+            // #4819: a citation without a page cannot satisfy a page the dataset expects.
             var actualCitationPages = inlineMatches
                 .Select(m => m.PageNumber)
+                .OfType<int>()
                 .Distinct()
                 .OrderBy(p => p)
                 .ToList();

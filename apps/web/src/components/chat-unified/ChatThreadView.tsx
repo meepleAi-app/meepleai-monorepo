@@ -25,6 +25,7 @@ import {
   collectCitations,
   getSuggestedQuestions,
   useChatScroll,
+  usePendingFirstMessage,
   useThreadMessages,
 } from '@/components/chat/shared';
 import { PageViewerPanel } from '@/components/chat/viewer/PageViewerPanel';
@@ -40,6 +41,7 @@ import {
   type ContinuationData,
 } from '@/lib/api/clients/chatClient';
 import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
+import { intentOf } from '@/lib/chat/answer-intent';
 import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/stores/voice/store';
 import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
@@ -51,7 +53,11 @@ import { ChatMessageList, type ChatMessageItem } from './ChatMessageList';
 import { ChatThreadHeader } from './ChatThreadHeader';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
-import { qaStreamErrorMessage } from './qaStreamErrors';
+import {
+  QaTooManyRequestsError,
+  qaRequestFailureMessage,
+  qaStreamErrorMessage,
+} from './qaStreamErrors';
 import { RAG_OWNERSHIP_REQUIRED, RagOwnershipRequiredNotice } from './RagOwnershipRequiredNotice';
 import {
   TIER_LIMIT_EXCEEDED,
@@ -235,11 +241,16 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     setOwnershipDenied(false);
     setNoManualNotice(false);
     setTierLimit(null);
+    // #4740: un caricamento superato (cambio di thread, o il doppio montaggio di StrictMode in sviluppo) non
+    // deve scrivere dopo quello che l'ha sostituito. Prima non contava: nessuno spediva nulla appena
+    // caricato; con la domanda di un Quick Start sì, e un caricamento tardivo cancellava bolle già a schermo.
+    let cancelled = false;
     async function loadThread() {
       setIsLoading(true);
       setError(null);
       try {
         const threadData = await api.chat.getThreadById(threadId);
+        if (cancelled) return;
         if (!threadData) {
           setError('Thread non trovato');
           return;
@@ -274,7 +285,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             const found = threadData.privateGameId
               ? await api.library.getPrivateGame(threadData.privateGameId)
               : await api.games.getById(threadData.gameId);
-            if (found) {
+            if (found && !cancelled) {
               gameName = found.title;
               setGame({
                 id: found.id,
@@ -285,6 +296,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             // Non-critical: game info not found
           }
         }
+        if (cancelled) return;
 
         // Issue #4780: Inject welcome message when thread is new (empty) and has an agent
         if (mappedMessages.length === 0 && agentId && gameName) {
@@ -302,13 +314,16 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           replaceMessagesInHook(mappedMessages);
         }
       } catch {
-        setError('Errore nel caricamento della conversazione');
+        if (!cancelled) setError('Errore nel caricamento della conversazione');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
     void loadThread();
+    return () => {
+      cancelled = true;
+    };
   }, [threadId, replaceMessagesInHook, abortCurrent]);
 
   // Handle continuation — append more content to the last assistant message
@@ -340,8 +355,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               }
             }
           }
-        } catch {
-          /* handled */
+        } catch (err) {
+          // #4388: «Continua» apre una seconda risposta sulla stessa rotta: con due già aperte il
+          // backend la rifiuta con 429. Gli altri errori restano com'erano (già gestiti).
+          if (err instanceof QaTooManyRequestsError) {
+            setError(err.message);
+          }
         } finally {
           setIsSending(false);
         }
@@ -524,7 +543,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
-          setError("Errore nell'invio del messaggio");
+          // #4388: due risposte già aperte, la terza è rifiutata con 429: la chat dice di aspettare.
+          setError(qaRequestFailureMessage(err, "Errore nell'invio del messaggio"));
           // Remove optimistic assistant message on error
           removeMessageById(assistantMsgId);
         }
@@ -639,6 +659,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // Keep ref in sync for voice onTranscript callback
   handleSendRef.current = handleSendMessage;
 
+  // #4740: the question of a Quick Start, left by the start page, goes out once the thread is open.
+  usePendingFirstMessage({
+    threadId,
+    view: 'desktop',
+    ready: !isLoading && thread?.id === threadId && !!thread.gameId && thread.messages.length === 0,
+    send: message => void handleSendMessage(message),
+  });
+
   // Title change
   const handleTitleChange = useCallback(
     async (newTitle: string) => {
@@ -665,7 +693,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // Agent switching with confirmation (Issue #4465)
   const handleAgentChangeRequest = useCallback(
     (newAgent: AgentType) => {
-      if (newAgent === ((thread?.agentTypology as AgentType) ?? 'auto')) return;
+      if (newAgent === intentOf(thread?.agentTypology)) return;
       setPendingAgent(newAgent);
       setShowAgentConfirm(true);
     },
@@ -679,7 +707,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       await api.chat.switchThreadAgent(thread.id, pendingAgent);
       setThread(prev => (prev ? { ...prev, agentTypology: pendingAgent } : prev));
     } catch {
-      setError('Errore nel cambio agente');
+      setError('Errore nel cambio del tipo di risposta');
     }
     setPendingAgent(null);
   }, [pendingAgent, thread]);
@@ -749,11 +777,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       <ChatThreadHeader
         title={thread?.title ?? 'Chat'}
         gameName={game?.title}
-        agentName={
-          thread?.agentTypology
-            ? AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto']
-            : undefined
-        }
+        agentName={thread?.agentTypology ? AGENT_NAMES[intentOf(thread.agentTypology)] : undefined}
         onTitleChange={handleTitleChange}
         onDelete={handleDelete}
       />
@@ -761,7 +785,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       {/* Agent Selector + Connection Status */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80">
         <AgentSelector
-          value={(thread?.agentTypology as AgentType) ?? 'auto'}
+          value={intentOf(thread?.agentTypology)}
           onChange={handleAgentChangeRequest}
           disabled={isSending || streamState.isStreaming}
           className="flex-1"
@@ -843,6 +867,18 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           className="mx-4 mt-2 rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground"
         >
           {`Possesso dichiarato, ma per ${game?.title ?? 'questo gioco'} non c'è ancora un manuale caricato: finché non ne viene caricato uno, le risposte non potranno citare il regolamento.`}
+        </div>
+      )}
+      {/* Without a game there is nothing to scope retrieval by, so nothing answers (#4139): say it, instead of
+          letting the user's message sit there with no reply and no error. */}
+      {!thread?.gameId && (
+        <div
+          data-testid="chat-no-game-notice"
+          role="note"
+          className="mx-4 mt-2 rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground"
+        >
+          Questa conversazione non ha un gioco: i messaggi vengono salvati ma non ricevono risposta.
+          Per fare domande sulle regole, avvia una nuova chat scegliendo un gioco.
         </div>
       )}
 
@@ -1009,8 +1045,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           agent={
             thread?.agentTypology
               ? {
-                  name: AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto'],
-                  typology: thread.agentTypology,
+                  name: AGENT_NAMES[intentOf(thread.agentTypology)],
+                  typology: intentOf(thread.agentTypology),
                 }
               : undefined
           }

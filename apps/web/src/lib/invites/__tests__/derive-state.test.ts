@@ -168,6 +168,40 @@ describe('deriveState (Wave A.5b)', () => {
       );
     });
 
+    // #4856: the NIGHT was cancelled. The invitation keeps its own state (a guest who accepted is still «Accepted»),
+    // and the page must not greet them with «you already answered» as if the night were on.
+    it.each(['Pending', 'Accepted', 'Declined'])(
+      'maps a cancelled night → token-expired, whatever the invitation says (%s)',
+      status => {
+        expect(
+          deriveState(
+            baseArgs({
+              data: {
+                ...PENDING_INVITATION,
+                status,
+                alreadyRespondedAs:
+                  status === 'Pending' ? null : (status as 'Accepted' | 'Declined'),
+                nightCancelled: true,
+              },
+            })
+          )
+        ).toBe('token-expired');
+      }
+    );
+
+    it('does not call a night that is on cancelled (nightCancelled=false or missing)', () => {
+      expect(
+        deriveState(
+          baseArgs({
+            data: { ...PENDING_INVITATION, alreadyRespondedAs: 'Accepted', nightCancelled: false },
+          })
+        )
+      ).toBe('already-accepted');
+      expect(
+        deriveState(baseArgs({ data: { ...PENDING_INVITATION, alreadyRespondedAs: 'Accepted' } }))
+      ).toBe('already-accepted');
+    });
+
     it('maps alreadyRespondedAs=Accepted → already-accepted', () => {
       expect(
         deriveState(baseArgs({ data: { ...PENDING_INVITATION, alreadyRespondedAs: 'Accepted' } }))

@@ -14,21 +14,24 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { ArrowLeft, ArrowRight, Check, Dices, Loader2, Plus, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { GamePicker, type GameOption } from '@/components/features/game-picker';
+import { AddSelfButton, OptOutButton, SelfBadge } from '@/components/session/SelfPlayerControls';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { ownUserId, useSelfPlayer, type SelfPlayer } from '@/hooks/useSelfPlayer';
 import { trackSessionCreated } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
 import type {
   PlayerColor,
   CreateLiveSessionRequest,
 } from '@/lib/api/schemas/live-sessions.schemas';
+import { duplicatePlayerNameMessage, findDuplicatePlayerName } from '@/lib/sessions/player-names';
 
 // ========== Types ==========
 
@@ -41,7 +44,11 @@ interface PlayerEntry {
   id: string;
   displayName: string;
   color: PlayerColor;
+  /** Set only for the creator's own entry (#4750): the other players are written by name. */
+  userId?: string;
 }
+
+const SELF_PLAYER_ID = 'temp-self';
 
 const PLAYER_COLORS: { value: PlayerColor; label: string; className: string }[] = [
   { value: 'Red', label: 'Rosso', className: 'bg-red-500' },
@@ -217,14 +224,34 @@ function ConfigureScoringStep({
 function AddPlayersStep({
   players,
   onPlayersChange,
+  self,
+  duplicateName,
 }: {
   players: PlayerEntry[];
   onPlayersChange: (players: PlayerEntry[]) => void;
+  self: SelfPlayer | null;
+  duplicateName: string | null;
 }) {
   const [newName, setNewName] = useState('');
 
   const usedColors = players.map(p => p.color);
   const nextAvailableColor = PLAYER_COLORS.find(c => !usedColors.includes(c.value))?.value ?? 'Red';
+  const isSelf = (player: PlayerEntry) => !!self && player.userId === self.userId;
+  const selfInList = players.some(isSelf);
+
+  // The creator goes first: this wizard has no turn-order step, so the list is the order.
+  const addSelf = () => {
+    if (!self || selfInList) return;
+    onPlayersChange([
+      {
+        id: SELF_PLAYER_ID,
+        displayName: self.displayName,
+        color: nextAvailableColor,
+        userId: self.userId,
+      },
+      ...players,
+    ]);
+  };
 
   const addPlayer = () => {
     if (!newName.trim()) return;
@@ -266,7 +293,18 @@ function AddPlayersStep({
                 PLAYER_COLORS.find(c => c.value === player.color)?.className ?? 'bg-gray-400'
               }`}
             />
-            <span className="font-medium text-sm flex-1 truncate">{player.displayName}</span>
+            {/* The creator's own entry carries «Tu» and the way out (#4750) */}
+            {isSelf(player) ? (
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm truncate">{player.displayName}</span>
+                  <SelfBadge />
+                </div>
+                <OptOutButton onClick={() => removePlayer(player.id)} />
+              </div>
+            ) : (
+              <span className="font-medium text-sm flex-1 truncate">{player.displayName}</span>
+            )}
 
             {/* Color selector */}
             <div className="flex gap-1">
@@ -284,9 +322,16 @@ function AddPlayersStep({
                 ))}
             </div>
 
-            <Button variant="ghost" size="sm" onClick={() => removePlayer(player.id)}>
-              <X className="h-4 w-4 text-muted-foreground" />
-            </Button>
+            {!isSelf(player) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removePlayer(player.id)}
+                aria-label={`Rimuovi ${player.displayName}`}
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            )}
           </div>
         ))}
       </div>
@@ -305,6 +350,15 @@ function AddPlayersStep({
           Aggiungi
         </Button>
       </div>
+
+      {duplicateName && (
+        <p className="text-sm text-destructive" role="status">
+          {duplicatePlayerNameMessage(duplicateName)}
+        </p>
+      )}
+
+      {/* The creator opted out and wants back in (#4750) */}
+      {self && !selfInList && <AddSelfButton onClick={addSelf} />}
     </div>
   );
 }
@@ -400,9 +454,26 @@ export function SessionCreationWizard() {
   const [dimensions, setDimensions] = useState<ScoringDimension[]>(DEFAULT_DIMENSIONS);
 
   // Step 3: Players
+  const self = useSelfPlayer();
   const [players, setPlayers] = useState<PlayerEntry[]>([]);
 
+  // #4750: the creator is the first player, linked to their account. Seeded once, when the user
+  // is known and the list is still empty: after «Io non gioco» the list is the user's.
+  const seededSelf = useRef(false);
+  useEffect(() => {
+    if (!self || seededSelf.current) return;
+    seededSelf.current = true;
+    setPlayers(prev =>
+      prev.length === 0
+        ? [{ id: SELF_PLAYER_ID, displayName: self.displayName, color: 'Red', userId: self.userId }]
+        : prev
+    );
+  }, [self]);
+
   const totalSteps = 4;
+
+  // The server refuses two players with the same name: say so before the session exists.
+  const duplicateName = findDuplicatePlayerName(players.map(p => p.displayName));
 
   const canProceed = (): boolean => {
     switch (step) {
@@ -411,7 +482,7 @@ export function SessionCreationWizard() {
       case 1:
         return dimensions.length > 0;
       case 2:
-        return players.length >= 1;
+        return players.length >= 1 && !duplicateName;
       case 3:
         return true;
       default:
@@ -436,11 +507,14 @@ export function SessionCreationWizard() {
 
       const sessionId = await api.liveSessions.createSession(request);
 
-      // Add players after session creation
+      // Add players after session creation. The linked creator is first in the list (seeded, and
+      // re-added, at the front), so the server makes them the Host (#4750).
       for (const player of players) {
+        const userId = ownUserId(player.userId, self);
         await api.liveSessions.addPlayer(sessionId, {
           displayName: player.displayName,
           color: player.color,
+          ...(userId ? { userId } : {}),
         });
       }
 
@@ -459,7 +533,7 @@ export function SessionCreationWizard() {
       setError(err instanceof Error ? err.message : 'Errore nella creazione della sessione');
       setIsCreating(false);
     }
-  }, [gameName, selectedGame, dimensions, players, router]);
+  }, [gameName, selectedGame, dimensions, players, self, router]);
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -476,7 +550,14 @@ export function SessionCreationWizard() {
       {step === 1 && (
         <ConfigureScoringStep dimensions={dimensions} onDimensionsChange={setDimensions} />
       )}
-      {step === 2 && <AddPlayersStep players={players} onPlayersChange={setPlayers} />}
+      {step === 2 && (
+        <AddPlayersStep
+          players={players}
+          onPlayersChange={setPlayers}
+          self={self}
+          duplicateName={duplicateName}
+        />
+      )}
       {step === 3 && (
         <ReviewStep
           gameName={gameName}

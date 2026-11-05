@@ -197,6 +197,7 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
           loading={isAuthenticating}
           error={twoFactorError}
           onErrorDismiss={() => setTwoFactorError('')}
+          allowBackupCode
           showRememberDevice
         />
       </AuthCard>

@@ -28,6 +28,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedText),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.CharacterCount),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.StructuredElementsJson),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.PageSpansJson),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedTables),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedDiagrams),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.AtomicRules),
@@ -206,11 +207,26 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return await DbContext.PdfDocuments.AnyAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<PdfDocument?> FindByContentHashAsync(string contentHash, CancellationToken cancellationToken = default)
+    public async Task<PdfDocument?> FindByContentHashForCatalogGameAsync(
+        string contentHash, Guid sharedGameId, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.ContentHash == contentHash)
+            .Where(p => p.ContentHash == contentHash && p.SharedGameId == sharedGameId)
+            .OrderByDescending(p => p.UploadedAt)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
+    public async Task<PdfDocument?> FindByContentHashForPrivateGameAsync(
+        string contentHash, Guid userId, Guid privateGameId, CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.ContentHash == contentHash
+                        && p.UploadedByUserId == userId
+                        && p.PrivateGameId == privateGameId)
             .OrderByDescending(p => p.UploadedAt)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 

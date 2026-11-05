@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Label } from '@/components/ui/primitives/label';
 import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
+import { PdfIngestResponseSchema, type PdfIngestOutcome } from '@/lib/api/schemas/pdf.schemas';
 import { formatSizeLimit } from '@/lib/format/file-size';
 import { cn } from '@/lib/utils';
 
@@ -118,45 +119,50 @@ export function PdfUploadStep({
       // Use XHR for progress tracking
       const xhr = new XMLHttpRequest();
 
-      const uploadPromise = new Promise<{ documentId: string; fileName: string }>(
-        (resolve, reject) => {
-          xhr.upload.addEventListener('progress', e => {
-            if (e.lengthComputable) {
-              setUploadProgress(Math.round((e.loaded / e.total) * 100));
+      const uploadPromise = new Promise<PdfIngestOutcome>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', e => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(PdfIngestResponseSchema.parse(JSON.parse(xhr.responseText)));
+            } catch {
+              reject(new Error('Risposta non valida dal server'));
             }
-          });
-
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const response = JSON.parse(xhr.responseText);
-                resolve(response);
-              } catch {
-                reject(new Error('Risposta non valida dal server'));
-              }
-            } else {
-              try {
-                const error = JSON.parse(xhr.responseText);
-                reject(new Error(error.error || 'Upload fallito'));
-              } catch {
-                reject(new Error(`Upload fallito: ${xhr.statusText}`));
-              }
+          } else {
+            try {
+              const error = JSON.parse(xhr.responseText);
+              reject(new Error(error.error || 'Upload fallito'));
+            } catch {
+              reject(new Error(`Upload fallito: ${xhr.statusText}`));
             }
-          });
+          }
+        });
 
-          xhr.addEventListener('error', () => {
-            reject(new Error('Errore di rete durante upload'));
-          });
+        xhr.addEventListener('error', () => {
+          reject(new Error('Errore di rete durante upload'));
+        });
 
-          xhr.open('POST', '/api/v1/ingest/pdf');
-          xhr.withCredentials = true;
-          xhr.send(formData);
-        }
-      );
+        xhr.open('POST', '/api/v1/ingest/pdf');
+        xhr.withCredentials = true;
+        xhr.send(formData);
+      });
 
       const result = await uploadPromise;
 
-      toast.success('PDF caricato con successo!');
+      // #4893: the same content already stored answers 200 with `existingKb` and no `documentId`. Nothing
+      // was uploaded: say so, and go on with the document that is already there.
+      if (result.kind === 'existing') {
+        toast.info(
+          `PDF già presente (stato: ${result.existingKb.processingState}): uso quello esistente`
+        );
+      } else {
+        toast.success('PDF caricato con successo!');
+      }
       onComplete(result.documentId, file.name, isPublic);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore sconosciuto';

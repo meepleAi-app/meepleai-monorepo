@@ -12,7 +12,11 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { toast } from 'sonner';
 
-import { qaStreamErrorMessage } from '@/components/chat-unified/qaStreamErrors';
+import {
+  QaTooManyRequestsError,
+  qaStreamErrorMessage,
+  throwIfQaTooManyRequests,
+} from '@/components/chat-unified/qaStreamErrors';
 import {
   readTierLimit,
   TIER_LIMIT_EXCEEDED,
@@ -282,11 +286,16 @@ async function* agentChatTransport(
       credentials: useProxy ? 'same-origin' : 'include',
       signal,
     });
+    // #4388: the backend keeps at most two answers open per user and refuses the third with 429.
+    // The proxy has its own limit and its own meaning, so it keeps the generic path.
+    if (!useProxy) throwIfQaTooManyRequests(response);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
   } catch (fetchErr) {
     if (signal.aborted) return;
+    // #4388: a refusal is not a lost connection. No "retrying" status, and errorMapper does not retry.
+    if (fetchErr instanceof QaTooManyRequestsError) throw fetchErr;
     // Yield a synthetic "disconnected" event so the reducer can set connectionStatus:'disconnected'
     // BEFORE the error propagates to the base hook's retry scheduler.
     // This preserves the original state transition (original lines 496-503):
@@ -603,6 +612,13 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
       isTerminalEvent: e =>
         e.type === StreamingEventType.Complete || e.type === StreamingEventType.Error,
       errorMapper: raw => {
+        // #4388: two answers are already open. A retry would arrive while they still are, so the
+        // user is told to wait. First, before the checks below: an answer left on screen by the
+        // previous question must not turn this refusal into an "interrupted" one.
+        if (raw instanceof QaTooManyRequestsError) {
+          return { kind: 'other', message: raw.message };
+        }
+
         // #4335: never retried. With words already on screen a retry would start the answer over
         // under them (the M-4 rule below). Without, the connection DID work and the server (or a
         // proxy) closed it: not the failure to connect that the retry is for, and a silent resend

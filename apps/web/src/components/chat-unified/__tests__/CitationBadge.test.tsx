@@ -114,3 +114,38 @@ describe('CitationBadge', () => {
     expect(button).toHaveAttribute('aria-label', 'Apri citazione — pagina 15');
   });
 });
+
+// ─── #4819: citazione senza pagina ────────────────────────────────────────────
+
+describe('CitationBadge — citazione senza pagina (#4819)', () => {
+  it.each([null, 0])('writes no page when the page is %s', page => {
+    render(<CitationBadge citation={makeCitation({ pageNumber: page, snippet: '' })} />);
+
+    const button = screen.getByRole('button');
+    expect(button).toHaveTextContent('Fonte');
+    expect(button).not.toHaveTextContent('p.');
+    expect(button).toHaveAttribute('aria-label', 'Apri citazione');
+    expect(button).toHaveAttribute('title', 'Fonte nel regolamento');
+  });
+
+  it('tells badges apart by what they quote when they have no page', () => {
+    render(
+      <CitationBadge
+        citation={makeCitation({ pageNumber: null, snippet: 'Si pescano 4 tessere.' })}
+      />
+    );
+
+    expect(screen.getByRole('button')).toHaveAttribute(
+      'aria-label',
+      'Apri citazione — "Si pescano 4 tessere."'
+    );
+  });
+
+  it('still writes the page when there is one', () => {
+    render(<CitationBadge citation={makeCitation({ pageNumber: 15, snippet: '' })} />);
+
+    const button = screen.getByRole('button');
+    expect(button).toHaveTextContent('p.15');
+    expect(button).toHaveAttribute('title', 'Pagina 15');
+  });
+});

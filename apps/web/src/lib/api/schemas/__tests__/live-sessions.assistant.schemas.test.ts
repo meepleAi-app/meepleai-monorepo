@@ -126,6 +126,28 @@ describe('SessionAssistantPanelDtoSchema (#4372, #4373)', () => {
   });
 });
 
+describe('SessionAssistantPanelDtoSchema — rulesLoaded (#4729)', () => {
+  const base = { availability: { enabled: true, code: null }, messages: [], proposals: [] };
+
+  it.each([true, false, null])('keeps rulesLoaded %s as the server wrote it', rulesLoaded => {
+    expect(SessionAssistantPanelDtoSchema.parse({ ...base, rulesLoaded }).rulesLoaded).toBe(
+      rulesLoaded
+    );
+  });
+
+  it('accepts a panel from a server that does not send the field yet', () => {
+    const parsed = SessionAssistantPanelDtoSchema.parse(base);
+
+    expect(parsed.rulesLoaded).toBeUndefined();
+  });
+
+  it('rejects a value that is not a boolean', () => {
+    expect(SessionAssistantPanelDtoSchema.safeParse({ ...base, rulesLoaded: 'no' }).success).toBe(
+      false
+    );
+  });
+});
+
 describe('citations (#4411)', () => {
   const full = {
     documentId: 'pdf-1',

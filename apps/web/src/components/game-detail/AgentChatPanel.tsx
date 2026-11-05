@@ -18,6 +18,10 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Paperclip, Mic, Bot, User, FileText } from 'lucide-react';
 
 import {
+  qaRequestFailureMessage,
+  throwIfQaTooManyRequests,
+} from '@/components/chat-unified/qaStreamErrors';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -146,6 +150,8 @@ export function AgentChatPanel({
         }
       );
 
+      // #4388: due risposte già aperte, la terza è rifiutata con 429: il pannello dice di aspettare.
+      throwIfQaTooManyRequests(response);
       if (!response.ok) {
         throw new Error('Failed to get agent response');
       }
@@ -183,7 +189,10 @@ export function AgentChatPanel({
       const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,
         role: 'agent',
-        content: "Errore nella comunicazione con l'agente. Riprova.",
+        content: qaRequestFailureMessage(
+          error,
+          "Errore nella comunicazione con l'agente. Riprova."
+        ),
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);

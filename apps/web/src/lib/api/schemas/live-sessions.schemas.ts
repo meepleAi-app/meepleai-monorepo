@@ -418,6 +418,9 @@ export const SessionAssistantPanelDtoSchema = z.object({
   }),
   messages: z.array(SessionAssistantMessageDtoSchema).default([]),
   proposals: z.array(AssistantProposalDtoSchema).default([]),
+  // #4729: false when the game has no rulebook ready for the assistant to consult; null/absent when the
+  // session has no game or the game is private (the server cannot tell, and says nothing).
+  rulesLoaded: z.boolean().nullish(),
 });
 
 export type SessionAssistantPanelDto = z.infer<typeof SessionAssistantPanelDtoSchema>;

@@ -32,7 +32,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 /// vector-arm role-match boost (<c>FusionSignals.ComputeRoleMatchBoost</c>) corpus-wide.
 ///
 /// This test captures the <see cref="Embedding"/> batch handed to
-/// <see cref="IVectorStoreAdapter.IndexBatchAsync"/> — the correct seam (NOT EF PgVectorEmbeddings) —
+/// <see cref="IVectorStoreAdapter.ReplaceByVectorDocumentIdAsync"/> — the correct seam (NOT EF PgVectorEmbeddings) —
 /// and asserts each row's <c>RoleTags</c> / <c>SourceChunkId</c> match the persisted
 /// <see cref="TextChunkEntity"/> at the same <c>ChunkIndex</c>. RED before the swap (all 0 / null),
 /// GREEN after.
@@ -41,6 +41,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 [Trait("BoundedContext", "DocumentProcessing")]
 public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
 {
+    private readonly FailOnDemandSaveInterceptor _failingSaves = new();
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IPdfTextExtractor> _pdfTextExtractorMock = new();
     private readonly Mock<IPdfTableExtractor> _tableExtractorMock = new();
@@ -58,7 +59,19 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
 
     public PdfProcessingPipelineRoleTagsTests()
     {
-        _db = TestDbContextFactory.CreateInMemoryDbContext();
+        // Same as TestDbContextFactory.CreateInMemoryDbContext, plus an interceptor that fails a save on demand
+        // (disarmed unless a test arms it).
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(_failingSaves)
+            .ConfigureWarnings(warnings =>
+            {
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning);
+            })
+            .Options;
+        _db = new MeepleAiDbContext(
+            options, new Mock<MediatR.IMediator>().Object, TestDbContextFactory.CreateMockEventCollector().Object);
     }
 
     public void Dispose()
@@ -80,9 +93,14 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         SetupIndexingPipelineCreatesVectorDocument();
 
         List<Embedding>? captured = null;
+        Guid? replacedVectorDocumentId = null;
         _vectorStoreMock
-            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
-            .Callback((List<Embedding> batch, CancellationToken _) => captured = batch)
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Callback((Guid vectorDocumentId, List<Embedding> batch, CancellationToken __) =>
+            {
+                replacedVectorDocumentId = vectorDocumentId;
+                captured = batch;
+            })
             .Returns(Task.CompletedTask);
 
         var sut = CreatePipeline();
@@ -94,7 +112,14 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
         doc!.ProcessingState.Should().Be("Ready");
 
-        captured.Should().NotBeNull("the pipeline must hand the pgvector rows to IVectorStoreAdapter.IndexBatchAsync");
+        captured.Should().NotBeNull("the pipeline must hand the pgvector rows to IVectorStoreAdapter.ReplaceByVectorDocumentIdAsync");
+
+        // The id to delete is the vector document's, not the PDF's: with the PDF's id nothing would be deleted
+        // and the embeddings of every re-index would pile up.
+        var vectorDocument = await _db.VectorDocuments.SingleAsync(v => v.PdfDocumentId == _pdfDocumentId);
+        replacedVectorDocumentId.Should().Be(vectorDocument.Id);
+        replacedVectorDocumentId.Should().NotBe(_pdfDocumentId);
+        captured!.Should().OnlyContain(e => e.VectorDocumentId == vectorDocument.Id);
 
         var persistedByIndex = await _db.TextChunks
             .Where(tc => tc.PdfDocumentId == _pdfDocumentId)
@@ -118,6 +143,385 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         // Explicit bug signal: no row may be left at the default (roleTags=0 / sourceChunkId=null).
         captured!.Should().OnlyContain(e => e.RoleTags != 0);
         captured!.Should().OnlyContain(e => e.SourceChunkId != null);
+    }
+
+    /// <summary>
+    /// #4609 — the vector document is declared <c>completed</c> (and has_knowledge_base raised) LAST, after the
+    /// pgvector rows are saved: <c>BeginIndexingAsync</c> first, so the row exists, then the rows, then
+    /// <c>IndexAsync</c>.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_CompletesTheVectorDocumentOnlyAfterTheEmbeddingsAreSaved()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+
+        var calls = new List<string>();
+        _indexingPipelineMock
+            .Setup(p => p.BeginIndexingAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("begin"))
+            .Returns(async (Guid docId, Guid? gid, Guid? sgid, int chunkCount, int totalChars, string lang, CancellationToken ct) =>
+            {
+                _db.VectorDocuments.Add(new VectorDocumentEntity
+                {
+                    Id = Guid.NewGuid(), PdfDocumentId = docId, GameId = gid, SharedGameId = sgid,
+                    ChunkCount = chunkCount, TotalCharacters = totalChars, IndexingStatus = "processing"
+                });
+                await _db.SaveChangesAsync(ct);
+            });
+        _vectorStoreMock
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("embeddings"))
+            .Returns(Task.CompletedTask);
+        _indexingPipelineMock
+            .Setup(p => p.IndexAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("complete"))
+            .Returns(Task.CompletedTask);
+
+        await CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        (await _db.PdfDocuments.FindAsync(_pdfDocumentId))!.ProcessingState.Should().Be("Ready", "a run that stopped early would make the order below vacuous");
+        calls.Should().Equal(new[] { "begin", "embeddings", "complete" });
+    }
+
+    /// <summary>
+    /// #4609 — if saving the pgvector rows fails, the document is never declared <c>completed</c>: no
+    /// <c>IndexAsync</c>, so no <c>VectorDocumentIndexedEvent</c> and no has_knowledge_base on an index that
+    /// does not exist.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenSavingTheEmbeddingsFails_NeverCompletesTheVectorDocument()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _vectorStoreMock
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        _indexingPipelineMock.Verify(
+            p => p.BeginIndexingAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _indexingPipelineMock.Verify(
+            p => p.IndexAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// Seguito di #4609: se il salvataggio degli embedding fallisce e il PDF finisce `Failed`, anche il suo documento
+    /// vettoriale (nato `processing` da Begin) viene chiuso come fallito, invece di restare in elaborazione.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenSavingTheEmbeddingsFails_MarksTheVectorDocumentFailed()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _vectorStoreMock
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        _vectorStoreMock.Verify(
+            v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the failure has to come from saving the embeddings, not from a step before it");
+        _indexingPipelineMock.Verify(
+            p => p.MarkIndexingFailedAsync(
+                _pdfDocumentId,
+                It.Is<string>(m => m.StartsWith("Processing failed (", StringComparison.Ordinal)
+                    && !m.Contains("the vector store is down", StringComparison.Ordinal)),
+                CancellationToken.None),
+            Times.Once,
+            "the vector document gets the category, not the exception message: pdf-status serves that column to users");
+    }
+
+    /// <summary>
+    /// Seguito di #4609, dalla revisione di #4657: `IndexAsync` scrive `completed` nell'entità tracciata PRIMA di
+    /// salvare. Se il salvataggio fallisce, la riga resta `Modified` nel contesto, che questa pipeline condivide con
+    /// il gestore d'errore; il salvataggio del PDF `Failed` rimanderebbe quel `completed` al database. Un PDF
+    /// fallito non può lasciare un documento vettoriale `completed`.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheFailureLeavesTheVectorRowCompletedInTheTracker_TheDatabaseNeverSeesIt()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _vectorStoreMock
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                var tracked = _db.VectorDocuments.Local.Single();
+                tracked.IndexingStatus = "completed";
+                tracked.IndexedAt = DateTime.UtcNow;
+            })
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
+            .Should().Be("Failed", "a run that did not fail would make the check below vacuous");
+        (await _db.VectorDocuments.AsNoTracking().SingleAsync(v => v.PdfDocumentId == _pdfDocumentId)).IndexingStatus
+            .Should().NotBe("completed", "the completion never reached the database before the save that failed");
+    }
+
+    /// <summary>
+    /// PdfProcessingQuartzJob condivide questo contesto (la pipeline è scoped come il suo DbContext) e dopo il
+    /// ritorno della pipeline salva il fallimento del job e dei suoi passi attraverso di esso. Il gestore d'errore
+    /// non deve staccare quelle entità: un <c>ChangeTracker.Clear()</c> farebbe del suo salvataggio un no-op e
+    /// lascerebbe il job in <c>Processing</c>, a occupare uno dei posti dei worker. Né deve scartare una modifica che il
+    /// job ha in sospeso su di esse: non è un residuo del guasto della pipeline.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheFailureIsHandled_LeavesTheEntitiesOfTheSharedContextTracked()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        var job = new Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity
+        {
+            Id = Guid.NewGuid(),
+            PdfDocumentId = _pdfDocumentId,
+            UserId = Guid.NewGuid(),
+            Status = "Processing",
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+        var step = new Api.Infrastructure.Entities.DocumentProcessing.ProcessingStepEntity
+        {
+            Id = Guid.NewGuid(),
+            ProcessingJobId = job.Id,
+            StepName = "Embed",
+            Status = "Pending",
+        };
+        _db.ProcessingJobs.Add(job);
+        _db.ProcessingSteps.Add(step);
+        await _db.SaveChangesAsync();
+        _vectorStoreMock
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            // A change the job holds on the shared context, made after the pipeline's last save: still unsaved when the
+            // failure handler runs (a change made earlier would be flushed by the pipeline's own saves).
+            .Callback(() =>
+            {
+                job.CurrentStep = "Embed";
+                step.Status = "Running";
+            })
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
+            .Should().Be("Failed", "a run that did not fail would make the check below vacuous");
+        _db.Entry(job).State.Should().NotBe(
+            EntityState.Detached, "the job that shares this context saves its own failure through its tracked entity");
+        job.CurrentStep.Should().Be("Embed", "the change the job holds is not a residue of the pipeline's failure");
+        step.Status.Should().Be("Running", "nor is the one on its step");
+    }
+
+    /// <summary>
+    /// #4660 punto 5. Il salvataggio dei chunk di testo fallisce: restano `Added` nel tracker, e il salvataggio che
+    /// segna il PDF `Failed` (un SaveChanges sull'intero contesto) li rimanderebbe e fallirebbe uguale, inghiottito dal
+    /// catch: il PDF non diventerebbe mai `Failed` e il suo documento vettoriale non sarebbe chiuso.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenSavingTheTextChunksFails_ThePdfIsStillMarkedFailed()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _failingSaves.FailWhen = context => context.ChangeTracker.Entries<TextChunkEntity>().Any(e => e.State == EntityState.Added);
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
+            .Should().Be("Failed");
+        _failingSaves.Failures.Should().Be(1, "the failure has to come from the text-chunk save, and only from it");
+    }
+
+    /// <summary>
+    /// #4660 punto 5, il caso del reprocess: i chunk vecchi del PDF sono segnati `Deleted` e i nuovi `Added` in un
+    /// solo salvataggio, che fallisce. Il salvataggio che segna il PDF `Failed` non deve cancellare i vecchi chunk,
+    /// che nel database sono ancora l'unico testo indicizzabile di quel documento.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenSavingTheNewTextChunksFails_TheOldChunksOfTheReprocessedPdfSurvive()
+    {
+        SeedPdfDocument();
+        for (var index = 0; index < 2; index++)
+        {
+            _db.TextChunks.Add(new TextChunkEntity
+            {
+                Id = Guid.NewGuid(),
+                PdfDocumentId = _pdfDocumentId,
+                PrivateGameId = _gameId,
+                Content = "old chunk",
+                ChunkIndex = index,
+                PageNumber = 1,
+                CharacterCount = 9,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        _db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking; // PERF-06, as in production
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        var oldChunksDeletedAtTheFailure = false;
+        _failingSaves.FailWhen = context =>
+        {
+            var failing = context.ChangeTracker.Entries<TextChunkEntity>().Any(e => e.State == EntityState.Added);
+            oldChunksDeletedAtTheFailure |= failing
+                && context.ChangeTracker.Entries<TextChunkEntity>().Any(e => e.State == EntityState.Deleted);
+            return failing;
+        };
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        var reprocessed = await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId);
+        reprocessed.ProcessingState.Should().Be("Failed", "a run that did not fail would make the check below vacuous");
+        _failingSaves.Failures.Should().Be(1, "the failure has to come from the save of the new chunks, and only from it (the PDF failed with: " + reprocessed.ProcessingError + ")");
+        oldChunksDeletedAtTheFailure.Should().BeTrue("the old chunks have to be pending deletion in the failed save, or the check below proves nothing");
+        (await _db.TextChunks.AsNoTracking().CountAsync(c => c.PdfDocumentId == _pdfDocumentId && c.Content == "old chunk"))
+            .Should().Be(2, "the save that deleted them is the one that failed");
+    }
+
+    /// <summary>
+    /// #4660 punto 5. Il salvataggio finale (`Ready`) fallisce senza essere un conflitto di concorrenza: il PDF resta
+    /// `Ready` solo in memoria, e il controllo «non sovrascrivere un PDF Ready» del gestore d'errore leggeva il
+    /// tracker, quindi saltava la scrittura di `Failed`: nel database il PDF restava nell'ultimo stato salvato.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheFinalSaveFails_ThePdfIsStillMarkedFailed()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _failingSaves.FailWhen = context => context.ChangeTracker.Entries<PdfDocumentEntity>()
+            .Any(e => e.State == EntityState.Modified && string.Equals(e.Entity.ProcessingState, "Ready", StringComparison.Ordinal));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
+            .Should().Be("Failed");
+        _failingSaves.Failures.Should().Be(1, "the failure has to come from the final Ready save, and only from it");
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).FailedAtState
+            .Should().Be("Indexing", "the state recorded is the last one saved, not the Ready that only reached memory");
+    }
+
+    /// <summary>
+    /// Il salvataggio di `Failed` perde una gara di concorrenza (la riga è cambiata da altri): vince l'altro, ma il PDF
+    /// non deve restare `Modified` nel tracker con il vecchio `xmin`. <c>PdfProcessingQuartzJob</c> condivide il
+    /// contesto e salva il fallimento del suo job subito dopo: quel salvataggio ritroverebbe la stessa riga vecchia,
+    /// fallirebbe uguale e il job resterebbe `Processing`.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheFailedSaveLosesAConcurrencyRace_LeavesNothingPendingForTheJobsSave()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _vectorStoreMock
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+        _failingSaves.ExceptionToThrow = () => new DbUpdateConcurrencyException("xmin conflict");
+        _failingSaves.FailWhen = context => context.ChangeTracker.Entries<PdfDocumentEntity>()
+            .Any(e => e.State == EntityState.Modified && string.Equals(e.Entity.ProcessingState, "Failed", StringComparison.Ordinal));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        _failingSaves.Failures.Should().Be(1, "the conflict has to hit the save that marks the PDF Failed, and only it");
+        _db.ChangeTracker.HasChanges().Should().BeFalse("a stale write left in the tracker would fail the job's own save as well");
+    }
+
+    /// <summary>
+    /// What <c>DiscardUnsavedChanges</c> relies on: a Modified entity put back to Unchanged gets the values it last had
+    /// in the database (loaded or saved), with no explicit copy and no database access. If a future EF Core stopped doing it, the discarded
+    /// PDF would keep its in-memory <c>Ready</c> and the failure handler would skip it.
+    /// </summary>
+    [Fact]
+    public async Task EfCore_AModifiedEntityPutBackToUnchanged_HasItsLastSavedValues()
+    {
+        SeedPdfDocument();
+        _db.ChangeTracker.Clear();
+        var pdf = await _db.PdfDocuments.AsTracking().SingleAsync(p => p.Id == _pdfDocumentId);
+        pdf.ProcessingState = "Ready";
+        _db.ChangeTracker.Entries<PdfDocumentEntity>().Single().State.Should().Be(EntityState.Modified);
+
+        _db.Entry(pdf).State = EntityState.Unchanged;
+
+        pdf.ProcessingState.Should().Be("Pending");
+    }
+
+    private sealed class FailOnDemandSaveInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    {
+        public Func<DbContext, bool>? FailWhen { get; set; }
+
+        public Func<Exception>? ExceptionToThrow { get; set; }
+
+        public int Failures { get; private set; }
+
+        public override ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context is { } context && FailWhen?.Invoke(context) == true)
+            {
+                Failures++;
+                throw ExceptionToThrow?.Invoke() ?? new DbUpdateException("simulated save failure");
+            }
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
     }
 
     private PdfProcessingPipelineService CreatePipeline()
@@ -265,8 +669,10 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
     /// </summary>
     private void SetupIndexingPipelineCreatesVectorDocument()
     {
+        // #4609: the row is created by BeginIndexingAsync (in "processing"); IndexAsync, called last, only
+        // completes it, so the default mock is enough for it.
         _indexingPipelineMock
-            .Setup(p => p.IndexAsync(
+            .Setup(p => p.BeginIndexingAsync(
                 It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
                 It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(async (Guid docId, Guid? gid, Guid? sgid, int chunkCount, int totalChars, string lang, CancellationToken ct) =>
@@ -279,8 +685,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
                     SharedGameId = sgid,
                     ChunkCount = chunkCount,
                     TotalCharacters = totalChars,
-                    IndexingStatus = "completed",
-                    IndexedAt = DateTime.UtcNow
+                    IndexingStatus = "processing"
                 });
                 await _db.SaveChangesAsync(ct);
             });

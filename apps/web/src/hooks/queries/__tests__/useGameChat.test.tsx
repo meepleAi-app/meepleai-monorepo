@@ -17,8 +17,13 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+import {
+  QA_TOO_MANY_REQUESTS_MESSAGE,
+  QaTooManyRequestsError,
+} from '@/components/chat-unified/qaStreamErrors';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { useGameChat } from '../useGameChat';
 
 async function* mockStream(events: Array<{ type: number; data: unknown }>) {
@@ -297,6 +302,284 @@ describe('useGameChat', () => {
     expect(result.current.messages.map(m => m.role)).toEqual(['user']);
   });
 
+  /**
+   * #4388: il backend tiene aperte al massimo due risposte per utente e rifiuta la terza con 429.
+   * Come per la quota, non è un guasto che chi chiama sappia gestire: `ask` non rifiuta, e l'hook
+   * dà la frase da mostrare. Prima `isError` diventava vero e il rifiuto risaliva fino a una
+   * `void chat.ask(q)` senza catch: la domanda restava senza risposta e senza un perché.
+   */
+  it('reports a refusal for too many open answers instead of failing', async () => {
+    const refused = async function* () {
+      throw new QaTooManyRequestsError();
+      yield happyEvents[2];
+    };
+    vi.mocked(qaStream).mockReturnValueOnce(refused() as any);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+
+    let rejection: unknown = null;
+    await act(async () => {
+      try {
+        await result.current.ask('q');
+      } catch (e) {
+        rejection = e;
+      }
+    });
+
+    expect(rejection).toBeNull();
+    expect(result.current.refusal).toBe(QA_TOO_MANY_REQUESTS_MESSAGE);
+    expect(result.current.isError).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+    // La domanda resta; una risposta dell'agente non c'è.
+    expect(result.current.messages.map(m => m.role)).toEqual(['user']);
+  });
+
+  it('forgets the refusal with the next question', async () => {
+    const refused = async function* () {
+      throw new QaTooManyRequestsError();
+      yield happyEvents[2];
+    };
+    vi.mocked(qaStream)
+      .mockReturnValueOnce(refused() as any)
+      .mockReturnValueOnce(mockStream(happyEvents) as any);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await act(async () => {
+      await result.current.ask('prima');
+    });
+    expect(result.current.refusal).not.toBeNull();
+
+    await act(async () => {
+      await result.current.ask('seconda');
+    });
+
+    expect(result.current.refusal).toBeNull();
+    expect(result.current.messages.at(-1)?.role).toBe('agent');
+  });
+
+  it('still fails for another error', async () => {
+    const broken = async function* () {
+      throw new Error('QA stream failed: HTTP 500');
+      yield happyEvents[2];
+    };
+    vi.mocked(qaStream).mockReturnValueOnce(broken() as any);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+
+    await act(async () => {
+      await expect(result.current.ask('q')).rejects.toThrow('HTTP 500');
+    });
+
+    expect(result.current.isError).toBe(true);
+    expect(result.current.refusal).toBeNull();
+  });
+
+  /**
+   * Uno stream che si chiude pulito senza `Complete` né `Error` — un proxy che taglia a metà, un backend
+   * che cade dopo qualche token. `ask` terminava senza errore e senza messaggio: l'indicatore di scrittura
+   * spariva e all'utente non restava niente. È la stessa classe di difetto di #4335, su un altro hook.
+   */
+  describe('stream closed without a result', () => {
+    it('an empty stream is reported as interrupted, not as silence', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream([]) as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow();
+      });
+
+      expect(result.current.isError).toBe(true);
+      expect(result.current.errorMessage).toBe(
+        'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.'
+      );
+    });
+
+    it('tokens without a Complete are reported as interrupted, and no half answer is kept', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          { type: 7, data: 'Cinque ' },
+          { type: 7, data: 'tessere ' },
+        ]) as any
+      );
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow();
+      });
+
+      expect(result.current.isError).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.messages.map(m => m.role)).toEqual(['user']);
+    });
+
+    it('the next question after an interruption starts clean and can succeed', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream([{ type: 7, data: 'Cinque ' }]) as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow();
+      });
+      expect(result.current.isError).toBe(true);
+
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+      await act(async () => {
+        await result.current.ask('q2');
+      });
+
+      expect(result.current.isError).toBe(false);
+      expect(result.current.errorMessage).toBeNull();
+      expect(result.current.messages.map(m => m.role)).toEqual(['user', 'user', 'agent']);
+    });
+
+    it('a stream that ends with a Complete is not an error', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await result.current.ask('q');
+      });
+
+      expect(result.current.isError).toBe(false);
+      expect(result.current.errorMessage).toBeNull();
+    });
+
+    it('a stream stopped by the plan quota is not reported as interrupted', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          { type: 5, data: { errorCode: 'TIER_LIMIT_EXCEEDED', current: 3, max: 3 } },
+        ]) as any
+      );
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await result.current.ask('q');
+      });
+
+      expect(result.current.isError).toBe(false);
+      expect(result.current.errorMessage).toBeNull();
+    });
+  });
+
+  /**
+   * #4332: `ask` rifiuta per un errore vero (sopra), e l'hook dà anche la frase da mostrare:
+   * quella tradotta del codice se il backend ne manda uno, altrimenti una generica. Il testo
+   * grezzo di un'eccezione di trasporto (`HTTP 500`) non è per l'utente.
+   */
+  describe('errorMessage (#4332)', () => {
+    it('is null before any error', () => {
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      expect(result.current.errorMessage).toBeNull();
+    });
+
+    it('translates the code of an error event', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          { type: 5, data: { errorCode: 'AI_BUDGET_DAILY_EXHAUSTED', message: 'daily budget' } },
+        ]) as any
+      );
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow();
+      });
+
+      expect(result.current.isError).toBe(true);
+      expect(result.current.errorMessage).toBe(
+        'Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.'
+      );
+    });
+
+    it('gives a generic sentence for a transport failure', async () => {
+      const broken = async function* () {
+        throw new Error('QA stream failed: HTTP 500');
+        yield happyEvents[2];
+      };
+      vi.mocked(qaStream).mockReturnValueOnce(broken() as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow('HTTP 500');
+      });
+
+      expect(result.current.errorMessage).toBe('La risposta non è arrivata. Riprova tra poco.');
+    });
+
+    // Il catch-all degli endpoint di risposta manda `An error occurred: {ex.Message}` con codice
+    // INTERNAL_ERROR: il messaggio di un'eccezione interna non è per l'utente.
+    it('never exposes the raw backend text of a code it does not know', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          {
+            type: 5,
+            data: {
+              errorCode: 'INTERNAL_ERROR',
+              message: 'An error occurred: Npgsql.PostgresException 42P01',
+            },
+          },
+        ]) as any
+      );
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow();
+      });
+
+      expect(result.current.errorMessage).toBe('La risposta non è arrivata. Riprova tra poco.');
+    });
+
+    it('logs the real cause, since the user only sees a sentence', async () => {
+      const spy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+      const broken = async function* () {
+        throw new Error('QA stream failed: HTTP 500');
+        yield happyEvents[2];
+      };
+      vi.mocked(qaStream).mockReturnValueOnce(broken() as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow('HTTP 500');
+      });
+
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('la risposta non è arrivata'),
+        expect.objectContaining({ message: 'QA stream failed: HTTP 500' })
+      );
+      spy.mockRestore();
+    });
+
+    it('forgets the sentence with the next question', async () => {
+      const broken = async function* () {
+        throw new Error('boom');
+        yield happyEvents[2];
+      };
+      vi.mocked(qaStream).mockReturnValueOnce(broken() as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow('boom');
+      });
+      expect(result.current.errorMessage).not.toBeNull();
+
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+      await act(async () => {
+        await result.current.ask('q2');
+      });
+
+      expect(result.current.errorMessage).toBeNull();
+      expect(result.current.isError).toBe(false);
+    });
+
+    it('is not set by the plan quota or by too many open answers', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          { type: 5, data: { errorCode: 'TIER_LIMIT_EXCEEDED', current: 3, max: 3 } },
+        ]) as any
+      );
+      const { result } = renderHook(() => useGameChat('wingspan'));
+      await act(async () => {
+        await result.current.ask('q');
+      });
+
+      expect(result.current.errorMessage).toBeNull();
+    });
+  });
+
   it('forgets the plan quota with the next question', async () => {
     vi.mocked(qaStream).mockReturnValueOnce(
       mockStream([
@@ -445,5 +728,42 @@ describe('useGameChat', () => {
     const { result: result2 } = renderHook(() => useGameChat('wingspan'));
     await waitFor(() => expect(result2.current.messages.length).toBeGreaterThan(0));
     expect(result2.current.messages[0].content).toBe('cached');
+  });
+});
+
+describe('useGameChat — citazione senza pagina (#4819)', () => {
+  it.each([
+    ['absent', {}],
+    ['null', { page: null }],
+    ['zero', { page: 0 }],
+  ])('maps a citation whose page is %s to no page, not to page 0', async (_label, over) => {
+    const events = [
+      { type: 7, data: { token: 'Si pescano 4 tessere.' } },
+      {
+        type: 1,
+        data: {
+          citations: [
+            {
+              text: 'Si pescano 4 tessere.',
+              source: 'PDF:853f6dcc-aaaa',
+              line: 0,
+              score: 0.85,
+              ...over,
+            },
+          ],
+        },
+      },
+      { type: 4, data: { confidence: 0.8, citations: null } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(events) as any);
+    const { result } = renderHook(() => useGameChat('azul'));
+
+    await act(async () => {
+      await result.current.ask('quante tessere si pescano?');
+    });
+
+    expect(result.current.messages[1].citations?.[0]).toEqual(
+      expect.objectContaining({ documentId: '853f6dcc-aaaa', pageNumber: null })
+    );
   });
 });

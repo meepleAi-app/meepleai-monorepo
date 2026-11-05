@@ -119,7 +119,8 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         catch (AmazonS3Exception ex)
         {
             _logger.LogError(ex, "S3 error storing file in {Category}/{ResourceKey}: {ErrorCode}", category, resourceKey, ex.ErrorCode);
-            return new BlobStorageResult(false, null, null, 0, $"S3 error: {ex.Message}");
+            // #4660: the exception is logged above; what reaches the uploader is the fixed text.
+            return new BlobStorageResult(false, null, null, 0, BlobStorageFailureText.S3);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -130,7 +131,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             // We must catch all exceptions to return error results instead of crashing the service.
             // Context: S3 operations can fail in unpredictable ways across different network conditions
             _logger.LogError(ex, "Unexpected error storing file in {Category}/{ResourceKey}", category, resourceKey);
-            return new BlobStorageResult(false, null, null, 0, ex.Message);
+            return new BlobStorageResult(false, null, null, 0, BlobStorageFailureText.Generic);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
         finally

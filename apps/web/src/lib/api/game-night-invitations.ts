@@ -63,6 +63,12 @@ export const PublicGameNightInvitationSchema = z.object({
    * with the Wave A.5b legacy `/invites/[token]` consumer.
    */
   respondedByName: z.string().nullable().optional(),
+  /**
+   * #4856: true when the NIGHT was cancelled, whatever the state of the invitation (which keeps its own).
+   * A link that is no longer alive (withdrawn, expired, or a cancelled night) carries only its state and the host's
+   * name: title, time, place, game and counts are empty (#4745). Optional on the wire for older backends.
+   */
+  nightCancelled: z.boolean().optional(),
 });
 
 export type PublicGameNightInvitation = z.infer<typeof PublicGameNightInvitationSchema>;
@@ -366,5 +372,60 @@ export async function respondToInvitation(
   throw new InvitationFetchError(
     response.status,
     `Respond request failed with status ${response.status}`
+  );
+}
+
+// ========== Unsubscribe (#4846) ==========
+
+export type UnsubscribeFromInvitationEmailsResult =
+  | { readonly kind: 'unsubscribed' }
+  | { readonly kind: 'rate-limited'; readonly retryAfter: number | null };
+
+/**
+ * POST the one-tap opt-out behind the link in every game night email to a guest. The credential is the invitation's
+ * UNSUBSCRIBE KEY, written in the emails and nowhere else: not its RSVP token, which the organizer also holds. The
+ * address the key names goes on the list the sends consult, whatever became of the invitation (answered, cancelled,
+ * expired), so there is no 409/410 to handle. Idempotent on the server.
+ *
+ * Resolves `unsubscribed` on 204 and `rate-limited` on 429 (backend cap: 10 req/min/IP). Throws
+ * `InvitationNotFoundError` for a key nobody holds (404) and `InvitationFetchError` on 5xx / network / any
+ * other status. Direct `fetch`, like the rest of this file: the route is public and the shared retry layer would
+ * add nothing to a call whose only input is the key.
+ */
+export async function unsubscribeFromInvitationEmails(
+  unsubscribeKey: string
+): Promise<UnsubscribeFromInvitationEmailsResult> {
+  const base = getApiBase();
+  const url = `${base}/api/v1/game-nights/guest-unsubscribe/${encodeURIComponent(unsubscribeKey)}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'POST', credentials: 'include' });
+  } catch (cause) {
+    throw new InvitationFetchError(null, 'Network error unsubscribing from invitation emails', {
+      cause,
+    });
+  }
+
+  if (response.status === 204) {
+    return { kind: 'unsubscribed' };
+  }
+
+  if (response.status === 429) {
+    const retryAfterRaw = response.headers.get('Retry-After');
+    const retryAfter =
+      retryAfterRaw && /^\d+$/.test(retryAfterRaw.trim())
+        ? Number.parseInt(retryAfterRaw.trim(), 10)
+        : null;
+    return { kind: 'rate-limited', retryAfter };
+  }
+
+  if (response.status === 404) {
+    throw new InvitationNotFoundError(unsubscribeKey);
+  }
+
+  throw new InvitationFetchError(
+    response.status,
+    `Unsubscribe request failed with status ${response.status}`
   );
 }

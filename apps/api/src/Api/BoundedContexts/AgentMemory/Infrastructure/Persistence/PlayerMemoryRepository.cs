@@ -129,7 +129,10 @@ internal sealed class PlayerMemoryRepository : RepositoryBase, IPlayerMemoryRepo
             claimedAt: entity.ClaimedAt,
             createdAt: entity.CreatedAt,
             lastProcessedEventId: entity.LastProcessedEventId,
-            gameStats: gameStats.Select(s => PlayerGameStats.Restore(s.GameId, s.Wins, s.Losses, s.TotalPlayed, s.BestScore)));
+            gameStats: gameStats.Select(s => PlayerGameStats.Restore(s.GameId, s.Wins, s.Losses, s.TotalPlayed, s.BestScore)),
+            processedSessionIds: entity.ProcessedSessionIdsJson is null
+                ? null
+                : JsonSerializer.Deserialize<List<Guid>>(entity.ProcessedSessionIdsJson));
     }
 
     /// <summary>
@@ -146,6 +149,9 @@ internal sealed class PlayerMemoryRepository : RepositoryBase, IPlayerMemoryRepo
             ClaimedAt = memory.ClaimedAt,
             CreatedAt = memory.CreatedAt,
             LastProcessedEventId = memory.LastProcessedEventId,
+            ProcessedSessionIdsJson = memory.ProcessedSessionIds.Count > 0
+                ? JsonSerializer.Serialize(memory.ProcessedSessionIds)
+                : null,
         };
 
         // Serialize game stats to JSONB

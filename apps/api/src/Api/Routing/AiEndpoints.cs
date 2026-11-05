@@ -43,10 +43,10 @@ internal static class AiEndpoints
             {
                 Id = !string.IsNullOrWhiteSpace(s.chunkId)
                     ? s.chunkId!
-                    : $"{s.source}#{s.page}.{s.line}",
+                    : $"{s.source}#{s.page ?? 0}.{s.line}",
                 Score = s.score,
                 Text = s.text,
-                Page = s.page,
+                Page = s.page ?? 0,
                 ChunkIndex = s.chunkPosition ?? s.line,
                 PdfName = s.source,
                 Used = true,
@@ -87,6 +87,7 @@ internal static class AiEndpoints
     private static void MapQaEndpoint(RouteGroupBuilder group)
     {
         group.MapPost("/agents/qa", HandleQaRequest)
+        .RequireRateLimiting(RateLimitingServiceExtensions.AnswerOpenRequestsPolicy) // #4388: at most 2 open answers per user
         .WithName("QaAgent")
         .WithDescription("Ask a question about game rules using RAG (Retrieval-Augmented Generation)")
         .WithTags("AI Agents")
@@ -142,7 +143,9 @@ internal static class AiEndpoints
     {
         // CHAT-01: Streaming QA endpoint (SSE)
         // Migrated to CQRS: Uses StreamQaQuery via MediatR (Issue #1186)
-        group.MapPost("/agents/qa/stream", HandleQaStreamAsync);
+        // #4388: at most 2 open answers per user, shared with the other answer routes.
+        group.MapPost("/agents/qa/stream", HandleQaStreamAsync)
+            .RequireRateLimiting(RateLimitingServiceExtensions.AnswerOpenRequestsPolicy);
     }
 
     private static async Task<IResult> HandleQaStreamAsync(
@@ -540,13 +543,11 @@ internal static class AiEndpoints
         var snippets = explainResponse.Citations.Select(c => new Snippet(
             text: c.Snippet,
             source: $"PDF:{c.DocumentId}",
-            // #3855: `CitationDto.PageNumber` e' nullable da quando una citazione servita dalla
-            // cache puo' non portare la pagina. Su questo percorso non accade — ExplainQueryHandler
-            // le costruisce dai search result, dove la pagina c'e' sempre — e `Snippet` e' un
-            // contratto di risposta pubblico (Api.Models.Contracts), quindi non lo si allarga per
-            // un caso che non si verifica qui. Lo zero e' un ripiego riconoscibile: una pagina 0
-            // non esiste, mentre un numero plausibile sarebbe indistinguibile da una fonte vera.
-            page: c.PageNumber ?? 0,
+            // `CitationDto.PageNumber` e' nullable (#3855: una citazione servita dalla cache puo' non
+            // portare la pagina; #4819: ExplainQueryHandler la toglie a un documento che non sa dirla,
+            // #4782) e `Snippet.page` lo e' dal passo 3 di #4819: nessuna pagina arriva come null, non come
+            // uno 0 che i client dovrebbero indovinare.
+            page: c.PageNumber,
             line: 0,
             score: (float)c.RelevanceScore
         )).ToList();
@@ -893,12 +894,14 @@ internal static class AiEndpoints
     /// <summary>
     /// Map QaResponseDto to legacy QaResponse format for backward compatibility.
     /// </summary>
-    private static QaResponse MapToLegacyQaResponse(QaResponseDto qaResponse)
+    internal static QaResponse MapToLegacyQaResponse(QaResponseDto qaResponse)
     {
         var snippets = qaResponse.Sources.Select(src => new Snippet(
             text: src.TextContent,
             source: $"PDF:{src.VectorDocumentId}",
-            page: src.PageNumber,
+            // #4819: `SearchResultDto.PageNumber` is a plain number and 0 means none (Ask writes it for a document that
+            // cannot vouch for its pages, #4782): on the wire that is `null`, as for the explanation.
+            page: src.PageNumber > 0 ? src.PageNumber : null,
             line: 0,
             score: (float)src.RelevanceScore
         )).ToList();

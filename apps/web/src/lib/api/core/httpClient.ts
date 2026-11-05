@@ -346,7 +346,7 @@ export class HttpClient {
                 return undefined as T;
               }
 
-              const data = await response.json();
+              const data = await this.readBodyNotRetried('POST', path, () => response.json());
 
               // Validate response with Zod if schema provided
               if (schema) {
@@ -499,7 +499,7 @@ export class HttpClient {
                 return undefined as T;
               }
 
-              const data = await response.json();
+              const data = await this.readBodyNotRetried('PUT', path, () => response.json());
 
               // Validate response with Zod if schema provided
               if (schema) {
@@ -641,7 +641,7 @@ export class HttpClient {
                 return undefined as T;
               }
 
-              const data = await response.json();
+              const data = await this.readBodyNotRetried('PATCH', path, () => response.json());
 
               if (schema) {
                 const validated = this.validateResponse(path, data, schema);
@@ -707,9 +707,76 @@ export class HttpClient {
    * DELETE request with automatic retry
    */
   async delete(path: string, options?: RequestOptions): Promise<void> {
+    // DELETE returns 204 NoContent, no body to parse
+    await this.sendDelete('DELETE', path, options, async () => undefined);
+  }
+
+  /**
+   * DELETE request that also returns the body the server sent back (204 → null).
+   *
+   * For endpoints that answer 200 with an outcome instead of deleting, e.g. a PDF still used by other
+   * games: `delete()` discards the body of every 2xx, so the caller could not tell the two apart.
+   */
+  async deleteWithResult<T>(
+    path: string,
+    schema?: z.ZodSchema<T>,
+    options?: RequestOptions
+  ): Promise<T | null> {
+    return this.sendDelete('DELETE:result', path, options, async response => {
+      if (response.status === 204) {
+        return null;
+      }
+
+      const data = await response.json();
+      return schema ? this.validateResponse(path, data, schema) : (data as T);
+    });
+  }
+
+  /**
+   * Reads a response body from inside a `withRetry` callback without letting a failed read be retried.
+   *
+   * The request already reached the server, so sending it again because its answer was cut short would
+   * repeat a mutation that ran (a duplicate, or a 404/409 for an operation that succeeded). The retry
+   * policy treats any `TypeError` mentioning "fetch" as a network error, and that is exactly what
+   * `response.json()` rejects with when the connection drops mid-body (measured in Chromium). So a
+   * `TypeError` is rethrown as a plain `Error` (original in `cause`), which `isRetryableError` never
+   * retries. Every other error already is not retried, and keeps its type (a `SyntaxError` from a body
+   * that is not JSON, an `AbortError`, an `ApiError` from a schema check). Not for `get`: it is
+   * idempotent, and trying again recovers the body.
+   */
+  private async readBodyNotRetried<T>(
+    method: string,
+    path: string,
+    read: () => Promise<T>
+  ): Promise<T> {
+    try {
+      return await read();
+    } catch (error) {
+      if (!(error instanceof TypeError)) {
+        throw error;
+      }
+      throw new Error(
+        `Could not read the response of ${method} ${path}: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error }
+      );
+    }
+  }
+
+  /**
+   * Shared DELETE pipeline (dedup, circuit breaker, retry). `readResult` runs once the response is known
+   * to be 2xx; a failure there is never retried (see `readBodyNotRetried`), so the DELETE is not sent a
+   * second time because its answer was malformed or cut short. `cacheMethod` keeps `delete` and
+   * `deleteWithResult` on distinct dedup keys: they resolve to different types.
+   */
+  private async sendDelete<T>(
+    cacheMethod: string,
+    path: string,
+    options: RequestOptions | undefined,
+    readResult: (response: Response) => Promise<T>
+  ): Promise<T> {
     // Generate cache key for deduplication (opt-out by default for DELETE)
     const cacheKey = globalRequestCache.generateKey(
-      'DELETE',
+      cacheMethod,
       `${this.baseUrl}${path}`,
       undefined,
       this.getAuthContext(),
@@ -737,7 +804,7 @@ export class HttpClient {
 
         let retryCount = 0;
 
-        await withRetry(
+        return await withRetry(
           async () => {
             try {
               const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
@@ -759,6 +826,10 @@ export class HttpClient {
                 await this.handleError(path, response, options);
               }
 
+              const result = await this.readBodyNotRetried('DELETE', path, () =>
+                readResult(response)
+              );
+
               // Track success after retry
               if (retryCount > 0) {
                 recordRetrySuccess();
@@ -769,7 +840,7 @@ export class HttpClient {
                 recordCircuitSuccess(path);
               }
 
-              // DELETE returns 204 NoContent, no body to parse
+              return result;
             } catch (error) {
               // Convert fetch errors to NetworkError for retry logic
               if (error instanceof TypeError && error.message.includes('fetch')) {

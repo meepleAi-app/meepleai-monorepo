@@ -74,6 +74,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   lazy,
   Suspense,
@@ -331,6 +332,41 @@ function NotFoundShell({
   );
 }
 
+// ─── Viewer role + header status (#4750) ──────────────────────────────────────
+
+/**
+ * The host controls the session: pause, resume, end and save. BE PlayerRole has 'Moderator',
+ * which FE ParticipantRole does not — it maps to 'Player'. The creator is the host whether or
+ * not a player is linked to their account (#4750).
+ */
+function deriveViewerRole(playerRole: string | undefined, isCreator: boolean): ParticipantRole {
+  if (isCreator || playerRole === 'Host') return 'Host';
+  return playerRole === 'Spectator' ? 'Spectator' : 'Player';
+}
+
+/**
+ * The header shows the server's `Completed` as such. `composeSessionLiveState` folds anything
+ * that is not InProgress/Paused into 'Setup', so reading its status alone made a concluded
+ * session look «In corso» with a timer still running (#4750).
+ *
+ * The same fold put a session that was never started (`Created`, `Setup`) under «In corso» too
+ * (#4781): it is `NotStarted` here, because scores, rule disputes and the end of the game all
+ * answer 409 until it runs.
+ */
+/** A session the server has not started yet: still waiting for its start (#4787). */
+function isUnstarted(dtoStatus: string | undefined): boolean {
+  return dtoStatus === 'Created' || dtoStatus === 'Setup';
+}
+
+function toHeaderStatus(
+  dtoStatus: string,
+  composedStatus: 'InProgress' | 'Paused' | 'Setup'
+): 'NotStarted' | 'InProgress' | 'Paused' | 'Completed' {
+  if (dtoStatus === 'Completed') return 'Completed';
+  if (composedStatus === 'Setup') return 'NotStarted';
+  return composedStatus;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function SessionLiveView(): ReactElement {
@@ -462,13 +498,15 @@ export function SessionLiveView(): ReactElement {
     const currentUserId = currentUser?.id ?? '';
     const viewerPlayer = dto.players.find(p => p.userId === currentUserId);
     const derivedRole = viewerPlayer?.role;
-    const viewerRole: ParticipantRole =
-      derivedRole === 'Host' || derivedRole === 'Spectator' ? derivedRole : 'Player';
+    // #4750: the creator of the session is its host — the server checks `CreatedByUserId` — even
+    // when the wizard wrote every player by name and none is linked to the account.
+    const isCreator = currentUserId !== '' && dto.createdByUserId === currentUserId;
+    const viewerRole = deriveViewerRole(derivedRole, isCreator);
 
     return {
       id: dto.id,
       name: `Sessione ${dto.id.slice(0, 8)}`,
-      status: liveState.status === 'Paused' ? 'Paused' : 'InProgress',
+      status: toHeaderStatus(dto.status, liveState.status),
       viewerRole,
       viewerId: viewerPlayer?.id ?? '',
       currentTurn: liveState.currentTurn,
@@ -694,12 +732,16 @@ export function SessionLiveView(): ReactElement {
       sessionTitleAriaLabel: t('pages.sessionLive.topBar.sessionTitleAriaLabel', {
         name: sessionName,
       }),
-      turnLabelResolved: t('pages.sessionLive.topBar.turnLabel', {
-        count: currentTurn,
-        total: totalTurns,
-      }),
+      // A session without a turn limit carries totalTurns 0: "Turno 1/0" is not a count of turns.
+      turnLabelResolved:
+        totalTurns > 0
+          ? t('pages.sessionLive.topBar.turnLabel', { count: currentTurn, total: totalTurns })
+          : t('pages.sessionLive.topBar.turnLabelNoTotal', { count: currentTurn }),
       statusInProgress: t('pages.sessionLive.topBar.statusInProgress'),
       statusPaused: t('pages.sessionLive.topBar.statusPaused'),
+      statusCompleted: t('pages.sessionLive.topBar.statusCompleted'),
+      statusNotStarted: t('pages.sessionLive.topBar.statusNotStarted'),
+      startCta: t('pages.sessionLive.topBar.startCta'),
       pauseCta: t('pages.sessionLive.topBar.pauseCta'),
       resumeCta: t('pages.sessionLive.topBar.resumeCta'),
       endgameCta: t('pages.sessionLive.topBar.endgameCta'),
@@ -717,7 +759,12 @@ export function SessionLiveView(): ReactElement {
   }, [t, activeSession?.currentTurn, activeSession?.totalTurns, activeSession?.name]);
 
   // G4 — Issue #2355: live elapsed time + connection pip wiring
-  const elapsedMs = useElapsedTime(sessionQuery.data?.startedAt);
+  // #4750: a concluded session stops at `completedAt` instead of counting on.
+  const elapsedMs = useElapsedTime(
+    sessionQuery.data?.startedAt,
+    undefined,
+    sessionQuery.data?.status === 'Completed' ? sessionQuery.data.completedAt : null
+  );
   // SI-4 (#2635): read-only derived start-time chip label (Invariante 5 — never user-editable).
   const startedAt = sessionQuery.data?.startedAt;
   const startedAtLabel = startedAt
@@ -970,6 +1017,50 @@ export function SessionLiveView(): ReactElement {
     liveSessionDto != null &&
     currentUser?.id != null &&
     liveSessionDto.createdByUserId === currentUser.id;
+
+  // #4787: a session left `Created` (the start failed after its retry, a player did not get in, or it
+  // predates #4781) had no way to start from here. Only its creator may: `StartLiveSessionCommandHandler`
+  // answers 403 to anyone else, and `viewerRole` `Host` also covers whoever merely holds the first seat.
+  // The ref, not the state, is the guard: two taps in the same frame both read the old state.
+  const [startPending, setStartPending] = useState(false);
+  const startInFlightRef = useRef(false);
+  const handleStart = useCallback(async (): Promise<void> => {
+    if (sessionId == null || !isSessionOwner || startInFlightRef.current) return;
+    // Nobody to play: the server refuses, and not always in a way that says why (a 409 for a session
+    // opened from a typed game name, a validation error for one from the catalog). Say it here.
+    if (!(liveSessionDto?.players ?? []).some(p => p.isActive)) {
+      toast.error(t('pages.sessionLive.topBar.startNeedsPlayerToast'), {
+        id: 'session-start-error',
+      });
+      return;
+    }
+    startInFlightRef.current = true;
+    setStartPending(true);
+    try {
+      let conflict = false;
+      try {
+        await api.liveSessions.startSession(sessionId);
+      } catch (err) {
+        if (err instanceof ConflictError || (err as { statusCode?: number })?.statusCode === 409) {
+          conflict = true;
+        } else {
+          toast.error(t('pages.sessionLive.topBar.startErrorToast'), { id: 'session-start-error' });
+          return;
+        }
+      }
+      // `refetch` does not throw: it resolves with the result, `data` being what the server now says.
+      const refreshed = await sessionQuery.refetch();
+      // A 409 means "cannot be started from here". Often that is a start that went through and whose
+      // answer was lost (the client retries POSTs on 502/503): the session is no longer unstarted, and
+      // there is nothing to report. If it still is, the start was refused: do not stay silent.
+      if (conflict && isUnstarted(refreshed?.data?.status)) {
+        toast.error(t('pages.sessionLive.topBar.startErrorToast'), { id: 'session-start-error' });
+      }
+    } finally {
+      startInFlightRef.current = false;
+      setStartPending(false);
+    }
+  }, [sessionId, isSessionOwner, liveSessionDto, sessionQuery, t]);
 
   // ── G6a #2787: per-game Catan flavor (conditional tab) ────────────────────
   const showFlavorTab = hasFlavor(liveSessionDto?.gameSlug);
@@ -1350,6 +1441,8 @@ export function SessionLiveView(): ReactElement {
         status={activeSession.status}
         viewerRole={activeSession.viewerRole}
         onExit={handleExit}
+        onStart={isSessionOwner ? () => void handleStart() : undefined}
+        startPending={startPending}
         onEndgame={
           hasRequiredRole(activeSession.viewerRole, 'Host') ? handleRequestEndgame : undefined
         }

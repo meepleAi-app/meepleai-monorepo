@@ -10,6 +10,30 @@ namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 
 internal class ConfigurationRepository : RepositoryBase, IConfigurationRepository
 {
+    /// <summary>
+    /// Le colonne di <c>system_configurations</c> che l'aggregato non porta (#4612). <see cref="UpdateAsync"/> non
+    /// le scrive mai: le possiede <c>RegisterCommandHandler</c>, sull'entità.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>BootstrapAdminCreated</c> e <c>BootstrapAdminCreatedAt</c> sono il flag single-use del claim del primo
+    /// admin. <c>DbSet.Update</c> su un'entità detached segna come modificata ogni colonna, e una colonna che
+    /// <c>MapToPersistence</c> non copia arrivava al database al valore di default della classe (<c>false</c> e
+    /// <c>NULL</c>): ogni update, toggle, rollback o import della riga <c>Authentication:BootstrapAdmin</c> riapriva
+    /// il claim. Stesso schema di <c>SharedGameRepository.ColumnsNotOwnedByTheAggregate</c> (#4585) e
+    /// <c>PdfDocumentRepository.ColumnsNotOwnedByTheAggregate</c> (#4347).
+    /// </para>
+    /// <para>
+    /// Il test <c>ConfigurationRepositoryTests</c> prende le colonne dal modello EF: una colonna aggiunta domani
+    /// all'entità, senza mapping e senza essere qui, lo fa fallire con il suo nome.
+    /// </para>
+    /// </remarks>
+    internal static readonly IReadOnlyList<string> ColumnsNotOwnedByTheAggregate =
+    [
+        nameof(Api.Infrastructure.Entities.SystemConfigurationEntity.BootstrapAdminCreated),
+        nameof(Api.Infrastructure.Entities.SystemConfigurationEntity.BootstrapAdminCreatedAt),
+    ];
+
     public ConfigurationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
     {
@@ -138,7 +162,17 @@ internal class ConfigurationRepository : RepositoryBase, IConfigurationRepositor
     {
         CollectDomainEvents(config);
         var entity = MapToPersistence(config);
-        DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Update(entity);
+        var entry = DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Update(entity);
+
+        // #4612: Update() segna come modificata anche ogni colonna che il mapper lascia al default. Quelle
+        // dell'elenco restano come sono nella riga. Nell'entità che resta nel contesto valgono invece il default:
+        // chi la rilegge tracciata nello stesso contesto le sovrascriva, non le usi. L'UPDATE parte comunque,
+        // perché le altre colonne restano modificate.
+        foreach (var column in ColumnsNotOwnedByTheAggregate)
+        {
+            entry.Property(column).IsModified = false;
+        }
+
         return Task.CompletedTask;
     }
 

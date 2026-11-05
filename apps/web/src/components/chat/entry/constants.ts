@@ -1,46 +1,8 @@
 /**
- * Chat entry constants — system agents and quick-start suggestions
+ * Chat entry constants — quick-start suggestions
  */
 
-import type { AgentOption, QuickStartSuggestion } from './types';
-
-export const DEFAULT_AGENTS: AgentOption[] = [
-  {
-    id: 'auto',
-    name: 'Auto',
-    type: 'auto',
-    description: 'Scelta automatica in base alla domanda',
-    icon: '🤖',
-  },
-  {
-    id: 'tutor',
-    name: 'Tutor',
-    type: 'qa',
-    description: 'Spiega regole e meccaniche',
-    icon: '📚',
-  },
-  {
-    id: 'arbitro',
-    name: 'Arbitro',
-    type: 'rules',
-    description: 'Risolve dubbi e dispute',
-    icon: '⚖️',
-  },
-  {
-    id: 'stratega',
-    name: 'Stratega',
-    type: 'strategy',
-    description: 'Consigli strategici e tattici',
-    icon: '🎯',
-  },
-  {
-    id: 'narratore',
-    name: 'Narratore',
-    type: 'narrative',
-    description: 'Racconta ambientazione, lore e atmosfera',
-    icon: '📖',
-  },
-];
+import type { QuickStartSuggestion } from './types';
 
 const RULE_SUGGESTIONS: QuickStartSuggestion[] = [
   {

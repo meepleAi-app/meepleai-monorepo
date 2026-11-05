@@ -120,7 +120,8 @@ public sealed class AnswerPipelinePartsTests
             "MeepleAI", "d", "p", "deepseek-flash", null, 0.3m, 1500, style,
             new Dictionary<string, string> { ["en"] = "EN prompt" }, "en", 20, 5, 0.55m, 0.7m, 0.3m, true,
             Enum.GetValues<DocumentCategory>(),
-            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
+            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled,
+            AgentProfileContent.NoIntentInstructions);
 
         var prompt = AnswerPromptBuilder.BuildAcrossGames(content, "en", "[1] [Source: Document d1, Page 3]\ntext", "q?", hasProtectedSources: true);
 
@@ -158,6 +159,78 @@ public sealed class AnswerPipelinePartsTests
         prompt.SystemPrompt.Should().Contain(AnswerPromptBuilder.HouseRuleInstruction);
         prompt.UserPrompt.Should().StartWith("[House Rule for this group]\nThe youngest player starts.\n\nCONTEXT FROM RULEBOOK:");
     }
+
+    // ─── Intento della risposta (#4404, ADR-098 §5) ──────────────────────────────
+
+    private static AnswerPrompt BuildFor(AgentProfileContent profile, string? intent) =>
+        AnswerPromptBuilder.Build(
+            profile, "it", "[Page 3] Ogni giocatore pesca due carte.", "Quante carte si pescano?", "concise", null, false,
+            intent: intent);
+
+    [Fact]
+    public void Build_TheSameQuestionUnderTwoIntents_GivesTwoPrompts_ThatDifferOnlyByTheSectionOfTheIntent()
+    {
+        // Rosso prima: oggi «auto» e «tutor» producono lo stesso prompt. Dopo, la sezione è l'unica differenza.
+        var profile = Content();
+
+        var auto = BuildFor(profile, "auto");
+        var tutor = BuildFor(profile, "tutor");
+
+        tutor.SystemPrompt.Should().NotBe(auto.SystemPrompt);
+        tutor.SystemPrompt.Should().Contain(AnswerIntent.DefaultInstructionFor("tutor")!);
+        auto.SystemPrompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("tutor")!);
+        tutor.SystemPrompt.Replace(AnswerIntent.DefaultInstructionFor("tutor")!, string.Empty, StringComparison.Ordinal)
+            .Replace("\n\n", "\n", StringComparison.Ordinal)
+            .Should().Be(auto.SystemPrompt.Replace("\n\n", "\n", StringComparison.Ordinal),
+                "everything but the section is the answer of today");
+        tutor.UserPrompt.Should().Be(auto.UserPrompt, "the intent shapes the instructions, not the question or the context");
+    }
+
+    [Fact]
+    public void Build_Secca_AsksForOneLineAndTheCitation_AndOverridesTheLengthOfTheStyle()
+    {
+        var secca = BuildFor(Content(), "secca");
+
+        secca.SystemPrompt.Should().Contain(AnswerIntent.DefaultInstructionFor("secca")!);
+        // The default style says «at most 200 words … bullet points»: the intent comes AFTER it and says it wins.
+        secca.SystemPrompt.IndexOf(AnswerIntent.DefaultInstructionFor("secca")!, StringComparison.Ordinal)
+            .Should().BeGreaterThan(secca.SystemPrompt.IndexOf(ConciseStyleMarker, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Build_WithoutAnIntent_IsTheAnswerOfToday()
+    {
+        var profile = Content();
+
+        BuildFor(profile, null).Should().Be(BuildFor(profile, "auto"));
+    }
+
+    [Theory]
+    [InlineData("arbitro")]
+    [InlineData("decisore")]
+    [InlineData("stratega")]
+    [InlineData("")]
+    public void Build_AnIdOutsideTheList_IsTheAnswerOfToday(string intent)
+    {
+        var profile = Content();
+
+        BuildFor(profile, intent).Should().Be(BuildFor(profile, "auto"));
+    }
+
+    [Fact]
+    public void Build_ASectionOfTheProfile_IsWhatTheIntentAddsInsteadOfTheBuiltInOne()
+    {
+        var profile = Content(intents: new Dictionary<string, string> { ["tutor"] = "Teach it like a patient friend." });
+
+        var tutor = BuildFor(profile, "tutor");
+
+        tutor.SystemPrompt.Should().Contain("Teach it like a patient friend.");
+        tutor.SystemPrompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("tutor")!);
+        BuildFor(profile, "secca").SystemPrompt.Should().Contain(AnswerIntent.DefaultInstructionFor("secca")!,
+            "the section is per intent: secca has none in this version");
+    }
+
+    private const string ConciseStyleMarker = "Answer concisely and in a structured way";
 
     [Fact]
     public void Build_WithoutAStyle_AddsNoStyleInstruction()
@@ -283,7 +356,8 @@ public sealed class AnswerPipelinePartsTests
     }
 
     private static AgentProfileContent Content(
-        Dictionary<string, string>? prompts = null, decimal temperature = 0.3m) =>
+        Dictionary<string, string>? prompts = null, decimal temperature = 0.3m,
+        IReadOnlyDictionary<string, string>? intents = null) =>
         AgentProfileContent.Create(
             "MeepleAI",
             "Test profile",
@@ -302,5 +376,6 @@ public sealed class AnswerPipelinePartsTests
             0.3m,
             true,
             Enum.GetValues<DocumentCategory>(),
-            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
+            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled,
+            intentInstructions: intents ?? AgentProfileContent.NoIntentInstructions);
 }

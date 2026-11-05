@@ -468,4 +468,72 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
         result.Sessions.Should().OnlyContain(s => !s.IsLive);
         result.CurrentSessionRoster.Should().BeEmpty();
     }
+
+    // #4752 (the night → live game bridge): the live game is reached from the tracking Session the
+    // link points at (LiveGameSession.TrackingSessionId), so the FE can link «Current game» to
+    // /sessions/{LiveSessionId}/live without a new column on the night.
+    private async Task SeedLiveGameAsync(Guid liveId, Guid? trackingSessionId, DateTime createdAt)
+    {
+        _db.LiveGameSessions.Add(new Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity
+        {
+            Id = liveId,
+            SessionCode = liveId.ToString("N")[..6].ToUpperInvariant(),
+            GameName = "Catan",
+            CreatedByUserId = Guid.NewGuid(),
+            ScoringConfigJson = "{}",
+            TrackingSessionId = trackingSessionId,
+            CreatedAt = createdAt,
+            UpdatedAt = createdAt,
+        });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task Handle_ASittingWithALiveGame_ExposesItsLiveSessionId_AndOnlyThatOne()
+    {
+        var organizerId = Guid.NewGuid();
+        var withLive = Guid.NewGuid();
+        var withoutLive = Guid.NewGuid();
+        var liveId = Guid.NewGuid();
+        await SeedLiveGameAsync(liveId, withLive, DateTime.UtcNow);
+        // A live game of someone else's night, and one with no companion: neither may leak in.
+        await SeedLiveGameAsync(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+        await SeedLiveGameAsync(Guid.NewGuid(), null, DateTime.UtcNow);
+
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid(), Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(withLive, evt.GameIds[0], "Catan");
+        evt.AddSession(withoutLive, evt.GameIds[1], "Dixit");
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.Sessions.Single(s => s.SessionId == withLive).LiveSessionId.Should().Be(liveId);
+        result.Sessions.Single(s => s.SessionId == withoutLive).LiveSessionId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_TwoLiveGamesOnOneTrackingSession_TheOldestWins()
+    {
+        // The bridge never creates two, but the read must be stable if the data ever holds them: the
+        // same rule as ILiveSessionRepository.GetByTrackingSessionIdAsync.
+        var organizerId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var older = Guid.NewGuid();
+        await SeedLiveGameAsync(Guid.NewGuid(), sessionId, DateTime.UtcNow);
+        await SeedLiveGameAsync(older, sessionId, DateTime.UtcNow.AddMinutes(-10));
+
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(sessionId, evt.GameIds[0], "Catan");
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.Sessions.Should().ContainSingle().Which.LiveSessionId.Should().Be(older);
+    }
 }

@@ -7,6 +7,15 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  EXISTING_PDF_DOCUMENT_ID,
+  INGEST_EXISTING_SHARED_BODY,
+  INGEST_EXISTING_USER_BODY,
+  INGEST_UPLOADED_BODY,
+  NEW_DOCUMENT_ID,
+} from '@/__tests__/fixtures/pdf-ingest-responses';
+
+import {
+  PdfIngestResponseSchema,
   ProcessingProgressSchema,
   ProcessingStepSchema,
   PdfDocumentDtoSchema,
@@ -264,3 +273,75 @@ function validBaseResponse() {
     errorMessage: null,
   };
 }
+
+// ========== POST /api/v1/ingest/pdf (#4893) ==========
+
+describe('PdfIngestResponseSchema', () => {
+  it('reads the body of a PDF uploaded now as an upload', () => {
+    expect(PdfIngestResponseSchema.parse(INGEST_UPLOADED_BODY)).toStrictEqual({
+      kind: 'uploaded',
+      documentId: NEW_DOCUMENT_ID,
+      fileName: 'catan_en_rulebook.pdf',
+    });
+  });
+
+  it('reads the existing-KB body of the user as the existing document, with its state', () => {
+    const outcome = PdfIngestResponseSchema.parse(INGEST_EXISTING_USER_BODY);
+
+    expect(outcome).toMatchObject({
+      kind: 'existing',
+      documentId: EXISTING_PDF_DOCUMENT_ID,
+      fileName: 'catan_en_rulebook.pdf',
+      message: 'Existing KB found in your uploads',
+    });
+    expect(outcome.kind === 'existing' && outcome.existingKb).toMatchObject({
+      pdfDocumentId: EXISTING_PDF_DOCUMENT_ID,
+      source: 'user',
+      processingState: 'Pending',
+      totalChunks: null,
+    });
+  });
+
+  it('reads the existing-KB body of the catalog game, indexed', () => {
+    const outcome = PdfIngestResponseSchema.parse(INGEST_EXISTING_SHARED_BODY);
+
+    expect(outcome.kind).toBe('existing');
+    expect(outcome.documentId).toBe(EXISTING_PDF_DOCUMENT_ID);
+    expect(outcome.kind === 'existing' && outcome.existingKb).toMatchObject({
+      source: 'shared',
+      processingState: 'Ready',
+      totalChunks: 42,
+    });
+  });
+
+  it('accepts the existing body the way the issue captured it, without the two optional keys', () => {
+    const {
+      originalGameName: _a,
+      sharedGameId: _b,
+      ...captured
+    } = INGEST_EXISTING_USER_BODY.existingKb;
+
+    const outcome = PdfIngestResponseSchema.safeParse({
+      ...INGEST_EXISTING_USER_BODY,
+      existingKb: captured,
+    });
+
+    expect(outcome.success).toBe(true);
+  });
+
+  it('rejects an existing body that names no document', () => {
+    const { pdfDocumentId: _id, ...withoutId } = INGEST_EXISTING_USER_BODY.existingKb;
+
+    expect(
+      PdfIngestResponseSchema.safeParse({ ...INGEST_EXISTING_USER_BODY, existingKb: withoutId })
+        .success
+    ).toBe(false);
+  });
+
+  it('rejects a body that is neither an upload nor an existing KB', () => {
+    expect(PdfIngestResponseSchema.safeParse({}).success).toBe(false);
+    expect(PdfIngestResponseSchema.safeParse({ fileName: 'x.pdf' }).success).toBe(false);
+    expect(PdfIngestResponseSchema.safeParse({ existingKbFound: false }).success).toBe(false);
+    expect(PdfIngestResponseSchema.safeParse(null).success).toBe(false);
+  });
+});

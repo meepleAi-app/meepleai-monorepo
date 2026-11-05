@@ -47,6 +47,7 @@ function GameGrid({
   isLoading,
   search,
   onSearchChange,
+  emptyMessage,
 }: {
   games: Game[];
   selectedGameId: string | null;
@@ -55,6 +56,8 @@ function GameGrid({
   isLoading: boolean;
   search: string;
   onSearchChange: (value: string) => void;
+  /** What an empty list says: it differs by tab, and by whether the user is searching. */
+  emptyMessage: string;
 }) {
   if (isLoading) {
     return (
@@ -84,8 +87,11 @@ function GameGrid({
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto pr-1">
         {games.length === 0 ? (
-          <p className="col-span-full text-sm text-muted-foreground text-center py-4">
-            Nessun gioco trovato
+          <p
+            className="col-span-full text-sm text-muted-foreground text-center py-4"
+            data-testid="game-empty-state"
+          >
+            {emptyMessage}
           </p>
         ) : (
           games.map(game => (
@@ -112,19 +118,6 @@ function GameGrid({
           ))
         )}
       </div>
-
-      {/* Skip game selection */}
-      <button
-        onClick={() => onSelect('')}
-        className={cn(
-          'mt-3 w-full py-2 px-3 rounded-lg text-xs text-muted-foreground border border-dashed border-border/50 transition-colors',
-          'hover:bg-muted/50 hover:text-foreground',
-          selectedGameId === '' && 'bg-muted/50 text-foreground border-solid'
-        )}
-        data-testid="skip-game-btn"
-      >
-        Continua senza gioco (chat generica)
-      </button>
     </div>
   );
 }
@@ -233,6 +226,16 @@ export function GameSelector({
 
   const activeGames = activeTab === 'private' ? privateGames : sharedGames;
   const isLoading = activeTab === 'private' ? !privateLoaded : !sharedLoaded;
+  // A search with no hits says so plainly. Otherwise the list is empty for a reason the user cannot see: the first
+  // tab only has private games, and the library tab hides every game that has no manual loaded (the KB filter).
+  const emptyMessage =
+    term !== ''
+      ? 'Nessun gioco trovato'
+      : activeTab === 'private'
+        ? 'Non hai ancora giochi privati: puoi aggiungerli dalla libreria.'
+        : showOnlyWithKb
+          ? 'Nessun gioco della tua libreria ha un regolamento caricato: carica un PDF dalla scheda del gioco e, a indicizzazione finita, comparirà qui.'
+          : 'Nessun gioco trovato';
 
   const handleSelect = useCallback(
     (gameId: string) => {
@@ -306,6 +309,7 @@ export function GameSelector({
         isLoading={isLoading}
         search={search}
         onSearchChange={setSearch}
+        emptyMessage={emptyMessage}
       />
     </section>
   );

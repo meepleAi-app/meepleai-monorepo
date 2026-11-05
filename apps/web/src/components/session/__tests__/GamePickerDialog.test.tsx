@@ -62,7 +62,7 @@ function serveLibrary(params?: { search?: string; pageSize?: number }) {
 function renderDialog() {
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <GamePickerDialog open onOpenChange={() => {}} />
+      <GamePickerDialog open onOpenChange={() => {}} gameNightEventId="night-1" />
     </QueryClientProvider>
   );
 }

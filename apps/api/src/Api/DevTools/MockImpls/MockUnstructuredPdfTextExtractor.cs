@@ -71,7 +71,10 @@ internal sealed class MockUnstructuredPdfTextExtractor : IPdfTextExtractor
                 PageNumber: i + 1,
                 Text: text,
                 CharStartIndex: charIndex,
-                CharEndIndex: charIndex + text.Length));
+                CharEndIndex: charIndex + text.Length,
+                // Like the real Unstructured extractor (#4782): its "pages" are equal slices of the text, not the
+                // pages of the PDF, so a mock standing in for it must not look like a source of measured pages.
+                PageIsEstimated: true));
             charIndex += text.Length + 2; // +2 for "\n\n" separator
         }
 

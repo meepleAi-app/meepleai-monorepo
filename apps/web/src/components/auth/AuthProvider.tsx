@@ -42,6 +42,9 @@ export interface RegisterData {
   termsAccepted?: boolean;
   displayName?: string;
   role?: string;
+  // #4783: the language the user is looking at ('it' | 'en'). The account's starting language — and so
+  // the language of the emails it sends — comes from it, not from a blind default.
+  locale?: string;
 }
 
 /**

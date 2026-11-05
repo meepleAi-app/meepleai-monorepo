@@ -14,6 +14,12 @@ internal sealed record HandleOAuthCallbackCommand : ICommand<HandleOAuthCallback
     public string State { get; init; } = string.Empty;
     public string? IpAddress { get; init; }
     public string? UserAgent { get; init; }
+
+    /// <summary>
+    /// #4783: the <c>Accept-Language</c> header of the callback request — the browser the user is in, back
+    /// from the provider. It sets the language of a NEW account; an existing one keeps its own.
+    /// </summary>
+    public string? AcceptLanguage { get; init; }
 }
 
 /// <summary>

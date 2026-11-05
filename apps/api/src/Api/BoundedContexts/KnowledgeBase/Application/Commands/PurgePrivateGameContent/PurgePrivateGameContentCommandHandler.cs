@@ -92,20 +92,9 @@ internal sealed class PurgePrivateGameContentCommandHandler : ICommandHandler<Pu
 
         // 2. Quelli che chi li ha caricati usa ancora da un altro gioco: un collegamento vivo, suo,
         //    che parte da un suo gioco privato che esiste o da un gioco del catalogo che esiste.
-        var stillUsed = await (
-            from link in _db.EntityLinks.IgnoreQueryFilters()
-            join pdf in _db.PdfDocuments on link.TargetEntityId equals pdf.Id
-            where !link.IsDeleted
-                  && link.TargetEntityType == MeepleEntityType.KbCard
-                  && link.SourceEntityType == MeepleEntityType.Game
-                  && link.SourceEntityId != gameId
-                  && candidateIds.Contains(pdf.Id)
-                  && link.OwnerUserId == pdf.UploadedByUserId
-                  && (_db.PrivateGames.Any(g => g.Id == link.SourceEntityId
-                                                && !g.IsDeleted && g.OwnerId == pdf.UploadedByUserId)
-                      || _db.SharedGames.Any(s => s.Id == link.SourceEntityId && !s.IsDeleted))
-            select pdf.Id)
-            .Distinct()
+        //    La regola sta in un punto solo, KbCardLinkRule (#4325): è la stessa che conta i
+        //    collegamenti nella cancellazione diretta di un PDF.
+        var stillUsed = await _db.PdfsUsedByOtherGames(candidateIds, gameId)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var deletedPdfs = 0;

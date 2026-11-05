@@ -81,3 +81,26 @@ describe('ActionLogTimeline — citations (#2564 AC-SSE-4)', () => {
     expect(container.querySelectorAll('[data-slot="action-log-citation"]')).toHaveLength(0);
   });
 });
+
+describe('ActionLogTimeline — citazione senza pagina (#4819)', () => {
+  it.each([
+    ['zero', 0],
+    ['null', null],
+    ['absent', undefined],
+  ])('writes no page on a chip whose page is %s', (_label, page) => {
+    const { container } = renderTimeline([
+      {
+        id: 'msg-1',
+        type: 'chat',
+        authorName: 'agent',
+        content: 'Vedi le regole.',
+        timestamp: '2026-06-29T10:00:00Z',
+        citations: [{ page, source: 'Setup' }],
+      },
+    ]);
+
+    const chip = container.querySelector('[data-slot="action-log-citation"]');
+    expect(chip?.textContent).toContain('Setup');
+    expect(chip?.textContent).not.toContain('p. ');
+  });
+});

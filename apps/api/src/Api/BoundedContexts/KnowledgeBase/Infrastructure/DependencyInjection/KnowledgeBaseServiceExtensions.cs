@@ -95,6 +95,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
         services.AddScoped<IRagPromptAssemblyService, RagPromptAssemblyService>(); // Replaces AgentPromptBuilder: RAG context + chat history + token budget
         services.AddScoped<IGroundedAnswerService, GroundedAnswerService>(); // #3490 (ADR-090): shared grounded finalize (leak guard + citation map + grounding)
+        services.AddScoped<ICitedPageTrust, CitedPageTrust>(); // #4819: which cited documents cannot vouch for the page of their passages
         services.AddScoped<IExpansionGameResolver, Infrastructure.Services.ExpansionGameResolver>(); // Issue #5588: Expansion priority in RAG search
         services.AddScoped<ITextChunkSearchService, Infrastructure.Services.TextChunkSearchService>(); // Phase 2: PostgreSQL FTS + adjacent chunk retrieval
         services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint
@@ -743,6 +744,24 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithIdentity("llm-log-pseudonymization-trigger", "knowledge-base")
                 .WithCronSchedule("0 0 2 * * ?")
                 .WithDescription("Runs daily at 2 AM UTC to pseudonymize UserId in logs older than 7 days"));
+        });
+
+        // Issue #4634: Daily expiry of the texts of rag_executions (the playground question and trace previews).
+        // The rows stay: the RAG dashboard and the per-agent statistics work on the numeric columns.
+        services.AddOptions<RagExecutionTextRetentionOptions>()
+            .Configure<IConfiguration>((opts, cfg) =>
+                cfg.GetSection(RagExecutionTextRetentionOptions.SectionKey).Bind(opts));
+        services.AddQuartz(q =>
+        {
+            q.AddJob<RagExecutionTextRetentionJob>(opts => opts
+                .WithIdentity("rag-execution-text-retention-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("rag-execution-text-retention-job", "knowledge-base")
+                .WithIdentity("rag-execution-text-retention-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 5 * * ?")
+                .WithDescription("Runs daily at 5 AM UTC to blank the question and trace of rag_executions rows older than the retention (90 days by default)"));
         });
 
         // Issue #5493: Model availability verification — checks OpenRouter models every 6 hours

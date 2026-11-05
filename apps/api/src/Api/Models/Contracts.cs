@@ -31,7 +31,9 @@ internal record QaResponse(
     // #4168 (ADR-095 D2): versione del profilo e lingua della risposta
     Guid? profileVersionId = null,
     string? language = null);
-internal record Snippet(string text, string source, int page, int line, float score)
+// #4819: `page` is null when the document cannot vouch for the page of its passages (#4782): a document
+// indexed without the page of each passage claims the same one for all of them. Better no page than a false one.
+internal record Snippet(string text, string source, int? page, int line, float score)
 {
     /// <summary>
     /// Composite chunk identifier "{PdfDocumentId}_{ChunkIndex}" from MultiGameSearchResultItem.
@@ -175,7 +177,9 @@ internal record StreamingComplete(
 
 internal record CitationDto(
     string DocumentId,
-    int PageNumber,
+    // #4819: null when the document cannot vouch for the page of its passages (#4782): a document indexed
+    // without the page of each passage claims the same one for all of them. Better no page than a false one.
+    int? PageNumber,
     float RelevanceScore,
     string? SnippetPreview,
     string CopyrightTier,
@@ -250,7 +254,7 @@ internal record InlineCitationMatch(
     int StartOffset,
     int EndOffset,
     int SnippetIndex,
-    int PageNumber,
+    int? PageNumber,
     string PdfDocumentId,
     double Confidence);
 

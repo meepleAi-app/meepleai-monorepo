@@ -91,6 +91,159 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
         }
     }
 
+    private static void ValidateArguments(int chunkCount, int totalCharacters, string language)
+    {
+        if (chunkCount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(chunkCount), "chunkCount must be positive");
+        if (totalCharacters < 0)
+            throw new ArgumentOutOfRangeException(nameof(totalCharacters), "totalCharacters cannot be negative");
+        if (string.IsNullOrWhiteSpace(language))
+            throw new ArgumentException("language cannot be empty", nameof(language));
+    }
+
+    /// <summary>
+    /// #4244: the PDF says whether this document belongs to a private game. The callers do not
+    /// agree on `gameId` for a private PDF — one passes the private id, the others the shared
+    /// game, which is null — and vector_documents.GameId is an FK to shared_games, so for a
+    /// private game it stays null and the game goes in PrivateGameId. Read here, in the one
+    /// write path every indexing flow goes through, so no caller can get it wrong.
+    /// </summary>
+    private async Task<(Guid? PrivateGameId, Guid? GameIdForTheForeignKey)> ResolveGameLinksAsync(
+        Guid pdfDocumentId, Guid? gameId, CancellationToken cancellationToken)
+    {
+        var privateGameId = await _db.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.Id == pdfDocumentId)
+            .Select(p => p.PrivateGameId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return (privateGameId, privateGameId.HasValue ? null : gameId);
+    }
+
+    public async Task BeginIndexingAsync(
+        Guid pdfDocumentId,
+        Guid? gameId,
+        Guid? sharedGameId,
+        int chunkCount,
+        int totalCharacters,
+        string language,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateArguments(chunkCount, totalCharacters, language);
+
+        var (privateGameId, gameIdForTheForeignKey) =
+            await ResolveGameLinksAsync(pdfDocumentId, gameId, cancellationToken).ConfigureAwait(false);
+
+        var existing = await _db.VectorDocuments
+            .AsTracking()
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDocumentId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (existing is null)
+        {
+            // No aggregate and no event here: this row only has to exist so the chunks and the vector
+            // rows can point at it. The event is raised by IndexAsync once the saves are done (#4609).
+            _db.VectorDocuments.Add(new VectorDocumentEntity
+            {
+                Id = Guid.NewGuid(),
+                GameId = gameIdForTheForeignKey,
+                SharedGameId = sharedGameId,
+                PrivateGameId = privateGameId,
+                PdfDocumentId = pdfDocumentId,
+                ChunkCount = chunkCount,
+                TotalCharacters = totalCharacters,
+                IndexingStatus = "processing"
+            });
+        }
+        else
+        {
+            // A row that is already "completed" stays completed: see the interface remarks.
+            if (!string.Equals(existing.IndexingStatus, "completed", StringComparison.Ordinal))
+            {
+                existing.IndexingStatus = "processing";
+                existing.IndexingError = null;
+            }
+
+            // Same healing as IndexAsync: the vector rows written next take their game from this row.
+            existing.SharedGameId ??= sharedGameId;
+            existing.PrivateGameId ??= privateGameId;
+        }
+
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfIndexingPipeline),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on VectorDocument for PDF {PdfDocumentId} while starting the indexing (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfDocumentId);
+        }
+    }
+
+    private const int MaxIndexingErrorLength = 500;
+
+    public async Task MarkIndexingFailedAsync(
+        Guid pdfDocumentId,
+        string errorMessage,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var row = await _db.VectorDocuments
+                .AsTracking()
+                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDocumentId, cancellationToken)
+                .ConfigureAwait(false);
+
+            // No row: the PDF failed before BeginIndexingAsync.
+            if (row is null)
+            {
+                return;
+            }
+
+            // The save that made the PDF fail may have left this row tracked with values that never reached the
+            // database (IndexAsync writes "completed" into the entity before it saves, and the queue pipeline shares
+            // the context without clearing it). Judge the row the database has, not the tracker's.
+            var entry = _db.Entry(row);
+            await entry.ReloadAsync(cancellationToken).ConfigureAwait(false);
+
+            // Gone since the read (an admin deleted it): nothing left to mark. Completed: a re-run of an indexed
+            // document is left as it is (see the interface remarks). Failed: already marked, the first error stays.
+            if (entry.State == EntityState.Detached
+                || string.Equals(row.IndexingStatus, "completed", StringComparison.Ordinal)
+                || string.Equals(row.IndexingStatus, "failed", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            row.IndexingStatus = "failed";
+            row.IndexingError = errorMessage is { Length: > MaxIndexingErrorLength }
+                ? errorMessage[..MaxIndexingErrorLength]
+                : errorMessage;
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfIndexingPipeline),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict marking the VectorDocument of PDF {PdfDocumentId} failed (Category B) — admin mutation wins",
+                pdfDocumentId);
+        }
+#pragma warning disable CA1031 // Failure handlers call this: it must not throw
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(ex,
+                "Could not mark the VectorDocument of PDF {PdfDocumentId} failed; it stays in its previous state",
+                pdfDocumentId);
+        }
+    }
+
     public async Task IndexAsync(
         Guid pdfDocumentId,
         Guid? gameId,
@@ -100,27 +253,12 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
         string language,
         CancellationToken cancellationToken = default)
     {
-        if (chunkCount <= 0)
-            throw new ArgumentOutOfRangeException(nameof(chunkCount), "chunkCount must be positive");
-        if (totalCharacters < 0)
-            throw new ArgumentOutOfRangeException(nameof(totalCharacters), "totalCharacters cannot be negative");
-        if (string.IsNullOrWhiteSpace(language))
-            throw new ArgumentException("language cannot be empty", nameof(language));
+        ValidateArguments(chunkCount, totalCharacters, language);
 
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // #4244: the PDF says whether this document belongs to a private game. The callers do not
-        // agree on `gameId` for a private PDF — one passes the private id, the others the shared
-        // game, which is null — and vector_documents.GameId is an FK to shared_games, so for a
-        // private game it stays null and the game goes in PrivateGameId. Read here, in the one
-        // write path every indexing flow goes through, so no caller can get it wrong.
-        var privateGameId = await _db.PdfDocuments
-            .AsNoTracking()
-            .Where(p => p.Id == pdfDocumentId)
-            .Select(p => p.PrivateGameId)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-        var gameIdForTheForeignKey = privateGameId.HasValue ? null : gameId;
+        var (privateGameId, gameIdForTheForeignKey) =
+            await ResolveGameLinksAsync(pdfDocumentId, gameId, cancellationToken).ConfigureAwait(false);
 
         // AsTracking required: we may update an existing row in-place.
         var existing = await _db.VectorDocuments

@@ -10,6 +10,7 @@
 import type { ReactElement } from 'react';
 
 import type { Citation } from '@/lib/api/schemas/streaming.schemas';
+import { citedPage } from '@/lib/citations/citedPage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -133,7 +134,9 @@ export function ActionLogTimeline({
                         className="inline-flex max-w-[10rem] items-center gap-1 rounded-full bg-[hsl(var(--c-kb)/0.12)] px-2 py-0.5 font-mono text-[0.65rem] font-medium text-[hsl(var(--c-kb))]"
                       >
                         <span aria-hidden="true">📖</span>
-                        {typeof citation.page === 'number' && <span>p. {citation.page}</span>}
+                        {citedPage(citation.page) !== null && (
+                          <span>p. {citedPage(citation.page)}</span>
+                        )}
                         {citation.source ? (
                           <span className="truncate">{citation.source}</span>
                         ) : null}

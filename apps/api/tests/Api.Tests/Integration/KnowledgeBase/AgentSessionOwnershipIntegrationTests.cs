@@ -286,27 +286,6 @@ public sealed class AgentSessionOwnershipIntegrationTests
         updated.StatusCode.Should().Be(HttpStatusCode.NoContent, await updated.Content.ReadAsStringAsync());
     }
 
-    [Fact]
-    public async Task UpdateConfig_by_another_user_is_forbidden_and_the_owner_updates_it()
-    {
-        var body = new
-        {
-            agentSessionId = _agentSessionId,
-            modelType = "gpt-4o-mini",
-            temperature = 0.3,
-            maxTokens = 1024,
-            ragStrategy = "VectorOnly",
-            ragParams = new Dictionary<string, object>(),
-        };
-
-        var refused = await SendAsync(HttpMethod.Patch, AgentUrl(_gameSessionId, "config"), _otherToken, body);
-        refused.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-
-        // Solo lo status, come per la definizione: la configurazione non ha colonne (#4367).
-        var updated = await SendAsync(HttpMethod.Patch, AgentUrl(_gameSessionId, "config"), _ownerToken, body);
-        updated.StatusCode.Should().Be(HttpStatusCode.NoContent, await updated.Content.ReadAsStringAsync());
-    }
-
     // ── chiusura ─────────────────────────────────────────────────────────────────
 
     [Fact]

@@ -57,6 +57,7 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
     private readonly IPublishedAgentProfileReader _profileReader;
     private readonly ILanguageDetectionService _languageDetection;
     private readonly ILlmService _llmService;
+    private readonly ICitedPageTrust _pageTrust;
     private readonly ILogger<CrossGameAnswerFlow> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -66,6 +67,7 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
         IPublishedAgentProfileReader profileReader,
         ILanguageDetectionService languageDetection,
         ILlmService llmService,
+        ICitedPageTrust pageTrust,
         ILogger<CrossGameAnswerFlow> logger,
         TimeProvider? timeProvider = null)
     {
@@ -74,6 +76,7 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
         _profileReader = profileReader ?? throw new ArgumentNullException(nameof(profileReader));
         _languageDetection = languageDetection ?? throw new ArgumentNullException(nameof(languageDetection));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _pageTrust = pageTrust ?? throw new ArgumentNullException(nameof(pageTrust));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -135,8 +138,14 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
 
         yield return CreateEvent(StreamingEventType.StateUpdate, new StreamingStateUpdate(SearchingMessage));
 
+        // #4819: a document that cannot tell its pages apart (#4782) is cited without one, as is a passage that
+        // comes without a page at all (it used to be written as page 0).
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(results!.Select(r => r.PdfDocumentId), cancellationToken)
+            .ConfigureAwait(false);
         var snippets = results!
-            .Select(r => new Snippet(r.Content, r.PdfDocumentId, r.PageNumber ?? 0, 0, r.HybridScore)
+            .Select(r => new Snippet(
+                r.Content, r.PdfDocumentId, withoutAPage.Contains(r.PdfDocumentId) ? null : r.PageNumber, 0, r.HybridScore)
             {
                 chunkId = r.ChunkId,
                 chunkPosition = r.ChunkIndex,

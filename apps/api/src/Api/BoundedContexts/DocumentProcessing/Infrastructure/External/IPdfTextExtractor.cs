@@ -128,11 +128,21 @@ internal record PagedTextExtractionResult(
 /// <summary>
 /// Represents text extracted from a single page
 /// </summary>
+/// <param name="PageNumber">The 1-based page of the PDF the text came from, or an estimate of it (see <paramref name="PageIsEstimated"/>).</param>
+/// <param name="Text">The text of the page.</param>
+/// <param name="CharStartIndex">Offset of the first character of the page in the extractor's own text.</param>
+/// <param name="CharEndIndex">Offset of the last character of the page in the extractor's own text.</param>
+/// <param name="PageIsEstimated">
+/// True when <see cref="PageNumber"/> was not read from the document but derived (#4782): the Unstructured extractor
+/// cuts the whole text into equal parts and numbers them 1..N. Such a number says nothing about where the text sits
+/// in the PDF, so nobody may build a page map from it.
+/// </param>
 internal record PageTextChunk(
     int PageNumber,
     string Text,
     int CharStartIndex,
-    int CharEndIndex)
+    int CharEndIndex,
+    bool PageIsEstimated = false)
 {
     /// <summary>
     /// Whether the page contains no extractable text

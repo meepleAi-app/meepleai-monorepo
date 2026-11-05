@@ -26,6 +26,11 @@ internal sealed class PlayerMemory : AggregateRoot<Guid>
     /// </summary>
     public Guid? LastProcessedEventId { get; private set; }
 
+    private readonly ProcessedSessions _processedSessions = new();
+
+    /// <summary>The sessions already counted in this player's stats (#4839, option C), oldest first.</summary>
+    public IReadOnlyList<Guid> ProcessedSessionIds => _processedSessions.Ids;
+
     /// <summary>EF Core constructor.</summary>
     private PlayerMemory() { }
 
@@ -73,7 +78,8 @@ internal sealed class PlayerMemory : AggregateRoot<Guid>
         DateTime? claimedAt,
         DateTime createdAt,
         Guid? lastProcessedEventId,
-        IEnumerable<PlayerGameStats> gameStats)
+        IEnumerable<PlayerGameStats> gameStats,
+        IEnumerable<Guid>? processedSessionIds = null)
     {
         ArgumentNullException.ThrowIfNull(gameStats);
 
@@ -88,6 +94,8 @@ internal sealed class PlayerMemory : AggregateRoot<Guid>
             LastProcessedEventId = lastProcessedEventId,
         };
         memory._gameStats.AddRange(gameStats);
+        foreach (var sessionId in new ProcessedSessions(processedSessionIds).Ids)
+            memory._processedSessions.Add(sessionId);
         return memory;
     }
 
@@ -120,11 +128,18 @@ internal sealed class PlayerMemory : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Records which domain event has just been processed against this aggregate
-    /// (issue #1939 / CF-3). Used by handlers to short-circuit on re-dispatch.
+    /// <c>true</c> when the result of this session has already been counted for this player, whatever event or
+    /// delivery counted it (#4839, option C).
     /// </summary>
-    public void MarkProcessed(Guid eventId)
+    public bool HasProcessedSession(Guid sessionId) => _processedSessions.Contains(sessionId);
+
+    /// <summary>
+    /// Records which domain event, and which session, have just been processed against this aggregate
+    /// (issue #1939 / CF-3, #4839). Used by handlers to short-circuit on re-dispatch.
+    /// </summary>
+    public void MarkProcessed(Guid eventId, Guid sessionId)
     {
         LastProcessedEventId = eventId;
+        _processedSessions.Add(sessionId);
     }
 }

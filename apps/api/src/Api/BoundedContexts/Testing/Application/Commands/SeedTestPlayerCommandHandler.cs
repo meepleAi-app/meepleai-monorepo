@@ -123,6 +123,8 @@ internal sealed class SeedTestPlayerCommandHandler
             {
                 Id = Guid.NewGuid(),
                 Token = Guid.NewGuid().ToString("N")[..16],
+                // Every email to a guest carries the opt-out link (#4846), so a stub that can be written to needs a key.
+                UnsubscribeKey = Guid.NewGuid().ToString("N")[..22],
                 GameNightId = request.GameNightId,
                 Email = $"guest-{Guid.NewGuid():N}@e2e.test",
                 Status = "Accepted",

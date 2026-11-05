@@ -76,7 +76,6 @@ public sealed class AnswerPathsSharePreconditionsArchitectureTests
         ["Api.BoundedContexts.KnowledgeBase.Application.Queries.GlobalKbSearch.GlobalKbSearchQueryHandler"] = NotAnAnswer,
         ["Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKnowledgeBaseStatusQueryHandler"] = NotAnAnswer,
         ["Api.BoundedContexts.KnowledgeBase.Application.Commands.CreateChatSessionCommandHandler"] = NotAnAnswer,
-        ["Api.BoundedContexts.KnowledgeBase.Application.Commands.LinkExistingKbToGameCommandHandler"] = NotAnAnswer,
         ["Api.BoundedContexts.KnowledgeBase.Application.Commands.RebuildRaptorCommandHandler"] = NotAnAnswer,
         ["Api.BoundedContexts.KnowledgeBase.Application.Commands.ReindexGameKbCommandHandler"] = NotAnAnswer,
         ["Api.BoundedContexts.GameToolkit.Application.Commands.GenerateToolkitFromKbHandler"] = NotAnAnswer,

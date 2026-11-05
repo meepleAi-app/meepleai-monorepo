@@ -65,6 +65,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     private readonly IAnswerPreconditions _preconditions;
     private readonly IMechanicCardProvider _mechanicCardProvider;
     private readonly IFeatureFlagService _featureFlags;
+    private readonly ICitedPageTrust _pageTrust;
     private readonly ILogger<AnswerPipeline> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -84,6 +85,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         IAnswerPreconditions preconditions,
         IMechanicCardProvider mechanicCardProvider,
         IFeatureFlagService featureFlags,
+        ICitedPageTrust pageTrust,
         ILogger<AnswerPipeline> logger,
         TimeProvider? timeProvider = null)
     {
@@ -102,6 +104,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         _preconditions = preconditions ?? throw new ArgumentNullException(nameof(preconditions));
         _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
         _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
+        _pageTrust = pageTrust ?? throw new ArgumentNullException(nameof(pageTrust));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -179,10 +182,11 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // #4279: the history of the thread, read BEFORE the cache. It goes into the prompt, so it
         // goes into the key: the cache is shared by every user, and an answer shaped by one
         // conversation must not be served to a question asked in another, or in none.
-        var chatHistoryContext = await LoadChatThreadContextAsync(
+        var thread = await LoadChatThreadContextAsync(
             query.ThreadId, query.GameId, query.UserId, cancellationToken).ConfigureAwait(false);
+        var chatHistoryContext = thread.History;
 
-        var cacheKey = QaCacheKey(query, profile, language.Language, chatHistoryContext);
+        var cacheKey = QaCacheKey(query, profile, language.Language, chatHistoryContext, thread.Intent);
         // #4169 (6c-3): una bozza cambia contenuto tenendo lo stesso id, quindi la sua prova non legge
         // né scrive la cache: una risposta salvata sotto quell'id sarebbe di un contenuto vecchio.
         var skipCache = injectClaims || query.Trial is not null;
@@ -204,8 +208,12 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             // Full-tier user's cached Full-gated regions must NOT be replayed to a later Protected-tier
             // user (DA-4). Regions are transient per-request data; fresh, correctly-gated regions are
             // emitted only on a cache MISS. Cache hits gracefully fall back to the text-quote highlight.
+            // #4819: the cache outlives the decision about a page (#4782). An entry written before it, or before a
+            // document was extracted again, would carry a page nobody can vouch for for a day: it is asked about again.
+            var servedSnippets = await WithoutUnreliablePagesAsync(cachedResponse.snippets, cancellationToken)
+                .ConfigureAwait(false);
             yield return CreateEvent(StreamingEventType.Citations,
-                new StreamingCitations(StripRegions(cachedResponse.snippets)));
+                new StreamingCitations(StripRegions(servedSnippets)));
 
             // Emit answer as tokens (simulate streaming for consistency).
             // #3850: le voci scritte prima della correzione portano la rinuncia in inglese.
@@ -246,7 +254,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
 
         // Stream fresh QA response
         await foreach (var evt in AskStreamInternalAsync(
-            query, profile, language.Language, verifiedBlock, chatHistoryContext, cacheKey, quota, cancellationToken).ConfigureAwait(false))
+            query, profile, language.Language, verifiedBlock, thread, cacheKey, quota, cancellationToken).ConfigureAwait(false))
         {
             yield return evt;
         }
@@ -257,7 +265,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         PublishedAgentProfile profile,
         string language,
         VerifiedRulesBlock verifiedBlock,
-        string chatHistoryContext,
+        ChatThreadContext thread,
         string cacheKey,
         AnswerQuota quota,
         [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -323,8 +331,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             new StreamingStateUpdate("Generating answer..."));
 
         var (systemPrompt, userPrompt) = BuildLlmPrompts(
-            profile.Content, language, query.Query, ragSnippets, chatHistoryContext,
-            query.ResponseStyle, query.ContinuationContext, verifiedBlock);
+            profile.Content, language, query.Query, ragSnippets, thread.History,
+            query.ResponseStyle, query.ContinuationContext, verifiedBlock, thread.Intent);
 
         // Step 4: Stream tokens from LLM.
         // #3850: la rinuncia esce nella lingua della risposta. Il localizzatore trattiene solo ciò che
@@ -488,6 +496,11 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // SP-C (#3407): the citations carry the pdf id (Issue #W) and the copyright tier resolved for the
         // asker (TieredPassageSearch). Here the verbatim excerpt stays and the region overlay is gated to
         // Full — StreamQa previously emitted verbatim text with NO gate (a leak, #447/DA-4).
+        // #4819: a document that cannot tell its pages apart (#4782) is cited without one. The same list grounds
+        // the prompt below and feeds the inline-citation matcher, so neither writes a page it cannot vouch for.
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(passages.Citations.Select(c => c.DocumentId), cancellationToken)
+            .ConfigureAwait(false);
         var snippets = passages.Citations.Select(c =>
         {
             var isFull = c.CopyrightTier == CopyrightTier.Full;
@@ -500,7 +513,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
                 // LLM-prompt/FE-citation source split — out of SP-C scope.)
                 c.SnippetPreview,
                 $"PDF:{c.DocumentId}",
-                c.PageNumber,
+                withoutAPage.Contains(c.DocumentId) ? null : c.PageNumber,
                 0,
                 c.RelevanceScore)
             {
@@ -525,22 +538,53 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         snippets.Select(s => s with { regions = null, charStart = null, charEnd = null }).ToList();
 
     /// <summary>
+    /// #4819: the snippets as they can be shown, leaving out the page of those from a document that cannot vouch
+    /// for it (#4782). Used on what comes out of the cache; a fresh answer asks while it builds its citations.
+    /// </summary>
+    private async Task<IReadOnlyList<Snippet>> WithoutUnreliablePagesAsync(
+        IReadOnlyList<Snippet> snippets, CancellationToken cancellationToken)
+    {
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(snippets.Select(s => PdfIdOf(s.source)), cancellationToken)
+            .ConfigureAwait(false);
+        return snippets
+            .Select(s => withoutAPage.Contains(PdfIdOf(s.source)) ? s with { page = null } : s)
+            .ToList();
+    }
+
+    private static string PdfIdOf(string source) =>
+        source.StartsWith("PDF:", StringComparison.Ordinal) ? source["PDF:".Length..] : source;
+
+    /// <summary>
+    /// What the pipeline takes from the chat thread named by the request: the history for the prompt and, since
+    /// #4404, the intent of the answer. Both come from the same thread and both obey the same rule — it must be
+    /// the asker's own, on the same game (#4242) — so a thread that is not theirs shapes nothing.
+    /// </summary>
+    /// <param name="History">The history to put in the prompt, or empty.</param>
+    /// <param name="Intent">One of <see cref="AnswerIntent.All"/>; <c>auto</c> when there is no usable thread.</param>
+    private sealed record ChatThreadContext(string History, string Intent)
+    {
+        public static ChatThreadContext None { get; } = new(string.Empty, AnswerIntent.Auto);
+    }
+
+    /// <summary>
     /// Loads chat thread context if ThreadId provided.
     /// </summary>
-    private async Task<string> LoadChatThreadContextAsync(
+    private async Task<ChatThreadContext> LoadChatThreadContextAsync(
         Guid? threadId,
         string gameId,
         Guid userId,
         CancellationToken cancellationToken)
     {
         if (!threadId.HasValue)
-            return string.Empty;
+            return ChatThreadContext.None;
 
         var thread = await _chatThreadRepository.GetByIdAsync(threadId.Value, cancellationToken).ConfigureAwait(false);
         if (thread == null)
-            return string.Empty;
+            return ChatThreadContext.None;
 
-        // Security (#4242): the history is used only for its owner, and only for its game.
+        // Security (#4242): the history is used only for its owner, and only for its game. The intent of the
+        // thread is lent on the same terms (#4404).
         Guid? questionGameId = Guid.TryParse(gameId, out var parsedGameId) ? parsedGameId : null;
         switch (ChatThreadHistoryPolicy.WhyNot(thread, userId, questionGameId))
         {
@@ -548,23 +592,26 @@ internal sealed class AnswerPipeline : IAnswerPipeline
                 _logger.LogWarning(
                     "Thread {ThreadId} does not belong to user {UserId}. Ignoring chat history.",
                     threadId.Value, userId);
-                return string.Empty;
+                return ChatThreadContext.None;
             case ChatThreadHistoryRefusal.AnotherGame:
                 _logger.LogWarning(
                     "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
                     threadId.Value, thread.GameId, gameId);
-                return string.Empty;
+                return ChatThreadContext.None;
         }
+
+        // A value outside the list (a retired id, another feature's type) answers as «auto».
+        var intent = AnswerIntent.FromStored(thread.AgentType);
 
         if (_chatContextService.ShouldIncludeChatHistory(thread))
         {
             _logger.LogInformation(
                 "Including chat history from thread {ThreadId}: {MessageCount} messages",
                 threadId.Value, thread.MessageCount);
-            return _chatContextService.BuildChatHistoryContext(thread);
+            return new ChatThreadContext(_chatContextService.BuildChatHistoryContext(thread), intent);
         }
 
-        return string.Empty;
+        return new ChatThreadContext(string.Empty, intent);
     }
 
     /// <summary>
@@ -579,10 +626,13 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         string chatHistoryContext,
         string? responseStyle,
         string? continuationContext,
-        VerifiedRulesBlock verifiedBlock)
+        VerifiedRulesBlock verifiedBlock,
+        string intent)
     {
         var context = string.Join("\n\n", snippets.Select(s =>
-            $"[Page {s.page}] {s.text}"));
+            // #4819: said outright when the page is not known: a passage without any marker would read as part of
+            // the one before it, and the model, asked to cite pages, would have only the example to copy.
+            $"[Page {(s.page is { } page ? page.ToString(System.Globalization.CultureInfo.InvariantCulture) : "unknown")}] {s.text}"));
 
         // R1 (spec §7.1/D8): approved claims rank above raw RAG context (the stream path has no house rules).
         var hasVerifiedRules = verifiedBlock is { IsEmpty: false };
@@ -595,7 +645,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
 
         // La chat ha sempre uno stile: senza una scelta dell'utente, sintetico.
         var prompt = AnswerPromptBuilder.Build(
-            profile, language, context, queryText, responseStyle ?? "concise", continuationContext, hasVerifiedRules);
+            profile, language, context, queryText, responseStyle ?? "concise", continuationContext, hasVerifiedRules,
+            intent: intent);
 
         // Enrich with chat history if available
         var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
@@ -779,13 +830,16 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     /// continuano a condividere la risposta in cache.
     /// </remarks>
     private string QaCacheKey(
-        AnswerRequest query, PublishedAgentProfile profile, string language, string chatHistoryContext)
+        AnswerRequest query, PublishedAgentProfile profile, string language, string chatHistoryContext, string intent)
     {
         var shape = string.Join(
             '|',
             language,
             profile.VersionId.ToString("N"),
             $"style:{NormalizedResponseStyle(query.ResponseStyle)}",
+            // #4404: la forma della risposta scelta nella chat (auto, tutor, secca) entra nel prompt, quindi nella chiave:
+            // la risposta del tutor non deve tornare a chi ha chiesto «auto».
+            $"intent:{intent}",
             $"history:{Fingerprint(chatHistoryContext)}",
             $"documents:{Fingerprint(DocumentFilterOf(query.DocumentIds))}",
             $"continues:{Fingerprint(query.ContinuationContext)}",

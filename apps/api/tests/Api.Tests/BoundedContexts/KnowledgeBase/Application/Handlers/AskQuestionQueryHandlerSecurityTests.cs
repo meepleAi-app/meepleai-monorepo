@@ -212,6 +212,7 @@ public class AskQuestionQueryHandlerSecurityTests
             new IntentClassifierService(),
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             Mock.Of<Api.Services.IFeatureFlagService>(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved(),
             _mockLogger.Object);
     }
 

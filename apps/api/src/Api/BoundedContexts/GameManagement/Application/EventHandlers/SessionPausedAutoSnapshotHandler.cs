@@ -2,6 +2,8 @@ using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Infrastructure.DomainEventLog;
+using Api.Observability;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -85,14 +87,7 @@ internal sealed class SessionPausedAutoSnapshotHandler
         }
         catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
         {
-            // CF-2 / #1938: outbox replay (#1535 at-least-once delivery) for a snapshot
-            // already persisted by an earlier dispatch. The partial UNIQUE index on
-            // session_snapshots.source_event_id blocked the duplicate insert at the DB.
-            // Log at Information — legitimate replays are not failures.
-            _logger.LogInformation(
-                ex,
-                "Skipping duplicate auto-snapshot for session {SessionId}: SourceEventId={SourceEventId} (already recorded)",
-                notification.SessionId, notification.EventId);
+            await ReportUniqueViolationAsync(notification, ex, cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031
         catch (Exception ex)
@@ -105,5 +100,53 @@ internal sealed class SessionPausedAutoSnapshotHandler
                 ex.Message);
         }
 #pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// A unique violation is either «this event already has its snapshot» (CF-2 / #1938: outbox replay, #1535
+    /// at-least-once delivery; the partial UNIQUE index on <c>session_snapshots.source_event_id</c> blocked the
+    /// duplicate insert) or the OTHER unique index, <c>(session_id, snapshot_index)</c>: a pause and a turn change
+    /// that worked out the same next index at the same instant. Both used to be logged as «already recorded»; in the
+    /// second the snapshot of the pause does not exist. The read of the event's own snapshot tells them apart (#4852).
+    /// </summary>
+    private async Task ReportUniqueViolationAsync(
+        LiveSessionPausedEvent notification, DbUpdateException violation, CancellationToken cancellationToken)
+    {
+        var alreadyRecorded = false;
+        try
+        {
+            alreadyRecorded = await _snapshotRepository
+                .GetBySourceEventIdAsync(notification.EventId, cancellationToken)
+                .ConfigureAwait(false) is not null;
+        }
+#pragma warning disable CA1031 // The read is only there to word the log: if it fails the violation is reported as it was before
+        catch (Exception readFailure)
+        {
+            _logger.LogWarning(
+                readFailure,
+                "Could not tell whether auto-snapshot of session {SessionId} (SourceEventId={SourceEventId}) was recorded after a unique violation",
+                notification.SessionId, notification.EventId);
+            return;
+        }
+#pragma warning restore CA1031
+
+        if (alreadyRecorded)
+        {
+            // Log at Information — legitimate replays are not failures.
+            _logger.LogInformation(
+                violation,
+                "Skipping duplicate auto-snapshot for session {SessionId}: SourceEventId={SourceEventId} (already recorded)",
+                notification.SessionId, notification.EventId);
+            return;
+        }
+
+        MeepleAiMetrics.DomainEventDispatchFailures.Add(
+            1,
+            new KeyValuePair<string, object?>("event_type", EventTypeRegistry.ResolveOrFullName(notification)),
+            new KeyValuePair<string, object?>("handler_name", nameof(SessionPausedAutoSnapshotHandler)));
+        _logger.LogError(
+            violation,
+            "Auto-snapshot of session {SessionId} on pause NOT recorded: SourceEventId={SourceEventId} has no snapshot, so the unique violation was on the snapshot index (another snapshot took the same index at the same instant)",
+            notification.SessionId, notification.EventId);
     }
 }

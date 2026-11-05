@@ -60,6 +60,8 @@ export interface AssistantActionError {
 export interface UseSessionAssistantResult {
   /** Null until the first read arrives. */
   readonly availability: { readonly enabled: boolean; readonly code: string | null } | null;
+  /** #4729: `false` = the game has no rulebook ready; `null` = unknown or not applicable. */
+  readonly rulesLoaded: boolean | null;
   readonly isLoading: boolean;
   readonly loadError: Error | null;
   readonly messages: readonly AssistantConversationMessage[];
@@ -283,6 +285,7 @@ export function useSessionAssistant(
           code: panel.data.availability.code ?? null,
         }
       : null,
+    rulesLoaded: panel.data?.rulesLoaded ?? null,
     isLoading: panel.isLoading,
     loadError: panel.error,
     messages,

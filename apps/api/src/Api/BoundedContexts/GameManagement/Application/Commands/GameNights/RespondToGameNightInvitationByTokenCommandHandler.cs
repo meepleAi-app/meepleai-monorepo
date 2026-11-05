@@ -1,7 +1,9 @@
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
@@ -20,16 +22,22 @@ internal sealed class RespondToGameNightInvitationByTokenCommandHandler
     : ICommandHandler<RespondToGameNightInvitationByTokenCommand>
 {
     private readonly IGameNightInvitationRepository _invitationRepository;
+    private readonly IGameNightEventRepository _gameNightRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDomainEventCollector _events;
     private readonly TimeProvider _timeProvider;
 
     public RespondToGameNightInvitationByTokenCommandHandler(
         IGameNightInvitationRepository invitationRepository,
+        IGameNightEventRepository gameNightRepository,
         IUnitOfWork unitOfWork,
+        IDomainEventCollector events,
         TimeProvider timeProvider)
     {
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
+        _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _events = events ?? throw new ArgumentNullException(nameof(events));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
@@ -39,6 +47,16 @@ internal sealed class RespondToGameNightInvitationByTokenCommandHandler
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        // #4744: the invitation carries its row version, so an answer that overlaps a withdrawal (or another answer)
+        // is refused when it is saved. The attempt is then made again from the read: an invitation found withdrawn
+        // is a 410, the same answer repeated is the idempotent no-op, a switch is a 409.
+        await InvitationWriteRetry.RunAsync(ct => AttemptAsync(command, ct), _events, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task AttemptAsync(
+        RespondToGameNightInvitationByTokenCommand command,
+        CancellationToken cancellationToken)
+    {
         var invitation = await _invitationRepository
             .GetByTokenAsync(command.Token, cancellationToken)
             .ConfigureAwait(false)
@@ -58,6 +76,19 @@ internal sealed class RespondToGameNightInvitationByTokenCommandHandler
         if (invitation.IsExpired(utcNow))
         {
             throw new GoneException("This invitation has expired.");
+        }
+
+        // 410 Gone: the night was cancelled (#4856). The cancellation does not touch the invitations (another
+        // aggregate), so their own state cannot say it: before this, a guest who opened an old link could still
+        // «accept» a night that was off, and be written «you're in». An unknown night is not blocked here: the
+        // public page answers 404 for it, and this endpoint has never depended on it.
+        var gameNight = await _gameNightRepository
+            .GetByIdAsync(invitation.GameNightId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (gameNight?.Status == GameNightStatus.Cancelled)
+        {
+            throw new GoneException("This game night was cancelled: the invitation can no longer be answered.");
         }
 
         bool transitioned;

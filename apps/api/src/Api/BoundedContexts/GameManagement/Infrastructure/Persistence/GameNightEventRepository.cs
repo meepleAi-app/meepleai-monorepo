@@ -53,6 +53,35 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return corruptedFallback;
     }
 
+    /// <summary>
+    /// #4759: the one EF form of «this user sits at this table». Organizer, an RSVP row, or an email
+    /// invitation the user accepted while logged in (no RSVP row is written on that path). Mirrors
+    /// <c>GameNightParticipation</c> on the loaded aggregate: change one, change the other.
+    /// </summary>
+    private Expression<Func<GameNightEventEntity, bool>> ParticipatedBy(Guid userId)
+    {
+        var accepted = nameof(GameNightInvitationStatus.Accepted);
+        var invitations = DbContext.GameNightInvitations;
+        return e => e.OrganizerId == userId
+            || e.Rsvps.Any(r => r.UserId == userId)
+            || invitations.Any(i => i.GameNightId == e.Id && i.RespondedByUserId == userId && i.Status == accepted);
+    }
+
+    public async Task<bool> HasAcceptedEmailInvitationAsync(
+        Guid gameNightId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+            return false;
+
+        var accepted = nameof(GameNightInvitationStatus.Accepted);
+        return await DbContext.GameNightInvitations
+            .AsNoTracking()
+            .AnyAsync(
+                i => i.GameNightId == gameNightId && i.RespondedByUserId == userId && i.Status == accepted,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<GameNightEvent?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.GameNightEvents
@@ -86,7 +115,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Sessions)
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt > DateTimeOffset.UtcNow)
-            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
+            .Where(ParticipatedBy(userId))
             .OrderBy(e => e.ScheduledAt)
             .Take(50)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -113,7 +142,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Completed)
                 || (e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt < now))
-            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
+            .Where(ParticipatedBy(userId))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(cap)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -128,7 +157,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
             .Include(e => e.Votes)
-            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
+            .Where(ParticipatedBy(userId))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(50)
             .ToListAsync(cancellationToken).ConfigureAwait(false);

@@ -293,6 +293,111 @@ public sealed class GameNightEventRepositoryTests : IDisposable
         Assert.Equal(newest.Id, Assert.Single(result).Id);
     }
 
+    // ── #4759: whoever accepted an email invitation while logged in sits at the table ──────────
+
+    private void SeedEmailInvitation(Guid gameNightId, Guid? respondedBy, string status)
+    {
+        var now = DateTimeOffset.UtcNow;
+        _dbContext.GameNightInvitations.Add(new GameNightInvitationEntity
+        {
+            Id = Guid.NewGuid(),
+            Token = Guid.NewGuid().ToString("N"),
+            GameNightId = gameNightId,
+            Email = $"{Guid.NewGuid():N}@example.com",
+            Status = status,
+            RespondedByUserId = respondedBy,
+            RespondedAt = respondedBy is null ? null : now,
+            ExpiresAt = now.AddDays(7),
+            CreatedAt = now,
+            CreatedBy = Guid.NewGuid(),
+        });
+        _dbContext.SaveChanges();
+    }
+
+    [Fact]
+    public async Task GetUpcomingAsync_IncludesANightWhoseEmailInvitationTheViewerAccepted()
+    {
+        // The guest is a registered user who answered the email link while logged in: no RSVP row is
+        // ever written for them, and the list used to leave the night out (403 on the detail, too).
+        var viewer = Guid.NewGuid();
+        var future = DateTimeOffset.UtcNow.AddDays(2);
+        var acceptedByEmail = SeedNight(Guid.NewGuid(), null, "Published", future);
+        SeedEmailInvitation(acceptedByEmail.Id, viewer, "Accepted");
+
+        var result = await _repository.GetUpcomingAsync(viewer, TestContext.Current.CancellationToken);
+
+        Assert.Equal(acceptedByEmail.Id, Assert.Single(result).Id);
+    }
+
+    [Theory]
+    [InlineData("Declined")]
+    [InlineData("Cancelled")]
+    [InlineData("Pending")]
+    public async Task GetUpcomingAsync_ExcludesANightWhoseEmailInvitationIsNotAccepted(string status)
+    {
+        // Declined by the viewer, withdrawn by the organizer, or never answered: not a participant.
+        var viewer = Guid.NewGuid();
+        var future = DateTimeOffset.UtcNow.AddDays(2);
+        var night = SeedNight(Guid.NewGuid(), null, "Published", future);
+        SeedEmailInvitation(night.Id, status == "Pending" ? null : viewer, status);
+
+        var result = await _repository.GetUpcomingAsync(viewer, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetUpcomingAsync_AnotherUsersAcceptedEmailInvitation_DoesNotLetTheViewerIn()
+    {
+        var viewer = Guid.NewGuid();
+        var night = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
+        SeedEmailInvitation(night.Id, Guid.NewGuid(), "Accepted");
+
+        var result = await _repository.GetUpcomingAsync(viewer, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetCompletedAsync_IncludesANightWhoseEmailInvitationTheViewerAccepted()
+    {
+        var viewer = Guid.NewGuid();
+        var night = SeedNight(Guid.NewGuid(), null, "Completed", DateTimeOffset.UtcNow.AddDays(-3));
+        SeedEmailInvitation(night.Id, viewer, "Accepted");
+
+        var result = await _repository.GetCompletedAsync(viewer, 10, TestContext.Current.CancellationToken);
+
+        Assert.Equal(night.Id, Assert.Single(result).Id);
+    }
+
+    [Fact]
+    public async Task GetByUserAsync_IncludesANightWhoseEmailInvitationTheViewerAccepted()
+    {
+        var viewer = Guid.NewGuid();
+        var night = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
+        SeedEmailInvitation(night.Id, viewer, "Accepted");
+
+        var result = await _repository.GetByUserAsync(viewer, TestContext.Current.CancellationToken);
+
+        Assert.Equal(night.Id, Assert.Single(result).Id);
+    }
+
+    [Fact]
+    public async Task HasAcceptedEmailInvitationAsync_IsTrueOnlyForAnAcceptedInvitationAnsweredByThatUser()
+    {
+        var viewer = Guid.NewGuid();
+        var night = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
+        var other = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
+        SeedEmailInvitation(night.Id, viewer, "Accepted");
+        SeedEmailInvitation(other.Id, viewer, "Declined");
+
+        var ct = TestContext.Current.CancellationToken;
+        Assert.True(await _repository.HasAcceptedEmailInvitationAsync(night.Id, viewer, ct));
+        Assert.False(await _repository.HasAcceptedEmailInvitationAsync(other.Id, viewer, ct), "declined");
+        Assert.False(await _repository.HasAcceptedEmailInvitationAsync(night.Id, Guid.NewGuid(), ct), "somebody else");
+        Assert.False(await _repository.HasAcceptedEmailInvitationAsync(night.Id, Guid.Empty, ct), "no caller is nobody");
+    }
+
     [Fact]
     public async Task GetCompletedAsync_AppliesTheUserFilterBeforeTheLimit()
     {

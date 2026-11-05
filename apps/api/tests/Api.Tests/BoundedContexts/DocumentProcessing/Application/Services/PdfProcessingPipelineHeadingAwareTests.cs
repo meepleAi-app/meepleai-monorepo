@@ -197,6 +197,27 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
         doc!.PageSpansJson.Should().BeNull();
     }
 
+    // #4782: with no map, the page count of the PDF is what tells a flat document of one page (truly on page 1) from a
+    // flat document of several (no page). The architecture test only sees that the argument is passed; this sees its value.
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(2, ChunkPage.Unknown)]
+    [InlineData(12, ChunkPage.Unknown)]
+    public async Task ProcessAsync_FlatDocumentWithEstimatedPages_GivesTheChunkerThePageCount_SoOnlyOnePageIsPageOne(
+        int pages, int expectedPage)
+    {
+        SeedPdfDocument();
+        SetupExtractorToReturn("chunk1. chunk2.", pages, structured: false, pagesAreEstimated: true);
+        SetupBlobStorageToReturn();
+        SetupHierarchicalChunking(out _);
+        SetupEmbeddingsToReturn(2);
+
+        await CreatePipelineService(languageCode: "en")
+            .ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        ChunkedDocument().Sections.Should().ContainSingle().Which.Page.Should().Be(expectedPage);
+    }
+
     [Fact]
     public async Task ProcessAsync_ReprocessingARow_ReplacesTheOldPageMap_NotKeepsIt()
     {

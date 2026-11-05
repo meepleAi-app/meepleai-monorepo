@@ -26,7 +26,9 @@ namespace Api.Tests.Architecture;
 /// forces it.
 /// </para>
 /// <para>
-/// <b>What this does not see.</b> A default written some other way (a <c>GetValueOrDefault(1)</c>, a ternary), a page
+/// <b>What this does not see.</b> A default written some other way (a <c>GetValueOrDefault(1)</c>, a ternary, or
+/// <c>adjacent.PageNumber ?? chunk.Page</c>, which defaults to ANOTHER page), an update of an existing row
+/// (<c>existing.PageNumber = …</c>, <c>ExecuteUpdate</c>) in a file that builds no <c>TextChunkEntity</c>, a page
 /// read from the vector table (<c>pgvector_embeddings.page_number</c> is never unknown: it is clamped to 1 on write, so
 /// the citations built from vector hits still say a page; they are protected by the per-document rule of
 /// <c>ICitedPageTrust</c>, not by this column), and the way a reader <i>presents</i> a page of 0.
@@ -66,6 +68,17 @@ public sealed class ChunkPageStorageArchitectureTests
 
     private static readonly Regex DefaultToARealPage = new(
         @"\bPageNumber\s*\?\?\s*[1-9][0-9]*", RegexOptions.Compiled);
+
+    /// <summary>`documentPageCount:` followed by a page count of the PDF: <c>extractResult.TotalPages</c> or <c>pdf.PageCount</c>.</summary>
+    private static readonly Regex PageCountOfThePdf = new(
+        @"\bdocumentPageCount:\s*[A-Za-z_][A-Za-z_0-9.]*(TotalPages|PageCount)\b", RegexOptions.Compiled);
+
+    private static string LineAt(string text, int index)
+    {
+        var start = text.LastIndexOf('\n', index) + 1;
+        var end = text.IndexOf('\n', index);
+        return text[start..(end < 0 ? text.Length : end)].Trim();
+    }
 
     [Fact]
     public void EveryTextChunkWriter_StoresThePageOfAChunkThroughChunkPageForStorage()
@@ -107,10 +120,11 @@ public sealed class ChunkPageStorageArchitectureTests
 
         foreach (var (relative, text) in SourceFiles(apiSrc))
         {
-            if (DefaultToARealPage.IsMatch(text) && !ReadersThatNeedARealPage.ContainsKey(relative))
+            // The match, not a line of the file: `PageNumber ??` and its default can sit on two lines.
+            var match = DefaultToARealPage.Match(text);
+            if (match.Success && !ReadersThatNeedARealPage.ContainsKey(relative))
             {
-                var line = text.Split('\n').First(l => DefaultToARealPage.IsMatch(l)).Trim();
-                offenders.Add($"{relative}  {line}");
+                offenders.Add($"{relative}  {LineAt(text, match.Index)}");
             }
         }
 
@@ -147,13 +161,14 @@ public sealed class ChunkPageStorageArchitectureTests
 
         calls.Should().NotBeEmpty("la scansione deve trovare le vie di indicizzazione, o non protegge nulla");
         var withoutTheCount = calls
-            .Where(c => !c.Call.Contains("documentPageCount:", StringComparison.Ordinal))
+            .Where(c => !PageCountOfThePdf.IsMatch(c.Call))
             .Select(c => c.Relative)
             .ToList();
 
         withoutTheCount.Should().BeEmpty(
             "senza `documentPageCount:` un documento piatto di una sola pagina riceve «pagina ignota» invece di pagina 1 "
-            + "(ExtractedDocumentFactory). Passa il numero di pagine del PDF. Chiamanti che non lo passano:" + "\n"
+            + "(ExtractedDocumentFactory), e l'argomento deve essere il numero di pagine del PDF (`TotalPages` "
+            + "dell'estrazione, o `PageCount` del documento), non un valore qualunque. Chiamanti fuori regola:" + "\n"
             + string.Join('\n', withoutTheCount));
     }
 

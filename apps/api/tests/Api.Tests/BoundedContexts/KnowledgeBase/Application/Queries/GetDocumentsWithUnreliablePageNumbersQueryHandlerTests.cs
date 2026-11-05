@@ -154,6 +154,17 @@ public sealed class GetDocumentsWithUnreliablePageNumbersQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ExactlyHalfOfThePassagesWithoutAPage_IsUnreliable()
+    {
+        // «More than half» of the passages must carry a real page: exactly half is not enough.
+        var half = await SeedAsync(pageCount: 12, chunkPages: [null, null, 1, 3]);
+
+        var result = await _sut.Handle(new GetDocumentsWithUnreliablePageNumbersQuery([half]), CancellationToken.None);
+
+        result.Should().Equal(half);
+    }
+
+    [Fact]
     public async Task Handle_OnlyTheDocumentsAskedAbout_AreAnswered_EachOnItsOwn()
     {
         var flat = await SeedAsync(pageCount: 40, chunkPages: [1, 1]);

@@ -93,7 +93,8 @@ internal sealed class GetDocumentsWithUnreliablePageNumbersQueryHandler
         var believed = claims
             .GroupBy(c => c.PdfDocumentId)
             .Where(g => g.Max(c => c.Passages) * 2 <= g.Sum(c => c.Passages)
-                && g.Sum(c => c.Passages) * 2 > totals[g.Key])
+                && totals.TryGetValue(g.Key, out var total)
+                && g.Sum(c => c.Passages) * 2 > total)
             .Select(g => g.Key)
             .ToHashSet();
 

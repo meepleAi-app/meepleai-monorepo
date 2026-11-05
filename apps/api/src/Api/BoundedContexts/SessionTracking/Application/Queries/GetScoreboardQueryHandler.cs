@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
@@ -25,11 +26,10 @@ public class GetScoreboardQueryHandler : IRequestHandler<GetScoreboardQuery, Sco
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
-        // #4883: the scoreboard is owner/participant-only (same rule as Session.IsAccessibleBy, #3119,
-        // on the persisted row; fail-closed on an empty id).
-        if (request.RequestedBy == Guid.Empty
-            || (session.UserId != request.RequestedBy
-                && !session.Participants.Any(p => p.UserId == request.RequestedBy)))
+        // #4883: the scoreboard is owner/participant-only. The rule is the domain's
+        // (Session.IsAccessibleBy, #3119), evaluated on the persisted row this handler loaded.
+        if (!SessionAccessPolicy.IsAccessible(
+                session.UserId, session.Participants.Select(p => p.UserId), request.RequestedBy))
         {
             throw new ForbiddenException("You do not have access to this session.");
         }

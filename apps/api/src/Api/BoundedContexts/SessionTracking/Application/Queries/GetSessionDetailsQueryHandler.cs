@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
@@ -22,12 +23,10 @@ public class GetSessionDetailsQueryHandler : IRequestHandler<GetSessionDetailsQu
         var session = await SessionDetailsReader.LoadSessionAsync(_context, request.SessionId, cancellationToken)
             .ConfigureAwait(false);
 
-        // #4883: the details carry the session code, so the read is owner/participant-only. Same rule as
-        // Session.IsAccessibleBy (#3119), evaluated on the persisted row this handler already loaded;
-        // fail-closed on an empty id, which is what an endpoint that forgot the principal would pass.
-        if (request.RequestedBy == Guid.Empty
-            || (session.UserId != request.RequestedBy
-                && !session.Participants.Any(p => p.UserId == request.RequestedBy)))
+        // #4883: the details carry the session code, so the read is owner/participant-only. The rule is
+        // the domain's (Session.IsAccessibleBy, #3119), evaluated on the persisted row this handler loaded.
+        if (!SessionAccessPolicy.IsAccessible(
+                session.UserId, session.Participants.Select(p => p.UserId), request.RequestedBy))
         {
             throw new ForbiddenException("You do not have access to this session.");
         }

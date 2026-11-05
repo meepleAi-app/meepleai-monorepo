@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Interfaces;
@@ -203,11 +204,11 @@ public class Session : IDomainEventSource
     /// <summary>
     /// Whether <paramref name="userId"/> may read this session: the owner or any
     /// participant. Single source of truth for session read-access authorization (#3119).
-    /// Fail-closed: an empty id is not an identity (it is what an endpoint that forgot to derive the
-    /// caller from the principal would pass), so it never matches.
+    /// The rule itself lives in <see cref="SessionAccessPolicy"/>, shared with the handlers that read the
+    /// persisted row; it is fail-closed on an empty id.
     /// </summary>
     public bool IsAccessibleBy(Guid userId) =>
-        userId != Guid.Empty && (UserId == userId || _participants.Any(p => p.UserId == userId));
+        SessionAccessPolicy.IsAccessible(UserId, _participants.Select(p => p.UserId), userId);
 
     /// <summary>
     /// Private constructor for EF Core.

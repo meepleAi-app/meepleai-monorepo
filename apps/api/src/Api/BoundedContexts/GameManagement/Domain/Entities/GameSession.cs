@@ -75,6 +75,46 @@ internal sealed class GameSession : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Ricostituisce una sessione letta dal database, così com'è (#4613).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. Il costruttore pubblico è quello di una sessione NUOVA: porta lo stato a Setup, la
+    /// data di inizio ad "adesso" e solleva <see cref="GameSessionCreatedEvent"/>. Usato per ricostruire una riga,
+    /// ogni aggregato letto portava già un «creata», e <c>UpdateAsync</c> lo consegnava al collector insieme
+    /// all'evento vero: l'audit registrava una creazione falsa a ogni avvio, pausa, ripresa o fine.
+    /// Nessun evento, quindi, e nessuna validazione: la riga è già stata scritta, e una sessione salvata non
+    /// diventa illeggibile perché la regola di una sessione nuova cambia (id del gioco, numero di giocatori).
+    /// </remarks>
+    internal static GameSession Reconstitute(
+        Guid id,
+        Guid gameId,
+        Guid? createdByUserId,
+        SessionStatus status,
+        DateTime startedAt,
+        DateTime? completedAt,
+        string? winnerName,
+        string? notes,
+        IEnumerable<SessionPlayer> players)
+    {
+        ArgumentNullException.ThrowIfNull(status);
+        ArgumentNullException.ThrowIfNull(players);
+
+        var session = new GameSession
+        {
+            Id = id,
+            GameId = gameId,
+            CreatedByUserId = createdByUserId,
+            Status = status,
+            StartedAt = startedAt,
+            CompletedAt = completedAt,
+            WinnerName = winnerName,
+            Notes = notes,
+        };
+        session._players.AddRange(players);
+        return session;
+    }
+
+    /// <summary>
     /// Starts the game session (moves from Setup to InProgress).
     /// </summary>
     public void Start()

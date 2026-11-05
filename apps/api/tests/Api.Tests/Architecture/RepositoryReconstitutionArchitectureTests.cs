@@ -13,7 +13,8 @@ using Xunit;
 namespace Api.Tests.Architecture;
 
 /// <summary>
-/// #4552: un mapper che ricostruisce un aggregato da una riga non passa dalla factory di un oggetto NUOVO.
+/// #4552, #4613: un mapper che ricostruisce un aggregato da una riga non passa dalla factory né dal costruttore di un
+/// oggetto NUOVO.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -42,12 +43,22 @@ namespace Api.Tests.Architecture;
 /// chiama <c>ClearDomainEvents</c>; un'esenzione copre la factory, mai un evento lasciato sull'aggregato.
 /// </para>
 /// <para>
+/// <b>I costruttori (#4613).</b> Anche il costruttore pubblico di un aggregato è quello di un oggetto nuovo, e se
+/// solleva un evento («creato», «collegato») la riga ricostruita lo porta fino al primo <c>UpdateAsync</c>, che lo
+/// consegna al collector insieme all'evento vero: l'audit registra una creazione falsa a ogni modifica, e gli
+/// handler della creazione ripartono. Per un costruttore conta solo l'evento, e vale la stessa regola dei metodi di
+/// dominio (<c>ClearDomainEvents</c> nel mapper lo assolve). L'id e l'ora non contano: i costruttori che passano
+/// l'id della riga li generano comunque, perché li genera l'evento stesso (<c>DomainEventBase</c> assegna un
+/// <c>EventId</c> e l'ora). Il rimedio è lo stesso: un <c>Reconstitute</c> interno che prende ogni colonna.
+/// </para>
+/// <para>
 /// <b>Cosa non vede.</b> Una factory chiamata da un aiuto che non riceve l'entità (per esempio un metodo che
 /// prende i campi già estratti). Una factory che riceve l'id ma data ad "adesso" senza che il mapper ripristini
 /// la data (oggi <c>GameLabel.CreatePredefinedWithId</c>). Le validazioni della factory: una factory senza
 /// effetti che rifiuta una data passata non viene segnalata. Un metodo d'istanza che genera un id per un figlio o
-/// data ad "adesso" senza sollevare eventi: oggi conta solo l'evento. L'ordine delle chiamate: un
-/// <c>ClearDomainEvents</c> in un punto qualunque del mapper basta. E una colonna che il mapper non ripristina: quella
+/// data ad "adesso" senza sollevare eventi: oggi conta solo l'evento, e lo stesso vale per un costruttore che
+/// genera un id proprio senza eventi. L'ordine delle chiamate: un <c>ClearDomainEvents</c> in un punto qualunque del
+/// mapper basta, anche se precede la chiamata che solleva l'evento. E una colonna che il mapper non ripristina: quella
 /// la vedono le guardie per repository che leggono le colonne dal modello EF (per esempio
 /// <c>AlertConfigurationRepositoryTests</c>). Il gate restringe il campo; il giudizio resta a chi scrive il
 /// mapper.
@@ -55,6 +66,7 @@ namespace Api.Tests.Architecture;
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("Issue", "4552")]
+[Trait("Issue", "4613")]
 public sealed class RepositoryReconstitutionArchitectureTests
 {
     /// <summary>
@@ -146,11 +158,12 @@ public sealed class RepositoryReconstitutionArchitectureTests
 
         // Unite in una stringa, così il messaggio elenca ogni caso: BeEmpty su una lista mostra solo il primo.
         string.Join(Environment.NewLine, offenders).Should().BeEmpty(
-            "a mapper that rebuilds an aggregate from a stored row must not go through the factory of a NEW " +
-            "object, nor leave a domain event on it: the factory generates a new id, stamps the current time or " +
-            "raises a creation event, and the row already has all three (#4552, #4544). Add an internal " +
-            "Reconstitute that takes every column as it is stored, like GameSession.Reconstitute, and restore " +
-            "children with methods that raise no event.");
+            "a mapper that rebuilds an aggregate from a stored row must not go through the factory or the " +
+            "constructor of a NEW object, nor leave a domain event on it: the factory generates a new id, stamps " +
+            "the current time or raises a creation event, and the row already has all three (#4552, #4544); a " +
+            "constructor that raises a creation event hands it to the collector at the first UpdateAsync, next " +
+            "to the event of the real change (#4613). Add an internal Reconstitute that takes every column as it " +
+            "is stored, like GameSession.Reconstitute, and restore children with methods that raise no event.");
     }
 
     [Fact]
@@ -207,6 +220,30 @@ public sealed class RepositoryReconstitutionArchitectureTests
 
                 var key = $"{OuterType(mapper.DeclaringType!).FullName} → {target.DeclaringType!.Name}.{target.Name}";
                 findings.Add(new Finding(key, mapper.Name, string.Join(", ", effects), unclearedEvent));
+            }
+
+            // #4613: i costruttori. Un costruttore pubblico è quello di un oggetto NUOVO, e se solleva un evento
+            // («creato», «collegato») la riga ricostruita lo porta fino al primo salvataggio.
+            foreach (var constructor in called.OfType<ConstructorInfo>())
+            {
+                if (constructor.DeclaringType is not { } owner || owner.Assembly != ApiAssembly || !IsDomainType(owner))
+                {
+                    continue;
+                }
+
+                if (!effectsCache.TryGetValue(constructor, out var effects))
+                {
+                    effects = CreationEffects(constructor);
+                    effectsCache[constructor] = effects;
+                }
+
+                if (!effects.Contains(DomainEventEffect) || clearsEvents)
+                {
+                    continue;
+                }
+
+                var key = $"{OuterType(mapper.DeclaringType!).FullName} → new {owner.Name}";
+                findings.Add(new Finding(key, mapper.Name, string.Join(", ", effects), UnclearedEvent: true));
             }
         }
 

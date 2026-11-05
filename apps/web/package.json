@@ -284,7 +284,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.9",
     "typescript": "5.9.3",
-    "vite": "~8.2.1",
+    "vite": "~8.1.6",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "4.1.10",
     "vitest-axe": "^0.1.0"

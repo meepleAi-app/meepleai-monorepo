@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
@@ -35,8 +36,9 @@ internal sealed class GetGameNightRsvpsQueryHandler : IQueryHandler<GetGameNight
 
         // #2698: participant-scoped read (organizer or invited) — closes the cross-tenant IDOR
         // where any authenticated user could read another user's roster + member names.
-        var isParticipant = gameNight.OrganizerId == query.CallerUserId
-            || gameNight.Rsvps.Any(r => r.UserId == query.CallerUserId);
+        var isParticipant = await GameNightParticipation
+            .IsParticipantAsync(gameNight, query.CallerUserId, _repository, cancellationToken)
+            .ConfigureAwait(false);
         if (!isParticipant)
             throw new ForbiddenException("Only the organizer or an invited player can view this game night's RSVPs.");
 

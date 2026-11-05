@@ -88,6 +88,37 @@ public class GetGameNightByIdQueryHandlerTests : IDisposable
         result.Id.Should().Be(evt.Id);
     }
 
+    [Fact]
+    public async Task Handle_UserWhoAcceptedAnEmailInvitationWhileLoggedIn_ReturnsDto()
+    {
+        // #4759: no RSVP row is written for them; the repository says whether they accepted by email.
+        var guestUserId = Guid.NewGuid();
+        var evt = PublishedEventWith(Guid.NewGuid());
+        _repo.Setup(r => r.HasAcceptedEmailInvitationAsync(evt.Id, guestUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await _handler.Handle(
+            new GetGameNightByIdQuery(evt.Id, guestUserId), TestContext.Current.CancellationToken);
+
+        result.Id.Should().Be(evt.Id);
+    }
+
+    [Fact]
+    public async Task Handle_OrganizerAndInvitedMember_AreLetInWithoutAskingAboutEmailInvitations()
+    {
+        // The in-memory part of the rule answers first: no extra roundtrip for the ordinary cases.
+        var organizerId = Guid.NewGuid();
+        var invitedUserId = Guid.NewGuid();
+        var evt = PublishedEventWith(organizerId, invitedUserId);
+
+        await _handler.Handle(new GetGameNightByIdQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+        await _handler.Handle(new GetGameNightByIdQuery(evt.Id, invitedUserId), TestContext.Current.CancellationToken);
+
+        _repo.Verify(
+            r => r.HasAcceptedEmailInvitationAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private void AddGuestInvitation(Guid gameNightId, GameNightInvitationStatus status, string email)
     {
         _db.GameNightInvitations.Add(new GameNightInvitationEntity

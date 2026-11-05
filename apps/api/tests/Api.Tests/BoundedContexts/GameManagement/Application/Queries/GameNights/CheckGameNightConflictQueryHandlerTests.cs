@@ -187,6 +187,94 @@ public sealed class CheckGameNightConflictQueryHandlerTests : IDisposable
         result.Conflicts[0].Role.Should().Be("invitee");
     }
 
+    private async Task SeedEmailInvitationAsync(Guid eventId, UserEntity? respondedBy, string status, string? email = null)
+    {
+        _dbContext.GameNightInvitations.Add(new GameNightInvitationEntity
+        {
+            Id = Guid.NewGuid(),
+            Token = Guid.NewGuid().ToString("N"),
+            GameNightId = eventId,
+            Email = email ?? respondedBy?.Email ?? $"{Guid.NewGuid():N}@example.com",
+            Status = status,
+            RespondedByUserId = respondedBy?.Id,
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedBy = Guid.NewGuid(),
+        });
+        await _dbContext.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Handle_WithOverlappingEventAcceptedByEmailWhileLoggedIn_ReturnsConflict()
+    {
+        // #4759: no RSVP row is written on that path; the lists show the night, so must the calendar.
+        var marco = await SeedUserAsync();
+        var alice = await SeedUserAsync();
+        var proposedAt = DateTimeOffset.UtcNow.AddDays(7);
+        var aliceNight = await SeedGameNightAsync(alice.Id, proposedAt.AddHours(1));
+        await SeedEmailInvitationAsync(aliceNight.Id, marco, "Accepted");
+
+        var result = await _sut.Handle(
+            new CheckGameNightConflictQuery(marco.Id, proposedAt),
+            CancellationToken.None);
+
+        result.HasConflict.Should().BeTrue();
+        result.Conflicts.Should().ContainSingle().Which.Role.Should().Be("invitee");
+    }
+
+    [Theory]
+    [InlineData("Declined")]
+    [InlineData("Cancelled")]
+    public async Task Handle_WithEmailInvitationNotAccepted_DoesNotReturnConflict(string status)
+    {
+        var marco = await SeedUserAsync();
+        var alice = await SeedUserAsync();
+        var proposedAt = DateTimeOffset.UtcNow.AddDays(7);
+        var aliceNight = await SeedGameNightAsync(alice.Id, proposedAt.AddHours(1));
+        await SeedEmailInvitationAsync(aliceNight.Id, marco, status);
+
+        var result = await _sut.Handle(
+            new CheckGameNightConflictQuery(marco.Id, proposedAt),
+            CancellationToken.None);
+
+        result.HasConflict.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_WithAForwardedLinkAcceptedByAnotherAccount_DoesNotReturnConflict()
+    {
+        // The invitation is addressed to somebody else: accepting it while logged in does not seat
+        // the account (decision of 2026-11-05), so it does not fill its calendar either.
+        var bob = await SeedUserAsync();
+        var alice = await SeedUserAsync();
+        var proposedAt = DateTimeOffset.UtcNow.AddDays(7);
+        var aliceNight = await SeedGameNightAsync(alice.Id, proposedAt.AddHours(1));
+        await SeedEmailInvitationAsync(aliceNight.Id, bob, "Accepted", email: "carla@example.com");
+
+        var result = await _sut.Handle(
+            new CheckGameNightConflictQuery(bob.Id, proposedAt),
+            CancellationToken.None);
+
+        result.HasConflict.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_InvitedBothByRsvpAndByEmail_ReturnsTheNightOnce()
+    {
+        var marco = await SeedUserAsync();
+        var alice = await SeedUserAsync();
+        var proposedAt = DateTimeOffset.UtcNow.AddDays(7);
+        var aliceNight = await SeedGameNightAsync(alice.Id, proposedAt.AddHours(1));
+        await SeedRsvpAsync(aliceNight.Id, marco.Id, "Accepted");
+        await SeedEmailInvitationAsync(aliceNight.Id, marco, "Accepted");
+
+        var result = await _sut.Handle(
+            new CheckGameNightConflictQuery(marco.Id, proposedAt),
+            CancellationToken.None);
+
+        result.Conflicts.Should().ContainSingle().Which.Id.Should().Be(aliceNight.Id);
+    }
+
     // ────────────────────────────────────────────────────────────────────────
     // Terminal statuses excluded
     // ────────────────────────────────────────────────────────────────────────

@@ -33,6 +33,14 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     Task<IReadOnlyList<GameNightEvent>> GetByUserAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #4759: whether <paramref name="userId"/> accepted an email invitation to this night while logged in.
+    /// Such a guest has no RSVP row on the aggregate (the invitations are another aggregate), so the
+    /// aggregate alone cannot say they sit at the table. The same rule filters the lists above. An empty
+    /// id is nobody.
+    /// </summary>
+    Task<bool> HasAcceptedEmailInvitationAsync(Guid gameNightId, Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets published events with ScheduledAt between from and to, for reminder scheduling.
     /// </summary>
     Task<IReadOnlyList<GameNightEvent>> GetEventsNeedingReminderAsync(

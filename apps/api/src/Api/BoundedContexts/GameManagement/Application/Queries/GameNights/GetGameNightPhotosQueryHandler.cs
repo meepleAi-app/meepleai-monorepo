@@ -41,8 +41,9 @@ internal sealed class GetGameNightPhotosQueryHandler
         var night = await _eventRepository.GetByIdAsync(query.GameNightId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("GameNight", query.GameNightId.ToString());
 
-        var isParticipant = night.OrganizerId == query.CallerUserId
-            || night.Rsvps.Any(r => r.UserId == query.CallerUserId);
+        var isParticipant = await GameNightParticipation
+            .IsParticipantAsync(night, query.CallerUserId, _eventRepository, cancellationToken)
+            .ConfigureAwait(false);
         if (!isParticipant)
             throw new ForbiddenException("Only the organizer or an invited player can view the photos.");
 

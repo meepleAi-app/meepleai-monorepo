@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Text.Json;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
@@ -53,6 +54,44 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return corruptedFallback;
     }
 
+    /// <summary>
+    /// #4759: the one EF form of «this user sits at this table». Organizer, an RSVP row, or an email
+    /// invitation the user accepted while logged in (no RSVP row is written on that path). Mirrors
+    /// <c>GameNightParticipation</c> on the loaded aggregate: change one, change the other.
+    /// </summary>
+    private async Task<Expression<Func<GameNightEventEntity, bool>>> ParticipatedByAsync(
+        Guid userId, CancellationToken cancellationToken)
+    {
+        // The invitation rule is GameNightInvitationQueries.AcceptedBy, composed here as a correlated
+        // subquery: the same expression HasAcceptedEmailInvitationAsync applies, so the lists and
+        // the detail gate cannot drift apart. It needs the account's address (one read), and an
+        // account without one is admitted by the organizer/RSVP part only.
+        var email = await GameNightInvitationQueries.NormalizedEmailOfAsync(DbContext, userId, cancellationToken)
+            .ConfigureAwait(false);
+        if (email is null)
+            return e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId);
+
+        var acceptedByUser = DbContext.GameNightInvitations.Where(GameNightInvitationQueries.AcceptedBy(userId, email));
+        return e => e.OrganizerId == userId
+            || e.Rsvps.Any(r => r.UserId == userId)
+            || acceptedByUser.Any(i => i.GameNightId == e.Id);
+    }
+
+    public async Task<bool> HasAcceptedEmailInvitationAsync(
+        Guid gameNightId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var email = await GameNightInvitationQueries.NormalizedEmailOfAsync(DbContext, userId, cancellationToken)
+            .ConfigureAwait(false);
+        if (email is null)
+            return false;
+
+        return await DbContext.GameNightInvitations
+            .AsNoTracking()
+            .Where(GameNightInvitationQueries.AcceptedBy(userId, email))
+            .AnyAsync(i => i.GameNightId == gameNightId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<GameNightEvent?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.GameNightEvents
@@ -86,7 +125,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Sessions)
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt > DateTimeOffset.UtcNow)
-            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
+            .Where(await ParticipatedByAsync(userId, cancellationToken).ConfigureAwait(false))
             .OrderBy(e => e.ScheduledAt)
             .Take(50)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -113,7 +152,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Completed)
                 || (e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt < now))
-            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
+            .Where(await ParticipatedByAsync(userId, cancellationToken).ConfigureAwait(false))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(cap)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -128,7 +167,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
             .Include(e => e.Votes)
-            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
+            .Where(await ParticipatedByAsync(userId, cancellationToken).ConfigureAwait(false))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(50)
             .ToListAsync(cancellationToken).ConfigureAwait(false);

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
@@ -34,10 +35,11 @@ internal sealed class GetGameNightByIdQueryHandler : IQueryHandler<GetGameNightB
             ?? throw new NotFoundException("GameNightEvent", query.GameNightId.ToString());
 
         // #2698: participant-scoped read (organizer or invited) — closes the cross-tenant IDOR
-        // where any authenticated user could read another user's private game night. Mirrors the
-        // guard on GetGameNightLiveQueryHandler.
-        var isParticipant = gameNight.OrganizerId == query.CallerUserId
-            || gameNight.Rsvps.Any(r => r.UserId == query.CallerUserId);
+        // where any authenticated user could read another user's private game night. The rule is
+        // written once, in GameNightParticipation (#4759: it also covers the email guest).
+        var isParticipant = await GameNightParticipation
+            .IsParticipantAsync(gameNight, query.CallerUserId, _repository, cancellationToken)
+            .ConfigureAwait(false);
         if (!isParticipant)
             throw new ForbiddenException("Only the organizer or an invited player can view this game night.");
 

@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
-import { ChatMobile } from '../ChatMobile';
+import { ANSWER_NOT_SAVED_MESSAGE, ChatMobile } from '../ChatMobile';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
@@ -101,11 +101,15 @@ async function savedMessages() {
 /**
  * Aspetta che lo stream sia finito e che la vista abbia eseguito ciò che segue il ciclo. Serve alle
  * asserzioni «non è stato salvato niente»: senza aspettare, passerebbero anche se il salvataggio
- * partisse un istante dopo.
+ * partisse un istante dopo. `qa.finished` scatta nel `finally` del generatore, cioè PRIMA del codice
+ * che segue il ciclo nella vista: da solo non basta, quindi si lascia passare anche un giro di
+ * macrotask, oltre il quale nessun `await` della vista può ancora essere in sospeso.
  */
 async function theStreamHasEnded() {
   await waitFor(() => expect(qa.finished).toBe(true));
-  await act(async () => {});
+  await act(async () => {
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+  });
 }
 
 describe('ChatMobile — salva la risposta dell’assistente (#4838)', () => {
@@ -178,6 +182,49 @@ describe('ChatMobile — salva la risposta dell’assistente (#4838)', () => {
     expect(await savedMessages()).toEqual([
       { threadId: 'thread-1', body: { content: QUESTION, role: 'user' } },
     ]);
+  });
+
+  it('keeps the later Complete from wiping the profile version and language of the first', async () => {
+    // I campi arrivano con il primo Complete; un frame di coda dello stesso tipo, senza, non li azzera.
+    qa.script = [
+      {
+        type: qa.EVENT.COMPLETE,
+        data: { answer: 'Cinque carte.', snippets: [], profileVersionId: 'pv-7', language: 'it' },
+      },
+      { type: qa.EVENT.COMPLETE, data: { snippets: [] } },
+    ];
+    const user = userEvent.setup();
+
+    await ask(user);
+
+    await waitFor(async () => expect(await savedMessages()).toHaveLength(2));
+    expect((await savedMessages())[1].body).toMatchObject({
+      content: 'Cinque carte.',
+      profileVersionId: 'pv-7',
+      language: 'it',
+    });
+  });
+
+  it('says so when the answer could not be saved, instead of showing it as if it were', async () => {
+    // Un salvataggio rifiutato (rete, sessione scaduta, 5xx) lasciava la bolla identica a un successo: la
+    // risposta letta sullo schermo e assente dal thread, cioe' il sintomo di #4838 su un'altra causa. La
+    // risposta resta (buttarla sarebbe peggio su telefono), ma la bolla dice che non e' stata salvata.
+    qa.script = [
+      { type: qa.EVENT.TOKEN, data: { token: 'Cinque carte.' } },
+      { type: qa.EVENT.COMPLETE, data: { answer: 'Cinque carte.', snippets: [] } },
+    ];
+    const { api } = await import('@/lib/api');
+    (api.chat.addMessage as Mock)
+      .mockResolvedValueOnce(thread) // la domanda
+      .mockRejectedValueOnce(new Error('HTTP 503')); // la risposta
+    const user = userEvent.setup();
+
+    await ask(user);
+
+    const bubble = await screen.findByText(/Cinque carte\./);
+    await waitFor(() => expect(bubble).toHaveTextContent(ANSWER_NOT_SAVED_MESSAGE));
+    expect(bubble.closest('[data-testid="message-assistant"]')).toHaveClass('justify-start');
+    expect(screen.queryByText('Errore nella generazione della risposta')).not.toBeInTheDocument();
   });
 
   it('does not save an empty answer', async () => {

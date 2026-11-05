@@ -208,7 +208,6 @@ export type MediaDto = z.infer<typeof MediaDtoSchema>;
 export const ShareableSessionDtoSchema = z.object({
   sessionId: z.string().uuid(),
   shareUrl: z.string(),
-  sessionCode: z.string(),
   gameName: z.string().nullable(),
   playerCount: z.number().int(),
   status: z.string(),

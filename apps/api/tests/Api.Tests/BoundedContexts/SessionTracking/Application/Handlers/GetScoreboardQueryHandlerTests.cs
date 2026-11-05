@@ -43,7 +43,7 @@ public sealed class GetScoreboardQueryHandlerTests : IDisposable
     public async Task Handle_SessionNotFound_ThrowsNotFoundException()
     {
         // Arrange — no sessions seeded
-        var query = new GetScoreboardQuery(Guid.NewGuid());
+        var query = new GetScoreboardQuery(Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -54,8 +54,9 @@ public sealed class GetScoreboardQueryHandlerTests : IDisposable
     public async Task Handle_DeletedSession_ThrowsNotFoundException()
     {
         // Arrange
-        var sessionId = await SeedSession(isDeleted: true);
-        var query = new GetScoreboardQuery(sessionId);
+        var ownerId = Guid.NewGuid();
+        var sessionId = await SeedSession(ownerId, isDeleted: true);
+        var query = new GetScoreboardQuery(sessionId, ownerId);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -63,11 +64,49 @@ public sealed class GetScoreboardQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Handle_StrangerWhoIsNeitherOwnerNorParticipant_ThrowsForbidden()
+    {
+        // #4883: any authenticated user used to read the scoreboard of any session they had the id of.
+        var ownerId = Guid.NewGuid();
+        var sessionId = await SeedSessionWithParticipants(ownerId);
+        var query = new GetScoreboardQuery(sessionId, Guid.NewGuid());
+
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => _handler.Handle(query, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_EmptyRequester_ThrowsForbidden()
+    {
+        // Fail-closed: an endpoint that forgot to derive the caller passes Guid.Empty.
+        var sessionId = await SeedSessionWithParticipants(Guid.NewGuid());
+        var query = new GetScoreboardQuery(sessionId, Guid.Empty);
+
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => _handler.Handle(query, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_RegisteredParticipantWhoIsNotOwner_ReturnsScoreboard()
+    {
+        // The other direction: the guard must not lock out the people at the table.
+        var ownerId = Guid.NewGuid();
+        var playerUserId = Guid.NewGuid();
+        var sessionId = await SeedSessionWithParticipants(ownerId, playerUserId);
+        var query = new GetScoreboardQuery(sessionId, playerUserId);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.Equal(sessionId, result.SessionId);
+    }
+
+    [Fact]
     public async Task Handle_SessionWithNoScores_ReturnsZeroTotals()
     {
         // Arrange
-        var sessionId = await SeedSessionWithParticipants();
-        var query = new GetScoreboardQuery(sessionId);
+        var ownerId = Guid.NewGuid();
+        var sessionId = await SeedSessionWithParticipants(ownerId);
+        var query = new GetScoreboardQuery(sessionId, ownerId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -133,7 +172,7 @@ public sealed class GetScoreboardQueryHandlerTests : IDisposable
 
         await _context.SaveChangesAsync();
 
-        var query = new GetScoreboardQuery(sessionId);
+        var query = new GetScoreboardQuery(sessionId, userId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -193,7 +232,7 @@ public sealed class GetScoreboardQueryHandlerTests : IDisposable
 
         await _context.SaveChangesAsync();
 
-        var query = new GetScoreboardQuery(sessionId);
+        var query = new GetScoreboardQuery(sessionId, userId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -208,10 +247,9 @@ public sealed class GetScoreboardQueryHandlerTests : IDisposable
 
     // Helpers
 
-    private async Task<Guid> SeedSession(bool isDeleted = false)
+    private async Task<Guid> SeedSession(Guid userId, bool isDeleted = false)
     {
         var sessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
 
         _context.SessionTrackingSessions.Add(new SessionEntity
         {
@@ -231,11 +269,40 @@ public sealed class GetScoreboardQueryHandlerTests : IDisposable
         return sessionId;
     }
 
-    private async Task<Guid> SeedSessionWithParticipants()
+    private async Task<Guid> SeedSessionWithParticipants(Guid userId, Guid? playerUserId = null)
     {
         var sessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var participantId = Guid.NewGuid();
+
+        var participants = new List<ParticipantEntity>
+        {
+            new()
+            {
+                Id = participantId,
+                SessionId = sessionId,
+                DisplayName = "Owner",
+                IsOwner = true,
+                Role = ParticipantRole.Host,
+                JoinOrder = 1,
+                CreatedAt = DateTime.UtcNow
+            }
+        };
+
+        // A registered, non-owner participant: the guard must let the people at the table through.
+        if (playerUserId is { } player)
+        {
+            participants.Add(new ParticipantEntity
+            {
+                Id = Guid.NewGuid(),
+                SessionId = sessionId,
+                UserId = player,
+                DisplayName = "Player",
+                IsOwner = false,
+                Role = ParticipantRole.Player,
+                JoinOrder = 2,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
 
         _context.SessionTrackingSessions.Add(new SessionEntity
         {
@@ -249,19 +316,7 @@ public sealed class GetScoreboardQueryHandlerTests : IDisposable
             IsDeleted = false,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId,
-            Participants =
-            [
-                new ParticipantEntity
-                {
-                    Id = participantId,
-                    SessionId = sessionId,
-                    DisplayName = "Owner",
-                    IsOwner = true,
-                    Role = ParticipantRole.Host,
-                    JoinOrder = 1,
-                    CreatedAt = DateTime.UtcNow
-                }
-            ]
+            Participants = participants
         });
 
         await _context.SaveChangesAsync();

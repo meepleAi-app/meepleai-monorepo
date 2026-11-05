@@ -85,7 +85,7 @@ public class GoLiveSessionLiveGameBridgeTests
         // Stored out of order AND with the owner's join order HIGHER than the guest's: the owner must
         // still sit first on its own merit (the first seat is the Host), not by coincidence with the
         // join order.
-        _mediator.Setup(m => m.Send(It.Is<GetSessionDetailsQuery>(q => q.SessionId == sessionId), It.IsAny<CancellationToken>()))
+        _mediator.Setup(m => m.Send(It.Is<GetSessionDetailsForSystemQuery>(q => q.SessionId == sessionId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DetailsWith(
                 new ParticipantDto { Id = Guid.NewGuid(), UserId = guest, DisplayName = "Luca", IsOwner = false, JoinOrder = 0 },
                 new ParticipantDto { Id = Guid.NewGuid(), UserId = owner, DisplayName = "Marta", IsOwner = true, JoinOrder = 4 }));
@@ -123,7 +123,7 @@ public class GoLiveSessionLiveGameBridgeTests
 
         _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(night);
-        _mediator.Setup(m => m.Send(It.Is<GetSessionDetailsQuery>(q => q.SessionId == sessionId), It.IsAny<CancellationToken>()))
+        _mediator.Setup(m => m.Send(It.Is<GetSessionDetailsForSystemQuery>(q => q.SessionId == sessionId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DetailsWith(
                 new ParticipantDto { Id = Guid.NewGuid(), UserId = planner, DisplayName = "Marta", IsOwner = true, JoinOrder = 0 },
                 new ParticipantDto { Id = Guid.NewGuid(), UserId = organizer, DisplayName = "Luca", IsOwner = false, JoinOrder = 1 }));
@@ -198,7 +198,7 @@ public class GoLiveSessionLiveGameBridgeTests
         var night = NightWithDraft(sessionId, out _);
         _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(night);
-        _mediator.Setup(m => m.Send(It.IsAny<GetSessionDetailsQuery>(), It.IsAny<CancellationToken>()))
+        _mediator.Setup(m => m.Send(It.IsAny<GetSessionDetailsForSystemQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DetailsWith());
         _mediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Organizer(night.OrganizerId, "Marta"));
@@ -225,7 +225,7 @@ public class GoLiveSessionLiveGameBridgeTests
         var night = NightWithDraft(sessionId, out _);
         _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(night);
-        _mediator.Setup(m => m.Send(It.IsAny<GetSessionDetailsQuery>(), It.IsAny<CancellationToken>()))
+        _mediator.Setup(m => m.Send(It.IsAny<GetSessionDetailsForSystemQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DetailsWith());
         _mediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((UserDto?)null);
@@ -251,7 +251,7 @@ public class GoLiveSessionLiveGameBridgeTests
         var night = NightWithDraft(sessionId, out _);
         _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(night);
-        _mediator.Setup(m => m.Send(It.IsAny<GetSessionDetailsQuery>(), It.IsAny<CancellationToken>()))
+        _mediator.Setup(m => m.Send(It.IsAny<GetSessionDetailsForSystemQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DetailsWith());
         _mediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Organizer(

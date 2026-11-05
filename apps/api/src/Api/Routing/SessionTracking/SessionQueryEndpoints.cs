@@ -121,10 +121,17 @@ internal static class SessionQueryEndpoints
     {
         group.MapGet("/game-sessions/{sessionId:guid}/scoreboard", async (
             Guid sessionId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var query = new GetScoreboardQuery(sessionId);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetScoreboardQuery(sessionId, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -134,6 +141,7 @@ internal static class SessionQueryEndpoints
         .WithSummary("Get session scoreboard")
         .Produces(200)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -141,10 +149,17 @@ internal static class SessionQueryEndpoints
     {
         group.MapGet("/game-sessions/{sessionId:guid}", async (
             Guid sessionId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var query = new GetSessionDetailsQuery(sessionId);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetSessionDetailsQuery(sessionId, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (result == null)
@@ -158,8 +173,10 @@ internal static class SessionQueryEndpoints
         .WithName("GetSessionDetails")
         .WithTags("SessionTracking")
         .WithSummary("Get session details")
+        .WithDescription("Owner or participant only: the details carry the session code. #4883.")
         .Produces(200)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -196,11 +213,18 @@ internal static class SessionQueryEndpoints
     {
         group.MapGet("/game-sessions/{sessionId:guid}/dice", async (
             Guid sessionId,
+            HttpContext httpContext,
             IMediator mediator,
             int limit = 20,
             CancellationToken ct = default) =>
         {
-            var query = new GetDiceRollHistoryQuery(sessionId, limit);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetDiceRollHistoryQuery(sessionId, userId, limit);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -208,9 +232,10 @@ internal static class SessionQueryEndpoints
         .WithName("GetDiceRollHistory")
         .WithTags("SessionTracking", "Dice")
         .WithSummary("Get recent dice rolls for a session")
-        .WithDescription("Returns the most recent dice rolls for the session (default: 20).")
+        .WithDescription("Returns the most recent dice rolls for the session (default: 20). Owner or participant only. #4883.")
         .Produces(200)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -504,13 +529,20 @@ internal static class SessionQueryEndpoints
     {
         group.MapGet("/game-sessions/{sessionId:guid}/events", async (
             Guid sessionId,
+            HttpContext httpContext,
             IMediator mediator,
             [FromQuery] string? eventType = null,
             [FromQuery] int limit = 50,
             [FromQuery] int offset = 0,
             CancellationToken ct = default) =>
         {
-            var query = new GetSessionEventsQuery(sessionId, eventType, limit, offset);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetSessionEventsQuery(sessionId, userId, eventType, limit, offset);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -518,9 +550,10 @@ internal static class SessionQueryEndpoints
         .WithName("GetSessionEvents")
         .WithTags("SessionTracking", "SessionDiary")
         .WithSummary("Get session timeline events")
-        .WithDescription("Returns paginated session events, optionally filtered by event type. Issue #276.")
+        .WithDescription("Returns paginated session events, optionally filtered by event type. Owner or participant only. Issue #276, #4883.")
         .Produces<GetSessionEventsResult>(200)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 

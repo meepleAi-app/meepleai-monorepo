@@ -127,6 +127,20 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         if (existing == null)
             throw new KeyNotFoundException($"Session with ID {session.Id} not found.");
 
+        // #4883: the code changes when a participant is removed (Session.RotateSessionCode). Without this
+        // line the rotation is a silent no-op — the domain object carries the new code, the row keeps the
+        // old one — and the removed participant walks back in with it. Same collision rule as AddAsync.
+        if (!string.Equals(existing.SessionCode, session.SessionCode, StringComparison.Ordinal))
+        {
+            var taken = await DbContext.SessionTrackingSessions
+                .AnyAsync(s => s.Id != session.Id && s.SessionCode == session.SessionCode, ct)
+                .ConfigureAwait(false);
+            if (taken)
+                throw new ConflictException($"Session code {session.SessionCode} already exists.");
+
+            existing.SessionCode = session.SessionCode;
+        }
+
         // Update scalar properties
         existing.Status = session.Status.ToString();
         existing.Location = session.Location;

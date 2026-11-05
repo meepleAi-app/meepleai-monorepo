@@ -25,9 +25,12 @@ public class GetSessionEventsQueryHandler : IRequestHandler<GetSessionEventsQuer
 
     public async Task<GetSessionEventsResult> Handle(GetSessionEventsQuery request, CancellationToken cancellationToken)
     {
-        // Verify session exists
-        _ = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
+        var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
+
+        // #4883: the diary is owner/participant-only (#3119 predicate).
+        if (!session.IsAccessibleBy(request.RequestedBy))
+            throw new ForbiddenException("You do not have access to this session.");
 
         var events = await _sessionEventRepository.GetBySessionIdAsync(
             request.SessionId,

@@ -7,6 +7,7 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 /// </summary>
 public record GetDiceRollHistoryQuery(
     Guid SessionId,
+    Guid RequestedBy, // #4883: owner/participant-only; derived from the principal, never from the client.
     int Limit = 20
 ) : IRequest<IEnumerable<DiceRollDto>>;
 

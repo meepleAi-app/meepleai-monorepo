@@ -293,10 +293,11 @@ Real-time scoreboard with rankings.
 
 **Request**:
 ```csharp
-public record GetScoreboardQuery(Guid SessionId) : IRequest<ScoreboardDto>;
+public record GetScoreboardQuery(Guid SessionId, Guid RequestedBy) : IRequest<ScoreboardDto>;
 ```
 
 **Handler**: `GetScoreboardQueryHandler`
+- Owner or participant only (`ForbiddenException` otherwise); `RequestedBy` comes from the principal (#4883)
 - Aggregates scores per participant
 - Calculates current ranks (order by total DESC)
 - Groups scores by round and category
@@ -309,10 +310,12 @@ Complete session data for detail view.
 
 **Request**:
 ```csharp
-public record GetSessionDetailsQuery(Guid SessionId) : IRequest<SessionDetailsDto>;
+public record GetSessionDetailsQuery(Guid SessionId, Guid RequestedBy) : IRequest<SessionDetailsDto>;
 ```
 
 **Handler**: `GetSessionDetailsQueryHandler`
+- Owner or participant only (`ForbiddenException` otherwise): the details carry the session code, which is the credential for joining (#4883)
+- For other bounded contexts that read the companion session on behalf of a flow they already authorized, `GetSessionDetailsForSystemQuery(SessionId)` has no caller check — never send it from an endpoint
 - Includes all participants, score entries, notes
 - Only returns shared/visible notes
 - Complete audit trail with timestamps
@@ -397,7 +400,7 @@ var result = await mediator.Send(command);
 
 **Get Scoreboard**:
 ```csharp
-var query = new GetScoreboardQuery(SessionId: sessionId);
+var query = new GetScoreboardQuery(SessionId: sessionId, RequestedBy: userId);
 var scoreboard = await mediator.Send(query);
 // Returns: ScoreboardDto with real-time rankings, scores by round/category
 ```
@@ -644,6 +647,9 @@ A: Generic sessions don't require a game_id (for custom scorekeeping). GameSpeci
 
 **Q: How are session codes kept unique?**
 A: Database UNIQUE constraint + retry logic in factory method. Collision probability: ~1 in 2 billion for 6-char code.
+
+**Q: Is the session code a secret?**
+A: It is a credential (#4883): whoever holds it can join (`POST /game-sessions/code/{code}/join`). It is shown only to the owner and the participants — never by an anonymous read (`/share`, the invite preview) and never in the Open Graph title of a share link. Removing a participant (kick) rotates the code and revokes the invite token (`Session.RemoveParticipant`), so the removed participant cannot walk back in; `SessionRepository.UpdateAsync` persists the new code.
 
 **Q: When to use Commands vs Queries?**
 A: Command = side effects (write). Query = no side effects (read). Commands implemented in GST-002.

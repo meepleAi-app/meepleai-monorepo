@@ -1024,6 +1024,10 @@ public class AskSessionAgentCommandHandlerTests
         rig.Chat.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         rig.Mediator.Verify(
             m => m.Publish(It.IsAny<SessionChatMessageSentEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        // The gate comes before the chat is even consulted for the next sequence number: the invariant is
+        // "nothing of the conversation is touched until the gate has answered".
+        rig.Chat.Verify(
+            r => r.GetNextSequenceNumberAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

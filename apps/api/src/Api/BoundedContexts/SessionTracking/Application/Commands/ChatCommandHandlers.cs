@@ -236,8 +236,9 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         // It is asked for the AUTHENTICATED CALLER, not for the user behind SenderId: the participant is picked by
         // the client, its id is readable by everyone at the table, and a guest has no account — judged on it, the
         // gate would let anyone borrow the ownership of whoever they name. No caller (Guid.Empty) is nobody: denied.
-        // The same identity sets the copyright tier below. The check is OUTSIDE the try below, which degrades
-        // fail-open on any error: inside it, "could not check" would read as "allowed". A denial is not an error
+        // The same identity sets the copyright tier below. The check is OUTSIDE the retrieval try further down
+        // (the one after the save), which degrades fail-open on any error: inside it, "could not check" would
+        // read as "allowed". A denial is not an error
         // for the chat: the question stays, no retrieval starts, and the answer is the model's alone, which
         // GroundingStatus.Ungrounded already says.
         //

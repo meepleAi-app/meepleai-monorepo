@@ -223,10 +223,17 @@
         "raccolta di servizi della classe non registrava ISemanticResponseCache (dipendenza di",
         "DeletePdfCommandHandler da #3982), quindi il gestore non si costruiva e nessun test della classe",
         "lo eseguiva. Registrato il doppio, la classe passa intera: misurato in locale su Postgres",
-        "(Testcontainers), 12 su 12. Gli altri nomi di questa voce non c'entrano con DeletePdf e restano."
+        "(Testcontainers), 12 su 12. Gli altri nomi di questa voce non c'entrano con DeletePdf e restano.",
+        "",
+        "PR #4923 (#4434 parte a): +2 saltati, le due righe della Theory",
+        "UnstructuredExtractionBenchTests (namespace ...DocumentProcessing.ExtractionBench, quindi nel filtro",
+        "di questo shard). Sono salti PREVISTO: senza TEST_UNSTRUCTURED_URL, che nessun workflow imposta, e",
+        "restano tali finche' non esiste un host con unstructured-service (decisioni dell'epic #4433). I nomi",
+        "sono quelli che scrive il .trx, ricavati da un run locale con lo stesso comparatore. Il conteggio",
+        "passa da 2 a 4; quando un host c'e', le due righe girano e vanno tolte da qui con --update-baseline."
       ],
       "failed": 5,
-      "skipped": 2,
+      "skipped": 4,
       "failedTests": [
         "Api.Tests.Integration.DocumentProcessing.OrphanCleanupAndReattemptIntegrationTests.CleanupThenReattempt_RemovesOrphansCascade_AndReEnqueuesOnlyValidPending",
         "Api.Tests.Integration.DocumentProcessing.OrphanCleanupAndReattemptIntegrationTests.Cleanup_IsIdempotent_OnSecondRun",
@@ -235,6 +242,8 @@
         "Api.Tests.Integration.DocumentProcessing.PdfRowVersionConcurrencyIntegrationTests.Reindex_RacesWithDelete_LeavesNoOrphanState"
       ],
       "skippedTests": [
+        "Api.Tests.BoundedContexts.DocumentProcessing.ExtractionBench.UnstructuredExtractionBenchTests.Unstructured_DoesNotFallBelowItsCommittedBaseline(extractorId: \"unstructured-fast\", strategy: Fast, blocking: True)",
+        "Api.Tests.BoundedContexts.DocumentProcessing.ExtractionBench.UnstructuredExtractionBenchTests.Unstructured_DoesNotFallBelowItsCommittedBaseline(extractorId: \"unstructured-hires\", strategy: HiRes, blocking: False)",
         "Api.Tests.Integration.DocumentProcessing.S3BlobStorageIntegrationTests.GetPresignedDownloadUrlAsync_AfterStore_ReturnsValidUrl",
         "Api.Tests.Integration.DocumentProcessing.S3BlobStorageIntegrationTests.StoreAsync_ValidFile_ReturnsSuccessWithFileId"
       ]

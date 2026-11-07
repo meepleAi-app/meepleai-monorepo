@@ -62,7 +62,8 @@
       "_comment": [
         "#4880 — Core diviso: i test sotto Integration.Routing, Integration.Testing e Integration.Events",
         "passano a CoreEndpoints. Conteggi e nomi invariati: nessuno dei nomi dichiarati qui cade in quei",
-        "token (controllo: jq sui nomi | grep -cE 'Integration\\.(Routing|Testing|Events)' -> 0). Lo shard",
+        "token (controllo: jq sui nomi | grep -ciE 'Integration\\.(Routing|Testing|Events)' -> 0; -i perche'",
+        "FullyQualifiedName~ di vstest confronta senza distinguere le maiuscole). Lo shard",
         "scende da 1309 a 1119 test (ripartizione del .trx del run 42073703384).",
         "",
         "#4609 — skipped 47 -> 46, DICHIARATO prima del run, NON ancora misurato: va ricontrollato sul",

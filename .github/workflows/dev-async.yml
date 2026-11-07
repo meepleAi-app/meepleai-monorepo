@@ -162,8 +162,10 @@ jobs:
         # selezionano tutti e due: le classi cross-context con `GameManagement` nel nome, i test di
         # SharedGameCatalog con `KnowledgeBase` nel nome del metodo. Lo shard che esclude il token
         # cede il test a quello che lo seleziona. L'ordine e' Catalog, GamesAdmin, AuthIntegration,
-        # DocProcessing, KnowledgeBase, CoreEndpoints: un test con i token di due contesti resta nel contesto di
-        # gioco ed esce dallo shard con meno margine. Un ciclo di esclusioni (A cede a B e B ad A) farebbe sparire
+        # DocProcessing, KnowledgeBase: un test con i token di due contesti resta nel contesto di
+        # gioco ed esce dallo shard con meno margine. `CoreEndpoints` non entra in quell'ordine: e'
+        # un ritaglio per nome di `Core`, e cede a OGNI shard di contesto per costruzione (esclude i
+        # loro sei token), qualunque sia il suo margine. Un ciclo di esclusioni (A cede a B e B ad A) farebbe sparire
         # quei test da ogni shard.
         #
         # 🔴 Le due meta' di questa regola non si tengono da sole. Togliere un token da uno shard

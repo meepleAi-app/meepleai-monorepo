@@ -334,79 +334,9 @@ internal partial class UploadPdfCommandHandler
 
             RecordPipelineMetricSafely("pages_processed", extractResult.TotalPages);
 
-            // Extract structured content (tables, diagrams)
-            await ExtractStructuredContentAsync(filePath, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
-
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, extractResult.TotalPages, extractResult.TotalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
             return (true, fullText, extractResult);
-        }
-    }
-
-    /// <summary>
-    /// Extracts structured content (tables, diagrams, atomic rules) from PDF.
-    /// </summary>
-    private async Task ExtractStructuredContentAsync(
-                string filePath,
-        PdfDocumentEntity pdfDoc,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        CancellationToken cancellationToken)
-    {
-        var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
-        if (tableExtractor == null) return;
-
-        // #3846: the extractor takes a FILE. Under S3 `filePath` is a bucket key, so it used to fail
-        // File.Exists and return a failure result that the line below drops without a word — tables,
-        // diagrams and atomic rules silently missing on every remote-storage upload, with the PDF
-        // still reaching Ready. Materialize the object first, and say something when it does fail.
-        using var localFile = await PdfLocalFile
-            .AcquireAsync(_blobStorageService, pdfDoc.Id, filePath, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (localFile is null)
-        {
-            _logger.LogWarning(
-                "[PDF-DEBUG] Structured content skipped for PDF {PdfId}: object not available in storage ({FilePath})",
-                pdfDoc.Id, filePath);
-            return;
-        }
-
-        var structuredResult = await tableExtractor.ExtractStructuredContentAsync(localFile.Path, cancellationToken).ConfigureAwait(false);
-        if (!structuredResult.Success)
-        {
-            _logger.LogWarning(
-                "[PDF-DEBUG] Structured content extraction failed for PDF {PdfId}: {Error}",
-                pdfDoc.Id, structuredResult.ErrorMessage);
-            return;
-        }
-
-        pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
-        pdfDoc.ExtractedDiagrams = System.Text.Json.JsonSerializer.Serialize(
-            structuredResult.Diagrams.Select(d => new
-            {
-                d.PageNumber,
-                d.DiagramType,
-                d.Description,
-                d.Width,
-                d.Height
-            }));
-        pdfDoc.AtomicRules = System.Text.Json.JsonSerializer.Serialize(structuredResult.AtomicRules);
-        pdfDoc.TableCount = structuredResult.TableCount;
-        pdfDoc.DiagramCount = structuredResult.DiagramCount;
-        pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(UploadPdfCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfDoc.Id, nameof(UploadPdfCommandHandler));
         }
     }
 
@@ -892,8 +822,7 @@ internal partial class UploadPdfCommandHandler
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, CancellationToken.None).ConfigureAwait(false);
 
         // Issue #3281 / pre-existing AsNoTracking bug: the pipeline's working pdfDoc is AsNoTracking,
-        // so extraction output written during ExtractPdfContentAsync/ExtractStructuredContentAsync never
-        // persists. Re-persist it here on a freshly TRACKED entity AFTER the final Ready transition
+        // so extraction output written during ExtractPdfContentAsync never persists. Re-persist it here on a freshly TRACKED entity AFTER the final Ready transition
         // (mirrors ExtractPdfTextCommandHandler). Until #4347 the repository transitions also nulled
         // these columns; they no longer do. Needed for re-index parity: IndexPdf reads
         // StructuredElementsJson and requires non-null ExtractedText.
@@ -913,12 +842,6 @@ internal partial class UploadPdfCommandHandler
             tracked.PageSpansJson = pdfDoc.PageSpansJson;
             tracked.PageCount = pdfDoc.PageCount;
             tracked.CharacterCount = pdfDoc.CharacterCount;
-            tracked.ExtractedTables = pdfDoc.ExtractedTables;
-            tracked.ExtractedDiagrams = pdfDoc.ExtractedDiagrams;
-            tracked.AtomicRules = pdfDoc.AtomicRules;
-            tracked.TableCount = pdfDoc.TableCount;
-            tracked.DiagramCount = pdfDoc.DiagramCount;
-            tracked.AtomicRuleCount = pdfDoc.AtomicRuleCount;
             try
             {
                 await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);

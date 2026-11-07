@@ -35,7 +35,6 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
 {
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IPdfTextExtractor> _pdfTextExtractorMock = new();
-    private readonly Mock<IPdfTableExtractor> _tableExtractorMock = new();
     private readonly Mock<ITextChunkingService> _chunkingServiceMock = new();
     private readonly Mock<IEmbeddingService> _embeddingServiceMock = new();
     private readonly Mock<IBlobStorageService> _blobStorageServiceMock = new();
@@ -276,7 +275,6 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
             _db,
             new Api.Tests.TestHelpers.InMemoryPdfClaimService(_db),
             _pdfTextExtractorMock.Object,
-            _tableExtractorMock.Object,
             _chunkingServiceMock.Object,
             _embeddingServiceMock.Object,
             _blobStorageServiceMock.Object,
@@ -346,10 +344,6 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
         _pdfTextExtractorMock
             .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
-
-        _tableExtractorMock
-            .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(StructuredContentResult.CreateFailure("Not applicable"));
     }
 
     /// <summary>

@@ -33,7 +33,6 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<UploadPdfCommandHandler> _logger;
     private readonly IPdfTextExtractor _pdfTextExtractor;
-    private readonly IPdfTableExtractor _tableExtractor;
     private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly IAiResponseCacheService _cacheService;
     private readonly IBlobStorageService _blobStorageService;
@@ -50,7 +49,6 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
         IServiceScopeFactory scopeFactory,
         ILogger<UploadPdfCommandHandler> logger,
         IPdfTextExtractor pdfTextExtractor,
-        IPdfTableExtractor tableExtractor,
         IBackgroundTaskService backgroundTaskService,
         IAiResponseCacheService cacheService,
         IBlobStorageService blobStorageService,
@@ -65,7 +63,6 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
-        _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
         _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));

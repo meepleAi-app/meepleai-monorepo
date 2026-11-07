@@ -29,7 +29,6 @@ internal static class PdfProcessingPipelineServiceCoverTestFactory
             db: db,
             pdfClaimService: Mock.Of<IPdfClaimService>(),
             pdfTextExtractor: Mock.Of<IPdfTextExtractor>(),
-            tableExtractor: Mock.Of<IPdfTableExtractor>(),
             chunkingService: Mock.Of<ITextChunkingService>(),
             embeddingService: Mock.Of<IEmbeddingService>(),
             blobStorageService: blob,

@@ -135,16 +135,6 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
                 }));
         services.AddSingleton<IPdfTextExtractor>(extractorMock.Object);
 
-        var tableExtractorMock = new Mock<IPdfTableExtractor>();
-        tableExtractorMock
-            .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>()!, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StructuredContentResult
-            {
-                Success = false,
-                ErrorMessage = "Skipped in test"
-            });
-        services.AddSingleton<IPdfTableExtractor>(tableExtractorMock.Object);
-
         // CRITICAL for this test: mocked IAdvancedChunkingService registered in the container so
         // scope.ServiceProvider.GetService<IAdvancedChunkingService>() (Processing.cs) resolves it
         // (non-null) and ChunkExtractedTextAsync takes the heading-aware branch instead of the

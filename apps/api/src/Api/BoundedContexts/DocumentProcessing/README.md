@@ -104,7 +104,6 @@ The DocumentProcessing bounded context manages the complete lifecycle of PDF rul
 - `PdfValidationDomainService` - PDF integrity and compliance validation
 - `PdfQualityValidationDomainService` - 4-metric quality scoring
 - `PdfTextProcessingDomainService` - Text normalization and preprocessing
-- `TableToAtomicRuleConverter` - Converts table data to atomic rules
 
 **Repositories (Interfaces)**:
 - `IPdfDocumentRepository` - PDF document persistence
@@ -151,7 +150,6 @@ The DocumentProcessing bounded context manages the complete lifecycle of PDF rul
   - `Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream, bool enableOcr, CancellationToken)`
 
 - `IPdfValidator` - PDF integrity validation
-- `IPdfTableExtractor` - Table structure extraction
 
 **External Models**:
 - `UnstructuredModels.cs` - Unstructured API request/response schemas

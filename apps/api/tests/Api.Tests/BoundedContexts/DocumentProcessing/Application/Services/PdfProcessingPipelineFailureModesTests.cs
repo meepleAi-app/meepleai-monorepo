@@ -33,7 +33,6 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
 {
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IPdfTextExtractor> _extractor = new();
-    private readonly Mock<IPdfTableExtractor> _tables = new();
     private readonly Mock<IEmbeddingService> _embeddings = new();
     private readonly Mock<IBlobStorageService> _blobs = new();
     private readonly Mock<IAdvancedChunkingService> _advancedChunking = new();
@@ -57,8 +56,6 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
                 totalCharacters: 23,
                 ocrTriggered: false,
                 structuredElements: [new ExtractedElement("Setup", 1, "Title"), new ExtractedElement("Place the tiles.", 1, "NarrativeText")]));
-        _tables.Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(StructuredContentResult.CreateFailure("Not applicable"));
     }
 
     public void Dispose() => _db.Dispose();
@@ -204,7 +201,6 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
             _db,
             new Api.Tests.TestHelpers.InMemoryPdfClaimService(_db),
             _extractor.Object,
-            _tables.Object,
             Mock.Of<ITextChunkingService>(),
             _embeddings.Object,
             _blobs.Object,

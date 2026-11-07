@@ -144,12 +144,6 @@ internal static class ApplicationServiceExtensions
 
     internal static IServiceCollection AddPdfServices(this IServiceCollection services, IConfiguration? configuration = null)
     {
-        // PDF sub-services (SOLID refactoring - Phase 3)
-        services.AddScoped<ITableDetectionService, TableDetectionService>();
-        services.AddScoped<ITableCellParser, TableCellParser>();
-        services.AddScoped<ITableStructureAnalyzer, TableStructureAnalyzer>();
-        services.AddScoped<IPdfMetadataExtractor, PdfMetadataExtractor>();
-
         // Issue #1314 PR 2 + #1399 Phase 4 cleanup: only the MigrationEnabled
         // toggle remains on StorageLayoutOptions, driving the outbox drainer.
         // Bound via Options pattern so the background service can resolve it.

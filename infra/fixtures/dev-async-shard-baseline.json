@@ -60,6 +60,12 @@
   "shards": {
     "Core": {
       "_comment": [
+        "#4880 — Core diviso: i test sotto Integration.Routing, Integration.Testing e Integration.Events",
+        "passano a CoreEndpoints. Conteggi e nomi invariati: nessuno dei nomi dichiarati qui cade in quei",
+        "token (controllo: jq sui nomi | grep -ciE 'Integration\\.(Routing|Testing|Events)' -> 0; -i perche'",
+        "FullyQualifiedName~ di vstest confronta senza distinguere le maiuscole). Lo shard",
+        "scende da 1309 a 1119 test (ripartizione del .trx del run 42073703384).",
+        "",
         "#4609 — skipped 47 -> 46, DICHIARATO prima del run, NON ancora misurato: va ricontrollato sul",
         ".trx di `integration-results-Core` del primo run di dev-async dopo il merge.",
         "  -1 UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledWhileSavingVectorRows_LeavesNoCompletedVectorDocument",
@@ -178,6 +184,23 @@
         "Api.Tests.Integration.UploadPdfIntegrationTests.UploadPdf_WhenDatabaseConnectionClosed_HandlesFailureGracefully",
         "Api.Tests.Integration.UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledMidTextExtraction_ReleasesResources"
       ]
+    },
+    "CoreEndpoints": {
+      "_comment": [
+        "Staccato da Core con #4880: i test il cui nome completo contiene Integration.Routing,",
+        "Integration.Testing o Integration.Events. Core li esclude.",
+        "",
+        "DERIVATI, non ancora misurati: la voce di Core ripartita come la ripartisce il filtro. Nessuno dei",
+        "2 falliti e dei 46 saltati di Core sta sotto quei token. Controprova sul .trx di",
+        "`integration-results-Core` del run 42073703384 (SHA 7de327b27): dei 1309 test di Core 190 cadono",
+        "nel filtro nuovo, tutti Passed, e i 1119 restanti tengono i 2 falliti e i 46 saltati.",
+        "Da ricatturare col primo run completo: shard-skip-assert.sh --shard CoreEndpoints --trx <file>",
+        "--log <file> --update-baseline, annotando run, job, sessione e modo del runner."
+      ],
+      "failed": 0,
+      "skipped": 0,
+      "failedTests": [],
+      "skippedTests": []
     },
     "KnowledgeBase": {
       "_comment": [

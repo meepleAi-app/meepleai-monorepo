@@ -114,7 +114,7 @@ jobs:
         # un test potrebbe non essere eseguito da nessuno dei due — il difetto di #3622 su un altro
         # asse. La ripartizione invece qui e' piu' fine (#3742): cio' che ci.yml chiama `Games` e'
         # diviso in `Catalog` e `GamesAdmin`, e da `KnowledgeBase` sono staccati `AuthIntegration` e
-        # `DocProcessing`.
+        # `DocProcessing`. `CoreEndpoints` invece e' staccato da `Core` in ENTRAMBI i workflow (#4880).
         #
         # Perche' divisa, e perche' li'. Uno shard dura quanto la sua catena seriale piu' lunga:
         # xUnit mette in parallelo le collection e in serie i test dentro una collection. In `Games`
@@ -147,12 +147,25 @@ jobs:
         # `DocumentProcessing`, e `KnowledgeBase` lo esclude: il confine e' fra due contesti, come
         # per Games, e una classe nuova di DocumentProcessing finisce sempre in `DocProcessing`.
         #
+        # Quarta volta (#4880), la prima su `Core`. `Core` e' il resto e non ha un token da cedere:
+        # lo shard nuovo ne seleziona tre e `Core` li esclude. La sessione di `Core` la fa
+        # Integration-GroupD: 50,6 minuti di test su 54 di sessione nel run 42073703384, 58,4 su 64
+        # (85% del limite) nel run lento 41823021627. Tre namespace ne portano meta':
+        # `Integration.Routing` (15,1 min), `Integration.Testing` (6,8), `Integration.Events` (4,3).
+        # `CoreEndpoints` li prende e cede a tutti gli altri shard escludendone i token; sul run
+        # lento GroupD diventa 29,3 minuti in `CoreEndpoints` e 29,1 in `Core`. I token hanno il
+        # punto, come `Integration.Authentication`: un nome di metodo non li contiene. A differenza
+        # delle divisioni sopra questa e' anche in ci.yml, perche' i due `Core` devono restare
+        # identici (integration-shard-matrix.bats).
+        #
         # Le esclusioni sono precedenze (#4488). Un test il cui nome contiene i token di due shard lo
         # selezionano tutti e due: le classi cross-context con `GameManagement` nel nome, i test di
         # SharedGameCatalog con `KnowledgeBase` nel nome del metodo. Lo shard che esclude il token
         # cede il test a quello che lo seleziona. L'ordine e' Catalog, GamesAdmin, AuthIntegration,
         # DocProcessing, KnowledgeBase: un test con i token di due contesti resta nel contesto di
-        # gioco ed esce dallo shard con meno margine. Un ciclo di esclusioni (A cede a B e B ad A) farebbe sparire
+        # gioco ed esce dallo shard con meno margine. `CoreEndpoints` non entra in quell'ordine: e'
+        # un ritaglio per nome di `Core`, e cede a OGNI shard di contesto per costruzione (esclude i
+        # loro sei token), qualunque sia il suo margine. Un ciclo di esclusioni (A cede a B e B ad A) farebbe sparire
         # quei test da ogni shard.
         #
         # 🔴 Le due meta' di questa regola non si tengono da sole. Togliere un token da uno shard
@@ -171,8 +184,10 @@ jobs:
             filter_extra: "&(FullyQualifiedName~SharedGameCatalog)"
           - name: "GamesAdmin"
             filter_extra: "&(FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)&FullyQualifiedName!~SharedGameCatalog"
+          - name: "CoreEndpoints"
+            filter_extra: "&(FullyQualifiedName~Integration.Routing|FullyQualifiedName~Integration.Testing|FullyQualifiedName~Integration.Events)&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
           - name: "Core"
-            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration&FullyQualifiedName!~Integration.Routing&FullyQualifiedName!~Integration.Testing&FullyQualifiedName!~Integration.Events"
 
     # Stessi service container di ci.yml: sostituiscono i Testcontainers avviati per-fixture, che
     # erano il vero costo.

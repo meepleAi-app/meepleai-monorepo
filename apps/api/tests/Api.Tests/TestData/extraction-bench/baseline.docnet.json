@@ -1,0 +1,50 @@
+{
+  "extractor": "docnet",
+  "fixtures": {
+    "graphic-table-de": {
+      "headingRecall": null,
+      "paragraphRecall": 1,
+      "readingOrder": 1,
+      "scanWordRecall": null,
+      "tableCellF1": null,
+      "tableCellRecall": 0,
+      "wordRecall": 0.9473684210526315
+    },
+    "inline-icons-en": {
+      "headingRecall": null,
+      "paragraphRecall": 1,
+      "readingOrder": 1,
+      "scanWordRecall": null,
+      "tableCellF1": null,
+      "tableCellRecall": null,
+      "wordRecall": 0.90625
+    },
+    "scanned-page-en": {
+      "headingRecall": null,
+      "paragraphRecall": 1,
+      "readingOrder": 1,
+      "scanWordRecall": 0,
+      "tableCellF1": null,
+      "tableCellRecall": null,
+      "wordRecall": 0.8666666666666667
+    },
+    "text-table-it": {
+      "headingRecall": null,
+      "paragraphRecall": 1,
+      "readingOrder": 1,
+      "scanWordRecall": null,
+      "tableCellF1": null,
+      "tableCellRecall": 1,
+      "wordRecall": 0.9444444444444444
+    },
+    "two-columns-en": {
+      "headingRecall": null,
+      "paragraphRecall": 1,
+      "readingOrder": 1,
+      "scanWordRecall": null,
+      "tableCellF1": null,
+      "tableCellRecall": null,
+      "wordRecall": 0.782051282051282
+    }
+  }
+}

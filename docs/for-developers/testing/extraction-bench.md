@@ -39,7 +39,7 @@ Ogni metrica restituisce un numero in [0, 1] oppure **`null` = non applicabile**
 | Metrica | Cosa dice | Insensibile a |
 |---|---|---|
 | `paragraphRecall` | quota dei paragrafi attesi ritrovati, contigui | spazi, maiuscole, tipografia |
-| `wordRecall` | quota delle parole distinte attese ritrovate a parola intera | maiuscole, tipografia — **vede le parole fuse** |
+| `wordRecall` | quota delle parole distinte attese ritrovate a parola intera | maiuscole, tipografia — **vede le parole fuse** (le fonde `NormalizeText`, vedi sotto) |
 | `readingOrder` | quota delle coppie consecutive di indicatori nell'ordine giusto | spazi |
 | `tableCellRecall` | quota delle celle attese presenti nel testo (contenuto, non struttura) | spazi |
 | `tableCellF1` | F1 sulle celle come multiinsieme (struttura) | — |
@@ -49,7 +49,7 @@ Ogni metrica restituisce un numero in [0, 1] oppure **`null` = non applicabile**
 
 ### Criterio di match
 
-Uguale per tutti gli estrattori (`ExtractionTextMatcher`): NFKC (le ligature tornano lettere), minuscole, trattino morbido tolto, trattini e apici tipografici ricondotti ai semplici. **Le diacritiche restano**: «über»/«uber» e «perché»/«perche» sono parole diverse. Per `paragraphRecall`, `readingOrder`, `tableCellRecall` e `headingRecall` anche gli spazi sono ignorati: pdfium perde lo spazio ai ritorni a capo automatici dei PDF generati dal banco («die folgende» → «diefolgende»), e un confronto sensibile agli spazi darebbe zero a un testo che c'è tutto. Le parole fuse si misurano a parte con `wordRecall`.
+Uguale per tutti gli estrattori (`ExtractionTextMatcher`): NFKC (le ligature tornano lettere), minuscole, trattino morbido tolto, trattini e apici tipografici ricondotti ai semplici. **Le diacritiche restano**: «über»/«uber» e «perché»/«perche» sono parole diverse. Per `paragraphRecall`, `readingOrder`, `tableCellRecall` e `headingRecall` anche gli spazi sono ignorati: Docnet restituisce il testo dopo `PdfTextProcessingDomainService.NormalizeText`, il cui **passo 3** (`([a-z])\n([a-z])` → `$1$2`) incolla due righe consecutive quando la prima finisce e la seconda comincia con una minuscola ASCII («die folgende» → «diefolgende»). Non lo fa pdfium: letto il testo grezzo sulla stessa fixture, le righe arrivano separate (`\r\n`) e le fonde la normalizzazione. Un confronto sensibile agli spazi darebbe zero a un testo che c'è tutto. Le parole fuse si misurano a parte con `wordRecall`, che quindi **misura quel passo di normalizzazione**, non l'estrazione.
 
 Tolleranza OCR: rapporto massimo fra distanza di edit e lunghezza della parola, **zero** di partenza. Si alza solo con una misura di `hi_res` che la giustifichi.
 
@@ -88,15 +88,31 @@ git diff TestData/extraction-bench/      # leggi il diff prima di committare
 
 Riscrive `TestData/extraction-bench/baseline.<estrattore>.json` nel sorgente. La CI **rifiuta** la variabile (`CI=true`).
 
+### Se un run su Linux (o un nuovo runner) sposta un numero
+
+La tolleranza è zero e la baseline di Docnet è nata su Windows; il primo run di CI su Linux ha dato valori identici, ma un cambio di versione di Docnet, di QuestPDF o dell'immagine del runner può cambiarli. **Non si allarga la tolleranza**: si rigenera la baseline con i valori misurati su Linux, che l'artifact `extraction-bench-results` del run rosso contiene già:
+
+```bash
+# dal run rosso: scarica l'artifact, poi
+jq -S '{extractor, fixtures: (.fixtures | map_values(.metrics))}' extraction-bench-docnet.json \
+  > apps/api/tests/Api.Tests/TestData/extraction-bench/baseline.docnet.json
+```
+
+La conversione riproduce la baseline committata (verificata sui valori; `-S` ordina le chiavi, quindi il diff può mostrare anche un riordino). Il diff è un cambio di requisito e si tratta come tale: la descrizione della PR dice quale metrica si è mossa, di quanto, e perché non è una regressione; **l'approvazione è del revisore della PR**, che deve leggere quel diff. Una baseline rigenerata per far tornare verde un rosso non spiegato è il modo di far smettere di funzionare il banco.
+
 ## Dove gira
 
 | Estrattore | Test | `Category` | Gate | Bloccante |
 |---|---|---|---|---|
 | Docnet | `DocnetExtractionBenchTests` | `Unit` + `PDF` | `dev-fast.yml` e `ci.yml` (deny-list: ciò che non è esplicitamente lento) | sì |
-| Unstructured `fast` | `UnstructuredExtractionBenchTests` | `Integration` + `PDF` | `dev-async.yml` (shard `DocumentProcessing`) e `ci.yml` | sì, **quando c'è la baseline** |
+| Unstructured `fast` | `UnstructuredExtractionBenchTests` | `Integration` + `PDF` | `dev-async.yml` (shard `DocProcessing`) e `ci.yml` | sì; **con il servizio acceso e senza baseline fallisce** (vedi sotto) |
 | Unstructured `hi_res` | idem | idem | idem | no (informativo) |
 
 Le colonne Unstructured sono **L2/L3**: servizio opzionale. Senza `TEST_UNSTRUCTURED_URL` saltano con un motivo `PREVISTO:` che dice come accenderle. Con la variabile impostata e `/health` che non risponde, **falliscono**: l'assenza si accerta con una sonda, non si deduce.
+
+**Senza baseline.** Con `TEST_UNSTRUCTURED_URL` impostata e il servizio sano, `fast` (bloccante) **fallisce** finché la sua baseline non esiste, con l'istruzione per crearla (`ExtractionBaselineGate.Enforce`): un banco bloccante senza baseline non misurerebbe niente. Chi ha già la variabile per altri test (`PdfExtractionRealBackendValidationTests` la legge dallo stesso nome) vedrà `fast` rosso fino a quella creazione. `hi_res`, informativo, senza baseline stampa un avviso e passa. Senza la variabile, entrambe le righe saltano.
+
+**Salti dichiarati in `dev-async`.** Le due righe stanno nello shard `DocProcessing` di `dev-async.yml` (filtro `FullyQualifiedName~DocumentProcessing`), che nessun workflow configura con `TEST_UNSTRUCTURED_URL`: fanno quindi 2 salti `PREVISTO:`. `infra/fixtures/dev-async-shard-baseline.json` (voce `DocProcessing`) li dichiara per nome e `infra/scripts/shard-skip-assert.sh` fallisce su un salto non dichiarato, anche a conteggio invariato. `dev-async` non gira sulle PR, quindi l'omissione si sarebbe vista solo al primo run dopo il merge. Quando esisterà un host che le esegue, i due nomi si tolgono dalla baseline con `--update-baseline`.
 
 Per eseguirle:
 
@@ -107,6 +123,16 @@ EXTRACTION_BENCH_UPDATE_BASELINE=1 dotnet test --filter "FullyQualifiedName~Unst
 ```
 
 > **Stato**: le colonne Unstructured non sono mai state eseguite (nessun host con `unstructured-service`, decisioni dell'epic #4433). Non hanno baseline: la crea chi ha il servizio. Il loro comportamento di salto è verificato.
+
+## Limiti noti
+
+Dichiarati, non corretti: o servirebbe una decisione, o un lavoro più grande di questo banco. Dove la correzione era di poche righe è stata fatta (una metrica in baseline che il run non produce ora fa fallire il confronto; il sabotaggio permanente dell'atteso muove anche `wordRecall` e `tableCellRecall`).
+
+- **La baseline non è un cricchetto.** Un miglioramento non alza il pavimento: il confronto è solo «non scendere», quindi un vantaggio guadagnato si può perdere fino al vecchio valore senza un rosso. E una metrica con `null` in baseline che diventa misurabile (per esempio `tableCellF1` quando #4439 farà arrivare le celle) passa per sempre senza forzare la rigenerazione, perché `ExtractionBaseline.Regressions` guarda il pavimento solo se non è `null`. Rimedio manuale: rigenerare la baseline quando una metrica migliora o diventa applicabile.
+- **Cosa sorveglia davvero il sabotaggio dell'atteso.** `TheBench_SeesAWrongExpectation` verifica, per Docnet, `paragraphRecall`, `readingOrder`, `wordRecall` e il `tableCellRecall` di `text-table-it`. `scanWordRecall` e il `tableCellRecall` di `graphic-table-de` valgono 0 in baseline e **non possono scendere**: se Docnet cominciasse a leggere la scansione o la tabella disegnata il banco non fallirebbe, salirebbe soltanto (e il pavimento non si alza: vedi sopra). `headingRecall` e `tableCellF1` sono `null` per Docnet, quindi non sorvegliano niente.
+- **Il match è permissivo.** Titoli e celle si cercano come sottostringa su testo senza spazi: «Oste» è stata trovata dentro «nello stesso turno» (di qui il test-guardia sulle fixture). `headingRecall` non ha precisione: un estrattore che etichetta tutto come `Title` ottiene 1. Il controllo d'inchiostro delle fixture (almeno 500 pixel scuri) non distingue il testo dai bordi.
+- **Tolleranza zero, e il primo run su Linux.** Una frazione fra interi non cambia da una macchina all'altra; il rischio sta nei ritorni a capo, che dipendono dal layout di QuestPDF (font incorporato, versione). Il primo run su Linux è stato identico alla baseline di Windows. Se un domani si rompesse, il rimedio è la rigenerazione descritta sopra, non una tolleranza.
+- **`wordRecall` misura il testo che arriva all'indice con Docnet, non pdfium.** Le parole mancanti sono quelle che `NormalizeText` (passo 3) incolla a ogni ritorno a capo fra due minuscole ASCII, e non solo dove c'era un trattino: sulla fixture a due colonne «centre of / the table» diventa «ofthe». Il banco lo rende visibile e non lo corregge (fuori perimetro): è un difetto del dominio di `DocumentProcessing`, da valutare a parte perché tocca il testo che Docnet porta all'indice.
 
 ## L'artifact
 

@@ -95,6 +95,17 @@ public sealed class ExtractionBaselineTests
     }
 
     [Fact]
+    public void Regressions_FlagsABaselineMetricThatTheRunDidNotProduce()
+    {
+        // Una metrica rinominata o tolta dal punteggio non deve sparire dal confronto in silenzio: la sua
+        // riga nella baseline resterebbe a dichiarare un pavimento che nessuno controlla piu'.
+        var baseline = ExtractionBaseline.FromReport(Report(("a", "m", 1.0), ("a", "n", 1.0)));
+
+        baseline.Regressions(Report(("a", "m", 1.0)), tolerance: 0)
+            .Should().ContainSingle().Which.Should().Contain("n").And.Contain("did not produce");
+    }
+
+    [Fact]
     public void Regressions_FlagsABaselineFixtureThatTheRunDidNotMeasure()
     {
         // Se una fixture sparisce dal run (rinominata, cancellata), il confronto non può restare muto.

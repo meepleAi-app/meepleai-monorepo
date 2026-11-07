@@ -96,14 +96,21 @@ public sealed class DocnetExtractionBenchTests
             {
                 Paragraphs = [.. expected.Paragraphs, "A sentence that this document never contains."],
                 TableCells = [.. expected.TableCells, "a cell that is not there"],
-                ReadingOrder = [.. expected.ReadingOrder.AsEnumerable().Reverse()],
+                // Invertito, e con un titolo che il documento non contiene: l'inversione muove readingOrder,
+                // le parole inesistenti muovono wordRecall (le stesse parole in ordine diverso non lo muoverebbero).
+                ReadingOrder = [.. expected.ReadingOrder.AsEnumerable().Reverse(), "Ghost heading nobody ever printed"],
             };
         });
 
+        // Le sole metriche che un atteso sbagliato può muovere per Docnet. scanWordRecall e il tableCellRecall
+        // di graphic-table-de valgono già 0 in baseline e non possono scendere (il filtro «> 0» sotto le salta);
+        // headingRecall e tableCellF1 sono non applicabili.
         var applicable = new[]
         {
             ExtractionScoring.ParagraphRecall,
             ExtractionScoring.ReadingOrder,
+            ExtractionScoring.WordRecall,
+            ExtractionScoring.TableCellRecall,
         };
 
         // Solo dove il valore onesto è sopra zero: da zero non si può scendere, e un confronto lì

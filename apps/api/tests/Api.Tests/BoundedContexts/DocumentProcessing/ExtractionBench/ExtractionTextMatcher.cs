@@ -60,9 +60,11 @@ internal static partial class ExtractionTextMatcher
 
     /// <summary>
     /// La forma normalizzata <b>senza spazi</b>. Serve ai confronti di contenuto («c'è, nell'ordine
-    /// giusto?»): pdfium perde lo spazio ai ritorni a capo automatici dei PDF generati dal banco
-    /// («die folgende» → «diefolgende»), e un confronto sensibile agli spazi darebbe zero a un testo che
-    /// c'è tutto. Gli spazi mancanti si misurano a parte, con <see cref="ExtractionMetrics.WordRecall"/>.
+    /// giusto?»): Docnet restituisce il testo dopo <c>PdfTextProcessingDomainService.NormalizeText</c>, il cui
+    /// passo 3 (<c>([a-z])\n([a-z])</c> → <c>$1$2</c>) incolla due righe consecutive quando la prima finisce e la
+    /// seconda comincia con una minuscola ASCII («die folgende» → «diefolgende»). Un confronto sensibile agli
+    /// spazi darebbe zero a un testo che c'è tutto. Gli spazi mancanti si misurano a parte, con
+    /// <see cref="ExtractionMetrics.WordRecall"/>: che quindi misura quel passo di normalizzazione, non pdfium.
     /// </summary>
     public static string Squeeze(string? text) =>
         Normalize(text).Replace(" ", string.Empty, StringComparison.Ordinal);

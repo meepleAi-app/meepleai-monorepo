@@ -65,9 +65,12 @@ public sealed class ExtractionMetricsTests
     [Fact]
     public void ParagraphRecall_IgnoresSpacesTheExtractorDropped_ButWordRecallSeesThem()
     {
-        // Osservato su pdfium: al ritorno a capo automatico l'ultima parola di una riga si fonde con la
-        // prima della successiva («diefolgende»). Il contenuto c'è, nell'ordine giusto: ParagraphRecall
-        // non deve dare zero. Ma la parola fusa è un danno vero per la ricerca, e WordRecall lo vede.
+        // Osservato su Docnet: l'ultima parola di una riga si fonde con la prima della successiva
+        // («diefolgende»). La causa non è l'estrazione di pdfium ma il passo 3 di
+        // PdfTextProcessingDomainService.NormalizeText, che con ([a-z])\n([a-z]) → $1$2 incolla due righe
+        // consecutive quando una finisce e l'altra comincia con una minuscola ASCII. Il contenuto c'è,
+        // nell'ordine giusto: ParagraphRecall non deve dare zero. Ma la parola fusa è un danno vero per la
+        // ricerca, e WordRecall lo vede: misura quel passo di normalizzazione, non pdfium.
         const string paragraph = "Il mercante paga due monete.";
         const string extracted = "Il mercante paga duemonete.";
 

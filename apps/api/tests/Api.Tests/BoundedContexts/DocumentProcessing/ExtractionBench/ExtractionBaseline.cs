@@ -92,6 +92,19 @@ internal sealed record ExtractionBaseline(
             }
         }
 
+        // Una metrica in baseline che il run non produce (rinominata, tolta dal punteggio): il suo pavimento
+        // resterebbe scritto senza che nessuno lo controlli più.
+        foreach (var (fixtureId, result) in report.Fixtures.OrderBy(f => f.Key, StringComparer.Ordinal))
+        {
+            if (Fixtures.TryGetValue(fixtureId, out var expectedMetrics))
+            {
+                failures.AddRange(expectedMetrics.Keys
+                    .Where(metric => !result.Metrics.ContainsKey(metric))
+                    .OrderBy(metric => metric, StringComparer.Ordinal)
+                    .Select(metric => $"'{fixtureId}'/{metric} is in the baseline but the run did not produce it"));
+            }
+        }
+
         failures.AddRange(Fixtures.Keys
             .Where(id => !report.Fixtures.ContainsKey(id))
             .OrderBy(id => id, StringComparer.Ordinal)

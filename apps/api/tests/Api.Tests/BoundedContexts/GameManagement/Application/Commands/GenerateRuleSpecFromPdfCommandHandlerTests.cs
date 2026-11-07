@@ -35,7 +35,13 @@ public class GenerateRuleSpecFromPdfCommandHandlerTests
             _db, new RuleAtomParsingDomainService(), TimeProvider.System);
     }
 
-    private PdfDocumentEntity SeedPdf(Guid? privateGameId, Guid? sharedGameId)
+    private const string TwoAtomicRules = "[\"Rule one\", \"Rule two\"]";
+
+    private PdfDocumentEntity SeedPdf(
+        Guid? privateGameId,
+        Guid? sharedGameId,
+        string? atomicRules = TwoAtomicRules,
+        string? extractedText = null)
     {
         var pdf = new PdfDocumentEntity
         {
@@ -47,7 +53,8 @@ public class GenerateRuleSpecFromPdfCommandHandlerTests
             FileSizeBytes = 1000,
             UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
-            AtomicRules = "[\"Rule one\", \"Rule two\"]"
+            AtomicRules = atomicRules,
+            ExtractedText = extractedText
         };
         _db.PdfDocuments.Add(pdf);
         return pdf;
@@ -64,6 +71,27 @@ public class GenerateRuleSpecFromPdfCommandHandlerTests
 
         result.GameId.Should().Be(gameId);
         result.Atoms.Should().HaveCount(2);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("[]")]
+    public async Task Handle_WhenAtomicRulesAbsentOrEmpty_BuildsOneAtomPerNonBlankExtractedTextLine(string? atomicRules)
+    {
+        // #4440: la pipeline non scrive piu' AtomicRules (le produceva l'estrattore iText, tolto).
+        // Per i PDF nuovi il ripiego su ExtractedText e' l'unico percorso vivo di
+        // POST /ingest/pdf/{id}/rulespec: le righe vuote non diventano atomi.
+        var pdf = SeedPdf(
+            privateGameId: Guid.NewGuid(),
+            sharedGameId: null,
+            atomicRules: atomicRules,
+            extractedText: "Prima regola\r\nSeconda regola\n\nTerza regola");
+        await _db.SaveChangesAsync();
+
+        var result = await _handler.Handle(new GenerateRuleSpecFromPdfCommand(pdf.Id), CancellationToken.None);
+
+        result.Atoms.Should().HaveCount(3);
     }
 
     [Fact]

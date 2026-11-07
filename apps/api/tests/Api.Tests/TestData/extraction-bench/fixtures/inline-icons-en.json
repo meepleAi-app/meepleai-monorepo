@@ -1,0 +1,17 @@
+{
+  "id": "inline-icons-en",
+  "language": "en",
+  "description": "Icone vettoriali in linea dentro le frasi: l'estrattore non deve spezzare la frase né inserire caratteri al posto dell'icona.",
+  "pages": [
+    {
+      "number": 1,
+      "kind": "text",
+      "columns": 1,
+      "blocks": [
+        { "type": "heading", "level": 1, "text": "Trading at the Quay" },
+        { "type": "paragraph", "text": "Pay two coins {icon} to take one crate {icon} from the market stall, then place a flag {icon} on the quay." },
+        { "type": "paragraph", "text": "If you hold a lantern {icon} you may skip the toll and move one extra space {icon} along the canal." }
+      ]
+    }
+  ]
+}

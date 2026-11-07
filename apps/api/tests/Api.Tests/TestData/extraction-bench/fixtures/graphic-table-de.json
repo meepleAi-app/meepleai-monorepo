@@ -1,0 +1,26 @@
+{
+  "id": "graphic-table-de",
+  "language": "de",
+  "description": "Tabella disegnata come immagine (nessun livello di testo) sotto un titolo e un paragrafo, in tedesco (dieresi e ß).",
+  "pages": [
+    {
+      "number": 1,
+      "kind": "text",
+      "columns": 1,
+      "blocks": [
+        { "type": "heading", "level": 1, "text": "Die Handelsgilde" },
+        { "type": "paragraph", "text": "Jede Gilde hat ihren Preis und liefert am Ende der Runde eine Belohnung, wie die folgende Übersicht zeigt." },
+        {
+          "type": "table",
+          "render": "image",
+          "rows": [
+            ["Beruf", "Kosten", "Ertrag"],
+            ["Händler", "zwei Münzen", "drei Edelsteine"],
+            ["Schmied", "drei Münzen", "fünf Edelsteine"],
+            ["Wirt", "eine Münze", "zwei Edelsteine"]
+          ]
+        }
+      ]
+    }
+  ]
+}

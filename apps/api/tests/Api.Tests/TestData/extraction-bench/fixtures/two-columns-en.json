@@ -1,0 +1,22 @@
+{
+  "id": "two-columns-en",
+  "language": "en",
+  "description": "Due colonne di paragrafi sotto due titoli: l'ordine di lettura deve essere colonna sinistra, poi colonna destra.",
+  "pages": [
+    {
+      "number": 1,
+      "kind": "text",
+      "columns": 2,
+      "blocks": [
+        { "type": "heading", "level": 1, "text": "Harbor Lights: Quick Rules" },
+        { "type": "heading", "level": 2, "text": "Setting up the board" },
+        { "type": "paragraph", "text": "Place the harbor tile in the centre of the table and give every player one lantern token and three coin tokens." },
+        { "type": "paragraph", "text": "Shuffle the ferry cards and deal two to each player; keep them hidden until the first tide phase begins." },
+        { "type": "paragraph", "text": "The youngest player takes the starting buoy and chooses which side of the harbor will receive the first cargo." },
+        { "type": "paragraph", "text": "During the tide phase each player reveals one ferry card and moves their lantern along the matching canal." },
+        { "type": "paragraph", "text": "A lantern that reaches a lighthouse space scores two points and returns to the harbor on the next turn." },
+        { "type": "paragraph", "text": "The game ends when the last cargo crate leaves the dock; the player with the most points wins." }
+      ]
+    }
+  ]
+}

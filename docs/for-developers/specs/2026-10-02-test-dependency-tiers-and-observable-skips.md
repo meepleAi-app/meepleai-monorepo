@@ -300,6 +300,20 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
   lo esclude. Prima del bats generale di #4488 questa divisione avrebbe richiesto una regola nuova
   per la coppia; ora le regole su doppi, cicli e copertura la coprono già. In testa a
   `KnowledgeBase` resta `GroupD`, la cui leva è #4572.
+
+  **Aggiunta del 2026-11-06 (#4880): quarta volta, la prima su `Core`.** Negli ultimi sei run di
+  `main-dev` prima della divisione, `Core` oscillava fra il 51% e l'**85%** del `TestSessionTimeout`
+  con lo stesso codice (due run su sei sopra la soglia d'avviso dell'80%); la differenza era il
+  runner. La sessione la fa `Integration-GroupD`: 50,6 minuti di test su 54 di sessione nel run
+  42073703384, 58,4 su 64 nel run lento 41823021627. Tre namespace ne portano metà
+  (`Integration.Routing` 15,1 min, `Integration.Testing` 6,8, `Integration.Events` 4,3). `Core` è
+  il resto e non ha un token da cedere, quindi lo shard nuovo `CoreEndpoints` ne seleziona tre e
+  `Core` li esclude: dei 1309 test del `.trx` di `Core` 190 passano a `CoreEndpoints` (tutti
+  superati) e 1119 restano, con i 2 falliti e i 46 saltati dichiarati. Sul run lento `GroupD`
+  diventa 29,3 minuti in `CoreEndpoints` e 29,1 in `Core`; nessuna classe cambia collection. A
+  differenza delle tre divisioni precedenti questa tocca **anche `ci.yml`** e `release-gates.yml`:
+  il bats pretende che i due `Core` siano identici, e allentarlo avrebbe lasciato il `Core` di
+  `ci.yml` all'85%. La voce `CoreEndpoints` della baseline è derivata, da ricatturare col primo run.
 - [x] **A3** — **verificato con un drill distruttivo**, 2026-10-03. Le due suite di #3978
   (`S3BlobStorageIntegrationTests`, `CoverR2ConventionIntegrationTests`) contro l'immagine MinIO
   puntata a un tag inesistente:

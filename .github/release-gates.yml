@@ -61,6 +61,13 @@ checks:
     pre_existing_in_main_dev: false
     notes: "Testcontainers + EF Core. Failure indicates DB/migration regression."
 
+  - check_name: "Backend - Integration (CoreEndpoints)"
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Staccato da Core con #4880: Integration.Routing, Integration.Testing, Integration.Events."
+
   - check_name: "Backend - Integration (Games)"
     severity: blocker
     owner: backend-dev

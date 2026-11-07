@@ -721,6 +721,8 @@ jobs:
         # KnowledgeBase cede a Games i test col nome di entrambi (#4488): le esclusioni sono
         # precedenze, spiegate sopra la matrice di dev-async.yml, e infra/scripts/tests/
         # integration-shard-matrix.bats verifica doppi e cicli in entrambi i workflow.
+        # CoreEndpoints (#4880) e' staccato da Core qui come in dev-async.yml: Core e' il resto, e il
+        # bats pretende che i due Core siano identici. Cede a KnowledgeBase e a Games.
         shard:
           - name: "KnowledgeBase"
             filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
@@ -728,8 +730,11 @@ jobs:
           - name: "Games"
             filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"
             coverage_file: "integration-coverage-shard2.xml"
+          - name: "CoreEndpoints"
+            filter_extra: "&(FullyQualifiedName~Integration.Routing|FullyQualifiedName~Integration.Testing|FullyQualifiedName~Integration.Events)&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            coverage_file: "integration-coverage-shard4.xml"
           - name: "Core"
-            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration&FullyQualifiedName!~Integration.Routing&FullyQualifiedName!~Integration.Testing&FullyQualifiedName!~Integration.Events"
             coverage_file: "integration-coverage-shard3.xml"
 
     services:

@@ -453,10 +453,43 @@ jobs:
       # riga per ogni salto; i test superati restano fuori dal log.
       - name: Unit tests (everything not explicitly slow/infra — #3622)
         working-directory: apps/api/tests/Api.Tests
+        env:
+          # #4434: il banco di estrazione (DocnetExtractionBenchTests, Category=Unit) scrive qui le sue metriche.
+          EXTRACTION_BENCH_OUTPUT_DIR: ${{ runner.temp }}/extraction-bench
         run: |
           dotnet test --no-build --configuration Release --verbosity quiet \
             --logger "console;verbosity=minimal" \
             --filter "Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow"
+
+      # #4434: il banco di qualità dell'estrazione gira dentro lo step sopra (Category=Unit: la deny-list lo
+      # include da sola), ma "gira" non si deduce dal verde dello step: `dotnet test` con un filtro che non
+      # trova più la classe esce 0. La prova che ha misurato è il suo artifact. Se manca o non ha fixture,
+      # il banco è uscito dal gate e questo step lo dice. L'upload sta dopo la guardia ma con `always()`,
+      # così un banco rosso lascia comunque i numeri da leggere (l'artifact si scrive prima dell'asserzione).
+      - name: Guard — the extraction bench measured something (#4434)
+        shell: bash
+        run: |
+          f="$RUNNER_TEMP/extraction-bench/extraction-bench-docnet.json"
+          if [ ! -s "$f" ]; then
+            echo "::error:: $f is missing — DocnetExtractionBenchTests did not run under the Unit gate (filter, trait or class moved?)"
+            exit 1
+          fi
+          fixtures=$(jq '.fixtures | length' "$f")
+          echo "Extraction bench (docnet) measured $fixtures fixtures"
+          if [ "$fixtures" -eq 0 ]; then
+            echo "::error:: the extraction bench ran but measured no fixture"
+            exit 1
+          fi
+
+      - name: Upload extraction bench metrics (#4434)
+        if: always()
+        # v7: stesso pin degli altri upload di questo workflow (migration-safety-report).
+        uses: actions/upload-artifact@v7
+        with:
+          name: extraction-bench-results
+          path: ${{ runner.temp }}/extraction-bench/*.json
+          if-no-files-found: warn
+          retention-days: 30
 
       # #4519: alcuni rami dei convertitori di date (UtcDateTimeJson), del filtro UtcDateTimeArguments e
       # dell'handler di suppress si vedono solo se il fuso dell'host NON è UTC: un DateTimeOffset senza

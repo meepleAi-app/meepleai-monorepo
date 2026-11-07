@@ -63,6 +63,34 @@ public sealed class ExtractionMetricsTests
     }
 
     [Fact]
+    public void ParagraphRecall_IgnoresSpacesTheExtractorDropped_ButWordRecallSeesThem()
+    {
+        // Osservato su pdfium: al ritorno a capo automatico l'ultima parola di una riga si fonde con la
+        // prima della successiva («diefolgende»). Il contenuto c'è, nell'ordine giusto: ParagraphRecall
+        // non deve dare zero. Ma la parola fusa è un danno vero per la ricerca, e WordRecall lo vede.
+        const string paragraph = "Il mercante paga due monete.";
+        const string extracted = "Il mercante paga duemonete.";
+
+        ExtractionMetrics.ParagraphRecall([paragraph], extracted).Should().Be(1.0);
+        ExtractionMetrics.WordRecall([paragraph], extracted, ocrEditTolerance: 0)
+            .Should().BeApproximately(3.0 / 5.0, 1e-9); // il, mercante, paga ritrovate; due e monete no
+    }
+
+    [Fact]
+    public void WordRecall_IsNull_WhenNothingIsExpected()
+    {
+        ExtractionMetrics.WordRecall([], "qualunque testo", ocrEditTolerance: 0).Should().BeNull();
+    }
+
+    [Fact]
+    public void WordRecall_CountsEachDistinctWordOnce()
+    {
+        // «la» compare due volte nell'atteso: non pesa il doppio.
+        ExtractionMetrics.WordRecall(["la carta la mano"], "la carta", ocrEditTolerance: 0)
+            .Should().BeApproximately(2.0 / 3.0, 1e-9);
+    }
+
+    [Fact]
     public void TableCellRecall_CountsCellsFoundInTheText()
     {
         ExtractionMetrics.TableCellRecall(["Mercante", "Bandito", "Oste", "Fabbro"], "mercante 2 bandito 3 oste 1")
@@ -136,6 +164,12 @@ public sealed class ExtractionMetricsTests
     public void ReadingOrder_IsOne_WhenMarkersAppearInTheExpectedSequence()
     {
         ExtractionMetrics.ReadingOrder(["alfa", "beta", "gamma"], "xx alfa yy beta zz gamma").Should().Be(1.0);
+    }
+
+    [Fact]
+    public void ReadingOrder_FindsMarkersEvenWhenTheExtractorDroppedSpaces()
+    {
+        ExtractionMetrics.ReadingOrder(["alfa beta", "gamma delta"], "alfabeta gammadelta").Should().Be(1.0);
     }
 
     [Fact]

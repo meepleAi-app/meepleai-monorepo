@@ -58,6 +58,15 @@ internal static partial class ExtractionTextMatcher
         return WhitespaceRegex().Replace(sb.ToString(), " ").Trim();
     }
 
+    /// <summary>
+    /// La forma normalizzata <b>senza spazi</b>. Serve ai confronti di contenuto («c'è, nell'ordine
+    /// giusto?»): pdfium perde lo spazio ai ritorni a capo automatici dei PDF generati dal banco
+    /// («die folgende» → «diefolgende»), e un confronto sensibile agli spazi darebbe zero a un testo che
+    /// c'è tutto. Gli spazi mancanti si misurano a parte, con <see cref="ExtractionMetrics.WordRecall"/>.
+    /// </summary>
+    public static string Squeeze(string? text) =>
+        Normalize(text).Replace(" ", string.Empty, StringComparison.Ordinal);
+
     /// <summary>True se <paramref name="normalizedPhrase"/> compare, contigua, in <paramref name="normalizedText"/>.</summary>
     public static bool ContainsPhrase(string normalizedText, string normalizedPhrase) =>
         normalizedPhrase.Length > 0 && normalizedText.Contains(normalizedPhrase, StringComparison.Ordinal);

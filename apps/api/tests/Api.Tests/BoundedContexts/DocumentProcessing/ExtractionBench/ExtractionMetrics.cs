@@ -40,16 +40,35 @@ internal static class ExtractionMetrics
             return null;
         }
 
-        var observed = observedHeadings.Select(ExtractionTextMatcher.Normalize).ToList();
+        var observed = observedHeadings.Select(ExtractionTextMatcher.Squeeze).ToList();
         var found = expectedHeadings
-            .Select(ExtractionTextMatcher.Normalize)
+            .Select(ExtractionTextMatcher.Squeeze)
             .Count(h => observed.Any(o => ExtractionTextMatcher.ContainsPhrase(o, h)));
         return (double)found / expectedHeadings.Count;
     }
 
-    /// <summary>Quota dei paragrafi attesi ritrovati, contigui, nel testo osservato.</summary>
+    /// <summary>
+    /// Quota dei paragrafi attesi ritrovati, contigui, nel testo osservato, <b>senza guardare gli
+    /// spazi</b>: dice se il contenuto c'è e in che ordine, non se le parole sono rimaste separate
+    /// (per quello c'è <see cref="WordRecall"/>).
+    /// </summary>
     public static double? ParagraphRecall(IReadOnlyList<string> expectedParagraphs, string observedText) =>
         PhraseRecall(expectedParagraphs, observedText);
+
+    /// <summary>
+    /// Quota delle parole distinte dei testi attesi che compaiono, <b>a parola intera</b>, nel testo
+    /// osservato. È la metrica graduata e sensibile alle parole fuse: una parola persa per uno spazio
+    /// mancante («alongthe») la abbassa di una parola, non di un paragrafo intero. Con tolleranza zero,
+    /// come per <see cref="ScanWordRecall"/>.
+    /// </summary>
+    public static double? WordRecall(IReadOnlyList<string> expectedTexts, string observedText, double ocrEditTolerance)
+    {
+        var words = expectedTexts
+            .SelectMany(t => ExtractionTextMatcher.Words(ExtractionTextMatcher.Normalize(t)))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        return ScanWordRecall(words, observedText, ocrEditTolerance);
+    }
 
     /// <summary>
     /// Quota delle celle attese ritrovate nel testo osservato. È una metrica <b>di testo</b>: dice se il
@@ -108,9 +127,9 @@ internal static class ExtractionMetrics
             return null;
         }
 
-        var text = ExtractionTextMatcher.Normalize(observedText);
+        var text = ExtractionTextMatcher.Squeeze(observedText);
         var positions = expectedSequence
-            .Select(m => text.IndexOf(ExtractionTextMatcher.Normalize(m), StringComparison.Ordinal))
+            .Select(m => text.IndexOf(ExtractionTextMatcher.Squeeze(m), StringComparison.Ordinal))
             .ToList();
 
         var inOrder = 0;
@@ -150,9 +169,9 @@ internal static class ExtractionMetrics
             return null;
         }
 
-        var text = ExtractionTextMatcher.Normalize(observedText);
+        var text = ExtractionTextMatcher.Squeeze(observedText);
         var found = expectedPhrases
-            .Select(ExtractionTextMatcher.Normalize)
+            .Select(ExtractionTextMatcher.Squeeze)
             .Count(p => ExtractionTextMatcher.ContainsPhrase(text, p));
         return (double)found / expectedPhrases.Count;
     }

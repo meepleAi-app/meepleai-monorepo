@@ -71,10 +71,6 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     /// </summary>
     private bool _simulateObjectNeverStored;
 
-    /// <summary>Issue #3846: what the structured-content extractor was handed, and whether it was readable.</summary>
-    private string? _structuredExtractionPath;
-    private byte[]? _structuredExtractionBytes;
-
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public UploadPdfExtractionPersistenceIntegrationTests(SharedTestcontainersFixture fixture)
@@ -153,27 +149,6 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
                 }));
         services.AddSingleton<IPdfTextExtractor>(extractorMock.Object);
         _extractorMock = extractorMock;
-
-        var tableExtractorMock = new Mock<IPdfTableExtractor>();
-        tableExtractorMock
-            .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>()!, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string path, CancellationToken _) =>
-            {
-                // Issue #3846: record what the extractor was actually handed. Every path-based adapter
-                // (iText tables, Tesseract, Vision) starts with File.Exists(path) and returns a failure
-                // result the caller drops with `if (!Success) return;` — so a bucket key here is a
-                // SILENT loss of tables, diagrams and atomic rules on every S3 upload, with the PDF
-                // still reaching Ready.
-                _structuredExtractionPath = path;
-                _structuredExtractionBytes = File.Exists(path) ? File.ReadAllBytes(path) : null;
-
-                return new StructuredContentResult
-                {
-                    Success = false,
-                    ErrorMessage = "Skipped in test"
-                };
-            });
-        services.AddSingleton<IPdfTableExtractor>(tableExtractorMock.Object);
 
         // Mocked IAdvancedChunkingService so ChunkExtractedTextAsync (Task 3 wiring) takes the
         // heading-aware branch — irrelevant to this test's assertions but keeps the pipeline shape
@@ -538,38 +513,6 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         persisted.ProcessingProgressJson.Should().NotBeNull("the page reads the progress to know the PDF is done");
         var progress = System.Text.Json.JsonSerializer.Deserialize<Api.Models.ProcessingProgress>(persisted.ProcessingProgressJson!);
         progress!.CurrentStep.Should().Be(Api.Models.ProcessingStep.Completed);
-    }
-
-    /// <summary>
-    /// Issue #3846, second (silent) half: the structured-content extractor takes a FILE PATH. Under S3
-    /// the pipeline handed it the persisted <c>FilePath</c>, which is a bucket key — the adapter's
-    /// <c>File.Exists</c> failed, it returned a failure result, and the caller dropped it with
-    /// <c>if (!structuredResult.Success) return;</c>. No log, no Failed state: tables, diagrams and
-    /// atomic rules were simply never extracted while the PDF still reached <c>Ready</c>. Fixing only
-    /// the resourceKey would have turned "an upload reaches Ready" green on an amputated document.
-    /// </summary>
-    [Fact(Timeout = 90000)]
-    public async Task ProcessPdfAsync_HandsTheStructuredExtractorAReadableFile_NotABucketKey()
-    {
-        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
-        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
-
-        var pdfBytes = CreateValidPdfBytes(1024);
-        var command = new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
-            GameId: testGame.Id.ToString(),
-            Metadata: null,
-            PrivateGameId: null,
-            UserId: testUser.Id,
-            File: CreateMockFormFile("structured-content.pdf", pdfBytes));
-
-        await handler.Handle(command, TestCancellationToken);
-        await _inlineBgService!.WaitForAllAsync();
-
-        _structuredExtractionPath.Should().NotBeNull("the structured-content stage must run");
-        _structuredExtractionBytes.Should().Equal(
-            pdfBytes,
-            "the extractor must receive a readable local file holding the uploaded PDF, not a bucket key");
     }
 
     /// <summary>

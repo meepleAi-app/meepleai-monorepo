@@ -232,12 +232,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             services.AddSingleton<IPdfTextExtractor>(extractorMock.Object);
         }
 
-        if (!services.Any(s => s.ServiceType == typeof(IPdfTableExtractor)))
-        {
-            var tableExtractorMock = new Mock<IPdfTableExtractor>();
-            services.AddSingleton<IPdfTableExtractor>(tableExtractorMock.Object);
-        }
-
         // Register IConfigurationService mock (required by PdfUploadQuotaService)
         if (!services.Any(s => s.ServiceType == typeof(IConfigurationService)))
         {

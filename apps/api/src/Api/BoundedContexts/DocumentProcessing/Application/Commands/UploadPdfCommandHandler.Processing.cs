@@ -250,7 +250,7 @@ internal partial class UploadPdfCommandHandler
     }
 
     /// <summary>
-    /// Extracts PDF text and structured content (tables, diagrams).
+    /// Extracts the PDF text, page by page.
     /// Returns (success, fullText, extractResult).
     /// </summary>
     private async Task<(bool success, string? fullText, PagedTextExtractionResult? result)> ExtractPdfContentAsync(

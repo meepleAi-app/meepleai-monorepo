@@ -24,7 +24,6 @@ on:
       - 'apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Commands/UploadPdfCommandHandler*.cs'
       - 'apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Services/PdfProcessingPipelineService.cs'
       - 'apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Services/PdfStorageKey.cs'
-      - 'apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Services/PdfLocalFile.cs'
       - 'apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Queries/DownloadPdfQueryHandler.cs'
       # I backend di storage e la loro selezione.
       - 'apps/api/src/Api/Services/Pdf/**'

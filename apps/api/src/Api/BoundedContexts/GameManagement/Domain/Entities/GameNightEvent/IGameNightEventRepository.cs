@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
@@ -39,6 +40,16 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     /// id is nobody.
     /// </summary>
     Task<bool> HasAcceptedEmailInvitationAsync(Guid gameNightId, Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #4921: the RSVP state an email guest reads as, per night, derived from the invitation they answered
+    /// while logged in (same binding as <see cref="HasAcceptedEmailInvitationAsync"/>): <c>Accepted</c> or
+    /// <c>Declined</c>. A night where the user answered none, or answered a link sent to another address,
+    /// is absent. No RSVP row is written on that path, so the aggregate cannot say it; the lists ask once
+    /// for all their nights.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, RsvpStatus>> GetEmailGuestRsvpStatusesAsync(
+        IReadOnlyCollection<Guid> gameNightIds, Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets published events with ScheduledAt between from and to, for reminder scheduling.

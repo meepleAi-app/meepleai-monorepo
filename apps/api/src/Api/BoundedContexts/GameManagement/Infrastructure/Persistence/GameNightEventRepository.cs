@@ -92,6 +92,38 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, RsvpStatus>> GetEmailGuestRsvpStatusesAsync(
+        IReadOnlyCollection<Guid> gameNightIds, Guid userId, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(gameNightIds);
+        if (gameNightIds.Count == 0 || userId == Guid.Empty)
+            return new Dictionary<Guid, RsvpStatus>();
+
+        var email = await GameNightInvitationQueries.NormalizedEmailOfAsync(DbContext, userId, cancellationToken)
+            .ConfigureAwait(false);
+        if (email is null)
+            return new Dictionary<Guid, RsvpStatus>();
+
+        var accepted = nameof(GameNightInvitationStatus.Accepted);
+        var rows = await DbContext.GameNightInvitations
+            .AsNoTracking()
+            .Where(GameNightInvitationQueries.AnsweredBy(userId, email))
+            .Where(i => gameNightIds.Contains(i.GameNightId))
+            .Select(i => new { i.GameNightId, i.Status })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // One invitation per address per night is the rule of the create command; if two ever exist, an
+        // acceptance outranks a decline, as it does for participation.
+        return rows
+            .GroupBy(r => r.GameNightId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Any(r => string.Equals(r.Status, accepted, StringComparison.Ordinal))
+                    ? RsvpStatus.Accepted
+                    : RsvpStatus.Declined);
+    }
+
     public async Task<GameNightEvent?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.GameNightEvents

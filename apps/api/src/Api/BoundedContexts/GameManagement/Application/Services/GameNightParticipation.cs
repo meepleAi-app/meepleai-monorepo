@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 
 namespace Api.BoundedContexts.GameManagement.Application.Services;
 
@@ -46,5 +47,35 @@ internal static class GameNightParticipation
         return await repository
             .HasAcceptedEmailInvitationAsync(night.Id, userId, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// #4921: the RSVP state the viewer reads as. A member has a row and that is the answer; an email
+    /// guest has none, and reads as the invitation they answered while logged in (<c>Accepted</c> or
+    /// <c>Declined</c>), derived by the repository; the organizer and a stranger read as <c>null</c>, as
+    /// before. The reads derive, nothing is written: the invitation stays the one record of the guest,
+    /// so the counts (#4706) keep summing it once.
+    /// </summary>
+    public static async Task<RsvpStatus?> ViewerRsvpStatusAsync(
+        GameNightEvent night,
+        Guid viewerId,
+        IGameNightEventRepository repository,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(night);
+        ArgumentNullException.ThrowIfNull(repository);
+
+        // The organizer has no RSVP and never had one: no roundtrip for them.
+        if (viewerId == Guid.Empty || night.OrganizerId == viewerId)
+            return null;
+
+        var rsvp = night.GetRsvp(viewerId);
+        if (rsvp is not null)
+            return rsvp.Status;
+
+        var derived = await repository
+            .GetEmailGuestRsvpStatusesAsync([night.Id], viewerId, cancellationToken)
+            .ConfigureAwait(false);
+        return derived.TryGetValue(night.Id, out var status) ? status : null;
     }
 }

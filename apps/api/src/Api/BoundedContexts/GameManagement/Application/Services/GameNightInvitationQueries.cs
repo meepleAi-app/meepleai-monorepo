@@ -50,4 +50,22 @@ internal static class GameNightInvitationQueries
         var accepted = nameof(GameNightInvitationStatus.Accepted);
         return i => i.RespondedByUserId == userId && i.Status == accepted && i.Email == normalizedEmail;
     }
+
+    /// <summary>
+    /// #4921: the invitation this account ANSWERED while logged in — accepted or declined — with the same
+    /// binding as <see cref="AcceptedBy"/> (answered by that account, addressed to that account's email).
+    /// It is the row an email guest can read their RSVP state from, and change from the app: a decline
+    /// is still theirs, even if it no longer seats them (<see cref="AcceptedBy"/> is the participation
+    /// rule, this is the ownership rule).
+    /// </summary>
+    public static Expression<Func<GameNightInvitationEntity, bool>> AnsweredBy(Guid userId, string normalizedEmail)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(normalizedEmail);
+
+        var accepted = nameof(GameNightInvitationStatus.Accepted);
+        var declined = nameof(GameNightInvitationStatus.Declined);
+        return i => i.RespondedByUserId == userId
+            && i.Email == normalizedEmail
+            && (i.Status == accepted || i.Status == declined);
+    }
 }

@@ -13,6 +13,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentDisputeTabContent } from '../AgentDisputeTabContent';
@@ -43,10 +44,13 @@ function renderContent(sessionId = 'sess-001'): ReturnType<typeof render> {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  // #4844: ArbitroModal reads the 409 sentences through useTranslation, so it needs an intl context.
   const ui: ReactElement = (
-    <QueryClientProvider client={queryClient}>
-      <AgentDisputeTabContent sessionId={sessionId} players={PLAYERS} />
-    </QueryClientProvider>
+    <IntlProvider locale="it" messages={{}}>
+      <QueryClientProvider client={queryClient}>
+        <AgentDisputeTabContent sessionId={sessionId} players={PLAYERS} />
+      </QueryClientProvider>
+    </IntlProvider>
   );
   return render(ui);
 }
@@ -129,9 +133,9 @@ describe('AgentDisputeTabContent — REST hydration on reload (#3391)', () => {
 
     // Wait until hydration has applied the REST snapshot...
     await waitFor(() =>
-      expect(useLiveSessionStore.getState().disputes.map((d) => d.id)).toContain('rest-1')
+      expect(useLiveSessionStore.getState().disputes.map(d => d.id)).toContain('rest-1')
     );
     // ...then the live SignalR dispute must still be present (merge, not blind replace).
-    expect(useLiveSessionStore.getState().disputes.map((d) => d.id)).toContain('live-1');
+    expect(useLiveSessionStore.getState().disputes.map(d => d.id)).toContain('live-1');
   });
 });

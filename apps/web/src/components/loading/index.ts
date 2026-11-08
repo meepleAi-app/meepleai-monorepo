@@ -8,7 +8,6 @@
  */
 
 export { Spinner, type SpinnerProps } from './Spinner';
-export { SkeletonLoader, type SkeletonLoaderProps } from './SkeletonLoader';
 export { TypingIndicator, type TypingIndicatorProps } from './TypingIndicator';
 export { MessageAnimator, type MessageAnimatorProps } from './MessageAnimator';
 export { LoadingButton, type LoadingButtonProps } from './LoadingButton';

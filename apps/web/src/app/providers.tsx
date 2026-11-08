@@ -21,6 +21,7 @@ import { CookieConsentBanner } from '@/components/legal';
 import { AddGameWizardProvider } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { SessionWarningModal } from '@/components/modals';
 import { IntlProvider } from '@/components/providers/IntlProvider';
+import { MotionProvider } from '@/components/providers/MotionProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PWAProvider } from '@/components/pwa';
 import { Toaster } from '@/components/ui/feedback/sonner';
@@ -174,14 +175,23 @@ function AppContent({ children }: { children: ReactNode }) {
  */
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <IntlProvider>
-      <ThemeProvider>
-        <QueryProvider>
-          <AuthProvider>
-            <ErrorBoundary componentName="App" showDetails={process.env.NODE_ENV === 'development'}>
-              <RouteErrorBoundary routeName="AppContent">
-                <AddGameWizardProvider>
-                  {/*
+    // #3898: framer-motion 13 non legge piu' `@emotion/is-prop-valid` da solo.
+    // Senza questo wrapper le prop non-DOM passate a un `motion.*` finiscono
+    // nell'elemento (attributi HTML non validi + warning React). E' il livello
+    // piu' esterno perche' `motion.*` compare in 86 file, modali e portali
+    // inclusi: il contesto React li raggiunge tutti.
+    <MotionProvider>
+      <IntlProvider>
+        <ThemeProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <ErrorBoundary
+                componentName="App"
+                showDetails={process.env.NODE_ENV === 'development'}
+              >
+                <RouteErrorBoundary routeName="AppContent">
+                  <AddGameWizardProvider>
+                    {/*
                     Asse B (#1897) WP5 T5 — StatePreviewProvider via dynamic loader.
                     DEC-4: `dynamic({ssr:false, loading:() => null})` guarantees the
                     provider impl is tree-shaken from production chunks (verified by
@@ -190,15 +200,16 @@ export function AppProviders({ children }: AppProvidersProps) {
                     chunks. In dev, the StatePreviewToggle is mounted by consumers
                     that opt in via `useStatePreview`.
                   */}
-                  <StatePreviewProvider>
-                    <AppContent>{children}</AppContent>
-                  </StatePreviewProvider>
-                </AddGameWizardProvider>
-              </RouteErrorBoundary>
-            </ErrorBoundary>
-          </AuthProvider>
-        </QueryProvider>
-      </ThemeProvider>
-    </IntlProvider>
+                    <StatePreviewProvider>
+                      <AppContent>{children}</AppContent>
+                    </StatePreviewProvider>
+                  </AddGameWizardProvider>
+                </RouteErrorBoundary>
+              </ErrorBoundary>
+            </AuthProvider>
+          </QueryProvider>
+        </ThemeProvider>
+      </IntlProvider>
+    </MotionProvider>
   );
 }

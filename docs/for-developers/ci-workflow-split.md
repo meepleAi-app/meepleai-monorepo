@@ -52,6 +52,17 @@ The branch protection rules currently track `GitGuardian Security Checks` only o
 
 Updating branch protection is a manual GitHub admin action that intentionally is NOT done inside this PR — it requires a green run of each new workflow first so the check names are registered. The rollout sequence is documented in epic #842.
 
+### `Security Scan / Dependency Vulnerabilities` — informativo per scelta (#3707)
+
+Il job resta **non required**, e la ragione è tecnica, non un rinvio: `security-scan.yml` dichiara `paths-ignore: ['**.md', 'docs/**', …]`. Un workflow che non parte non riporta alcuno stato — a differenza di un job `skipped`, che conta come `success` — quindi renderlo required bloccherebbe a tempo indeterminato ogni PR docs-only, in attesa di un check che non arriverà mai.
+
+Le due condizioni per riaprire la scelta:
+
+1. i `paths-ignore` vengono rimossi, o il job viene spostato in un workflow senza filtri di path;
+2. il gate è stabilmente verde — rendere bloccante un check ereditato rosso trasforma un problema di igiene in un blocco di rilascio.
+
+Finché resta informativo, il suo valore dipende dall'essere **verde di default**: un rosso deve tornare a essere un'anomalia leggibile. Il precedente è #3707, dove l'advisory GHSA-q939-rpr3-3284 (SSH.NET transitivo via Testcontainers) ha tenuto il check rosso su ogni branch per quattro giorni senza che nessuno lo leggesse più.
+
 ## Legacy `ci.yml` — co-existence and deprecation plan
 
 `ci.yml` continues to trigger on `pull_request: [main, main-staging]` and `push: [main-staging]`. It overlaps with `staging.yml` and `prod.yml`. This co-existence is intentional during the rollout:

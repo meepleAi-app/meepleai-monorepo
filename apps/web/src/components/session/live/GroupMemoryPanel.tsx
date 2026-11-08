@@ -95,7 +95,9 @@ export function GroupMemoryPanel({ groupId }: GroupMemoryPanelProps) {
 
       {/* Members */}
       <div className="space-y-1">
-        <span className="text-xs text-muted-foreground font-nunito uppercase tracking-wide">Members</span>
+        <span className="text-xs text-muted-foreground font-nunito uppercase tracking-wide">
+          Members
+        </span>
         <div className="flex flex-wrap gap-1.5">
           {group.members.map((member, index) => (
             <Badge
@@ -103,7 +105,7 @@ export function GroupMemoryPanel({ groupId }: GroupMemoryPanelProps) {
               variant="outline"
               className={
                 member.guestName
-                  ? 'bg-purple-50 border-purple-200 text-purple-700 text-xs font-nunito'
+                  ? 'bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300 text-xs font-nunito'
                   : 'bg-muted border-border text-foreground text-xs font-nunito'
               }
             >
@@ -143,7 +145,9 @@ export function GroupMemoryPanel({ groupId }: GroupMemoryPanelProps) {
       {/* Stats */}
       {group.stats && (
         <div className="space-y-1">
-          <span className="text-xs text-muted-foreground font-nunito uppercase tracking-wide">Stats</span>
+          <span className="text-xs text-muted-foreground font-nunito uppercase tracking-wide">
+            Stats
+          </span>
           <div className="flex gap-4 text-sm font-nunito">
             <span className="text-foreground">
               <strong className="font-quicksand">{group.stats.totalSessions}</strong> sessions

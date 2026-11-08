@@ -175,9 +175,7 @@ export class QueueDashboardPage extends BasePage {
    */
   async waitForJobListLoaded(): Promise<void> {
     // Wait for loading indicator to disappear (if present)
-    const loadingVisible = await this.jobListLoading
-      .isVisible({ timeout: 2_000 })
-      .catch(() => false);
+    const loadingVisible = await this.jobListLoading.isVisible({ timeout: 2_000 });
     if (loadingVisible) {
       await this.waitForElementToDisappear(this.jobListLoading, { timeout: 15_000 });
     }

@@ -1,9 +1,13 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.Services;
@@ -42,6 +46,7 @@ public class SendSessionChatMessageCommandHandlerTests
         _mockChatRepo = new Mock<ISessionChatRepository>();
         _mockMediator = new Mock<IMediator>();
         _handler = new SendSessionChatMessageCommandHandler(
+            SessionAccessGuardMocks.Permissive(),
             _mockSessionRepo.Object,
             _mockChatRepo.Object,
             _mockMediator.Object);
@@ -188,10 +193,16 @@ public class AskSessionAgentCommandHandlerTests
             _mockLlmService.Object,
             new Mock<IImagePreprocessor>().Object,
             new Mock<IGameStateExtractor>().Object,
-            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
     }
 
-    private static Session CreateSessionWithParticipant(Guid sessionId, Guid participantId)
+    /// <summary>The ownership gate (ADR-096) letting everyone through: the tests that are not about it.</summary>
+    private static Mock<IAnswerPreconditions> OpenGate() => new();
+
+    /// <summary>The access guard (#4837) letting everyone through: the tests that are not about it.</summary>
+    private static Mock<ISessionAccessGuard> OpenAccess() => new();
+
+    private static Session CreateSessionWithParticipant(Guid sessionId, Guid participantId, Guid? participantUserId = null)
     {
         var session = Session.Create(
             userId: Guid.NewGuid(),
@@ -200,7 +211,7 @@ public class AskSessionAgentCommandHandlerTests
 
         typeof(Session).GetProperty("Id")!.SetValue(session, sessionId);
 
-        var participant = new Participant { Id = participantId, SessionId = sessionId };
+        var participant = new Participant { Id = participantId, SessionId = sessionId, UserId = participantUserId };
         var participantsField = typeof(Session).GetField("_participants",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         var list = (List<Participant>)participantsField!.GetValue(session)!;
@@ -354,7 +365,7 @@ public class AskSessionAgentCommandHandlerTests
             mockLlm.Object,
             mockImagePreprocessor.Object,
             new Mock<IGameStateExtractor>().Object,
-            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
 
         var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
         using var listener = BuildCounterListener(AgentGroundingName, captures);
@@ -410,7 +421,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             new Mock<IImagePreprocessor>().Object, new Mock<IGameStateExtractor>().Object,
-            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
@@ -460,7 +471,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             new Mock<IImagePreprocessor>().Object, new Mock<IGameStateExtractor>().Object,
-            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
@@ -514,7 +525,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             mockImagePreprocessor.Object, new Mock<IGameStateExtractor>().Object,
-            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
@@ -566,7 +577,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             new Mock<IImagePreprocessor>().Object, new Mock<IGameStateExtractor>().Object,
-            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         // Act — client-cancelled token.
@@ -576,6 +587,420 @@ public class AskSessionAgentCommandHandlerTests
         await act.Should().ThrowAsync<OperationCanceledException>();
         mockLlm.Verify(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Never);
         mockLlm.Verify(l => l.GenerateMultimodalCompletionAsync(It.IsAny<IReadOnlyList<LlmMessage>>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // #4776: the retrieval of the session chat is behind the RAG ownership gate (ADR-096)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>A handler wired to a gate and a mediator that WOULD hand back a grounded answer if asked.</summary>
+    private sealed record GateRig(
+        AskSessionAgentCommandHandler Handler,
+        Mock<IAnswerPreconditions> Gate,
+        Mock<IMediator> Mediator,
+        Mock<ILlmService> Llm,
+        Mock<ISessionChatRepository> Chat,
+        Session Session,
+        Guid SessionId,
+        Guid SenderId);
+
+    /// <param name="participantUserId">The account behind the participant the message is written as (null: a guest).</param>
+    private static GateRig BuildGateRig(bool retrievalFlagOn, Guid? participantUserId = null, Action<Mock<IAnswerPreconditions>>? configureGate = null)
+    {
+        var sessionId = Guid.NewGuid();
+        var senderId = Guid.NewGuid();
+        var session = CreateSessionWithParticipant(sessionId, senderId, participantUserId);
+
+        var sessionRepo = new Mock<ISessionRepository>();
+        sessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        var chatRepo = new Mock<ISessionChatRepository>();
+        chatRepo.SetupSequence(r => r.GetNextSequenceNumberAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1).ReturnsAsync(2);
+
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GroundedSessionAnswerDto(
+                "You take turns placing settlements. [Page 2]",
+                new List<Api.Models.CitationDto> { new("doc-1", 2, 0.9f, "settlements", "full") },
+                GroundingStatus.Grounded,
+                0.82));
+        var llm = new Mock<ILlmService>();
+        llm.Setup(l => l.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer without the rulebook"));
+
+        var flags = new Mock<IFeatureFlagService>();
+        flags.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey, It.IsAny<Api.Infrastructure.Entities.UserRole?>()))
+            .ReturnsAsync(retrievalFlagOn);
+
+        // The vision branch (a photo of the board): the processed image and the model's reply about it.
+        var imagePreprocessor = new Mock<IImagePreprocessor>();
+        imagePreprocessor
+            .Setup(p => p.ProcessAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<ImageProcessingOptions?>()))
+            .ReturnsAsync(new ProcessedImage(new byte[] { 1, 2, 3 }, "image/jpeg", 10, 10, 3));
+        llm.Setup(l => l.GenerateMultimodalCompletionAsync(
+                It.IsAny<IReadOnlyList<LlmMessage>>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer about the photo"));
+
+        var gate = OpenGate();
+        configureGate?.Invoke(gate);
+
+        var handler = new AskSessionAgentCommandHandler(
+            sessionRepo.Object, chatRepo.Object, mediator.Object, llm.Object,
+            imagePreprocessor.Object, new Mock<IGameStateExtractor>().Object,
+            gate.Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            flags.Object);
+
+        return new GateRig(handler, gate, mediator, llm, chatRepo, session, sessionId, senderId);
+    }
+
+    /// <summary>The question goes out as the participant of the rig, from the authenticated <paramref name="caller"/>.</summary>
+    private static Task<AskSessionAgentResult> AskAs(GateRig rig, Guid caller) =>
+        rig.Handler.Handle(
+            new AskSessionAgentCommand(rig.SessionId, rig.SenderId, "How do I start my turn?", 1, RequestedBy: caller),
+            TestContext.Current.CancellationToken);
+
+    /// <summary>The same question with a photo of the board attached.</summary>
+    private static Task<AskSessionAgentResult> AskWithAPhotoAs(GateRig rig, Guid caller) =>
+        rig.Handler.Handle(
+            new AskSessionAgentCommand(
+                rig.SessionId, rig.SenderId, "What should I do?", 1,
+                new List<ChatImageAttachment> { new(new byte[] { 1, 2, 3 }, "image/jpeg", "board.jpg") },
+                RequestedBy: caller),
+            TestContext.Current.CancellationToken);
+
+    private static void DenyOwnership(Mock<IAnswerPreconditions> gate) => gate
+        .Setup(g => g.EnsureCanAskAboutGameAsync(
+            It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        .ThrowsAsync(new RagOwnershipRequiredException(Guid.NewGuid()));
+
+    private static void VerifyNoRetrieval(GateRig rig) =>
+        rig.Mediator.Verify(
+            m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+
+    [Fact]
+    public async Task Handle_FlagOn_OwnershipDenied_NeverStartsTheRetrieval_AndAnswersWithoutTheRulebook()
+    {
+        // Arrange — the asker never declared owning the game. The mediator WOULD return a grounded answer
+        // with the rulebook's text: if the retrieval started, the test would see it.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
+            .Setup(g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new RagOwnershipRequiredException(Guid.NewGuid())));
+
+        // Act
+        var result = await AskAs(rig, Guid.NewGuid());
+
+        // Assert — no passage of the rulebook went anywhere; the answer is the model's alone, and says WHY.
+        VerifyNoRetrieval(rig);
+        result.GroundingStatus.Should().Be(GroundingStatus.Ungrounded);
+        result.CitationsJson.Should().BeNull();
+        result.Answer.Should().Be(
+            AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice + "\n\nAnswer without the rulebook");
+        // The question is still part of the chat: the gate protects the rulebook, not the conversation.
+        rig.Chat.Verify(
+            r => r.AddAsync(It.IsAny<Api.BoundedContexts.SessionTracking.Domain.Entities.SessionChatMessage>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_OwnershipDenied_TheNoticeIsInTheSavedAndPublishedMessage_NotOnlyInTheResponse()
+    {
+        // Arrange — the answer is saved for the whole table to read, like the Arbiter's verdict: a notice kept in
+        // the HTTP response alone would reach only who asked, and the others would read an ungrounded answer.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
+            .Setup(g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new RagOwnershipRequiredException(Guid.NewGuid())));
+        var saved = new List<SessionChatMessage>();
+        rig.Chat
+            .Setup(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SessionChatMessage, CancellationToken>((m, _) => saved.Add(m));
+
+        // Act
+        await AskAs(rig, Guid.NewGuid());
+
+        // Assert — the agent's message (the second one) opens with the notice, and so does the event.
+        saved.Should().HaveCount(2);
+        saved[1].Content.Should().StartWith(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice);
+        saved[0].Content.Should().NotContain(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice,
+            "the notice qualifies the answer, never the player's question");
+        rig.Mediator.Verify(
+            m => m.Publish(
+                It.Is<SessionChatMessageSentEvent>(e => e.Content.StartsWith(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice, StringComparison.Ordinal)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_OwnershipDenied_ModelFails_TheApologyIsNotQualifiedByANotice()
+    {
+        // Arrange — there is no answer to qualify: «the answer does not rest on the rulebook» would describe
+        // an apology. The player reads the apology and asks again.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
+            .Setup(g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new RagOwnershipRequiredException(Guid.NewGuid())));
+        rig.Llm
+            .Setup(l => l.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("provider down"));
+
+        // Act
+        var result = await AskAs(rig, Guid.NewGuid());
+
+        // Assert
+        result.Answer.Should().NotContain(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice);
+        result.Answer.Should().StartWith("I'm sorry");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_OwnershipDenied_WithAPhoto_TheNoticeOpensTheAnswerAboutIt()
+    {
+        // Arrange — the vision branch is a different path to the same answer without the rulebook.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: DenyOwnership);
+
+        // Act
+        var result = await AskWithAPhotoAs(rig, Guid.NewGuid());
+
+        // Assert
+        VerifyNoRetrieval(rig);
+        result.Answer.Should().Be(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice + "\n\nAnswer about the photo");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_OwnershipDenied_WithAPhoto_ModelFails_TheApologyIsNotQualifiedByANotice()
+    {
+        // Arrange
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: DenyOwnership);
+        rig.Llm
+            .Setup(l => l.GenerateMultimodalCompletionAsync(
+                It.IsAny<IReadOnlyList<LlmMessage>>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("vision down"));
+
+        // Act
+        var result = await AskWithAPhotoAs(rig, Guid.NewGuid());
+
+        // Assert
+        result.Answer.Should().NotContain(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice);
+        result.Answer.Should().StartWith("I'm sorry");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_GateOpen_RetrievalFails_TheAnswerCarriesNoNotice()
+    {
+        // Arrange — the asker owns the game; the retrieval is what failed. That is not their doing, and the notice
+        // («possesso non dichiarato») would be false.
+        var callerId = Guid.NewGuid();
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: callerId);
+        rig.Mediator
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("retrieval down"));
+
+        // Act
+        var result = await AskAs(rig, callerId);
+
+        // Assert — the model alone answered, and says nothing about ownership.
+        result.Answer.Should().Be("Answer without the rulebook");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_OwnershipDenied_ALongAnswer_StillFitsTheColumnOfTheMessage()
+    {
+        // Arrange — an answer that fits by itself (4990 characters) but not with the notice in front of it. The
+        // content column is varchar(5000) and CreateAgentResponse does not check: a text over it fails at the save,
+        // after the question is stored and the model paid. The notice must not be what tips it over.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: DenyOwnership);
+        rig.Llm
+            .Setup(l => l.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(new string('x', 4990)));
+        var saved = new List<SessionChatMessage>();
+        rig.Chat
+            .Setup(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SessionChatMessage, CancellationToken>((m, _) => saved.Add(m));
+
+        // Act
+        var result = await AskAs(rig, Guid.NewGuid());
+
+        // Assert — saved and answered within the column, the notice first, the cut marked.
+        saved[1].Content.Length.Should().BeLessThanOrEqualTo(AskSessionAgentCommandHandler.MaxMessageLength);
+        saved[1].Content.Should().StartWith(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice);
+        saved[1].Content.Should().EndWith("…");
+        result.Answer.Length.Should().BeLessThanOrEqualTo(AskSessionAgentCommandHandler.MaxMessageLength);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_OwnershipDenied_ModelReplyIsBlank_IsNotSavedAsANoticeThatQualifiesNothing()
+    {
+        // Arrange — a reply made of spaces is not an answer. It kept failing at CreateAgentResponse before the
+        // notice existed; it must not turn into a saved message that says «this answer does not rest on the
+        // rulebook» with no answer under it.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: DenyOwnership);
+        rig.Llm
+            .Setup(l => l.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("   "));
+        var saved = new List<SessionChatMessage>();
+        rig.Chat
+            .Setup(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SessionChatMessage, CancellationToken>((m, _) => saved.Add(m));
+
+        // Act
+        var act = () => AskAs(rig, Guid.NewGuid());
+
+        // Assert — as before: nothing but the question is stored.
+        await act.Should().ThrowAsync<ArgumentException>();
+        saved.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_GateOpen_TheAnswerCarriesNoNotice()
+    {
+        // Arrange — the asker declared owning the game: the grounded answer goes out as it is.
+        var callerId = Guid.NewGuid();
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: callerId);
+
+        // Act
+        var result = await AskAs(rig, callerId);
+
+        // Assert
+        result.Answer.Should().NotContain(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice);
+        result.Answer.Should().Be("You take turns placing settlements. [Page 2]");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOff_TheAnswerCarriesNoNotice_NobodyWasDeniedAnything()
+    {
+        // Arrange — with the retrieval switched off the rulebook is not consulted for ANYONE: that is not a
+        // denial, and a notice about ownership on every answer would blame the player for a switch they did not flip.
+        var rig = BuildGateRig(retrievalFlagOn: false, participantUserId: Guid.NewGuid());
+
+        // Act
+        var result = await AskAs(rig, Guid.NewGuid());
+
+        // Assert
+        result.Answer.Should().Be("Answer without the rulebook");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_AsksTheGateForTheAuthenticatedCaller_AndForTheGameOfTheSession_ThenRetrieves()
+    {
+        // Arrange — the caller is also the account behind the participant: the ordinary case.
+        var callerId = Guid.NewGuid();
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: callerId);
+
+        // Act
+        var result = await AskAs(rig, callerId);
+
+        // Assert — the gate is asked about the caller (not about the owner of the session), for this game,
+        // and an open gate lets the grounded answer through, at the tier of that same caller.
+        rig.Gate.Verify(
+            g => g.EnsureCanAskAboutGameAsync(
+                callerId, It.IsAny<string?>(), rig.Session.GameId, It.IsAny<CancellationToken>()),
+            Times.Once);
+        rig.Mediator.Verify(
+            m => m.Send(It.Is<AskGroundedSessionQuery>(q => q.UserId == callerId), It.IsAny<CancellationToken>()),
+            Times.Once);
+        result.GroundingStatus.Should().Be(GroundingStatus.Grounded);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_ChoosingAnotherParticipant_DoesNotBorrowTheirOwnership()
+    {
+        // Arrange — H owns the game and declared it; F did not. F writes AS H's participant: SenderId is picked
+        // by the client and a participant id is readable by everyone at the table. The gate says yes to H only.
+        var hostUserId = Guid.NewGuid();
+        var friendUserId = Guid.NewGuid();
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: hostUserId, configureGate: gate => gate
+            .Setup(g => g.EnsureCanAskAboutGameAsync(
+                It.Is<Guid>(u => u != hostUserId), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new RagOwnershipRequiredException(Guid.NewGuid())));
+
+        // Act — the caller is F, the participant is H's.
+        var result = await AskAs(rig, friendUserId);
+
+        // Assert — judged on F: denied, and no passage of the rulebook is retrieved.
+        rig.Gate.Verify(
+            g => g.EnsureCanAskAboutGameAsync(
+                friendUserId, It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        rig.Gate.Verify(
+            g => g.EnsureCanAskAboutGameAsync(
+                hostUserId, It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        VerifyNoRetrieval(rig);
+        result.GroundingStatus.Should().Be(GroundingStatus.Ungrounded);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_GuestParticipant_IsJudgedOnTheCallerWhoWritesForThem()
+    {
+        // Arrange — a guest has no account: whoever types on their behalf is judged on their own.
+        var callerId = Guid.NewGuid();
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: null);
+
+        // Act
+        await AskAs(rig, callerId);
+
+        // Assert
+        rig.Gate.Verify(
+            g => g.EnsureCanAskAboutGameAsync(
+                callerId, It.IsAny<string?>(), rig.Session.GameId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_NoAuthenticatedCaller_IsAskedAboutAsNoOne()
+    {
+        // Arrange — a command that did not come through the endpoint carries no caller: nobody, never a
+        // participant's account by default.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid());
+
+        // Act
+        await AskAs(rig, Guid.Empty);
+
+        // Assert
+        rig.Gate.Verify(
+            g => g.EnsureCanAskAboutGameAsync(
+                Guid.Empty, It.IsAny<string?>(), rig.Session.GameId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOff_DoesNotAskTheGate_ThereIsNoRetrievalToProtect()
+    {
+        // Arrange
+        var rig = BuildGateRig(retrievalFlagOn: false, participantUserId: Guid.NewGuid());
+
+        // Act
+        await AskAs(rig, Guid.NewGuid());
+
+        // Assert
+        VerifyNoRetrieval(rig);
+        rig.Gate.Verify(
+            g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_GateFailureThatIsNotADenial_PropagatesInsteadOfFailingOpen()
+    {
+        // Arrange — the access check itself broke (database down). The retrieval below degrades fail-open
+        // on ANY error, so a gate inside that try would turn "could not check" into "allowed".
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
+            .Setup(g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("access store unavailable")));
+
+        // Act
+        var act = () => AskAs(rig, Guid.NewGuid());
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        VerifyNoRetrieval(rig);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -618,7 +1043,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             new Mock<IImagePreprocessor>().Object, mockExtractor.Object,
-            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         // Act — empty turn text.
@@ -660,7 +1085,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             new Mock<IImagePreprocessor>().Object, mockExtractor.Object,
-            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         // Act — whitespace text.

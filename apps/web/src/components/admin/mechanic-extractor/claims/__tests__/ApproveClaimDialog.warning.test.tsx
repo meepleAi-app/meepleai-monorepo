@@ -1,6 +1,9 @@
 /** @vitest-environment jsdom */
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+
+import { backgroundClasses } from '@/test-utils/background-classes';
+
 import { ApproveClaimDialog } from '../ApproveClaimDialog';
 
 describe('ApproveClaimDialog fail warning', () => {
@@ -30,5 +33,29 @@ describe('ApproveClaimDialog fail warning', () => {
       />
     );
     expect(screen.queryByTestId('approve-fail-warning')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * #4548 — il conferma è un `AlertDialogAction`, che compone `buttonVariants()`: le classi della
+ * variante `default` col modificatore (`dark:bg-primary/90`, `dark:hover:bg-primary`) battevano
+ * il verde nella console admin, sempre scura.
+ */
+describe('ApproveClaimDialog confirm button (#4548)', () => {
+  it('ha solo il fondo verde del consumatore, col testo bianco', () => {
+    render(
+      <ApproveClaimDialog
+        open
+        onOpenChange={() => {}}
+        onConfirm={() => {}}
+        isPending={false}
+        claimPreview="ok"
+        validations={[]}
+      />
+    );
+
+    const confirm = screen.getByTestId('approve-claim-confirm');
+    expect(backgroundClasses(confirm)).toEqual(['bg-green-700', 'hover:bg-green-800']);
+    expect(confirm).toHaveClass('text-white');
   });
 });

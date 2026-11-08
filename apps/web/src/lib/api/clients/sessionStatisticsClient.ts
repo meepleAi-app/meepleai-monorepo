@@ -20,12 +20,12 @@ export function createSessionStatisticsClient(deps: {
   return {
     async getStatistics(monthsBack?: number): Promise<SessionStatistics> {
       const params = monthsBack ? `?monthsBack=${monthsBack}` : '';
-      const data = await httpClient.get(`/game-sessions/session-statistics${params}`);
+      const data = await httpClient.get(`/api/v1/game-sessions/session-statistics${params}`);
       return SessionStatisticsSchema.parse(data);
     },
 
     async getGameStatistics(gameId: string): Promise<GameStatistics> {
-      const data = await httpClient.get(`/game-sessions/session-statistics/game/${gameId}`);
+      const data = await httpClient.get(`/api/v1/game-sessions/session-statistics/game/${gameId}`);
       return GameStatisticsSchema.parse(data);
     },
   };

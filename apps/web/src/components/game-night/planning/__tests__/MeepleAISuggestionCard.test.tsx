@@ -14,6 +14,21 @@ describe('MeepleAISuggestionCard', () => {
     expect(card).toHaveAttribute('data-entity', 'agent');
   });
 
+  // The featured variant is a fixed 400px wide; the planning layout puts this card in a 320px column. jsdom has no
+  // layout, so the contract is the cap that keeps the card inside whatever column holds it.
+  it('caps the card width to its column in the empty state', () => {
+    render(<MeepleAISuggestionCard suggestions={[]} />);
+    expect(screen.getByTestId('ai-suggestion-card')).toHaveClass('max-w-full');
+  });
+
+  it('caps the card width to its column when suggestions are listed', () => {
+    render(
+      <MeepleAISuggestionCard suggestions={[{ gameTitle: 'Catan', reason: 'Good for groups' }]} />
+    );
+    const card = screen.getByTestId('ai-suggestion-card').querySelector('[data-entity="agent"]');
+    expect(card).toHaveClass('max-w-full');
+  });
+
   it('displays suggestion titles when provided', () => {
     const suggestions = [
       { gameTitle: 'Catan', reason: 'Good for groups' },

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Helpers;
 using Api.Infrastructure;
@@ -70,11 +71,26 @@ internal class KeywordSearchService : IKeywordSearchService
         // column; non-english uses a query-time to_tsvector with the SAME config (see tsvectorExpr).
         var textSearchConfig = await ResolveGameFtsConfigAsync(gameId, language, cancellationToken).ConfigureAwait(false);
 
+        // #3768: il titolo del gioco serve a ESCLUDERE i suoi token dalla tsquery, non a cercarli.
+        var gameTitle = await ResolveGameTitleAsync(gameId, cancellationToken).ConfigureAwait(false);
+
         try
         {
             // Build tsquery for full-text search (Slice A: synonym expansion is language-aware,
             // so the resolved per-game FTS config is threaded through to BuildTsQuery).
-            var tsQuery = BuildTsQuery(query, phraseSearch, textSearchConfig);
+            var tsQuery = BuildTsQuery(query, phraseSearch, textSearchConfig, gameTitle);
+
+            // #3768: senza token residui non c'è niente da cercare. `to_tsquery(cfg, '')` è un
+            // errore SQL, non un risultato vuoto, quindi il caso va intercettato qui — e restituire
+            // zero risultati è corretto: un candidato senza segnale lessicale conserva il suo
+            // VectorScore nella fusione, dove `absent = 0` è load-bearing (#3735).
+            if (string.IsNullOrWhiteSpace(tsQuery))
+            {
+                _logger.LogInformation(
+                    "Keyword search: query='{Query}', gameId={GameId} — nessun token oltre al nome del gioco, braccio lessicale saltato (#3768)",
+                    query, gameId);
+                return new List<KeywordSearchResult>();
+            }
 
             _logger.LogInformation(
                 "Keyword search: query='{Query}', gameId={GameId}, phraseSearch={PhraseSearch}, boostTerms={BoostTerms}, limit={Limit}, ftsConfig={FtsConfig}",
@@ -94,13 +110,16 @@ internal class KeywordSearchService : IKeywordSearchService
             // Perf: subquery avoids double ts_rank_cd evaluation (computed once in inner SELECT, filtered in outer WHERE)
             // Phase D (D6): include role_tags in the projection so the hybrid re-ranker can
             // apply a role-match boost without an extra round-trip.
+            // #4244: a private game lives in "PrivateGameId"; "GameId" is an FK to shared_games and
+            // is null for its chunks. The filter looks at both columns, and the projection
+            // coalesces them, because the row type reads the game as a non-nullable Guid.
             var sql = $@"
                 SELECT * FROM (
                     SELECT
                         ""Id"",
                         ""Content"",
                         ""PdfDocumentId"",
-                        ""GameId"",
+                        COALESCE(""GameId"", ""PrivateGameId"") AS ""GameId"",
                         ""ChunkIndex"",
                         ""PageNumber"",
                         role_tags AS ""RoleTags"",
@@ -108,7 +127,7 @@ internal class KeywordSearchService : IKeywordSearchService
                         ts_rank_cd({tsvectorExpr}, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
                     FROM text_chunks
                     WHERE
-                        ""GameId"" = @gameId::uuid
+                        (""GameId"" = @gameId::uuid OR ""PrivateGameId"" = @gameId::uuid)
                         AND {tsvectorExpr} @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
                 ) ranked
                 WHERE ""RelevanceScore"" >= @minScore
@@ -263,10 +282,23 @@ internal class KeywordSearchService : IKeywordSearchService
     /// - Phrase: "en passant" with phraseSearch=true returns "en &lt;-&gt; passant"
     /// - Synonym (italian): "setup" returns "(setup | preparazione | allestimento)"
     /// </remarks>
-    internal static string BuildTsQuery(string query, bool phraseSearch, string ftsConfig)
+    internal static string BuildTsQuery(string query, bool phraseSearch, string ftsConfig, string? gameTitle = null)
     {
         // Sanitize query to prevent SQL injection and tsquery syntax errors
         var sanitizedQuery = SanitizeQuery(query);
+
+        // #3768: togli i token del NOME DEL GIOCO. Questa ricerca gira gia' filtrata per GameId,
+        // quindi ogni candidato appartiene a quel gioco e il nome vi compare ovunque: e' un termine
+        // a IDF nullo, che non sceglie fra i chunk ma premia quelli che lo ripetono di piu'.
+        //
+        // Misurato su staging per `catan-setup-it`: il rango 1 del braccio lessicale era la pagina
+        // di copyright («Copyright © 2025 CATAN GmbH…», ts_rank_cd 0.2256) davanti alle regole vere,
+        // e con ts_rank_cd normalizzato per lunghezza un chunk breve che ripete il nome vince
+        // sistematicamente. Quei candidati sono quelli che il gioco manda alla fusione globale.
+        //
+        // Il filtro NON si applica al percorso senza gameId (gameTitle null): li' il nome del gioco
+        // e' esattamente il segnale che sceglie il gioco (#3735).
+        sanitizedQuery = RemoveGameTitleTokens(sanitizedQuery, gameTitle);
 
         // Handle phrase search with proximity operator <->
         if (phraseSearch && sanitizedQuery.Contains(' '))
@@ -326,8 +358,26 @@ internal class KeywordSearchService : IKeywordSearchService
     /// de-duplicated. No-op for a null/blank config or a config without a curated table
     /// (english/simple/…), so English retrieval is byte-identical.
     /// </summary>
-    internal static IReadOnlyList<string> ExpandHeadingMatchTerms(IReadOnlyList<string>? terms, string? ftsConfig)
+    internal static IReadOnlyList<string> ExpandHeadingMatchTerms(
+        IReadOnlyList<string>? terms,
+        string? ftsConfig,
+        string? gameTitle = null)
     {
+        // #3768: togli i token del NOME DEL GIOCO, per lo stesso motivo di #3769 sulla tsquery —
+        // dentro un gioco gia' filtrato per GameId quel nome ha IDF nullo. Qui pesa di piu' che nel
+        // braccio lessicale: HeadingMatchBoost e' additivo e vale 0.15, mentre rrfSum satura a
+        // 1/61 = 0.0164, quindi un match di heading non inclina il ranking, lo sostituisce. E le
+        // heading che contengono il nome del gioco sono proprio quelle senza contenuto: il colophon
+        // (`catan.com`), il pie' di pagina (`4 of 5 CATAN CN3081`), la copertina.
+        //
+        // Il filtro precede la return anticipata qui sotto: la maggior parte dei giochi risolve a
+        // una config senza tabella di sinonimi ('english'), e applicarlo dopo lo renderebbe un
+        // no-op proprio sul caso misurato.
+        //
+        // Come in #3769, NON si applica al percorso senza gameId (gameTitle null): li' il nome del
+        // gioco e' esattamente il segnale che sceglie il gioco (#3735).
+        terms = RemoveGameTitleTerms(terms, gameTitle);
+
         if (terms is null || terms.Count == 0
             || string.IsNullOrEmpty(ftsConfig)
             || !SynonymTablesByConfig.TryGetValue(ftsConfig, out var synonyms))
@@ -376,9 +426,9 @@ internal class KeywordSearchService : IKeywordSearchService
     /// <para>
     /// A token with a synonym entry becomes a grouped alternation <c>(head | syn1 | syn2)</c>;
     /// multi-word synonyms are joined with the proximity operator <c>&lt;-&gt;</c> (a bare space is
-    /// a to_tsquery syntax error). <paramref name="sanitizedQuery"/> is already operator/paren
-    /// stripped by <see cref="SanitizeQuery"/>, and the injected grouping characters come only from
-    /// this controlled table, so the fragment is injection-safe.
+    /// a to_tsquery syntax error). <paramref name="sanitizedQuery"/> carries only letters, digits,
+    /// hyphens and inner dots after <see cref="SanitizeQuery"/> (#4479), and the injected grouping
+    /// characters come only from this controlled table, so the fragment is injection-safe.
     /// </para>
     /// </summary>
     internal static string ExpandTermsToTsQuery(string sanitizedQuery, string ftsConfig)
@@ -425,6 +475,88 @@ internal class KeywordSearchService : IKeywordSearchService
     /// Sanitizes user query to prevent tsquery syntax errors and SQL injection.
     /// Removes special PostgreSQL full-text search operators and dangerous characters.
     /// </summary>
+    /// <summary>
+    /// Rimuove dai token della query quelli che compongono il titolo del gioco (#3768).
+    /// </summary>
+    /// <remarks>
+    /// Restituisce la query invariata quando <paramref name="gameTitle"/> è null o vuoto — il
+    /// percorso non filtrato per gioco. Può restituire stringa vuota se la query era fatta solo del
+    /// nome del gioco: il chiamante deve trattarla come «niente da cercare» e saltare la ricerca
+    /// lessicale, perché <c>to_tsquery(cfg, '')</c> è un errore SQL, non un risultato vuoto.
+    /// </remarks>
+    private static string RemoveGameTitleTokens(string sanitizedQuery, string? gameTitle)
+    {
+        if (string.IsNullOrWhiteSpace(sanitizedQuery) || string.IsNullOrWhiteSpace(gameTitle))
+        {
+            return sanitizedQuery;
+        }
+
+        var titleTokens = SanitizeQuery(gameTitle)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(NormaliseForTitleMatch)
+            .Where(t => t.Length > 0)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (titleTokens.Count == 0)
+        {
+            return sanitizedQuery;
+        }
+
+        var kept = sanitizedQuery
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(token => !titleTokens.Contains(NormaliseForTitleMatch(token)));
+
+        return string.Join(' ', kept);
+    }
+
+    /// <summary>
+    /// Toglie dai termini di heading-match quelli che compongono il titolo del gioco (#3768).
+    /// </summary>
+    /// <remarks>
+    /// Usa la stessa forma di confronto della tsquery (<see cref="NormaliseForTitleMatch"/>), così
+    /// il nome del gioco viene riconosciuto allo stesso modo nei due bracci. Può restituire una
+    /// lista vuota — una query fatta del solo nome del gioco non ha niente su cui premiare una
+    /// heading, e il chiamante non va in errore, a differenza di <c>to_tsquery(cfg, '')</c>.
+    /// </remarks>
+    private static IReadOnlyList<string>? RemoveGameTitleTerms(
+        IReadOnlyList<string>? terms,
+        string? gameTitle)
+    {
+        if (terms is null || terms.Count == 0 || string.IsNullOrWhiteSpace(gameTitle))
+        {
+            return terms;
+        }
+
+        var titleTokens = SanitizeQuery(gameTitle)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(NormaliseForTitleMatch)
+            .Where(t => t.Length > 0)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (titleTokens.Count == 0)
+        {
+            return terms;
+        }
+
+        return terms
+            .Where(t => !titleTokens.Contains(NormaliseForTitleMatch(t)))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Forma di confronto per il match con il titolo: solo lettere e cifre (#3768).
+    /// </summary>
+    /// <remarks>
+    /// Fino a #4479 <c>SanitizeQuery</c> lasciava passare la punteggiatura, e l'ultimo token di una
+    /// domanda arrivava come <c>"Catan?"</c>: confrontare i token grezzi faceva fallire il filtro
+    /// proprio sulle query di produzione. Ora la punteggiatura separa le parole già lì, ma restano
+    /// i punti interni («7.5») e i trattini, quindi il confronto resta su lettere e cifre.
+    /// </remarks>
+    private static string NormaliseForTitleMatch(string token)
+    {
+        return string.Concat(token.Where(char.IsLetterOrDigit));
+    }
+
     private static string SanitizeQuery(string query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -432,25 +564,23 @@ internal class KeywordSearchService : IKeywordSearchService
             return string.Empty;
         }
 
-        // Remove or escape special tsquery operators: & | ! <-> ( ) '
-        // Keep only alphanumeric characters, spaces, and hyphens
-        var sanitized = query
-            .Replace("'", "") // Remove single quotes to prevent SQL injection
-            .Replace("&", " ")
-            .Replace("|", " ")
-            .Replace("!", " ")
-            .Replace("(", "")
-            .Replace(")", "")
-            .Replace("<->", " ")
-            .Trim();
-
-        // Remove multiple spaces
-        while (sanitized.Contains("  "))
+        // Keep only letters, digits and hyphens; every other character separates words. The text goes
+        // into to_tsquery, where punctuation is syntax: #4479 found «(2:1),» in a user's question
+        // failing the whole answer with 42601, and «:*» or «<2>» changing its meaning (prefix match,
+        // word distance). A blacklist of operators missed the colon, so this is an allowlist. The
+        // apostrophe separates too: «l'insediamento» is «l insediamento», not «linsediamento».
+        // A dot between two letters or digits stays: Postgres reads «3.5» and «catan.com» as one word.
+        var kept = new char[query.Length];
+        for (var i = 0; i < query.Length; i++)
         {
-            sanitized = sanitized.Replace("  ", " ");
+            var c = query[i];
+            var innerDot = c == '.' && i > 0 && i < query.Length - 1
+                && char.IsLetterOrDigit(query[i - 1]) && char.IsLetterOrDigit(query[i + 1]);
+            kept[i] = char.IsLetterOrDigit(c) || c == '-' || innerDot
+                || CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark ? c : ' ';
         }
 
-        return sanitized;
+        return string.Join(' ', new string(kept).Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
     /// <summary>
@@ -491,6 +621,47 @@ internal class KeywordSearchService : IKeywordSearchService
         => ResolveGameFtsConfigAsync(gameId, language, cancellationToken);
 
     /// <summary>
+    /// Titolo del gioco, usato solo per escluderne i token dalla tsquery (#3768).
+    /// </summary>
+    /// <remarks>
+    /// Fallisce in silenzio restituendo null: senza titolo il comportamento torna a quello
+    /// precedente, che è degradato ma non rotto. Far fallire una ricerca perché non si è potuto
+    /// leggere un nome sarebbe sproporzionato.
+    /// </remarks>
+    public async Task<string?> ResolveGameTitleAsync(Guid gameId, CancellationToken cancellationToken = default)
+    {
+        var previousTimeout = _dbContext.Database.GetCommandTimeout();
+        try
+        {
+            _dbContext.Database.SetCommandTimeout(3);
+            return await _dbContext.Database
+                // #4244: a private game has a title too. Raw SQL does not go through the EF query
+                // filter of PrivateGameEntity, hence the explicit is_deleted.
+                .SqlQueryRaw<string>(
+                    @"SELECT title AS ""Value"" FROM shared_games WHERE id = @gameId::uuid
+                      UNION ALL
+                      SELECT title AS ""Value"" FROM private_games WHERE id = @gameId::uuid AND NOT is_deleted
+                      LIMIT 1",
+                    new NpgsqlParameter("@gameId", gameId.ToString()))
+                .AsNoTracking()
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // il titolo è un'ottimizzazione del ranking, non un requisito
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(ex,
+                "Keyword search: titolo del gioco {GameId} non risolto, la tsquery conserverà il nome del gioco (#3768)",
+                gameId);
+            return null;
+        }
+        finally
+        {
+            _dbContext.Database.SetCommandTimeout(previousTimeout);
+        }
+    }
+
+    /// <summary>
     /// Detects the dominant document language for a game (from <c>pdf_documents.Language</c>,
     /// joined via the game's chunks) and resolves it to an FTS config. Keyword-retrieval callers
     /// do not thread a per-game language, so it is detected here rather than pinned to english.
@@ -507,7 +678,8 @@ internal class KeywordSearchService : IKeywordSearchService
                     SELECT pd.""Language"" AS ""Value""
                     FROM text_chunks tc
                     JOIN pdf_documents pd ON pd.""Id"" = tc.""PdfDocumentId""
-                    WHERE tc.""GameId"" = @gameId::uuid AND pd.""Language"" IS NOT NULL AND pd.""Language"" <> ''
+                    WHERE (tc.""GameId"" = @gameId::uuid OR tc.""PrivateGameId"" = @gameId::uuid)
+                      AND pd.""Language"" IS NOT NULL AND pd.""Language"" <> ''
                     GROUP BY pd.""Language""
                     ORDER BY count(*) DESC
                     LIMIT 1",

@@ -70,10 +70,10 @@ public sealed class BulkReindexFailedResetsPdfIntegrationTests : IAsyncLifetime
         _databaseName = $"test_bulkfailed_reset_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        // useNoTrackingDefault: true reproduces the production QueryTrackingBehavior.NoTracking
+        // #3866: the context reproduces the production QueryTrackingBehavior.NoTracking default
         // default, so a missing `.AsTracking()` on the PDF reset query would drop the mutation.
         var services = IntegrationServiceCollectionBuilder.CreateBase(
-            _isolatedDbConnectionString, useNoTrackingDefault: true);
+            _isolatedDbConnectionString);
 
         services.AddSingleton<IHttpContextAccessor>(new Mock<IHttpContextAccessor>().Object);
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();

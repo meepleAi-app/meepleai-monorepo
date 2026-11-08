@@ -140,12 +140,50 @@ public interface ISharedGameRepository
     Task<SharedGame?> GetGameByFaqIdAsync(Guid faqId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #4557 — adds one vote to a FAQ and returns the new count, without loading or saving the
+    /// <c>SharedGame</c> aggregate.
+    ///
+    /// <para>
+    /// A vote is a counter on <c>game_faqs</c>, not a change to the game. It is public and
+    /// anonymous, so it must not go through <see cref="Update"/>: that rewrites the game row and takes
+    /// its <c>xmin</c> check, so two simultaneous votes would end in a 409. (Before #4585 it also
+    /// zeroed <c>has_knowledge_base</c>, <c>is_rag_public</c>, <c>BggRawData</c> and
+    /// <c>test_run_id</c>, which the mapper did not carry.)
+    /// </para>
+    /// <para>
+    /// Executes immediately, server-side, as <c>upvote_count = upvote_count + 1</c>: concurrent votes
+    /// are serialised by Postgres and all counted. Does NOT call <c>SaveChanges</c> and bypasses the
+    /// change tracker. A FAQ of a soft-deleted game is not found.
+    /// </para>
+    /// </summary>
+    /// <param name="faqId">The FAQ ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The new upvote count and the game the FAQ belongs to (#4565), or null when the FAQ does not exist or its game is deleted.</returns>
+    Task<FaqUpvoteResult?> IncrementFaqUpvoteAsync(Guid faqId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a shared game by an Errata ID contained within it.
     /// </summary>
     /// <param name="errataId">The Errata ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The game if found, null otherwise</returns>
     Task<SharedGame?> GetGameByErrataIdAsync(Guid errataId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #4596 — gets a shared game by its ID WITH its quick questions loaded. Soft-deleted games are not
+    /// found.
+    ///
+    /// <para>
+    /// The only read that loads the quick questions: <see cref="GetByIdAsync"/> does not. Replacing,
+    /// removing or editing a question needs the rows already saved to be in the aggregate;
+    /// <c>AddQuickQuestion</c> works without them (the new question becomes an INSERT). A game read with
+    /// <see cref="GetByIdAsync"/> and saved never touches <c>quick_questions</c> that it did not read.
+    /// </para>
+    /// </summary>
+    /// <param name="id">The game ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The game with its quick questions if found, null otherwise</returns>
+    Task<SharedGame?> GetByIdWithQuickQuestionsAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a shared game by its ID, including soft-deleted games.

@@ -8,7 +8,9 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// Only one template per game can be active at a time.
 /// Issue #2400: GameStateTemplate Entity + AI Generation
 /// </summary>
+/// <param name="SharedGameId">#4543: il gioco del segmento <c>{id}</c>; un template di un altro gioco risponde 404</param>
 /// <param name="TemplateId">The ID of the template to activate</param>
 internal record ActivateGameStateTemplateCommand(
+    Guid SharedGameId,
     Guid TemplateId
 ) : ICommand<GameStateTemplateDto>;

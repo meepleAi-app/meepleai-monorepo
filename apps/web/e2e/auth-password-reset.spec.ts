@@ -443,22 +443,10 @@ test.describe('Password Reset - Edge Cases', () => {
 
     // Should show error message from real backend failure
     const errorVisible =
-      (await page
-        .getByText(/failed to send reset email/i)
-        .isVisible({ timeout: 5000 })
-        .catch(() => false)) ||
-      (await page
-        .getByText(/internal server error/i)
-        .isVisible({ timeout: 5000 })
-        .catch(() => false)) ||
-      (await page
-        .getByText(/something went wrong/i)
-        .isVisible({ timeout: 5000 })
-        .catch(() => false)) ||
-      (await page
-        .getByText(/error/i)
-        .isVisible({ timeout: 5000 })
-        .catch(() => false));
+      (await page.getByText(/failed to send reset email/i).isVisible({ timeout: 5000 })) ||
+      (await page.getByText(/internal server error/i).isVisible({ timeout: 5000 })) ||
+      (await page.getByText(/something went wrong/i).isVisible({ timeout: 5000 })) ||
+      (await page.getByText(/error/i).isVisible({ timeout: 5000 }));
 
     expect(errorVisible).toBeTruthy();
   });

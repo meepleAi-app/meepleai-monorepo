@@ -38,11 +38,13 @@ async function loginAsAdmin(page: Page): Promise<void> {
 async function navigateToPipelineBuilder(page: Page): Promise<void> {
   await page.goto(PIPELINE_BUILDER_URL);
   // Wait for the page to load - check for toolbar or canvas
-  await page.waitForSelector('.react-flow, [class*="react-flow"], [data-testid="pipeline-canvas"]', {
-    timeout: 10000,
-  }).catch(() => {
-    // Page might not have test IDs, just wait for content to load
-  });
+  await page
+    .waitForSelector('.react-flow, [class*="react-flow"], [data-testid="pipeline-canvas"]', {
+      timeout: 10000,
+    })
+    .catch(() => {
+      // Page might not have test IDs, just wait for content to load
+    });
   // Wait for basic page content
   await page.waitForTimeout(1000);
 }
@@ -71,7 +73,10 @@ test.describe('Pipeline Builder - Page Loading', () => {
   test('should display the toolbar', async ({ page }) => {
     await navigateToPipelineBuilder(page);
     // Toolbar contains save, undo, redo buttons
-    const saveButton = page.locator('button').filter({ has: page.locator('svg') }).first();
+    const saveButton = page
+      .locator('button')
+      .filter({ has: page.locator('svg') })
+      .first();
     await expect(saveButton).toBeVisible({ timeout: 5000 });
   });
 });
@@ -84,7 +89,9 @@ test.describe('Pipeline Builder - Plugin Palette', () => {
 
   test('should display plugin categories', async ({ page }) => {
     // Check for category headers or plugin items
-    const pluginItems = page.locator('[class*="plugin"], [class*="palette"], [data-testid*="plugin"]');
+    const pluginItems = page.locator(
+      '[class*="plugin"], [class*="palette"], [data-testid*="plugin"]'
+    );
     const count = await pluginItems.count();
     // Should have at least some plugin-related elements
     expect(count).toBeGreaterThanOrEqual(0);
@@ -109,7 +116,10 @@ test.describe('Pipeline Builder - Pipeline Creation', () => {
 
   test('should open new pipeline dialog', async ({ page }) => {
     // Click the "New" button (Plus icon)
-    const newButton = page.locator('button').filter({ has: page.locator('svg') }).first();
+    const newButton = page
+      .locator('button')
+      .filter({ has: page.locator('svg') })
+      .first();
     await newButton.click();
 
     // Check for dialog/modal
@@ -130,7 +140,9 @@ test.describe('Pipeline Builder - Pipeline Creation', () => {
     await page.waitForTimeout(500);
 
     // Fill in the pipeline name
-    const nameInput = page.locator('input[placeholder*="Pipeline"], input[placeholder*="pipeline"], input[placeholder*="name"]');
+    const nameInput = page.locator(
+      'input[placeholder*="Pipeline"], input[placeholder*="pipeline"], input[placeholder*="name"]'
+    );
     const inputCount = await nameInput.count();
 
     if (inputCount > 0) {
@@ -208,7 +220,7 @@ test.describe('Pipeline Builder - Canvas Interaction', () => {
 
   test('should allow canvas pan and zoom', async ({ page }) => {
     const canvas = page.locator('.react-flow__pane, [class*="react-flow"]').first();
-    const isVisible = await canvas.isVisible().catch(() => false);
+    const isVisible = await canvas.isVisible();
 
     if (isVisible) {
       // Try to scroll (zoom) on the canvas

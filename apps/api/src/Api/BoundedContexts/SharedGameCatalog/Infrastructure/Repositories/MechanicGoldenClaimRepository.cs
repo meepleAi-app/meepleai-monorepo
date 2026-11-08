@@ -74,7 +74,13 @@ internal sealed class MechanicGoldenClaimRepository : RepositoryBase, IMechanicG
         // (mirrors the MechanicAnalysisRepository graph-state bug fixed in commit cd708babc).
         // IgnoreQueryFilters lets us hydrate a soft-deleted row in case of a re-deactivation
         // retry (the global filter is `!IsDeleted`).
+        // Issue #3866: `.AsTracking()` was MISSING and the comment above says "load the tracked
+        // entity". It was not tracked — the DbContext default is NoTracking (PERF-06) — so every
+        // assignment below landed on a detached instance and nothing was written: not the statement,
+        // not the embedding, and not the soft delete. The technique this method documents
+        // (TrackedMutation, #3688) only works if the read actually tracks.
         var entity = await DbContext.MechanicGoldenClaims
+            .AsTracking()
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.Id == claim.Id, cancellationToken)
             .ConfigureAwait(false);

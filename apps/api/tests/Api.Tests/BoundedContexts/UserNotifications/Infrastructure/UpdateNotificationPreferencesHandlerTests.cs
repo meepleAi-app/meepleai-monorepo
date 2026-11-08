@@ -14,6 +14,19 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.UserNotifications.Infrastructure;
 
 /// <summary>
+/// La fixture di <see cref="UpdateNotificationPreferencesHandlerTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class UpdateNotificationPreferencesHandlerTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "t2849_notifpref");
+
+/// <summary>
 /// Issue #2849 / finding #T: <c>PUT /api/v1/notifications/preferences</c> returned 204 but did
 /// not persist — the command handler staged the repository Add/Update but never committed the
 /// unit of work (ADR-060). These tests drive the command through MediatR (full pipeline) and then
@@ -22,37 +35,29 @@ namespace Api.Tests.BoundedContexts.UserNotifications.Infrastructure;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserNotifications")]
-public sealed class UpdateNotificationPreferencesHandlerTests : IAsyncLifetime
+public sealed class UpdateNotificationPreferencesHandlerTests
+    : IClassFixture<UpdateNotificationPreferencesHandlerTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly UpdateNotificationPreferencesHandlerTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private Guid _userId;
 
-    public UpdateNotificationPreferencesHandlerTests(SharedTestcontainersFixture fixture)
+    public UpdateNotificationPreferencesHandlerTests(UpdateNotificationPreferencesHandlerTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"t2849_notifpref_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var conn = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(conn);
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
         (_userId, _) = await TestSessionHelper.CreateUserSessionAsync(db, Guid.NewGuid());
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory is not null)
-        {
-            await _factory.DisposeAsync();
-        }
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     private static UpdateNotificationPreferencesCommand BuildCommand(Guid userId, bool emailOnDocumentReady) =>
         new(

@@ -23,7 +23,7 @@ async function setupPageNavigationMocks(page: Page) {
   const totalPages = 15;
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -40,7 +40,7 @@ async function setupPageNavigationMocks(page: Page) {
   });
 
   // Mock document details
-  await page.route(`${API_BASE}/api/v1/documents/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/documents/*`, async route => {
     if (route.request().url().includes('/page')) {
       return route.continue();
     }
@@ -58,7 +58,7 @@ async function setupPageNavigationMocks(page: Page) {
   });
 
   // Mock page content endpoint
-  await page.route(`${API_BASE}/api/v1/documents/*/page/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/documents/*/page/*`, async route => {
     const url = route.request().url();
     const pageMatch = url.match(/page\/(\d+)/);
     const pageNum = pageMatch ? parseInt(pageMatch[1]) : 1;
@@ -85,7 +85,7 @@ async function setupPageNavigationMocks(page: Page) {
   });
 
   // Mock games endpoint
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -106,9 +106,7 @@ test.describe('PDF-08: Page Navigation', () => {
 
       // Should show page indicator
       await expect(
-        page.getByText(/page.*1|1.*of.*15/i).or(
-          page.locator('[data-testid="page-indicator"]')
-        )
+        page.getByText(/page.*1|1.*of.*15/i).or(page.locator('[data-testid="page-indicator"]'))
       ).toBeVisible({ timeout: 5000 });
     });
 
@@ -146,9 +144,7 @@ test.describe('PDF-08: Page Navigation', () => {
       await page.goto('/library/documents/doc-1');
       await page.waitForLoadState('networkidle');
 
-      await expect(
-        page.getByRole('button', { name: /next|→|>/i })
-      ).toBeVisible();
+      await expect(page.getByRole('button', { name: /next|→|>/i })).toBeVisible();
     });
 
     test('should display previous page button', async ({ page }) => {
@@ -157,9 +153,7 @@ test.describe('PDF-08: Page Navigation', () => {
       await page.goto('/library/documents/doc-1');
       await page.waitForLoadState('networkidle');
 
-      await expect(
-        page.getByRole('button', { name: /prev|←|</i })
-      ).toBeVisible();
+      await expect(page.getByRole('button', { name: /prev|←|</i })).toBeVisible();
     });
 
     test('should navigate to next page', async ({ page }) => {
@@ -182,7 +176,7 @@ test.describe('PDF-08: Page Navigation', () => {
       await page.waitForLoadState('networkidle');
 
       const prevButton = page.getByRole('button', { name: /prev|←|</i });
-      if (await prevButton.isVisible() && await prevButton.isEnabled()) {
+      if ((await prevButton.isVisible()) && (await prevButton.isEnabled())) {
         await prevButton.click();
         await page.waitForTimeout(500);
       }
@@ -221,9 +215,9 @@ test.describe('PDF-08: Page Navigation', () => {
       await page.waitForLoadState('networkidle');
 
       await expect(
-        page.getByRole('spinbutton').or(
-          page.locator('input[type="number"], input[data-testid="page-input"]')
-        )
+        page
+          .getByRole('spinbutton')
+          .or(page.locator('input[type="number"], input[data-testid="page-input"]'))
       ).toBeVisible();
     });
 
@@ -233,9 +227,7 @@ test.describe('PDF-08: Page Navigation', () => {
       await page.goto('/library/documents/doc-1');
       await page.waitForLoadState('networkidle');
 
-      const pageInput = page.getByRole('spinbutton').or(
-        page.locator('input[type="number"]')
-      );
+      const pageInput = page.getByRole('spinbutton').or(page.locator('input[type="number"]'));
 
       if (await pageInput.isVisible()) {
         await pageInput.clear();
@@ -290,7 +282,11 @@ test.describe('PDF-08: Page Navigation', () => {
       await page.waitForLoadState('networkidle');
 
       // Focus on viewer area
-      await page.locator('.pdf-viewer, [data-testid="pdf-viewer"]').first().focus().catch(() => {});
+      await page
+        .locator('.pdf-viewer, [data-testid="pdf-viewer"]')
+        .first()
+        .focus()
+        .catch(() => {});
 
       await page.keyboard.press('ArrowRight');
       await page.waitForTimeout(500);
@@ -324,7 +320,7 @@ test.describe('PDF-08: Page Navigation', () => {
 
       // Should go to first page
       const pageIndicator = page.getByText(/page.*1.*of|1.*\/.*15/i);
-      const isOnFirstPage = await pageIndicator.isVisible().catch(() => false);
+      const isOnFirstPage = await pageIndicator.isVisible();
       // Some implementations may not support this
       await expect(page.locator('body')).toBeVisible();
     });

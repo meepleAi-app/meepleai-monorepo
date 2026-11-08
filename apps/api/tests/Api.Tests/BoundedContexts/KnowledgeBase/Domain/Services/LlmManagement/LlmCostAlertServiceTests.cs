@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SystemConfiguration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Models;
@@ -22,8 +23,9 @@ public sealed class LlmCostAlertServiceTests
     private readonly LlmCostAlertService _service;
 
     // Threshold constants matching the service
+    // #4166: le soglie vengono dalla politica di budget salvata; la settimanale è 7 × il tetto giornaliero.
     private const decimal DailyThreshold = 100m;
-    private const decimal WeeklyThreshold = 500m;
+    private const decimal WeeklyThreshold = DailyThreshold * LlmCostAlertService.DaysPerWeek;
     private const decimal MonthlyThreshold = 3000m;
 
     public LlmCostAlertServiceTests()
@@ -31,11 +33,17 @@ public sealed class LlmCostAlertServiceTests
         _costLogRepositoryMock = new Mock<ILlmCostLogRepository>();
         _alertingServiceMock = new Mock<IAlertingService>();
         _loggerMock = new Mock<ILogger<LlmCostAlertService>>();
+        _configProviderMock = new Mock<ILlmSystemConfigProvider>();
+        _configProviderMock.Setup(p => p.GetBudgetPolicyAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LlmBudgetPolicy(DailyThreshold, MonthlyThreshold, 80, 30, 20));
         _service = new LlmCostAlertService(
             _costLogRepositoryMock.Object,
             _alertingServiceMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _configProviderMock.Object);
     }
+
+    private readonly Mock<ILlmSystemConfigProvider> _configProviderMock;
 
     #region Constructor Tests
 
@@ -46,7 +54,8 @@ public sealed class LlmCostAlertServiceTests
         var action = () => new LlmCostAlertService(
             null!,
             _alertingServiceMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _configProviderMock.Object);
 
         // Assert
         action.Should().Throw<ArgumentNullException>()
@@ -60,7 +69,8 @@ public sealed class LlmCostAlertServiceTests
         var action = () => new LlmCostAlertService(
             _costLogRepositoryMock.Object,
             null!,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _configProviderMock.Object);
 
         // Assert
         action.Should().Throw<ArgumentNullException>()
@@ -74,7 +84,8 @@ public sealed class LlmCostAlertServiceTests
         var action = () => new LlmCostAlertService(
             _costLogRepositoryMock.Object,
             _alertingServiceMock.Object,
-            null!);
+            null!,
+            _configProviderMock.Object);
 
         // Assert
         action.Should().Throw<ArgumentNullException>()
@@ -263,7 +274,7 @@ public sealed class LlmCostAlertServiceTests
         // Arrange
         _costLogRepositoryMock
             .Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(400m); // Below $500 threshold
+            .ReturnsAsync(400m); // Below the weekly threshold (7 × 100 $)
 
         // Act
         await _service.CheckWeeklyCostThresholdAsync();
@@ -305,7 +316,7 @@ public sealed class LlmCostAlertServiceTests
     public async Task CheckWeeklyCostThresholdAsync_WhenCostAboveThreshold_SendsAlert()
     {
         // Arrange
-        var weeklyCost = 750m; // Above $500 threshold
+        var weeklyCost = 750m; // Above the weekly threshold (7 × 100 $)
 
         _costLogRepositoryMock
             .Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
@@ -328,7 +339,7 @@ public sealed class LlmCostAlertServiceTests
             a => a.SendAlertAsync(
                 "LLM_WEEKLY_COST_THRESHOLD",
                 "warning",
-                It.Is<string>(s => s.Contains("750") && s.Contains("500") && s.Contains("exceeds threshold")),
+                It.Is<string>(s => s.Contains("750") && s.Contains("700") && s.Contains("exceeds threshold")),
                 It.Is<IDictionary<string, object>>(m =>
                     (decimal)m["weekly_cost"] == weeklyCost &&
                     (decimal)m["threshold"] == WeeklyThreshold),
@@ -365,7 +376,7 @@ public sealed class LlmCostAlertServiceTests
         // Arrange
         _costLogRepositoryMock
             .Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(600m);
+            .ReturnsAsync(800m);
 
         _alertingServiceMock
             .Setup(a => a.SendAlertAsync(
@@ -688,4 +699,28 @@ public sealed class LlmCostAlertServiceTests
     }
 
     #endregion
+
+    /// <summary>
+    /// #4166 (review della 3b): un tetto a zero vuol dire AI a pagamento spenta, non un allarme a ogni
+    /// controllo. È lo stesso contratto di LlmBudgetMonitoringService.
+    /// </summary>
+    [Fact]
+    public async Task WithZeroCaps_NoCheckSendsAnAlert()
+    {
+        _configProviderMock.Setup(p => p.GetBudgetPolicyAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LlmBudgetPolicy(0m, 0m, 80, 30, 20));
+        _costLogRepositoryMock.Setup(r => r.GetDailyCostAsync(It.IsAny<DateOnly>(), It.IsAny<CancellationToken>())).ReturnsAsync(0.5m);
+        _costLogRepositoryMock.Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0.5m);
+        _costLogRepositoryMock.Setup(r => r.GetCostsByProviderAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, decimal>(StringComparer.Ordinal));
+
+        await _service.CheckDailyCostThresholdAsync(TestContext.Current.CancellationToken);
+        await _service.CheckWeeklyCostThresholdAsync(TestContext.Current.CancellationToken);
+        await _service.CheckMonthlyCostProjectionAsync(TestContext.Current.CancellationToken);
+
+        _alertingServiceMock.Verify(a => a.SendAlertAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IDictionary<string, object>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

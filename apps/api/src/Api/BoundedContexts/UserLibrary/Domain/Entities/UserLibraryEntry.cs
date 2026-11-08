@@ -39,12 +39,6 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     public bool IsFavorite { get; private set; }
 
     /// <summary>
-    /// Custom AI agent configuration for this game.
-    /// Null means use system default configuration.
-    /// </summary>
-    public AgentConfiguration? CustomAgentConfig { get; private set; }
-
-    /// <summary>
     /// Custom PDF rulebook metadata uploaded by user.
     /// Null means use the SharedGame's default PDF.
     /// </summary>
@@ -102,6 +96,49 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     /// Labels assigned to this game in the library.
     /// </summary>
     public IReadOnlyCollection<UserGameLabel> Labels => _labels.AsReadOnly();
+
+    /// <summary>
+    /// Concurrency token letto dalla riga (#3651, ADR-060). L'aggregato lo trasporta perché
+    /// <c>UserLibraryRepository.UpdateAsync</c> persiste un grafo <b>detached</b>
+    /// (<c>MapToPersistence</c> + <c>Update()</c>): senza il round-trip la WHERE conterrebbe
+    /// <c>xmin = 0</c> e ogni scrittura fallirebbe — il difetto di #3688, opposto a quello che
+    /// questa conversione chiude.
+    /// </summary>
+    public uint Xmin { get; private set; }
+
+    /// <summary>
+    /// Carica il token letto dalla riga. Chiamato solo dal mapper del repository: il dominio non
+    /// lo interpreta, lo trasporta.
+    /// </summary>
+    internal void SetXmin(uint xmin) => Xmin = xmin;
+
+    /// <summary>
+    /// Marcatore delle righe seminate dai test E2E (#1929): lo scrive solo
+    /// <c>SeedTestLibraryGameCommandHandler</c> all'inserimento, e <c>CleanupTestEntitiesCommand</c>
+    /// cancella per quel valore. Come <see cref="Xmin"/>, l'aggregato non lo interpreta: lo
+    /// trasporta, perché <c>UpdateAsync</c> persiste un grafo detached e una colonna che il mapper
+    /// non scrive viene salvata a <c>NULL</c> — la pulizia E2E non avrebbe più trovato la riga (#4499).
+    /// </summary>
+    public string? TestRunId { get; private set; }
+
+    /// <summary>
+    /// Carica il marcatore letto dalla riga. Chiamato solo dal mapper del repository.
+    /// </summary>
+    internal void SetTestRunId(string? testRunId) => TestRunId = testRunId;
+
+    /// <summary>
+    /// Rimette nell'aggregato i figli letti dal database (#4505). Chiamato solo dal mapper del
+    /// repository: non solleva eventi e non ricalcola le statistiche, che la riga radice porta già.
+    /// </summary>
+    internal void RestoreChildren(
+        IEnumerable<GameSession> sessions,
+        IEnumerable<GameChecklist> checklist,
+        IEnumerable<UserGameLabel> labels)
+    {
+        _sessions.AddRange(sessions);
+        _checklist.AddRange(checklist);
+        _labels.AddRange(labels);
+    }
 
     /// <summary>
     /// Private constructor for EF Core.
@@ -198,26 +235,6 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Configures a custom AI agent for this game.
-    /// Replaces any existing custom configuration.
-    /// </summary>
-    /// <param name="agentConfig">The agent configuration to apply</param>
-    public void ConfigureAgent(AgentConfiguration agentConfig)
-    {
-        ArgumentNullException.ThrowIfNull(agentConfig);
-        CustomAgentConfig = agentConfig;
-    }
-
-    /// <summary>
-    /// Resets the AI agent to use system default configuration.
-    /// Removes any custom agent configuration.
-    /// </summary>
-    public void ResetAgentToDefault()
-    {
-        CustomAgentConfig = null;
-    }
-
-    /// <summary>
     /// Uploads a custom PDF rulebook for this game.
     /// Replaces any existing custom PDF.
     /// </summary>
@@ -300,11 +317,6 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     {
         CustomCoverR2Key = string.IsNullOrWhiteSpace(r2Key) ? null : r2Key;
     }
-
-    /// <summary>
-    /// Returns whether this entry uses a custom agent configuration.
-    /// </summary>
-    public bool HasCustomAgent() => CustomAgentConfig is not null;
 
     // ========== GAME STATE MANAGEMENT ==========
 

@@ -15,18 +15,23 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('useGameTitle E2E', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    // #3901: la condizione di skip stava in un `test.skip((_fixtures, testInfo) => ...)`
+    // di primo livello. Playwright pretende il destructuring sul primo parametro, e
+    // scriverlo `({}, testInfo)` viola `no-empty-pattern`. Dentro il beforeEach il
+    // fixture serve davvero (`page`) e `testInfo` arriva come secondo argomento:
+    // stessa semantica, nessun costrutto da silenziare con un disable.
+    test.skip(
+      !testInfo.project.metadata?.seedTranslations,
+      'Requires sub-PR 3/3 seed translations to land first'
+    );
+
     // Force browser locale via context override
     await page.context().addInitScript(() => {
       Object.defineProperty(navigator, 'language', { get: () => 'it-IT' });
       Object.defineProperty(navigator, 'languages', { get: () => ['it-IT', 'it'] });
     });
   });
-
-  test.skip(
-    (_fixtures, testInfo) => !testInfo.project.metadata?.seedTranslations,
-    'Requires sub-PR 3/3 seed translations to land first'
-  );
 
   test('IT user sees IT-localized title on Library page', async ({ page }) => {
     await page.goto('/library');

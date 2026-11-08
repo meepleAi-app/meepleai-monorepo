@@ -5,7 +5,7 @@
  *
  * Provides singleton QueryClient with optimized defaults:
  * - 5min staleTime (reduce unnecessary refetches)
- * - 1 retry on failure
+ * - 1 retry on a failed query; mutations are not resent on their own (#4735)
  * - Error logging with correlation IDs
  *
  * Next.js 16 App Router pattern:
@@ -36,8 +36,10 @@ const defaultOptions: DefaultOptions = {
     refetchOnMount: false,
   },
   mutations: {
-    // Retry mutations once
-    retry: 1,
+    // A mutation is not resent on its own (#4735): the server may have run the write even when the
+    // answer is an error, and a second send duplicates it (#4692, #4720). One that is safe to repeat
+    // asks for `retry` itself.
+    retry: false,
 
     // Log mutation errors
     onError: error => {

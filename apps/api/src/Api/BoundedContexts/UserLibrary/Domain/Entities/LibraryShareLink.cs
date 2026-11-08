@@ -48,11 +48,18 @@ internal sealed class LibraryShareLink : AggregateRoot<Guid>
     /// <summary>
     /// Tracking counter for number of times the link was accessed.
     /// </summary>
+    /// <remarks>
+    /// Solo lettura per l'aggregato (#4558): la visita lo incrementa nel database con
+    /// <c>ILibraryShareLinkRepository.TryRecordAccessAsync</c>, in un solo statement con il controllo di
+    /// validità. Un metodo di dominio che lo incrementasse andrebbe salvato riscrivendo l'aggregato, cioè
+    /// il difetto che quel metodo ha sostituito.
+    /// </remarks>
     public int ViewCount { get; private set; }
 
     /// <summary>
     /// UTC timestamp of last access via this link.
     /// </summary>
+    /// <remarks>Come <see cref="ViewCount"/>: lo scrive solo la visita, nel database.</remarks>
     public DateTime? LastAccessedAt { get; private set; }
 
     // Constructor for domain factory method
@@ -98,6 +105,39 @@ internal sealed class LibraryShareLink : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Ricostituisce un link letto dal database, così com'è (#4544).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. <see cref="Create"/> è la factory di un link nuovo: genera id e token,
+    /// lo data ad "adesso" e rifiuta una scadenza passata, ed è giusto per un link che nasce. Usata per
+    /// ricostruire una riga, rendeva illeggibile ogni link scaduto: la lettura pubblica rispondeva 400
+    /// invece di 404, e la revoca falliva allo stesso modo. Un link salvato può essere scaduto o revocato:
+    /// sono stati che <see cref="IsExpired"/> e <see cref="IsRevoked"/> descrivono, non errori.
+    /// </remarks>
+    internal static LibraryShareLink Reconstitute(
+        Guid id,
+        Guid userId,
+        string shareToken,
+        LibrarySharePrivacyLevel privacyLevel,
+        bool includeNotes,
+        DateTime createdAt,
+        DateTime? expiresAt,
+        DateTime? revokedAt,
+        int viewCount,
+        DateTime? lastAccessedAt) => new(id)
+        {
+            UserId = userId,
+            ShareToken = shareToken,
+            PrivacyLevel = privacyLevel,
+            IncludeNotes = includeNotes,
+            CreatedAt = createdAt,
+            ExpiresAt = expiresAt,
+            RevokedAt = revokedAt,
+            ViewCount = viewCount,
+            LastAccessedAt = lastAccessedAt,
+        };
+
+    /// <summary>
     /// Generates a secure random token (32 hex characters).
     /// </summary>
     private static string GenerateSecureToken()
@@ -114,15 +154,6 @@ internal sealed class LibraryShareLink : AggregateRoot<Guid>
             throw new InvalidOperationException("Share link is already revoked");
 
         RevokedAt = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Records an access to this share link (for analytics/audit).
-    /// </summary>
-    public void RecordAccess()
-    {
-        ViewCount++;
-        LastAccessedAt = DateTime.UtcNow;
     }
 
     /// <summary>

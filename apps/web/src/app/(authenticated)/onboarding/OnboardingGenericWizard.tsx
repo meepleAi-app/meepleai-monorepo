@@ -32,8 +32,9 @@ interface OnboardingGenericWizardProps {
  *  - Step 3 (Invite Friend): `InviteFriendComingSoonStep` placeholder,
  *    skip-only. Real invite feature deferred to a future sub-issue.
  *
- * This is NOT the invited-user `OnboardingWizard` (token-based, 5 step) which
- * remains the entry point for `/accept-invite` — that flow is untouched.
+ * It is the only onboarding wizard. Issue #4138 deleted the invited-user
+ * `OnboardingWizard` (5 step): this comment used to say `/accept-invite` mounted
+ * it, but no route ever did — `/accept-invite` redirects here.
  *
  * After completion the user is redirected to `/library`, and the backend
  * marks `user.onboardingCompleted = true` via `api.auth.completeOnboarding`.

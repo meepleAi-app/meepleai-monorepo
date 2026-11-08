@@ -230,7 +230,7 @@ test.describe('Prompt Management Admin E2E Tests', () => {
       .filter({ hasText: 'Version 1' });
     const rollbackButton = version1Row.getByRole('button', { name: /rollback/i });
 
-    if (await rollbackButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+    if (await rollbackButton.isVisible({ timeout: 1000 })) {
       await rollbackButton.click();
       await promptPage.assertSuccess();
     } else {
@@ -250,7 +250,7 @@ test.describe('Prompt Management Admin E2E Tests', () => {
       .getByRole('button', { name: /quick.*activate|attiva/i })
       .first();
 
-    if (await quickActivateButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+    if (await quickActivateButton.isVisible({ timeout: 1000 })) {
       await quickActivateButton.click();
       await promptPage.assertSuccess();
     } else {

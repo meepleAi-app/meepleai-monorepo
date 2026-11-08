@@ -6,13 +6,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition
 /// <summary>
 /// Command to create a new agent definition.
 /// Issue #3808 (Epic #3687): AgentDefinition management in AI Lab.
-/// Issue #3708: Extended with Type and Strategy fields for full template specification.
+/// Issue #4138: the Type field is gone - it never had an effect on the answer path.
 /// Issue #5140: Added KbCardIds and GameId for KB card validation.
 /// </summary>
 public sealed record CreateAgentDefinitionCommand(
     string Name,
     string Description,
-    string Type,
     string Model,
     int MaxTokens,
     float Temperature,

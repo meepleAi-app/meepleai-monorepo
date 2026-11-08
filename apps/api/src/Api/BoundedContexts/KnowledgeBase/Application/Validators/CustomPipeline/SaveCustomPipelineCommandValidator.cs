@@ -44,6 +44,6 @@ public sealed class SaveCustomPipelineCommandValidator : AbstractValidator<SaveC
         RuleFor(x => x.Tags)
             .Must(tags => tags.All(t => t.Length <= 50))
             .WithMessage("Each tag must not exceed 50 characters")
-            .When(x => x.Tags.Length > 0);
+            .When(x => x.Tags is { Length: > 0 }); // #3847: Tags puo' essere assente
     }
 }

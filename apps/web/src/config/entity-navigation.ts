@@ -146,11 +146,6 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
         idKey: 'agentId',
         buildHref: id => `/agents/${id}`,
       },
-      {
-        entity: 'chat',
-        label: 'Chats',
-        buildHref: id => `/sessions/${id}/chats`,
-      },
     ],
 
     player: [
@@ -173,18 +168,22 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
         idKey: 'gameId',
         buildHref: id => `/library/${id}`,
       },
+      // #4244: a thread on a private game. `/library/{id}` resolves catalog games only; the caller
+      // passes either `gameId` or `privateGameId`, never both.
+      {
+        entity: 'game',
+        label: 'Game',
+        idKey: 'privateGameId',
+        buildHref: id => `/library/private/${id}`,
+      },
       {
         entity: 'agent',
         label: 'Agent',
         idKey: 'agentId',
         buildHref: id => `/agents/${id}`,
       },
-      {
-        entity: 'session',
-        label: 'Session',
-        idKey: 'sessionId',
-        buildHref: id => `/sessions/${id}`,
-      },
+      // #4156: no session link. No caller ever passed `sessionId` for a chat, and a thread does not
+      // carry the id of a LiveGameSession, which is the only id `/sessions/{id}` resolves (D4).
     ],
 
     event: [

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
 
@@ -24,6 +25,10 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExt
 /// wiring in <c>MechanicClaimEntityConfiguration</c>. Because of this constraint we build claims
 /// via <see cref="MechanicClaim.CreateWithId"/> with the pre-allocated Id (preserving
 /// <c>IsNew = true</c> so the repository persists them as INSERT, not UPDATE).</description></item>
+/// <item><description>List sections run in two passes (prompt v1.2.0): the first pass allocates a claim
+/// Id per valid item, the second builds the claims so <c>overrides</c> ordinals — the RAW 0-based
+/// position in the section array, the same index used by the <c>sourceAnchor</c> — can be resolved
+/// to Ids.</description></item>
 /// </list>
 /// </remarks>
 internal static class MechanicOutputParser
@@ -119,7 +124,8 @@ internal static class MechanicOutputParser
             text: text!,
             displayOrder: 0,
             citations: citations,
-            sourceAnchor: "$.summary");
+            sourceAnchor: "$.summary",
+            structure: MechanicClaimStructure.Default);
     }
 
     // ============================================================
@@ -130,54 +136,20 @@ internal static class MechanicOutputParser
     {
         if (!root.TryGetProperty("mechanics", out var items) || items.ValueKind != JsonValueKind.Array)
         {
-            yield break;
+            return Array.Empty<MechanicClaim>();
         }
 
-        var sourceIndex = 0;
-        var displayOrder = 0;
-        foreach (var item in items.EnumerateArray())
-        {
-            var anchor = $"$.mechanics[{sourceIndex}]";
-            sourceIndex++;
-
-            if (item.ValueKind != JsonValueKind.Object)
-            {
-                continue;
-            }
-
-            var description = ReadString(item, "description");
-            if (string.IsNullOrWhiteSpace(description))
-            {
-                continue;
-            }
-
-            var claimId = Guid.NewGuid();
-            var citations = ExtractCitations(item, claimId).ToList();
-            if (citations.Count == 0)
-            {
-                continue;
-            }
-
-            var name = ReadString(item, "name");
-            var text = string.IsNullOrWhiteSpace(name)
-                ? description!
-                : $"{name!.Trim()}: {description!.Trim()}";
-
-            yield return BuildClaim(
-                claimId: claimId,
-                analysisId: analysisId,
-                section: MechanicSection.Mechanics,
-                text: text,
-                displayOrder: displayOrder++,
-                citations: citations,
-                sourceAnchor: anchor);
-        }
+        var prepared = PrepareItems(items, "description", item => LabelledText(item, "name", ReadString(item, "description")!));
+        return EmitItems(analysisId, MechanicSection.Mechanics, "mechanics", prepared, sortByDeclaredOrder: false);
     }
 
     // ============================================================
     // Section: Victory
     // Schema: { "victory": { "primary": "...", "alternatives": ["..."], "citations": [...] } }
     // The envelope holds one citation array shared between primary and alternatives.
+    // kind/priority/trigger (v1.2.0) are read from the victory object and apply to the primary;
+    // `overrides` is not meaningful here (the only addressable item is the primary itself, so any
+    // ordinal is dropped as self/out-of-range). Alternatives keep the default structure.
     // ============================================================
     private static IEnumerable<MechanicClaim> ParseVictory(Guid analysisId, JsonElement root)
     {
@@ -216,7 +188,8 @@ internal static class MechanicOutputParser
             text: primary!,
             displayOrder: displayOrder++,
             citations: primaryCitations,
-            sourceAnchor: "$.victory");
+            sourceAnchor: "$.victory",
+            structure: ReadStructure(victory, new[] { primaryClaimId }, 0));
 
         // Alternatives reuse the same citation source — re-extract per claim so ClaimId wires up.
         if (!victory.TryGetProperty("alternatives", out var alternatives)
@@ -257,7 +230,8 @@ internal static class MechanicOutputParser
                 text: text!,
                 displayOrder: displayOrder++,
                 citations: altCitations,
-                sourceAnchor: $"$.victory.alternatives[{altIndex}]");
+                sourceAnchor: $"$.victory.alternatives[{altIndex}]",
+                structure: MechanicClaimStructure.Default);
         }
     }
 
@@ -269,119 +243,28 @@ internal static class MechanicOutputParser
     {
         if (!root.TryGetProperty("resources", out var items) || items.ValueKind != JsonValueKind.Array)
         {
-            yield break;
+            return Array.Empty<MechanicClaim>();
         }
 
-        var sourceIndex = 0;
-        var displayOrder = 0;
-        foreach (var item in items.EnumerateArray())
-        {
-            var anchor = $"$.resources[{sourceIndex}]";
-            sourceIndex++;
-
-            if (item.ValueKind != JsonValueKind.Object)
-            {
-                continue;
-            }
-
-            var usage = ReadString(item, "usage");
-            if (string.IsNullOrWhiteSpace(usage))
-            {
-                continue;
-            }
-
-            var claimId = Guid.NewGuid();
-            var citations = ExtractCitations(item, claimId).ToList();
-            if (citations.Count == 0)
-            {
-                continue;
-            }
-
-            var name = ReadString(item, "name");
-            var text = string.IsNullOrWhiteSpace(name)
-                ? usage!
-                : $"{name!.Trim()}: {usage!.Trim()}";
-
-            yield return BuildClaim(
-                claimId: claimId,
-                analysisId: analysisId,
-                section: MechanicSection.Resources,
-                text: text,
-                displayOrder: displayOrder++,
-                citations: citations,
-                sourceAnchor: anchor);
-        }
+        var prepared = PrepareItems(items, "usage", item => LabelledText(item, "name", ReadString(item, "usage")!));
+        return EmitItems(analysisId, MechanicSection.Resources, "resources", prepared, sortByDeclaredOrder: false);
     }
 
     // ============================================================
     // Section: Phases
     // Schema: { "phases": [{ "name": "...", "description": "...", "order": 1, "citations": [...] }] }
     // Entries are emitted in their declared `order`; when missing or duplicate we fall back to
-    // the source array order.
+    // the source array order. Anchors and override ordinals stay the RAW source index.
     // ============================================================
     private static IEnumerable<MechanicClaim> ParsePhases(Guid analysisId, JsonElement root)
     {
         if (!root.TryGetProperty("phases", out var items) || items.ValueKind != JsonValueKind.Array)
         {
-            yield break;
+            return Array.Empty<MechanicClaim>();
         }
 
-        var buffered = new List<(int? Order, int SourceIndex, JsonElement Element)>();
-        var sourceIndex = 0;
-        foreach (var item in items.EnumerateArray())
-        {
-            if (item.ValueKind != JsonValueKind.Object)
-            {
-                sourceIndex++;
-                continue;
-            }
-
-            int? order = null;
-            if (item.TryGetProperty("order", out var orderEl)
-                && orderEl.ValueKind == JsonValueKind.Number
-                && orderEl.TryGetInt32(out var parsedOrder))
-            {
-                order = parsedOrder;
-            }
-
-            buffered.Add((order, sourceIndex, item));
-            sourceIndex++;
-        }
-
-        var ordered = buffered
-            .OrderBy(x => x.Order ?? int.MaxValue)
-            .ThenBy(x => x.SourceIndex);
-
-        var displayOrder = 0;
-        foreach (var (_, srcIdx, item) in ordered)
-        {
-            var description = ReadString(item, "description");
-            if (string.IsNullOrWhiteSpace(description))
-            {
-                continue;
-            }
-
-            var claimId = Guid.NewGuid();
-            var citations = ExtractCitations(item, claimId).ToList();
-            if (citations.Count == 0)
-            {
-                continue;
-            }
-
-            var name = ReadString(item, "name");
-            var text = string.IsNullOrWhiteSpace(name)
-                ? description!
-                : $"{name!.Trim()}: {description!.Trim()}";
-
-            yield return BuildClaim(
-                claimId: claimId,
-                analysisId: analysisId,
-                section: MechanicSection.Phases,
-                text: text,
-                displayOrder: displayOrder++,
-                citations: citations,
-                sourceAnchor: $"$.phases[{srcIdx}]");
-        }
+        var prepared = PrepareItems(items, "description", item => LabelledText(item, "name", ReadString(item, "description")!));
+        return EmitItems(analysisId, MechanicSection.Phases, "phases", prepared, sortByDeclaredOrder: true);
     }
 
     // ============================================================
@@ -393,118 +276,42 @@ internal static class MechanicOutputParser
     {
         if (!root.TryGetProperty("faq", out var items) || items.ValueKind != JsonValueKind.Array)
         {
-            yield break;
+            return Array.Empty<MechanicClaim>();
         }
 
-        var sourceIndex = 0;
-        var displayOrder = 0;
-        foreach (var item in items.EnumerateArray())
+        var prepared = PrepareItems(items, "answer", item =>
         {
-            var anchor = $"$.faq[{sourceIndex}]";
-            sourceIndex++;
-
-            if (item.ValueKind != JsonValueKind.Object)
-            {
-                continue;
-            }
-
-            var answer = ReadString(item, "answer");
-            if (string.IsNullOrWhiteSpace(answer))
-            {
-                continue;
-            }
-
-            var claimId = Guid.NewGuid();
-            var citations = ExtractCitations(item, claimId).ToList();
-            if (citations.Count == 0)
-            {
-                continue;
-            }
-
+            var answer = ReadString(item, "answer")!;
             var question = ReadString(item, "question");
-            var text = string.IsNullOrWhiteSpace(question)
-                ? answer!
-                : $"Q: {question!.Trim()}\nA: {answer!.Trim()}";
-
-            yield return BuildClaim(
-                claimId: claimId,
-                analysisId: analysisId,
-                section: MechanicSection.Faq,
-                text: text,
-                displayOrder: displayOrder++,
-                citations: citations,
-                sourceAnchor: anchor);
-        }
+            return string.IsNullOrWhiteSpace(question)
+                ? answer
+                : $"Q: {question.Trim()}\nA: {answer.Trim()}";
+        });
+        return EmitItems(analysisId, MechanicSection.Faq, "faq", prepared, sortByDeclaredOrder: false);
     }
 
     // ============================================================
     // Section: Setup (v1.1.0)
     // Schema: { "setup": [{ "description": "...", "order": 1, "playerCountNote": "...", "citations": [...] }] }
     // Emitted in declared `order`; falls back to source array order when missing/duplicate.
+    // Anchors and override ordinals stay the RAW source index.
     // ============================================================
     private static IEnumerable<MechanicClaim> ParseSetup(Guid analysisId, JsonElement root)
     {
         if (!root.TryGetProperty("setup", out var items) || items.ValueKind != JsonValueKind.Array)
         {
-            yield break;
+            return Array.Empty<MechanicClaim>();
         }
 
-        var buffered = new List<(int? Order, int SourceIndex, JsonElement Element)>();
-        var sourceIndex = 0;
-        foreach (var item in items.EnumerateArray())
+        var prepared = PrepareItems(items, "description", item =>
         {
-            if (item.ValueKind != JsonValueKind.Object)
-            {
-                sourceIndex++;
-                continue;
-            }
-
-            int? order = null;
-            if (item.TryGetProperty("order", out var orderEl)
-                && orderEl.ValueKind == JsonValueKind.Number
-                && orderEl.TryGetInt32(out var parsedOrder))
-            {
-                order = parsedOrder;
-            }
-
-            buffered.Add((order, sourceIndex, item));
-            sourceIndex++;
-        }
-
-        var ordered = buffered
-            .OrderBy(x => x.Order ?? int.MaxValue)
-            .ThenBy(x => x.SourceIndex);
-
-        var displayOrder = 0;
-        foreach (var (_, srcIdx, item) in ordered)
-        {
-            var description = ReadString(item, "description");
-            if (string.IsNullOrWhiteSpace(description))
-            {
-                continue;
-            }
-
-            var claimId = Guid.NewGuid();
-            var citations = ExtractCitations(item, claimId).ToList();
-            if (citations.Count == 0)
-            {
-                continue;
-            }
-
+            var description = ReadString(item, "description")!;
             var note = ReadString(item, "playerCountNote");
-            var text = string.IsNullOrWhiteSpace(note)
-                ? description!
-                : $"{description!.Trim()} ({note!.Trim()})";
-
-            yield return BuildClaim(
-                claimId: claimId,
-                analysisId: analysisId,
-                section: MechanicSection.Setup,
-                text: text,
-                displayOrder: displayOrder++,
-                citations: citations,
-                sourceAnchor: $"$.setup[{srcIdx}]");
-        }
+            return string.IsNullOrWhiteSpace(note)
+                ? description
+                : $"{description.Trim()} ({note.Trim()})";
+        });
+        return EmitItems(analysisId, MechanicSection.Setup, "setup", prepared, sortByDeclaredOrder: true);
     }
 
     // ============================================================
@@ -515,63 +322,33 @@ internal static class MechanicOutputParser
     {
         if (!root.TryGetProperty("components", out var items) || items.ValueKind != JsonValueKind.Array)
         {
-            yield break;
+            return Array.Empty<MechanicClaim>();
         }
 
-        var sourceIndex = 0;
-        var displayOrder = 0;
-        foreach (var item in items.EnumerateArray())
+        var prepared = PrepareItems(items, "description", item =>
         {
-            var anchor = $"$.components[{sourceIndex}]";
-            sourceIndex++;
-
-            if (item.ValueKind != JsonValueKind.Object)
-            {
-                continue;
-            }
-
-            var description = ReadString(item, "description");
-            if (string.IsNullOrWhiteSpace(description))
-            {
-                continue;
-            }
-
-            var claimId = Guid.NewGuid();
-            var citations = ExtractCitations(item, claimId).ToList();
-            if (citations.Count == 0)
-            {
-                continue;
-            }
-
+            var description = ReadString(item, "description")!;
             var name = ReadString(item, "name");
             var quantity = ReadString(item, "quantity");
             string? label;
             if (string.IsNullOrWhiteSpace(quantity))
             {
-                label = string.IsNullOrWhiteSpace(name) ? null : name!.Trim();
+                label = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
             }
             else if (string.IsNullOrWhiteSpace(name))
             {
-                label = $"×{quantity!.Trim()}";
+                label = $"×{quantity.Trim()}";
             }
             else
             {
-                label = $"{name!.Trim()} (×{quantity!.Trim()})";
+                label = $"{name.Trim()} (×{quantity.Trim()})";
             }
 
-            var text = string.IsNullOrWhiteSpace(label)
-                ? description!
-                : $"{label}: {description!.Trim()}";
-
-            yield return BuildClaim(
-                claimId: claimId,
-                analysisId: analysisId,
-                section: MechanicSection.Components,
-                text: text,
-                displayOrder: displayOrder++,
-                citations: citations,
-                sourceAnchor: anchor);
-        }
+            return string.IsNullOrWhiteSpace(label)
+                ? description
+                : $"{label}: {description.Trim()}";
+        });
+        return EmitItems(analysisId, MechanicSection.Components, "components", prepared, sortByDeclaredOrder: false);
     }
 
     // ============================================================
@@ -582,53 +359,218 @@ internal static class MechanicOutputParser
     {
         if (!root.TryGetProperty("endgame", out var items) || items.ValueKind != JsonValueKind.Array)
         {
-            yield break;
+            return Array.Empty<MechanicClaim>();
         }
 
-        var sourceIndex = 0;
-        var displayOrder = 0;
-        foreach (var item in items.EnumerateArray())
-        {
-            var anchor = $"$.endgame[{sourceIndex}]";
-            sourceIndex++;
-
-            if (item.ValueKind != JsonValueKind.Object)
-            {
-                continue;
-            }
-
-            var description = ReadString(item, "description");
-            if (string.IsNullOrWhiteSpace(description))
-            {
-                continue;
-            }
-
-            var claimId = Guid.NewGuid();
-            var citations = ExtractCitations(item, claimId).ToList();
-            if (citations.Count == 0)
-            {
-                continue;
-            }
-
-            var name = ReadString(item, "name");
-            var text = string.IsNullOrWhiteSpace(name)
-                ? description!
-                : $"{name!.Trim()}: {description!.Trim()}";
-
-            yield return BuildClaim(
-                claimId: claimId,
-                analysisId: analysisId,
-                section: MechanicSection.EndgameScoring,
-                text: text,
-                displayOrder: displayOrder++,
-                citations: citations,
-                sourceAnchor: anchor);
-        }
+        var prepared = PrepareItems(items, "description", item => LabelledText(item, "name", ReadString(item, "description")!));
+        return EmitItems(analysisId, MechanicSection.EndgameScoring, "endgame", prepared, sortByDeclaredOrder: false);
     }
 
     // ============================================================
     // Helpers
     // ============================================================
+
+    /// <summary>One valid list item after the first (id-allocation) pass.</summary>
+    private sealed record PreparedItem(
+        int SourceIndex,
+        JsonElement Element,
+        Guid ClaimId,
+        IReadOnlyList<MechanicCitation> Citations,
+        string Text,
+        int? Order);
+
+    /// <summary>
+    /// First pass over a list section: allocates a claim Id for every RAW item that will become a
+    /// claim. The result has exactly one slot per raw array item; skipped items (non-object,
+    /// missing <paramref name="requiredField"/>, no valid citations) are <c>null</c>.
+    /// </summary>
+    private static IReadOnlyList<PreparedItem?> PrepareItems(
+        JsonElement items, string requiredField, Func<JsonElement, string> buildText)
+    {
+        var prepared = new List<PreparedItem?>();
+        var sourceIndex = 0;
+        foreach (var item in items.EnumerateArray())
+        {
+            prepared.Add(PrepareItem(item, sourceIndex, requiredField, buildText));
+            sourceIndex++;
+        }
+
+        return prepared;
+    }
+
+    private static PreparedItem? PrepareItem(
+        JsonElement item, int sourceIndex, string requiredField, Func<JsonElement, string> buildText)
+    {
+        if (item.ValueKind != JsonValueKind.Object || string.IsNullOrWhiteSpace(ReadString(item, requiredField)))
+        {
+            return null;
+        }
+
+        var claimId = Guid.NewGuid();
+        var citations = ExtractCitations(item, claimId).ToList();
+        if (citations.Count == 0)
+        {
+            return null;
+        }
+
+        int? order = null;
+        if (item.TryGetProperty("order", out var orderEl)
+            && orderEl.ValueKind == JsonValueKind.Number
+            && orderEl.TryGetInt32(out var parsedOrder))
+        {
+            order = parsedOrder;
+        }
+
+        return new PreparedItem(sourceIndex, item, claimId, citations, buildText(item), order);
+    }
+
+    /// <summary>
+    /// Second pass: builds the claims of a list section. <c>overrides</c> ordinals and the
+    /// <c>sourceAnchor</c> both use the RAW source index; <c>displayOrder</c> is contiguous over
+    /// emitted claims, following the declared <c>order</c> when <paramref name="sortByDeclaredOrder"/>.
+    /// </summary>
+    private static IEnumerable<MechanicClaim> EmitItems(
+        Guid analysisId,
+        MechanicSection section,
+        string jsonProperty,
+        IReadOnlyList<PreparedItem?> prepared,
+        bool sortByDeclaredOrder)
+    {
+        var sectionClaimIds = prepared.Select(p => p?.ClaimId ?? Guid.Empty).ToList();
+
+        IEnumerable<PreparedItem> sequence = prepared.OfType<PreparedItem>();
+        if (sortByDeclaredOrder)
+        {
+            sequence = sequence.OrderBy(x => x.Order ?? int.MaxValue).ThenBy(x => x.SourceIndex);
+        }
+
+        var structures = SanitizeOverrideGraph(
+            prepared.OfType<PreparedItem>()
+                .ToDictionary(p => p.SourceIndex, p => ReadStructure(p.Element, sectionClaimIds, p.SourceIndex)),
+            sectionClaimIds);
+
+        var displayOrder = 0;
+        foreach (var p in sequence)
+        {
+            yield return BuildClaim(
+                claimId: p.ClaimId,
+                analysisId: analysisId,
+                section: section,
+                text: p.Text,
+                displayOrder: displayOrder++,
+                citations: p.Citations,
+                sourceAnchor: $"$.{jsonProperty}[{p.SourceIndex}]",
+                structure: structures[p.SourceIndex]);
+        }
+    }
+
+    /// <summary>
+    /// Makes the persisted override graph of one section respect the spec §2 invariants the parser can
+    /// enforce on its own (precedent: ruling R5). First every edge whose source OR target item is an
+    /// <c>Example</c> is dropped (ruling R10). Then, each time a cycle is found (DFS in ascending raw-index
+    /// order), the override edge leaving the cycle member with the HIGHEST raw source index is dropped, and
+    /// the search repeats until no cycle remains. T5 reports both problems on the raw JSON
+    /// (<c>T5_example_in_override</c>, <c>T5_override_cycle</c>); the parser only guarantees the persisted data.
+    /// </summary>
+    private static Dictionary<int, MechanicClaimStructure> SanitizeOverrideGraph(
+        Dictionary<int, MechanicClaimStructure> structures, IReadOnlyList<Guid> sectionClaimIds)
+    {
+        var indexOf = new Dictionary<Guid, int>();
+        for (var i = 0; i < sectionClaimIds.Count; i++)
+        {
+            if (sectionClaimIds[i] != Guid.Empty)
+            {
+                indexOf[sectionClaimIds[i]] = i;
+            }
+        }
+
+        bool IsExample(int index) => structures[index].Kind == MechanicClaimKind.Example;
+
+        var edges = structures.ToDictionary(
+            kv => kv.Key, kv => kv.Value.Overrides.Select(g => indexOf[g]).ToList());
+
+        var changed = new HashSet<int>();
+        foreach (var (from, targets) in edges)
+        {
+            var before = targets.Count;
+            if (IsExample(from))
+            {
+                targets.Clear();
+            }
+            else
+            {
+                targets.RemoveAll(IsExample);
+            }
+
+            if (targets.Count != before)
+            {
+                changed.Add(from);
+            }
+        }
+
+        while (FindCycle(edges) is { } cycle)
+        {
+            var from = cycle.Max();
+            var next = cycle[(cycle.IndexOf(from) + 1) % cycle.Count];
+            edges[from].Remove(next);
+            changed.Add(from);
+        }
+
+        foreach (var idx in changed)
+        {
+            structures[idx] = structures[idx] with { Overrides = edges[idx].Select(i => sectionClaimIds[i]).ToList() };
+        }
+
+        return structures;
+    }
+
+    /// <summary>Returns the nodes of one cycle in path order (each overrides the next, last overrides first), or null.</summary>
+    private static List<int>? FindCycle(Dictionary<int, List<int>> edges)
+    {
+        var state = new Dictionary<int, int>(); // 1 = on stack, 2 = done
+        var stack = new List<int>();
+
+        List<int>? Visit(int node)
+        {
+            state[node] = 1;
+            stack.Add(node);
+            foreach (var next in edges[node])
+            {
+                var s = state.GetValueOrDefault(next);
+                if (s == 1)
+                {
+                    return stack.Skip(stack.IndexOf(next)).ToList();
+                }
+
+                if (s == 0 && Visit(next) is { } found)
+                {
+                    return found;
+                }
+            }
+
+            stack.RemoveAt(stack.Count - 1);
+            state[node] = 2;
+            return null;
+        }
+
+        foreach (var node in edges.Keys.OrderBy(x => x))
+        {
+            if (state.GetValueOrDefault(node) == 0 && Visit(node) is { } cycle)
+            {
+                return cycle;
+            }
+        }
+
+        return null;
+    }
+
+    private static string LabelledText(JsonElement item, string labelProperty, string body)
+    {
+        var label = ReadString(item, labelProperty);
+        return string.IsNullOrWhiteSpace(label)
+            ? body
+            : $"{label.Trim()}: {body.Trim()}";
+    }
 
     /// <summary>
     /// Extracts <c>citations[]</c> under <paramref name="parent"/> and converts each entry to a
@@ -720,7 +662,8 @@ internal static class MechanicOutputParser
         string text,
         int displayOrder,
         IReadOnlyList<MechanicCitation> citations,
-        string sourceAnchor)
+        string sourceAnchor,
+        MechanicClaimStructure structure)
     {
         return MechanicClaim.CreateWithId(
             id: claimId,
@@ -729,7 +672,66 @@ internal static class MechanicOutputParser
             text: text.Trim(),
             displayOrder: displayOrder,
             citations: citations,
-            sourceAnchor: sourceAnchor);
+            sourceAnchor: sourceAnchor,
+            structure: structure);
+    }
+
+    private static readonly IReadOnlyDictionary<string, MechanicClaimKind> KindNames =
+        new Dictionary<string, MechanicClaimKind>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["rule"] = MechanicClaimKind.Rule,
+            ["exception"] = MechanicClaimKind.Exception,
+            ["clarification"] = MechanicClaimKind.Clarification,
+            ["example"] = MechanicClaimKind.Example
+        };
+
+    private static readonly IReadOnlyDictionary<string, MechanicRulePriority> PriorityNames =
+        new Dictionary<string, MechanicRulePriority>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["base"] = MechanicRulePriority.Base,
+            ["expansion"] = MechanicRulePriority.Expansion,
+            ["card"] = MechanicRulePriority.Card,
+            ["scenario"] = MechanicRulePriority.Scenario
+        };
+
+    /// <summary>
+    /// Reads kind/priority/overrides/trigger from one section item (prompt v1.2.0). Overrides are
+    /// 0-based ordinals into the RAW array of the same section — the index the LLM returned, also
+    /// used by the <c>sourceAnchor</c>. <paramref name="sectionClaimIds"/> has one slot per raw
+    /// item, <see cref="Guid.Empty"/> for items that produced no claim. An ordinal that is out of
+    /// range, equal to <paramref name="selfOrdinal"/> or points at a skipped item is dropped here
+    /// (the T5 guardrail reports it). Unknown kind/priority fall back to Rule/Base.
+    /// </summary>
+    internal static MechanicClaimStructure ReadStructure(
+        JsonElement item, IReadOnlyList<Guid> sectionClaimIds, int selfOrdinal)
+    {
+        var kind = ReadString(item, "kind") is { } k && KindNames.TryGetValue(k.Trim(), out var kk)
+            ? kk : MechanicClaimKind.Rule;
+        var priority = ReadString(item, "priority") is { } p && PriorityNames.TryGetValue(p.Trim(), out var pp)
+            ? pp : MechanicRulePriority.Base;
+
+        var overrides = new List<Guid>();
+        if (item.TryGetProperty("overrides", out var ov) && ov.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var el in ov.EnumerateArray())
+            {
+                if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var ord)
+                    && ord >= 0 && ord < sectionClaimIds.Count && ord != selfOrdinal
+                    && sectionClaimIds[ord] != Guid.Empty
+                    && !overrides.Contains(sectionClaimIds[ord]))
+                {
+                    overrides.Add(sectionClaimIds[ord]);
+                }
+            }
+        }
+
+        MechanicTrigger? trigger = null;
+        if (item.TryGetProperty("trigger", out var tr) && tr.ValueKind == JsonValueKind.Object)
+        {
+            trigger = MechanicTrigger.Create(ReadString(tr, "phase"), ReadString(tr, "action"), ReadString(tr, "component"));
+        }
+
+        return new MechanicClaimStructure(kind, priority, overrides, trigger);
     }
 
     private static string? ReadString(JsonElement obj, string propertyName)

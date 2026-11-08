@@ -43,8 +43,9 @@ describe('SideDrawer', () => {
   it('renders the secondary ("tutto il resto") destinations when open', () => {
     render(<SideDrawer {...defaultProps} />);
     expect(screen.getByText('Serate')).toBeDefined();
-    expect(screen.getByText('Agenti')).toBeDefined();
     expect(screen.getByText('Giocatori')).toBeDefined();
+    // Issue #4138: la voce 'Agenti' e' uscita con la sezione /agents.
+    expect(screen.queryByText('Agenti')).toBeNull();
     expect(screen.getByText('Knowledge Base')).toBeDefined();
     expect(screen.getByText('Toolkit')).toBeDefined();
   });
@@ -64,13 +65,13 @@ describe('SideDrawer', () => {
   it('highlights the active route with aria-current="page"', () => {
     render(<SideDrawer {...defaultProps} />);
     expect(screen.getByText('Giocatori').closest('a')?.getAttribute('aria-current')).toBe('page');
-    expect(screen.getByText('Agenti').closest('a')?.getAttribute('aria-current')).toBeNull();
+    expect(screen.getByText('Serate').closest('a')?.getAttribute('aria-current')).toBeNull();
   });
 
-  it('shows Admin Hub and Editor Agenti for admin users', () => {
+  it('shows Admin Hub and the rules editor for admin users', () => {
     render(<SideDrawer {...defaultProps} />);
     expect(screen.getByText('Admin Hub')).toBeDefined();
-    expect(screen.getByText('Editor Agenti')).toBeDefined();
+    expect(screen.getByText('Editor Regole')).toBeDefined();
   });
 
   it('shows user info (name, email, initial)', () => {

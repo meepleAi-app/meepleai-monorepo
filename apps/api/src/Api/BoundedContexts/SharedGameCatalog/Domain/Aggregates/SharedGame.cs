@@ -445,7 +445,8 @@ public sealed class SharedGame : AggregateRoot<Guid>
         Guid? manualCoverAttestedBy = null,
         DateTime? manualCoverAttestedAt = null,
         string? bggCoverR2Key = null,
-        uint xminVersion = 0) : base(id)
+        uint xminVersion = 0,
+        bool isRagPublic = false) : base(id)
     {
         XminVersion = xminVersion;
         _id = id;
@@ -485,6 +486,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _modifiedAt = modifiedAt;
         _bggId = bggId;
         _agentDefinitionId = agentDefinitionId;
+        _isRagPublic = isRagPublic;
     }
 
     /// <summary>
@@ -756,6 +758,38 @@ public sealed class SharedGame : AggregateRoot<Guid>
     public void MarkDataComplete()
     {
         TransitionDataStatusTo(GameDataStatus.Complete);
+    }
+
+    /// <summary>
+    /// #4401: the PDF import wizard creates the game as a skeleton before uploading the rulebook,
+    /// and fills it with the metadata the admin reviewed. Once filled there is nothing left to
+    /// enrich: the game is complete.
+    /// </summary>
+    /// <remarks>
+    /// A named exception to <see cref="ValidDataStatusTransitions"/>, which keeps a skeleton away
+    /// from <see cref="GameDataStatus.Complete"/> on purpose: on the enrichment path a skeleton has
+    /// no data yet. Left a skeleton, the imported game would be picked up by "enqueue all
+    /// skeletons" and its reviewed metadata overwritten from BGG.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The game is not a skeleton, or its data is incomplete.</exception>
+    public void CompleteFromReviewedImport(Guid modifiedBy)
+    {
+        if (_gameDataStatus != GameDataStatus.Skeleton)
+            throw new InvalidOperationException(
+                $"Only a skeleton can be completed by the import wizard; this game is {_gameDataStatus}.");
+
+        if (modifiedBy == Guid.Empty)
+            throw new ArgumentException("ModifiedBy cannot be empty.", nameof(modifiedBy));
+
+        // The skeleton's zero defaults must be gone: the import fills them through UpdateInfo first.
+        ValidateYear(_yearPublished);
+        ValidateDescription(_description);
+        ValidatePlayers(_minPlayers, _maxPlayers);
+        ValidatePlayingTime(_playingTimeMinutes);
+
+        _gameDataStatus = GameDataStatus.Complete;
+        _modifiedBy = modifiedBy;
+        _modifiedAt = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -1070,8 +1104,9 @@ public sealed class SharedGame : AggregateRoot<Guid>
         ValidateMinAge(minAge);
         ValidateComplexityRating(complexityRating);
         ValidateAverageRating(averageRating);
-        ValidateImageUrl(imageUrl);
-        ValidateThumbnailUrl(thumbnailUrl);
+        // #4090: optional on update, required on create — see ValidateOptionalImageUrl.
+        ValidateOptionalImageUrl(imageUrl);
+        ValidateOptionalThumbnailUrl(thumbnailUrl);
 
         if (modifiedBy == Guid.Empty)
             throw new ArgumentException("ModifiedBy cannot be empty", nameof(modifiedBy));
@@ -1335,25 +1370,6 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Upvotes a FAQ in this game.
-    /// Issue #2681: Public FAQs endpoints
-    /// </summary>
-    /// <param name="faqId">The ID of the FAQ to upvote</param>
-    /// <returns>The new upvote count</returns>
-    /// <exception cref="InvalidOperationException">Thrown when FAQ is not found</exception>
-    public int UpvoteFaq(Guid faqId)
-    {
-        if (faqId == Guid.Empty)
-            throw new ArgumentException("FaqId cannot be empty", nameof(faqId));
-
-        var faq = _faqs.FirstOrDefault(f => f.Id == faqId);
-        if (faq is null)
-            throw new InvalidOperationException($"FAQ with ID {faqId} not found in this game");
-
-        return faq.Upvote();
-    }
-
-    /// <summary>
     /// Removes an existing FAQ from this game.
     /// </summary>
     /// <param name="faqId">The ID of the FAQ to remove</param>
@@ -1473,14 +1489,16 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Clears all quick questions and replaces them with a new set (used during AI regeneration).
+    /// Replaces the AI-generated quick questions with a new set (used during AI regeneration).
+    /// Questions written by an administrator (<c>IsGenerated == false</c>) are kept: regenerating
+    /// must not throw away manual work (#4596).
     /// </summary>
     /// <param name="questions">The new questions to set</param>
     public void ReplaceQuickQuestions(IEnumerable<QuickQuestion> questions)
     {
         ArgumentNullException.ThrowIfNull(questions);
 
-        _quickQuestions.Clear();
+        _quickQuestions.RemoveAll(q => q.IsGenerated);
         _quickQuestions.AddRange(questions);
     }
 
@@ -1604,45 +1622,10 @@ public sealed class SharedGame : AggregateRoot<Guid>
         return _contributors.Any(c => c.UserId == userId);
     }
 
-    // Agent Linking Methods (Issue #4228)
-
-    /// <summary>
-    /// Links an AI agent to this shared game.
-    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
-    /// </summary>
-    /// <param name="agentId">The ID of the agent to link</param>
-    /// <exception cref="ArgumentException">Thrown when agentId is empty</exception>
-    /// <exception cref="InvalidOperationException">Thrown when an agent is already linked</exception>
-    public void LinkAgent(Guid agentId)
-    {
-        if (agentId == Guid.Empty)
-            throw new ArgumentException("AgentId cannot be empty", nameof(agentId));
-
-        if (_agentDefinitionId.HasValue)
-            throw new InvalidOperationException("An agent is already linked to this game");
-
-        _agentDefinitionId = agentId;
-        _modifiedAt = DateTime.UtcNow;
-
-        AddDomainEvent(new AgentLinkedToSharedGameEvent(_id, agentId));
-    }
-
-    /// <summary>
-    /// Unlinks the AI agent from this shared game.
-    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
-    /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when no agent is linked</exception>
-    public void UnlinkAgent()
-    {
-        if (!_agentDefinitionId.HasValue)
-            throw new InvalidOperationException("No agent is currently linked to this game");
-
-        var oldAgentId = _agentDefinitionId.Value;
-        _agentDefinitionId = null;
-        _modifiedAt = DateTime.UtcNow;
-
-        AddDomainEvent(new AgentUnlinkedFromSharedGameEvent(_id, oldAgentId));
-    }
+    // Issue #4138: LinkAgent / UnlinkAgent (Issue #4228) stood here, with no callers left — no
+    // handler existed for LinkAgentToSharedGameCommand. AgentDefinitionId above stays read-only:
+    // the session Hand view and the RAG readiness still read existing links, and their switch to
+    // the single system agent belongs to ADR-095.
 
     // RAG Access Methods
 
@@ -1730,6 +1713,37 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _coverAssignments.Add(assignment);
     }
 
+    /// <summary>
+    /// Reconstitution hook for the repository (#4543): appends a persisted erratum to the
+    /// aggregate WITHOUT re-running creation validation or raising <c>GameErrataAddedEvent</c>.
+    /// </summary>
+    internal void LoadErrata(GameErrata errata)
+    {
+        ArgumentNullException.ThrowIfNull(errata);
+        _erratas.Add(errata);
+    }
+
+    /// <summary>
+    /// Reconstitution hook for the repository (#4557): appends a persisted FAQ to the aggregate
+    /// WITHOUT re-running creation validation or raising <c>GameFaqAddedEvent</c>.
+    /// </summary>
+    internal void LoadFaq(GameFaq faq)
+    {
+        ArgumentNullException.ThrowIfNull(faq);
+        _faqs.Add(faq);
+    }
+
+    /// <summary>
+    /// Reconstitution hook for the repository (#4596): appends a persisted quick question to the
+    /// aggregate WITHOUT re-running creation validation. Unlike <see cref="AddQuickQuestion"/> it does
+    /// not check the owner: the repository builds the row from the game's own collection.
+    /// </summary>
+    internal void LoadQuickQuestion(QuickQuestion question)
+    {
+        ArgumentNullException.ThrowIfNull(question);
+        _quickQuestions.Add(question);
+    }
+
     // Validation Methods
 
     private static void ValidateTitle(string title)
@@ -1789,19 +1803,42 @@ public sealed class SharedGame : AggregateRoot<Guid>
             throw new ArgumentException("AverageRating must be between 1.0 and 10.0", nameof(rating));
     }
 
+    // Creation keeps requiring a value: Create_WithInvalidImageUrl_ThrowsArgumentException (both
+    // SharedGameTests and SharedGameDomainTests) and the create validator all assert it, and #4090
+    // left that product question alone.
     private static void ValidateImageUrl(string imageUrl)
     {
         if (string.IsNullOrWhiteSpace(imageUrl))
             throw new ArgumentException("ImageUrl is required", nameof(imageUrl));
 
-        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
-            throw new ArgumentException("ImageUrl must be a valid URL", nameof(imageUrl));
+        ValidateOptionalImageUrl(imageUrl);
     }
 
     private static void ValidateThumbnailUrl(string thumbnailUrl)
     {
         if (string.IsNullOrWhiteSpace(thumbnailUrl))
             throw new ArgumentException("ThumbnailUrl is required", nameof(thumbnailUrl));
+
+        ValidateOptionalThumbnailUrl(thumbnailUrl);
+    }
+
+    // #4090: on UPDATE empty is the normal state since the #2123 nullify migration — these columns
+    // are a deprecation tombstone and MapToDomain coerces a null row value to "", so a game loaded
+    // from a nullified row could not be saved at all and every admin save had to invent a URL.
+    // Covers come from CoverUrlResolver, never from these columns.
+    private static void ValidateOptionalImageUrl(string imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+            return;
+
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
+            throw new ArgumentException("ImageUrl must be a valid URL", nameof(imageUrl));
+    }
+
+    private static void ValidateOptionalThumbnailUrl(string thumbnailUrl)
+    {
+        if (string.IsNullOrWhiteSpace(thumbnailUrl))
+            return;
 
         if (!Uri.TryCreate(thumbnailUrl, UriKind.Absolute, out _))
             throw new ArgumentException("ThumbnailUrl must be a valid URL", nameof(thumbnailUrl));

@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Helpers;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using MediatR;
@@ -26,6 +27,7 @@ internal sealed class SuggestPlayerMoveCommandHandler
     private readonly IGameStateParser _gameStateParser;
     private readonly IMediator _mediator;
     private readonly ILlmService _llmService;
+    private readonly IRagAccessService _ragAccessService;
 
     // Confidence scoring weights
     private const double RagConfidenceWeight = 0.4;
@@ -66,13 +68,15 @@ internal sealed class SuggestPlayerMoveCommandHandler
         ILogger<SuggestPlayerMoveCommandHandler> logger,
         IGameStateParser gameStateParser,
         IMediator mediator,
-        ILlmService llmService)
+        ILlmService llmService,
+        IRagAccessService ragAccessService)
     {
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _gameStateParser = gameStateParser ?? throw new ArgumentNullException(nameof(gameStateParser));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
     }
 
     public async Task<PlayerModeSuggestionResponse> Handle(
@@ -80,6 +84,21 @@ internal sealed class SuggestPlayerMoveCommandHandler
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        // #4294: the RAG gate, before anything else. The suggestion is built from the KB of the
+        // game and returns its passages in `sources`; and the cache below is keyed by game, state
+        // and question — not by user — so a check placed after it would serve to anyone an answer
+        // computed for someone who may query the game. Outside the try on purpose: a refusal is
+        // not an error to turn into a fallback suggestion.
+        // As in StreamSetupGuideQueryHandler, the check applies to GUID ids: the KB is indexed by
+        // GUID, so an id that does not parse reads no KB.
+        if (Guid.TryParse(request.GameId, out var accessGameId))
+        {
+            var userRole = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            await _ragAccessService.EnsureRagAccessAsync(
+                request.UserId, accessGameId, userRole, cancellationToken).ConfigureAwait(false);
+        }
 
         // Validate query if provided
         if (!string.IsNullOrWhiteSpace(request.Query))
@@ -209,11 +228,13 @@ internal sealed class SuggestPlayerMoveCommandHandler
             var searchCommand = new SearchQuery(
                 GameId: Guid.Parse(gameId),
                 Query: searchQuery,
+                // Checked at the top of Handle, before the cache.
+                Access: SearchAccess.AlreadyChecked,
                 TopK: 10,
                 MinScore: 0.55,
                 SearchMode: "hybrid",
                 Language: "en",
-                DocumentIds: null
+                PdfDocumentIds: null
             );
 
             var searchResults = await _mediator.Send(searchCommand, cancellationToken).ConfigureAwait(false);

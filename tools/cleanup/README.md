@@ -112,9 +112,18 @@ bash tools/cleanup/cleanup-caches.sh --yes
 **What it does:**
 1. Finds processes: `testhost.exe` (DLL locking culprit), `node.exe`, `dotnet.exe`, `jest`, `VBCSCompiler`
 2. Filters for test-related processes (checks command line arguments)
-3. Kills orphaned testhost processes (>10 minutes runtime)
-4. Protects IDEs and development tools (VS Code, Rider, etc.)
-5. Prevents MSB3027 errors (DLL file locking during build)
+3. Keeps only the processes started from **this checkout**: the command line must name a path under it
+4. Kills orphaned testhost processes (>10 minutes runtime)
+5. Protects IDEs and development tools (VS Code, Rider, etc.)
+6. Prevents MSB3027 errors (DLL file locking during build)
+
+**Scope (#4310):** a test process of another checkout (another git worktree) is somebody else's
+test run, not an orphan, and is left alone. The script used to kill every testhost on the
+machine, so a cleanup in one checkout - the pre-push hook runs one - aborted the tests of all the
+others. `-AllCheckouts` restores the machine-wide behaviour; use it only when nothing else is
+running. A process whose command line does not name any checkout (a bare `dotnet test`) is left
+alone too. The rules are in `TestProcessCleanup.psm1`, tested in
+`infra/scripts/tests/cleanup-test-processes.Tests.ps1`.
 
 **Usage via package.json (Recommended):**
 ```bash
@@ -137,6 +146,9 @@ pnpm cleanup:dry-run      # Preview what would be killed
 
 # Custom memory threshold
 .\tools\cleanup\cleanup-test-processes.ps1 -MemoryThresholdMB 200
+
+# Whole machine - aborts the test runs of every other checkout
+.\tools\cleanup\cleanup-test-processes.ps1 -TestHostOnly -AllCheckouts
 ```
 
 **Common scenarios:**
@@ -154,7 +166,30 @@ pnpm cleanup:dry-run      # Preview what would be killed
 
 **Requirements:** PowerShell 5.1+, Windows 10/11
 **Alternative (Linux/macOS):** Not needed - DLL locking is Windows-specific
-**Related:** Issue #2210
+**Related:** Issue #2210, Issue #4310
+
+---
+
+### 🐳 **remove-stopped-testcontainers.sh**
+**Purpose:** Remove the Testcontainers containers that are no longer running
+
+**What it does:**
+1. Lists the containers labelled `org.testcontainers=true` in state `exited` or `dead`
+2. Removes them with `docker rm`, without `-f`
+
+**What it never does:** touch a running container. A running one is the Postgres or Redis of a
+test run in progress, possibly of another checkout on this machine. The pre-push hook calls this
+script; before #4310 it removed every Testcontainers container.
+
+```bash
+sh tools/cleanup/remove-stopped-testcontainers.sh
+```
+
+**Machine-wide alternatives:** `cleanup-testcontainers.sh` and `cleanup-testcontainers.ps1` remove
+every Testcontainers container, running ones included. They abort the integration tests of any
+other checkout working on the machine: run them only when nothing else is running.
+
+**Related:** Issue #4310
 
 ---
 

@@ -24,7 +24,6 @@ internal static class ChatSessionEndpoints
         MapGetSessionEndpoint(group);
         MapGetUserGameSessionsEndpoint(group);
         MapGetRecentSessionsEndpoint(group);
-        MapGetSessionLimitEndpoint(group);
         MapDeleteSessionEndpoint(group);
         MapRenameSessionEndpoint(group);
 
@@ -76,15 +75,6 @@ internal static class ChatSessionEndpoints
             .WithDescription("Get recent chat sessions for a user");
     }
 
-    private static void MapGetSessionLimitEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/users/{userId:guid}/chat-sessions/limit", HandleGetSessionLimit)
-            .WithName("GetChatSessionLimit")
-            .RequireSession()
-            .WithTags("ChatSessions")
-            .WithDescription("Get the user's chat session tier limit, usage, and tier name");
-    }
-
     private static void MapDeleteSessionEndpoint(RouteGroupBuilder group)
     {
         group.MapDelete("/chat/sessions/{sessionId:guid}", HandleDeleteSession)
@@ -111,11 +101,7 @@ internal static class ChatSessionEndpoints
     {
         var userId = httpContext.User.GetUserId();
 
-        // Determine tier limit for auto-archive sliding window
-        var (authenticated, session, _) = httpContext.TryGetActiveSession();
-        var tierLimit = 0;
-        if (authenticated && session?.Principal?.Subject != null)
-            tierLimit = ChatSessionTierLimits.GetLimit(session.Principal!.Subject.Tier, session.Principal!.Subject.Role);
+        var (_, session, _) = httpContext.TryGetActiveSession();
 
         var command = new CreateChatSessionCommand(
             UserId: userId,
@@ -127,7 +113,6 @@ internal static class ChatSessionEndpoints
             AgentId: request.AgentId,
             AgentType: request.AgentType,
             AgentName: request.AgentName,
-            TierLimit: tierLimit,
             UserRole: session?.Principal?.Subject?.Role
         );
 
@@ -227,41 +212,6 @@ internal static class ChatSessionEndpoints
         var sessions = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
 
         return Results.Ok(sessions);
-    }
-
-    private static async Task<IResult> HandleGetSessionLimit(
-        [FromRoute] Guid userId,
-        [FromServices] IMediator mediator,
-        HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
-        // Ownership check: caller can only query their own limit
-        var callerId = httpContext.User.GetUserId();
-        if (callerId != userId)
-            return Results.Forbid();
-
-        var (authenticated, session, _) = httpContext.TryGetActiveSession();
-
-        string tierName;
-        int limit;
-
-        if (authenticated && session?.Principal?.Subject != null)
-        {
-            tierName = session.Principal!.Subject.Tier ?? "user";
-            limit = ChatSessionTierLimits.GetLimit(session.Principal!.Subject.Tier, session.Principal!.Subject.Role);
-        }
-        else
-        {
-            tierName = "anonymous";
-            limit = ChatSessionTierLimits.GetLimit(null, null);
-        }
-
-        var used = await mediator.Send(new GetChatSessionCountQuery(callerId), cancellationToken).ConfigureAwait(false);
-
-        return Results.Ok(new ChatSessionTierLimitDto(
-            Limit: limit,
-            Used: used,
-            Tier: tierName));
     }
 
     private static async Task<IResult> HandleDeleteSession(

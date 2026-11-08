@@ -34,6 +34,35 @@ public sealed class CreateGameNightCommandValidatorTests
     }
 
     // ────────────────────────────────────────────────────────────────────────
+    // #4692 — an id chosen by the caller
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Validate_WithoutAnId_Passes()
+    {
+        var result = _validator.TestValidate(MakeCommand());
+
+        result.ShouldNotHaveValidationErrorFor(x => x.Id);
+    }
+
+    [Fact]
+    public void Validate_WithARealId_Passes()
+    {
+        var result = _validator.TestValidate(MakeCommand() with { Id = Guid.NewGuid() });
+
+        result.ShouldNotHaveValidationErrorFor(x => x.Id);
+    }
+
+    [Fact]
+    public void Validate_WithTheEmptyGuid_Fails()
+    {
+        // What an unset id serialises to: it would make every such request "the same creation".
+        var result = _validator.TestValidate(MakeCommand() with { Id = Guid.Empty });
+
+        result.ShouldHaveValidationErrorFor(x => x.Id);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
     // Combined invitee limit (BE-7): InvitedUserIds.Count + InvitedEmails.Count ≤ 49
     // ────────────────────────────────────────────────────────────────────────
 

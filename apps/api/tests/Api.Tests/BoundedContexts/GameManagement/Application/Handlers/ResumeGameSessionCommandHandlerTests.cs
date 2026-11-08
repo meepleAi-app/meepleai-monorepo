@@ -204,7 +204,7 @@ public class ResumeGameSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SessionInSetupStatus_ThrowsInvalidOperationException()
+    public async Task Handle_SessionInSetupStatus_ThrowsConflictException()
     {
         // Arrange - Session not started yet (Setup status)
         var sessionId = Guid.NewGuid();
@@ -221,7 +221,7 @@ public class ResumeGameSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf("Cannot resume session in Setup status");
 
@@ -232,7 +232,7 @@ public class ResumeGameSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AlreadyInProgressSession_ThrowsInvalidOperationException()
+    public async Task Handle_AlreadyInProgressSession_ThrowsConflictException()
     {
         // Arrange - Session already in progress (not paused)
         var sessionId = Guid.NewGuid();
@@ -250,13 +250,13 @@ public class ResumeGameSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf("Cannot resume session in InProgress status");
     }
 
     [Fact]
-    public async Task Handle_CompletedSession_ThrowsInvalidOperationException()
+    public async Task Handle_CompletedSession_ThrowsConflictException()
     {
         // Arrange - Session already completed
         var sessionId = Guid.NewGuid();
@@ -274,7 +274,7 @@ public class ResumeGameSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf("Cannot resume session in Completed status");
     }

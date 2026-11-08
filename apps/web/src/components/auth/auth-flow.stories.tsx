@@ -16,8 +16,9 @@
  * CANONICAL COMPONENT PICK (DS-17 Phase C-1 spec § 6 multi-route consolidation):
  *   Renders `LoginForm` as hero for stage matrix. Other 5 screens are
  *   documentation-only (real components — RegisterForm, ResetPasswordForm,
- *   VerificationPending, TwoFactorSetup — have dedicated stories under
- *   apps/web/src/components/auth/<Component>.stories.tsx).
+ *   VerificationPending — have dedicated stories under
+ *   apps/web/src/components/auth/<Component>.stories.tsx; the 2FA setup lives in
+ *   the settings wizard, features/settings/two-factor/TwoFactorWizardBody).
  *
  * Refs: spec docs/superpowers/specs/2026-06-11-ds-17-phase-c-pilot-migration-design.md,
  *       umbrella #2063, sub-issue #2160.
@@ -145,7 +146,7 @@ export const Frame06_TwoFactorSetup: Story = {
     docs: {
       description: {
         story:
-          'Documentation-only frame. `TwoFactorSetup` (apps/web/src/components/auth/TwoFactorSetup.tsx) renders QR + manual code + 6-digit PIN inline confirm.',
+          'Documentation-only frame. The settings wizard `TwoFactorWizardBody` (apps/web/src/components/features/settings/two-factor/TwoFactorWizardBody.tsx) renders QR + manual code + 6-digit PIN inline confirm.',
       },
     },
   },

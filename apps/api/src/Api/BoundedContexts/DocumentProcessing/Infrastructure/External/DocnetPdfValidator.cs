@@ -1,9 +1,11 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Helpers;
 using Docnet.Core;
 using Docnet.Core.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using DomainPdfVersion = Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects.PdfVersion;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
@@ -29,6 +31,7 @@ internal class DocnetPdfValidator : IPdfValidator
 {
     private readonly ILogger<DocnetPdfValidator> _logger;
     private readonly PdfValidationDomainService _domainService;
+    private readonly long _maxFileSizeBytes;
 
     // PDF magic bytes signature: %PDF-
     private static readonly byte[] PdfMagicBytes = { 0x25, 0x50, 0x44, 0x46, 0x2D };
@@ -38,10 +41,13 @@ internal class DocnetPdfValidator : IPdfValidator
 
     public DocnetPdfValidator(
         ILogger<DocnetPdfValidator> logger,
-        PdfValidationDomainService domainService)
+        PdfValidationDomainService domainService,
+        IOptions<PdfProcessingOptions> pdfOptions)
     {
         _logger = logger;
         _domainService = domainService;
+        ArgumentNullException.ThrowIfNull(pdfOptions);
+        _maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
     }
 
     public async Task<PdfValidationResult> ValidateAsync(
@@ -178,7 +184,7 @@ internal class DocnetPdfValidator : IPdfValidator
         else
         {
             var fileSize = new FileSize(pdfStream.Length);
-            var fileSizeResult = _domainService.ValidateFileSize(fileSize);
+            var fileSizeResult = _domainService.ValidateFileSize(fileSize, _maxFileSizeBytes);
             if (!fileSizeResult.IsSuccess)
             {
                 errors[fileSizeResult.FieldName!] = fileSizeResult.Error!;

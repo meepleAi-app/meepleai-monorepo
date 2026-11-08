@@ -1,8 +1,8 @@
 /**
  * AgentSwitchDialog - Agent change confirmation banner
  *
- * Shown when user requests to switch the agent type on an active thread.
- * Displays confirmation with agent name and confirm/cancel buttons.
+ * Shown when user requests to switch the answer intent (Auto, Tutor, Risposta secca) on an active thread.
+ * Displays confirmation with the intent name and confirm/cancel buttons.
  */
 
 'use client';
@@ -35,7 +35,8 @@ export function AgentSwitchDialog({
       data-testid="agent-switch-confirm"
     >
       <p className="text-sm font-nunito text-amber-900 dark:text-amber-200">
-        Vuoi cambiare agente a <strong>{pendingAgentName}</strong>? La cronologia viene mantenuta.
+        Vuoi cambiare il tipo di risposta in <strong>{pendingAgentName}</strong>? La cronologia
+        viene mantenuta.
       </p>
       <div className="flex gap-2 flex-shrink-0">
         <button

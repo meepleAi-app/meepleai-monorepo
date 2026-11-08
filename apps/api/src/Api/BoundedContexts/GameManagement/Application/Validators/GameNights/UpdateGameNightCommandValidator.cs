@@ -31,6 +31,10 @@ internal sealed class UpdateGameNightCommandValidator : AbstractValidator<Update
             .Must(scheduledAt => scheduledAt > DateTimeOffset.UtcNow.AddHours(1))
             .WithMessage("Scheduled time must be at least 1 hour in the future");
 
+        // Issue #4754: shape only; see CreateGameNightCommandValidator.
+        RuleFor(x => x.TimeZoneId)
+            .MustBeAnIanaZoneId();
+
         RuleFor(x => x.Description)
             .MaximumLength(2000)
             .When(x => x.Description != null)

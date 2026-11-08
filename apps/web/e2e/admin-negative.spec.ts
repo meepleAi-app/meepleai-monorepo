@@ -103,7 +103,7 @@ test.describe('Admin Negative Scenarios - Issue #1494', () => {
 
       // Try to set invalid negative value
       const configInput = page.locator('input[type="number"]').first();
-      if (await configInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await configInput.isVisible({ timeout: 5000 })) {
         await configInput.fill('-100');
 
         const submitButton = page.locator('button[type="submit"]').first();
@@ -147,7 +147,7 @@ test.describe('Admin Negative Scenarios - Issue #1494', () => {
 
       // Try to set value beyond boundary
       const configInput = page.locator('input[type="number"]').first();
-      if (await configInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await configInput.isVisible({ timeout: 5000 })) {
         await configInput.fill('9999');
 
         const submitButton = page.locator('button[type="submit"]').first();
@@ -190,14 +190,14 @@ test.describe('Admin Negative Scenarios - Issue #1494', () => {
       const deleteButton = page
         .locator('button:has-text("Delete"), button:has-text("Elimina")')
         .first();
-      if (await deleteButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await deleteButton.isVisible({ timeout: 5000 })) {
         await deleteButton.click();
 
         // Confirm deletion in modal if present
         const confirmButton = page
           .locator('button:has-text("Confirm"), button:has-text("Conferma")')
           .first();
-        if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await confirmButton.isVisible({ timeout: 2000 })) {
           await confirmButton.click();
         }
 
@@ -234,7 +234,7 @@ test.describe('Admin Negative Scenarios - Issue #1494', () => {
 
       // Attempt to assign invalid role (if UI allows)
       const roleSelect = page.locator('select[name="role"]').first();
-      if (await roleSelect.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await roleSelect.isVisible({ timeout: 5000 })) {
         // UI should only show valid roles, but test validation
         const submitButton = page.locator('button[type="submit"]').first();
         if (await submitButton.isVisible()) {
@@ -267,7 +267,7 @@ test.describe('Admin Negative Scenarios - Issue #1494', () => {
 
       // Try to update configuration
       const configInput = page.locator('input').first();
-      if (await configInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await configInput.isVisible({ timeout: 5000 })) {
         await configInput.fill('updated value');
 
         const submitButton = page.locator('button[type="submit"]').first();

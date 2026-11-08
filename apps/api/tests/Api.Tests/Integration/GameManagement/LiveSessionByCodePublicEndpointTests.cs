@@ -16,6 +16,25 @@ using Xunit;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// La guardia <c>WaitForPostgresReadyAsync</c> che questa classe chiamava prima di costruire l'host
+/// non e' andata persa: e' nella base, subito dopo la creazione del database isolato.
+/// </para>
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test crea la propria sessione con
+/// <c>CreateSessionWithCodeAsync</c> (utente nuovo, <c>CreateLiveSessionCommand</c>, codice
+/// restituito dal dominio) e interroga <c>GET /code/{code}/public</c> con <b>quel</b> codice: la
+/// risposta riguarda una sola sessione, non una lista. Il test del 404 usa il letterale
+/// <c>ZZZZZZ</c>, che nessun test della classe semina.
+/// </para>
+/// </summary>
+public sealed class LiveSessionByCodePublicHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "live_codepublic");
+
+/// <summary>
 /// Integration tests for the public lobby-by-code endpoint (#2590):
 ///   GET /api/v1/live-sessions/code/{code}/public
 /// Anonymous, narrow read-only projection. Proves the guest QR-join path works without auth,
@@ -26,36 +45,15 @@ namespace Api.Tests.Integration.GameManagement;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2590")]
-public sealed class LiveSessionByCodePublicEndpointTests : IAsyncLifetime
+public sealed class LiveSessionByCodePublicEndpointTests : IClassFixture<LiveSessionByCodePublicHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _databaseName = $"live_codepublic_{Guid.NewGuid():N}";
-    private Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> _factory = null!;
+    private readonly Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> _factory;
 
-    public LiveSessionByCodePublicEndpointTests(SharedTestcontainersFixture fixture)
+    public LiveSessionByCodePublicEndpointTests(LiveSessionByCodePublicHostFixture host)
     {
-        _fixture = fixture;
+        _factory = host.Factory;
     }
 
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
-        await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
 
     [Fact(DisplayName = "GET /code/{code}/public returns 200 to an anonymous caller with the narrow body")]
     public async Task Anonymous_ValidCode_Returns200_NarrowBody()

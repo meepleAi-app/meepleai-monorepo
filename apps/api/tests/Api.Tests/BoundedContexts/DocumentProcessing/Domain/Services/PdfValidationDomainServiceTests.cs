@@ -23,7 +23,6 @@ public class PdfValidationDomainServiceTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Pdf:MaxFileSizeMb"] = "50",
                 ["Pdf:MinPageCount"] = "1",
                 ["Pdf:MaxPageCount"] = "500",
                 ["Pdf:MinVersion"] = "1.0",
@@ -34,14 +33,17 @@ public class PdfValidationDomainServiceTests
 
         _service = new PdfValidationDomainService(configuration);
     }
+    // #4449: the limit is passed in — the single PdfProcessing:MaxFileSizeBytes, 100 MiB.
+    private const long Limit = 104_857_600;
+
     [Fact]
     public void ValidateFileSize_ValidSize_ReturnsSuccess()
     {
-        // Arrange: 10 MB file (well under 50 MB limit)
+        // Arrange: 10 MB file (well under the limit)
         var fileSize = FileSize.FromMegabytes(10);
 
         // Act
-        var result = _service.ValidateFileSize(fileSize);
+        var result = _service.ValidateFileSize(fileSize, Limit);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -52,11 +54,11 @@ public class PdfValidationDomainServiceTests
     [Fact]
     public void ValidateFileSize_ExactLimit_ReturnsSuccess()
     {
-        // Arrange: Exactly 50 MB (at limit)
-        var fileSize = FileSize.FromMegabytes(50);
+        // Arrange: Exactly the limit
+        var fileSize = new FileSize(Limit);
 
         // Act
-        var result = _service.ValidateFileSize(fileSize);
+        var result = _service.ValidateFileSize(fileSize, Limit);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -65,16 +67,16 @@ public class PdfValidationDomainServiceTests
     [Fact]
     public void ValidateFileSize_OverLimit_ReturnsFailure()
     {
-        // Arrange: 51 MB (over 50 MB limit)
-        var fileSize = FileSize.FromMegabytes(51);
+        // Arrange: one byte over the limit
+        var fileSize = new FileSize(Limit + 1);
 
         // Act
-        var result = _service.ValidateFileSize(fileSize);
+        var result = _service.ValidateFileSize(fileSize, Limit);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
         result.FieldName.Should().Be("fileSize");
-        result.Error.Should().Contain("exceeds maximum of 50 MB");
+        result.Error.Should().Contain("exceeds maximum of 100 MB");
         // Locale-independent check: just verify MB is mentioned
         result.Error.Should().Contain("MB");
     }
@@ -86,7 +88,7 @@ public class PdfValidationDomainServiceTests
         var fileSize = FileSize.FromKilobytes(1);
 
         // Act
-        var result = _service.ValidateFileSize(fileSize);
+        var result = _service.ValidateFileSize(fileSize, Limit);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -319,19 +321,15 @@ public class PdfValidationDomainServiceTests
         result.FieldName.Should().Be("fileType");
     }
     [Fact]
-    public void ValidateFileSize_DefaultConfiguration_UsesDefaultLimit()
+    public void ValidateFileSize_UsesTheLimitItIsGiven_NotAConfigurationKeyOfItsOwn()
     {
-        // Arrange: Empty config (should use defaults)
-        var config = new ConfigurationBuilder().Build();
-        var service = new PdfValidationDomainService(config);
-        var fileSize = FileSize.FromMegabytes(51); // Over default 50 MB
+        // #4449: it used to read Pdf:MaxFileSizeMb, with a default of 50 MB in code. With an empty
+        // configuration the limit is still the one passed in.
+        var service = new PdfValidationDomainService(new ConfigurationBuilder().Build());
 
-        // Act
-        var result = service.ValidateFileSize(fileSize);
+        var result = service.ValidateFileSize(FileSize.FromMegabytes(60), Limit);
 
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Error.Should().Contain("50 MB");
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]

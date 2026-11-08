@@ -84,6 +84,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -144,6 +145,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
@@ -182,6 +184,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -221,6 +224,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -265,6 +269,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -337,6 +342,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -408,6 +414,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
@@ -433,6 +440,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

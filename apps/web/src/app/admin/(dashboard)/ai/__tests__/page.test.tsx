@@ -3,9 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 // Mock all tab components
 vi.mock('../AgentsTab', () => ({ AgentsTab: () => <div data-testid="agents-tab" /> }));
-vi.mock('../TypologiesTab', () => ({
-  TypologiesTab: () => <div data-testid="typologies-tab" />,
-}));
 vi.mock('../DefinitionsTab', () => ({
   DefinitionsTab: () => <div data-testid="definitions-tab" />,
 }));
@@ -45,12 +42,14 @@ describe('AdminAiPage', () => {
     expect(screen.getByTestId('agents-tab')).toBeInTheDocument();
   });
 
-  it('renders typologies tab when tab=typologies', async () => {
-    const page = await AdminAiPage({
+  // #4169: il tab Typologies è uscito. Chiamava rotte admin mai esistite
+  // (/api/v1/admin/agent-typologies), quindi non ha mai caricato né salvato nulla.
+  it('no longer renders a typologies tab (#4169)', async () => {
+    const jsx = await AdminAiPage({
       searchParams: Promise.resolve({ tab: 'typologies' }),
     });
-    render(page);
-    expect(screen.getByTestId('typologies-tab')).toBeInTheDocument();
+    render(jsx);
+    expect(screen.queryByTestId('typologies-tab')).not.toBeInTheDocument();
   });
 
   it('renders definitions tab when tab=definitions', async () => {
@@ -108,7 +107,9 @@ describe('AdminAiPage', () => {
     const page = await AdminAiPage({ searchParams: Promise.resolve({}) });
     render(page);
     expect(screen.getByText('Agents')).toBeInTheDocument();
-    expect(screen.getByText('Typologies')).toBeInTheDocument();
+    // #4169: Typologies è uscita (rotte admin mai esistite); Budget è la pagina della 6a.
+    expect(screen.queryByText('Typologies')).not.toBeInTheDocument();
+    expect(screen.getByText('Budget')).toBeInTheDocument();
     expect(screen.getByText('Definitions')).toBeInTheDocument();
     expect(screen.getByText('AI Lab')).toBeInTheDocument();
     expect(screen.getByText('Prompts')).toBeInTheDocument();

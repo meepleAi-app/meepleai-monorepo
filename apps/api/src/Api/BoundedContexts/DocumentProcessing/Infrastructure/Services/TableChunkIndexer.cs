@@ -88,14 +88,17 @@ internal sealed class TableChunkIndexer : ITableChunkIndexer
         var vector = embedResult.Embeddings[0];
 
         var chunkId = TableRegionKey.ChunkIdFromRegionHash(regionHash);
-        var resolvedGameId = await PdfGameIdResolver.ResolveAsync(_db, pdf, cancellationToken).ConfigureAwait(false);
         var bboxJson = ChunkBoundingBoxJson.Serialize(
             ChunkingModels.BoundingBox.FromCoordinates((float)x, (float)y, (float)width, (float)height),
             pageNumber);
         var now = DateTime.UtcNow;
 
         // Upsert the text_chunks row (deterministic id -> idempotent replace of this one region).
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var existing = await _db.TextChunks
+            .AsTracking()
             .FirstOrDefaultAsync(tc => tc.Id == chunkId, cancellationToken)
             .ConfigureAwait(false);
         int chunkIndex;
@@ -113,8 +116,10 @@ internal sealed class TableChunkIndexer : ITableChunkIndexer
             _db.TextChunks.Add(new TextChunkEntity
             {
                 Id = chunkId,
-                GameId = resolvedGameId,
+                // #4244: GameId is an FK to shared_games; a private game goes in its own column.
+                GameId = pdf.SharedGameId,
                 SharedGameId = pdf.SharedGameId,
+                PrivateGameId = pdf.PrivateGameId,
                 PdfDocumentId = pdf.Id,
                 Content = markdown,
                 ChunkIndex = chunkIndex,
@@ -133,8 +138,9 @@ internal sealed class TableChunkIndexer : ITableChunkIndexer
             existing.PageNumber = pageNumber;
             existing.ElementType = TableElementType;
             existing.BoundingBoxesJson = bboxJson;
-            existing.GameId = resolvedGameId;
+            existing.GameId = pdf.SharedGameId;
             existing.SharedGameId = pdf.SharedGameId;
+            existing.PrivateGameId = pdf.PrivateGameId;
         }
 
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

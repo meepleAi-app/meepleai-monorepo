@@ -16,7 +16,7 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-vi.mock('@/hooks/useAuthUser', () => ({
+vi.mock('@/components/auth/AuthProvider', () => ({
   useAuthUser: () => ({ user: null, loading: false }),
 }));
 

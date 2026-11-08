@@ -60,6 +60,33 @@ internal class MockEmbeddingService : IEmbeddingService
         return GenerateEmbeddingAsync(text, ct);
     }
 
+    /// <summary>
+    /// Purposes requested through the purpose-aware overloads, in call order (#3737).
+    /// Lets a test assert that a retrieval path asked for <see cref="EmbeddingPurpose.Query"/>
+    /// instead of silently taking the passage side.
+    /// </summary>
+    public IReadOnlyList<EmbeddingPurpose> RequestedPurposes => _requestedPurposes;
+
+    private readonly List<EmbeddingPurpose> _requestedPurposes = new();
+
+    public Task<EmbeddingResult> GenerateEmbeddingsAsync(List<string> texts, EmbeddingPurpose purpose, CancellationToken ct = default)
+    {
+        _requestedPurposes.Add(purpose);
+        return GenerateEmbeddingsAsync(texts, ct);
+    }
+
+    public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, EmbeddingPurpose purpose, CancellationToken ct = default)
+    {
+        _requestedPurposes.Add(purpose);
+        return GenerateEmbeddingAsync(text, ct);
+    }
+
+    public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, string language, EmbeddingPurpose purpose, CancellationToken ct = default)
+    {
+        _requestedPurposes.Add(purpose);
+        return GenerateEmbeddingAsync(text, ct);
+    }
+
     public int GetEmbeddingDimensions() => _dimensions;
 
     public string GetModelName() => _modelName;

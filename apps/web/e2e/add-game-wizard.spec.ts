@@ -414,14 +414,14 @@ async function openWizardFromLibrary(page: Page) {
 
   // Look for the "add game" button on library page
   const addButton = page.getByRole('button', { name: /aggiungi/i }).first();
-  const isVisible = await addButton.isVisible().catch(() => false);
+  const isVisible = await addButton.isVisible();
 
   if (isVisible) {
     await addButton.click();
   } else {
     // Fallback: try link-based trigger
     const addLink = page.getByRole('link', { name: /aggiungi/i }).first();
-    const linkVisible = await addLink.isVisible().catch(() => false);
+    const linkVisible = await addLink.isVisible();
     if (linkVisible) {
       await addLink.click();
     }

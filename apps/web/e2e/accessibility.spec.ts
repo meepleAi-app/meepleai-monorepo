@@ -1,17 +1,31 @@
 /**
  * E2E Accessibility Tests (Issue #2929 - WCAG 2.1 AA Compliance)
  *
- * Comprehensive accessibility testing for all 7 main pages using axe-core.
- * Tests both light and dark modes with WCAG 2.1 AA standards.
+ * Comprehensive accessibility testing using axe-core, in light and dark mode,
+ * against WCAG 2.1 AA.
  *
- * Pages Covered:
+ * Pages covered (all PUBLIC — this spec seeds no session, see below):
  * 1. Landing Page (/)
- * 2. Games Catalog (/board-game-ai/games)
- * 3. Game Detail (/library/games/[id])
- * 4. Dashboard (/dashboard)
- * 5. Library (/library)
- * 6. Settings (/settings)
- * 7. Auth Pages (/login, /register)
+ * 2. Shared Games catalog (/shared-games)
+ * 3. Auth pages (/login, /register)
+ * 4. Static pages (/about, /faq, /privacy, /terms)
+ *
+ * Authenticated routes are covered by the 13 specs under `e2e/a11y/`, which
+ * seed a session via `seedAuthSession` so the `PLAYWRIGHT_AUTH_BYPASS` path in
+ * `proxy.ts` engages. This spec deliberately does NOT seed one, so any
+ * `(authenticated)` route here would be redirected to `/login` and silently
+ * measured as the login page.
+ *
+ * Issue #3917 — this file used to scan two routes that were not what they
+ * claimed to be, and the gate stayed green on both:
+ *   - `/board-game-ai/games` does not exist (5 executions). axe on a 404 has
+ *     nothing to complain about, so a blocking gate reported success on an
+ *     empty page. Replaced with `/shared-games`, the real public catalog.
+ *   - `/library` is under `(authenticated)`; with no session cookie the proxy
+ *     redirects to `/login`, so 3 executions were re-measuring the login page
+ *     under the name "Library".
+ * The fix is not just the URLs: `gotoChecked` below makes both failure modes
+ * loud, so the next route rename cannot quietly blind the gate again.
  *
  * WCAG 2.1 AA Requirements:
  * - Color contrast minimum 4.5:1 for normal text
@@ -22,7 +36,9 @@
  */
 
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+import { mockAuthEndpoints, seedAuthSession } from './_helpers/seedAuthSession';
 
 // WCAG 2.1 AA tags for axe-core
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
@@ -33,6 +49,39 @@ function createAxeBuilder(page: Parameters<typeof AxeBuilder>[0]['page']) {
     .withTags(WCAG_TAGS)
     .exclude('#webpack-dev-server-client-overlay') // Exclude dev overlay
     .exclude('[data-chromatic-ignore]'); // Exclude Chromatic-specific elements
+}
+
+/**
+ * Navigate and assert the page under test is actually the page we asked for.
+ *
+ * Issue #3917: an accessibility gate is only as good as the page it lands on.
+ * Two failure modes make it green while scanning nothing, and both are silent:
+ *   - the route does not exist  → the 404 page passes axe trivially;
+ *   - the route redirects       → an `(authenticated)` route lands on `/login`,
+ *                                 and the gate re-measures the login page.
+ *
+ * Asserting the status and the final pathname turns both into a loud failure,
+ * so a future route rename breaks the gate instead of blinding it.
+ */
+async function gotoChecked(page: Page, url: string): Promise<void> {
+  const response = await page.goto(url);
+
+  expect(response, `navigation to ${url} produced no response`).not.toBeNull();
+  expect(
+    response!.status(),
+    `${url} returned HTTP ${response!.status()} — the route does not exist, ` +
+      `so axe would scan an error page and pass trivially`
+  ).toBeLessThan(400);
+
+  const landed = new URL(page.url()).pathname;
+  const requested = new URL(url, page.url()).pathname;
+  expect(
+    landed,
+    `${url} redirected to ${landed} — the scan would measure that page instead. ` +
+      `If the route needs a session, seed one (see e2e/a11y/*) or move the test there`
+  ).toBe(requested);
+
+  await page.waitForLoadState('networkidle');
 }
 
 // Helper to format violations for better error messages
@@ -61,35 +110,29 @@ test.describe('Accessibility - Public Pages (Light Mode)', () => {
   });
 
   test('Landing Page (/) - light mode @a11y', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/');
 
     const results = await createAxeBuilder(page).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
 
-  test('Games Catalog (/board-game-ai/games) - light mode @a11y', async ({ page }) => {
-    await page.goto('/board-game-ai/games');
-    await page.waitForLoadState('networkidle');
+  test('Shared Games Catalog (/shared-games) - light mode @a11y', async ({ page }) => {
+    await gotoChecked(page, '/shared-games');
 
     const results = await createAxeBuilder(page).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
 
-  test('Library (/library) - light mode @a11y', async ({ page }) => {
-    await page.goto('/library');
-    await page.waitForLoadState('networkidle');
-
-    const results = await createAxeBuilder(page).analyze();
-
-    expect(results.violations, formatViolations(results.violations)).toEqual([]);
-  });
+  // `/library` used to be scanned here as a public page. It is under
+  // `(authenticated)`: with no session cookie the proxy redirects to `/login`,
+  // so this test was re-measuring the login page under the name "Library"
+  // (#3917). Its real coverage lives in `e2e/a11y/library.spec.ts`, which
+  // seeds a session.
 
   test('Login Page (/login) - light mode @a11y', async ({ page }) => {
-    await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/login');
 
     // Wait for auth modal to be fully rendered
     await page.waitForTimeout(500);
@@ -100,8 +143,7 @@ test.describe('Accessibility - Public Pages (Light Mode)', () => {
   });
 
   test('Register Page (/register) - light mode @a11y', async ({ page }) => {
-    await page.goto('/register');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/register');
 
     // Wait for auth modal to be fully rendered
     await page.waitForTimeout(500);
@@ -112,8 +154,7 @@ test.describe('Accessibility - Public Pages (Light Mode)', () => {
   });
 
   test('About Page (/about) - light mode @a11y', async ({ page }) => {
-    await page.goto('/about');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/about');
 
     const results = await createAxeBuilder(page).analyze();
 
@@ -121,8 +162,7 @@ test.describe('Accessibility - Public Pages (Light Mode)', () => {
   });
 
   test('FAQ Page (/faq) - light mode @a11y', async ({ page }) => {
-    await page.goto('/faq');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/faq');
 
     const results = await createAxeBuilder(page).analyze();
 
@@ -140,17 +180,15 @@ test.describe('Accessibility - Public Pages (Dark Mode)', () => {
   });
 
   test('Landing Page (/) - dark mode @a11y', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/');
 
     const results = await createAxeBuilder(page).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
 
-  test('Games Catalog (/board-game-ai/games) - dark mode @a11y', async ({ page }) => {
-    await page.goto('/board-game-ai/games');
-    await page.waitForLoadState('networkidle');
+  test('Shared Games Catalog (/shared-games) - dark mode @a11y', async ({ page }) => {
+    await gotoChecked(page, '/shared-games');
 
     const results = await createAxeBuilder(page).analyze();
 
@@ -158,8 +196,7 @@ test.describe('Accessibility - Public Pages (Dark Mode)', () => {
   });
 
   test('Login Page (/login) - dark mode @a11y', async ({ page }) => {
-    await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/login');
     await page.waitForTimeout(500);
 
     const results = await createAxeBuilder(page).analyze();
@@ -168,8 +205,7 @@ test.describe('Accessibility - Public Pages (Dark Mode)', () => {
   });
 
   test('Register Page (/register) - dark mode @a11y', async ({ page }) => {
-    await page.goto('/register');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/register');
     await page.waitForTimeout(500);
 
     const results = await createAxeBuilder(page).analyze();
@@ -189,8 +225,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
     // when caught mid-pulse cycle). Components must carry
     // `motion-reduce:animate-none` for this to take effect.
     await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/');
 
     const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
 
@@ -199,22 +234,20 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
 
   test('Landing Page meets 4.5:1 contrast ratio - dark mode @a11y', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/');
 
     const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
 
-  test('Games Catalog meets contrast requirements @a11y', async ({ page }) => {
+  test('Shared Games Catalog meets contrast requirements @a11y', async ({ page }) => {
     // #1094 follow-up: reduced-motion neutralizes mid-animation captures
     // (e.g. /register `.animate-pulse` "Creating account…" yielded ratio 4.09
     // when caught mid-pulse cycle). Components must carry
     // `motion-reduce:animate-none` for this to take effect.
     await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
-    await page.goto('/board-game-ai/games');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/shared-games');
 
     const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
 
@@ -227,8 +260,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
     // when caught mid-pulse cycle). Components must carry
     // `motion-reduce:animate-none` for this to take effect.
     await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
-    await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/login');
     await page.waitForTimeout(500);
 
     const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
@@ -245,8 +277,7 @@ test.describe('Accessibility - Keyboard Navigation', () => {
   test('Landing Page - all interactive elements are keyboard accessible @a11y', async ({
     page,
   }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/');
 
     // Test Tab navigation
     const focusableElements = await page
@@ -265,8 +296,7 @@ test.describe('Accessibility - Keyboard Navigation', () => {
   });
 
   test('Login form - keyboard navigation works correctly @a11y', async ({ page }) => {
-    await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/login');
     await page.waitForTimeout(500);
 
     // Check that form inputs can receive focus
@@ -278,19 +308,24 @@ test.describe('Accessibility - Keyboard Navigation', () => {
     }
   });
 
-  test('Games catalog - cards are keyboard navigable @a11y', async ({ page }) => {
-    await page.goto('/board-game-ai/games');
-    await page.waitForLoadState('networkidle');
+  test('Shared games catalog - cards are keyboard navigable @a11y', async ({ page }) => {
+    await gotoChecked(page, '/shared-games');
 
-    // Check for game cards with links
-    const gameLinks = await page.locator('a[href*="/giochi/"], a[href*="/games/"]').all();
+    // Detail links of the public catalog. The old selector looked for
+    // `/giochi/` and `/games/`, which never matched this route (#3917).
+    const gameLinks = await page.locator('a[href^="/shared-games/"]').all();
 
-    // If there are game links, verify they are focusable
-    if (gameLinks.length > 0) {
-      await gameLinks[0].focus();
-      const isFocused = await gameLinks[0].evaluate(el => el === document.activeElement);
-      expect(isFocused).toBe(true);
-    }
+    // The catalog can legitimately be empty in an unseeded environment. Skipping
+    // with a reason keeps that visible in the report; the previous `if (...) {}`
+    // with no `else` reported success for a check that never ran (#3917).
+    test.skip(
+      gameLinks.length === 0,
+      'no catalog entries rendered — nothing to assert about card focusability'
+    );
+
+    await gameLinks[0].focus();
+    const isFocused = await gameLinks[0].evaluate(el => el === document.activeElement);
+    expect(isFocused).toBe(true);
   });
 });
 
@@ -300,8 +335,7 @@ test.describe('Accessibility - Keyboard Navigation', () => {
 
 test.describe('Accessibility - Focus Indicators', () => {
   test('Buttons have visible focus indicators @a11y', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/');
 
     const buttons = await page.locator('button').all();
     if (buttons.length > 0) {
@@ -327,8 +361,7 @@ test.describe('Accessibility - Focus Indicators', () => {
   });
 
   test('Links have visible focus indicators @a11y', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/');
 
     const links = await page.locator('a[href]').all();
     if (links.length > 0) {
@@ -346,8 +379,7 @@ test.describe('Accessibility - Focus Indicators', () => {
 
 test.describe('Accessibility - ARIA and Semantic HTML', () => {
   test('Landing Page has proper landmark regions @a11y', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/');
 
     // Check for main landmark
     const main = await page.locator('main, [role="main"]').count();
@@ -359,8 +391,7 @@ test.describe('Accessibility - ARIA and Semantic HTML', () => {
   });
 
   test('Login form has proper labels @a11y', async ({ page }) => {
-    await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/login');
     await page.waitForTimeout(500);
 
     const results = await new AxeBuilder({ page }).withTags(['cat.forms']).analyze();
@@ -369,8 +400,7 @@ test.describe('Accessibility - ARIA and Semantic HTML', () => {
   });
 
   test('Images have alt text @a11y', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/');
 
     const results = await new AxeBuilder({ page }).withTags(['cat.text-alternatives']).analyze();
 
@@ -378,8 +408,7 @@ test.describe('Accessibility - ARIA and Semantic HTML', () => {
   });
 
   test('Buttons and links have accessible names @a11y', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/');
 
     const results = await new AxeBuilder({ page }).withTags(['cat.name-role-value']).analyze();
 
@@ -397,8 +426,7 @@ test.describe('Accessibility - Authenticated Pages', () => {
 
   test.skip('Dashboard (/dashboard) - requires auth @a11y @authenticated', async ({ page }) => {
     // TODO: Implement after auth setup is added
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/dashboard');
 
     const results = await createAxeBuilder(page).analyze();
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
@@ -406,17 +434,28 @@ test.describe('Accessibility - Authenticated Pages', () => {
 
   test.skip('Library (/library) - requires auth @a11y @authenticated', async ({ page }) => {
     // TODO: Implement after auth setup is added
-    await page.goto('/library');
-    await page.waitForLoadState('networkidle');
+    await gotoChecked(page, '/library');
 
     const results = await createAxeBuilder(page).analyze();
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
 
-  test.skip('Settings (/settings) - requires auth @a11y @authenticated', async ({ page }) => {
-    // TODO: Implement after auth setup is added
-    await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
+  // Un-skipped with the fix that made the hub reachable (#3938/#3946/#3961).
+  //
+  // The note that used to sit here said `/settings` did not exist. It did: #3938 had
+  // created the route, and nine 308s in `next.config.js` were shadowing it — which is
+  // also why `gotoChecked` would have failed, not on a 404 but on its second assertion,
+  // landing on `/profile` instead of the requested path. Removing the redirects satisfies
+  // both. This test is the coverage that would have caught the defect, so it is enabled
+  // here rather than deferred.
+  //
+  // Its two neighbours above stay skipped: their blocker is the missing auth setup, which
+  // is a separate concern and covers routes outside this change.
+  test('Settings (/settings) - requires auth @a11y @authenticated', async ({ page }) => {
+    await seedAuthSession(page);
+    await mockAuthEndpoints(page);
+
+    await gotoChecked(page, '/settings');
 
     const results = await createAxeBuilder(page).analyze();
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
@@ -439,8 +478,9 @@ test.describe('Accessibility - Comprehensive Audit', () => {
 
   const publicPages = [
     { name: 'Landing Page', url: '/' },
-    { name: 'Games Catalog', url: '/board-game-ai/games' },
-    { name: 'Library', url: '/library' },
+    { name: 'Shared Games Catalog', url: '/shared-games' },
+    // 'Library' removed (#3917): `(authenticated)` route, redirected to /login
+    // without a session — this entry audited the login page a second time.
     { name: 'Login', url: '/login' },
     { name: 'Register', url: '/register' },
     { name: 'About', url: '/about' },
@@ -453,8 +493,7 @@ test.describe('Accessibility - Comprehensive Audit', () => {
     test(`${pageConfig.name} (${pageConfig.url}) - full WCAG 2.1 AA audit @a11y`, async ({
       page,
     }) => {
-      await page.goto(pageConfig.url);
-      await page.waitForLoadState('networkidle');
+      await gotoChecked(page, pageConfig.url);
 
       // Extra wait for dynamic content
       if (pageConfig.url.includes('login') || pageConfig.url.includes('register')) {

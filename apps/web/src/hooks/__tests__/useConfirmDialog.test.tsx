@@ -181,7 +181,7 @@ describe('useConfirmDialog', () => {
 
     await waitFor(() => {
       const confirmButton = screen.getByRole('button', { name: /confirm/i });
-      expect(confirmButton).toHaveClass('bg-destructive');
+      expect(confirmButton).toHaveClass('bg-destructive/(--btn-fill)');
     });
   });
 

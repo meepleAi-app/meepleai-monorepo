@@ -12,45 +12,53 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
+/// <summary>
+/// La fixture di <see cref="MechanicMetricsEndpointsTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class MechanicMetricsEndpointsTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "me532_endpoints");
+
 /// <summary>#532: the metrics endpoints are admin-gated and route to the query handlers.</summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class MechanicMetricsEndpointsTests : IAsyncLifetime
+public sealed class MechanicMetricsEndpointsTests
+    : IClassFixture<MechanicMetricsEndpointsTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly MechanicMetricsEndpointsTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
     private string _adminToken = null!;
 
-    public MechanicMetricsEndpointsTests(SharedTestcontainersFixture fixture)
+    public MechanicMetricsEndpointsTests(MechanicMetricsEndpointsTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"me532_endpoints_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var conn = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(conn);
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await db.Database.MigrateAsync();
             (_, _adminToken) = await TestSessionHelper.CreateAdminSessionAsync(db, Guid.NewGuid());
         }
         _client = _factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    // Host e database appartengono alla fixture; il client e' di questa istanza.
+    public ValueTask DisposeAsync()
     {
         _client?.Dispose();
-        if (_factory is not null)
-        {
-            await _factory.DisposeAsync();
-        }
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     [Fact]

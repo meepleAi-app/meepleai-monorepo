@@ -58,10 +58,8 @@ internal sealed class ReindexGameKbCommandHandler : ICommandHandler<ReindexGameK
         // another user's KB (incl. PrivateGameId cross-user). Mirror AskArbiter/TutorQuery handlers.
         var userRole = Enum.TryParse<UserRole>(command.UserRole, ignoreCase: true, out var parsedRole)
             ? parsedRole : UserRole.User;
-        var canAccess = await _ragAccessService.CanAccessRagAsync(
+        await _ragAccessService.EnsureRagAccessAsync(
             command.UserId, command.GameId, userRole, cancellationToken).ConfigureAwait(false);
-        if (!canAccess)
-            throw new ForbiddenException("Accesso RAG non autorizzato");
 
         // 1. Count indexable PDFs.
         var pdfCount = await _db.PdfDocuments

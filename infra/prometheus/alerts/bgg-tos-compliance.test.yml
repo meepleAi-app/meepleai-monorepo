@@ -16,7 +16,7 @@ tests:
   # offending FE route surfaced in the summary.
   - interval: 1m
     input_series:
-      - series: 'meepleai_bgg_url_attempted_render_total{path="/library"}'
+      - series: 'meepleai_bgg_url_attempted_render_total_attempts_total{path="/library"}'
         values: '0 0 1 1 1 1'
     alert_rule_test:
       - eval_time: 5m
@@ -28,13 +28,13 @@ tests:
               path: "/library"
             exp_annotations:
               summary: "BGG ToS violation attempt on /library (SLO=0 P1)"
-              description: "meepleai_bgg_url_attempted_render_total incremented: a browser attempted to load an image from a banned BGG host. SLO for this metric is ZERO; any nonzero rate is a P1 ToS-compliance incident (#2123, ADR-059)."
+              description: "meepleai_bgg_url_attempted_render_total_attempts_total incremented: a browser attempted to load an image from a banned BGG host. SLO for this metric is ZERO; any nonzero rate is a P1 ToS-compliance incident (#2123, ADR-059)."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#20-catalog-covers--bgg-tos-compliance-2123"
 
   # No attempts (counter flat at 0) must NOT fire — SLO=0 holds, no page.
   - interval: 1m
     input_series:
-      - series: 'meepleai_bgg_url_attempted_render_total{path="/library"}'
+      - series: 'meepleai_bgg_url_attempted_render_total_attempts_total{path="/library"}'
         values: '0 0 0 0 0 0'
     alert_rule_test:
       - eval_time: 5m

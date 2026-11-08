@@ -108,7 +108,7 @@ internal class GameSessionStateRepository : RepositoryBase, IGameSessionStateRep
         var snapshotsList = entity.Snapshots.Select(MapSnapshotToDomain).ToList();
 
         // Use internal constructor for reconstruction
-        return new GameSessionState(
+        var domainState = new GameSessionState(
             id: entity.Id,
             gameSessionId: entity.GameSessionId,
             templateId: entity.TemplateId,
@@ -118,6 +118,13 @@ internal class GameSessionStateRepository : RepositoryBase, IGameSessionStateRep
             lastUpdatedBy: entity.LastUpdatedBy,
             snapshots: snapshotsList
         );
+
+        // #3651/#3688: il token letto viaggia con l'aggregato. UpdateAsync stacca l'entità
+        // tracciata e riattacca un grafo detached, dove EF usa i valori correnti come original
+        // values: senza questa riga la WHERE avrebbe xmin = 0 e ogni scrittura fallirebbe.
+        domainState.SetXmin(entity.Xmin);
+
+        return domainState;
     }
 
     /// <summary>
@@ -133,7 +140,9 @@ internal class GameSessionStateRepository : RepositoryBase, IGameSessionStateRep
             CurrentStateJson = domainEntity.GetStateAsString(),
             Version = domainEntity.Version,
             LastUpdatedAt = domainEntity.LastUpdatedAt,
-            LastUpdatedBy = domainEntity.LastUpdatedBy
+            LastUpdatedBy = domainEntity.LastUpdatedBy,
+            // #3651/#3688: round-trip del concurrency token verso il grafo detached.
+            Xmin = domainEntity.Xmin,
         };
 
         // Map snapshots

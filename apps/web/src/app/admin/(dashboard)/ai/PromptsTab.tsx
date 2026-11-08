@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react';
 
-import { ScrollText, Plus, Trash2, Pencil } from 'lucide-react';
+import { ScrollText, Plus } from 'lucide-react';
 import Link from 'next/link';
 
 import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
-import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { PromptTemplate } from '@/lib/api/schemas';
 
@@ -33,6 +32,13 @@ export function PromptsTab() {
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             System prompts for AI agents. Version-controlled with audit history.
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            The system prompt of the answers to users is part of the{' '}
+            <Link href="/admin/agents/profile" className="underline underline-offset-2">
+              agent profile
+            </Link>
+            : a published version cannot be changed or deleted.
           </p>
         </div>
         <Link
@@ -76,19 +82,6 @@ export function PromptsTab() {
                     </span>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0 self-end sm:self-start">
-                <Button variant="ghost" size="sm" aria-label="Edit prompt">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Delete prompt"
-                  onClick={() => api.admin.deletePrompt(p.id).catch(() => {})}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
               </div>
             </div>
           ))}

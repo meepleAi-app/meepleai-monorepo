@@ -3,16 +3,20 @@
 import * as React from 'react';
 
 import {
-  type ColumnDef,
-  type SortingState,
-  type VisibilityState,
-  type RowSelectionState,
-  type OnChangeFn,
-  type Row,
+  columnVisibilityFeature,
+  createSortedRowModel,
   flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
+  rowSelectionFeature,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
+  type ColumnDef as RtColumnDef,
+  type ColumnVisibilityState,
+  type OnChangeFn,
+  type Row as RtRow,
+  type RowData,
+  type RowSelectionState,
+  type SortingState,
 } from '@tanstack/react-table';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
@@ -21,22 +25,76 @@ import { Checkbox } from '@/components/ui/primitives/checkbox';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 
-// Re-export types for convenience
-export type { ColumnDef, SortingState, VisibilityState, RowSelectionState };
+/**
+ * Le feature che questa tabella usa, registrate esplicitamente (#3893).
+ *
+ * In react-table v9 le feature non sono piu' incluse d'ufficio: una API
+ * assente significa quasi sempre una feature non registrata, non una API
+ * rimossa. Qui ne servono tre — ordinamento, selezione righe, visibilita'
+ * colonne — piu' lo slot del sorted row model. Il core row model e'
+ * automatico e non va piu' passato.
+ *
+ * NON si usa `stockFeatures`: bundlerebbe anche paginazione, filtri,
+ * raggruppamento, faceting, pinning e resizing, che questa tabella non ha
+ * mai offerto.
+ */
+const features = tableFeatures({
+  columnVisibilityFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+});
 
-// Shift selection context for range selection support
-interface ShiftSelectionContextValue<TData> {
-  enabled: boolean;
-  handleRowClick?: (row: Row<TData>, event: React.MouseEvent) => void;
+type Features = typeof features;
+
+/**
+ * I consumatori non devono nominare il set di feature: e' una scelta di
+ * questo wrapper, non loro. Questi alias tengono la firma a un solo
+ * generico come in v8 (`ColumnDef<Riga>`), cosi' i quattro call-site
+ * cambiano solo la sorgente dell'import — e smettono di dipendere
+ * direttamente da @tanstack/react-table, che era anche un errore di
+ * stratificazione.
+ */
+export type ColumnDef<TData extends RowData, TValue = unknown> = RtColumnDef<
+  Features,
+  TData,
+  TValue
+>;
+export type Row<TData extends RowData> = RtRow<Features, TData>;
+/** v9 ha rinominato `VisibilityState` in `ColumnVisibilityState`. */
+export type VisibilityState = ColumnVisibilityState;
+export type { SortingState, RowSelectionState };
+
+// Shift selection context for range selection support.
+//
+// #3893: il contesto non e' piu' generico. Del `Row` gli servono soltanto
+// `id` e `toggleSelected`, e in v9 i generici di `Row` sono invarianti —
+// tenerlo generico costringeva a un `any` (con relativo eslint-disable) e
+// comunque non tipava nulla. Un tipo strutturale minimo dice esattamente cosa
+// serve e toglie l'`any`.
+interface ShiftSelectableRow {
+  id: string;
+  toggleSelected: () => void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ShiftSelectionContext = React.createContext<ShiftSelectionContextValue<any>>({
+interface ShiftSelectionContextValue {
+  enabled: boolean;
+  handleRowClick?: (row: ShiftSelectableRow, event: React.MouseEvent) => void;
+}
+
+const ShiftSelectionContext = React.createContext<ShiftSelectionContextValue>({
   enabled: false,
 });
 
-export interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+/**
+ * #3893: il generico `TValue` e' sparito dalla firma pubblica. In v9
+ * `useTable` vuole un array omogeneo con `TValue = unknown`, e tutti i
+ * call-site scrivevano gia' `ColumnDef<Riga, unknown>`: l'alias `ColumnDef`
+ * qui sopra mantiene i due parametri con `unknown` come default, quindi le
+ * annotazioni esistenti continuano a compilare senza modifiche.
+ */
+export interface DataTableProps<TData extends RowData> {
+  columns: ColumnDef<TData>[];
   data: TData[];
   sorting?: SortingState;
   onSortingChange?: OnChangeFn<SortingState>;
@@ -51,7 +109,7 @@ export interface DataTableProps<TData, TValue> {
   enableShiftSelection?: boolean;
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends RowData>({
   columns,
   data,
   sorting,
@@ -65,7 +123,7 @@ export function DataTable<TData, TValue>({
   isLoading = false,
   emptyMessage = 'No results.',
   enableShiftSelection = false,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData>) {
   // Internal state when external state is not provided
   const [internalSorting, setInternalSorting] = React.useState<SortingState>([]);
   const [internalRowSelection, setInternalRowSelection] = React.useState<RowSelectionState>({});
@@ -74,11 +132,10 @@ export function DataTable<TData, TValue>({
   );
   const [lastSelectedIndex, setLastSelectedIndex] = React.useState<number | null>(null);
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     onSortingChange: onSortingChange ?? setInternalSorting,
     onRowSelectionChange: onRowSelectionChange ?? setInternalRowSelection,
     onColumnVisibilityChange: onColumnVisibilityChange ?? setInternalColumnVisibility,
@@ -92,7 +149,7 @@ export function DataTable<TData, TValue>({
 
   // Shift+click handler for range selection
   const handleShiftClick = React.useCallback(
-    (row: Row<TData>, event: React.MouseEvent) => {
+    (row: ShiftSelectableRow, event: React.MouseEvent) => {
       if (!enableShiftSelection || !event.shiftKey || lastSelectedIndex === null) {
         // Normal click - just toggle selection
         row.toggleSelected();
@@ -134,7 +191,7 @@ export function DataTable<TData, TValue>({
   );
 
   // Shift selection context value
-  const shiftSelectionValue = React.useMemo<ShiftSelectionContextValue<TData>>(
+  const shiftSelectionValue = React.useMemo<ShiftSelectionContextValue>(
     () => ({
       enabled: enableShiftSelection,
       handleRowClick: enableShiftSelection ? handleShiftClick : undefined,
@@ -226,7 +283,7 @@ export function SortableHeader({ column, children }: SortableHeaderProps) {
 }
 
 // Checkbox cell component with Shift+click support
-function SelectCheckboxCell<TData>({ row }: { row: Row<TData> }) {
+function SelectCheckboxCell<TData extends RowData>({ row }: { row: Row<TData> }) {
   const shiftContext = React.useContext(ShiftSelectionContext);
 
   const handleClick = (e: React.MouseEvent) => {
@@ -253,7 +310,7 @@ function SelectCheckboxCell<TData>({ row }: { row: Row<TData> }) {
 }
 
 // Helper to create a checkbox selection column
-export function createSelectColumn<TData>(): ColumnDef<TData> {
+export function createSelectColumn<TData extends RowData>(): ColumnDef<TData> {
   return {
     id: 'select',
     header: ({ table }) => (

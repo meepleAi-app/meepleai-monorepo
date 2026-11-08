@@ -30,8 +30,9 @@ vi.mock('@/hooks/useTranslation', () => ({
   }),
 }));
 
-// Mock useAuth so RegisterForm mount doesn't hit real auth client
-vi.mock('@/hooks/useAuth', () => ({
+// Mock useAuth so RegisterForm mount doesn't hit real auth client.
+// #4190: the form now uses AuthProvider, not the homonymous @/hooks/useAuth.
+vi.mock('@/components/auth/AuthProvider', () => ({
   useAuth: () => ({ register: vi.fn() }),
 }));
 

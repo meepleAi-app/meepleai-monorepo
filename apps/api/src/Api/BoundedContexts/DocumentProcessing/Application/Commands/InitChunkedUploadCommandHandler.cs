@@ -1,8 +1,11 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -12,16 +15,26 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// </summary>
 internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUploadCommand, InitChunkedUploadResult>
 {
+    /// <summary>
+    /// How many chunked uploads one user may have open at once. Read by <c>GetUploadLimitsQuery</c>
+    /// so the web shows this number instead of a copy of it (#4449).
+    /// </summary>
+    internal const int MaxActiveSessionsPerUser = 3;
+
     private readonly IChunkedUploadSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<InitChunkedUploadCommandHandler> _logger;
     private readonly string _uploadTempBasePath;
+    private readonly long _maxFileSizeBytes;
 
     public InitChunkedUploadCommandHandler(
         IChunkedUploadSessionRepository sessionRepository,
         MeepleAiDbContext dbContext,
-        ILogger<InitChunkedUploadCommandHandler> logger)
+        ILogger<InitChunkedUploadCommandHandler> logger,
+        IOptions<PdfProcessingOptions> pdfOptions)
     {
+        ArgumentNullException.ThrowIfNull(pdfOptions);
+        _maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -50,9 +63,9 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                 );
             }
 
-            // Validate file size (max 500 MB for now)
-            const long maxFileSizeBytes = 500L * 1024 * 1024;
-            if (request.TotalFileSize > maxFileSizeBytes)
+            // #4449: the single PDF limit. InitChunkedUploadCommandValidator refuses first; this is the
+            // handler's own guard, and it used to be a 500 MB number of its own.
+            if (request.TotalFileSize > _maxFileSizeBytes)
             {
                 return new InitChunkedUploadResult(
                     Success: false,
@@ -60,7 +73,7 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                     TotalChunks: 0,
                     ChunkSizeBytes: 0,
                     ExpiresAt: null,
-                    ErrorMessage: $"File size exceeds maximum allowed ({maxFileSizeBytes / (1024 * 1024)} MB)"
+                    ErrorMessage: $"File size exceeds maximum allowed ({PdfSizeLimit.Describe(_maxFileSizeBytes)})"
                 );
             }
 
@@ -77,9 +90,13 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                 );
             }
 
-            // Check for existing active sessions for this user (limit to 3 concurrent uploads)
-            var activeSessions = await _sessionRepository.FindActiveByUserIdAsync(request.UserId, cancellationToken).ConfigureAwait(false);
-            if (activeSessions.Count >= 3)
+            // #4395: the game must exist. The completed upload ties the PDF to it (SharedGameId is a foreign
+            // key), so an unknown id used to fail only after the whole file was uploaded and stored,
+            // leaving the blob behind.
+            var gameExists = request.PrivateGameId.HasValue
+                ? await _dbContext.PrivateGames.AnyAsync(g => g.Id == request.PrivateGameId.Value, cancellationToken).ConfigureAwait(false)
+                : await _dbContext.SharedGames.AnyAsync(g => g.Id == request.GameId!.Value, cancellationToken).ConfigureAwait(false);
+            if (!gameExists)
             {
                 return new InitChunkedUploadResult(
                     Success: false,
@@ -87,7 +104,21 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                     TotalChunks: 0,
                     ChunkSizeBytes: 0,
                     ExpiresAt: null,
-                    ErrorMessage: "Maximum concurrent uploads (3) reached. Complete or cancel existing uploads first."
+                    ErrorMessage: "Game not found."
+                );
+            }
+
+            // Check for existing active sessions for this user (at most MaxActiveSessionsPerUser at once)
+            var activeSessions = await _sessionRepository.FindActiveByUserIdAsync(request.UserId, cancellationToken).ConfigureAwait(false);
+            if (activeSessions.Count >= MaxActiveSessionsPerUser)
+            {
+                return new InitChunkedUploadResult(
+                    Success: false,
+                    SessionId: null,
+                    TotalChunks: 0,
+                    ChunkSizeBytes: 0,
+                    ExpiresAt: null,
+                    ErrorMessage: $"Maximum concurrent uploads ({MaxActiveSessionsPerUser}) reached. Complete or cancel existing uploads first."
                 );
             }
 

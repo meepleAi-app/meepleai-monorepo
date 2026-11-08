@@ -40,7 +40,11 @@ internal sealed class RAGRecommender : IRAGRecommender
         try
         {
             // Get user's top favorite games (most played or favorites)
-            var topGames = await _dbContext.Set<UserLibraryEntry>()
+            // UserLibraryEntries e' il DbSet mappato. L'aggregato di dominio UserLibraryEntry
+            // non e' nel modello — MeepleAiDbContext lo dichiara Ignore<>() — quindi
+            // Set<UserLibraryEntry>() falliva a runtime con "Cannot create a DbSet for
+            // 'UserLibraryEntry' because this type is not included in the model" (#3839).
+            var topGames = await _dbContext.UserLibraryEntries
                 .AsNoTracking()
                 .Where(e => e.UserId == userId)
                 .OrderByDescending(e => e.Sessions.Count) // Most played
@@ -48,7 +52,7 @@ internal sealed class RAGRecommender : IRAGRecommender
                 .Take(TopGamesToAnalyze)
                 .Select(e => new
                 {
-                    e.GameId
+                    e.SharedGameId
                 })
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);

@@ -71,8 +71,13 @@ public sealed class GameNightPlaylistRowVersionConcurrencyTests : IAsyncLifetime
         await using var dbA = _fixture.CreateDbContext(_connectionString);
         await using var dbB = _fixture.CreateDbContext(_connectionString);
 
-        var playlistA = await dbA.GameNightPlaylists.FirstAsync(p => p.Id == playlistId);
-        var playlistB = await dbB.GameNightPlaylists.FirstAsync(p => p.Id == playlistId);
+        // Issue #3866: `.AsTracking()` is REQUIRED here. The DbContext default is NoTracking
+        // (PERF-06), so a plain read hands back a DETACHED entity: the mutations below would reach
+        // no change tracker, SaveChangesAsync would write nothing, and the concurrency token this
+        // test exists to exercise would never even be compared. This is the documented opt-out for
+        // a fixture whose subject IS a tracked read-modify-write.
+        var playlistA = await dbA.GameNightPlaylists.AsTracking().FirstAsync(p => p.Id == playlistId);
+        var playlistB = await dbB.GameNightPlaylists.AsTracking().FirstAsync(p => p.Id == playlistId);
 
         playlistA.Should().NotBeSameAs(playlistB);
         playlistA.Xmin.Should().Be(playlistB.Xmin, "both scopes loaded the same row — xmin must match");

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -31,6 +32,105 @@ public class AdvancedChunkingServiceTests
             _textChunkingServiceMock.Object,
             _strategySelector,
             _loggerMock.Object);
+    }
+
+    // ── #4782: the page of a chunk comes from the page map, when there is one ────────────────
+
+    // "page one text" (0..13) \n\n "page two text" (15..28) \n\n "page four text" (30..44)
+    private const string PagedContent = "page one text\n\npage two text\n\npage four text";
+    private static readonly PageSpan[] PagedSpans = [new(1, 0), new(2, 15), new(4, 30)];
+
+    private static ExtractedDocument SingleSectionDocument(IReadOnlyList<PageSpan>? spans) => new()
+    {
+        Id = Guid.NewGuid(),
+        Content = PagedContent,
+        PageSpans = spans,
+        Sections =
+        [
+            new() { Content = PagedContent, Page = 1, CharStart = 0, CharEnd = PagedContent.Length },
+        ],
+    };
+
+    // Each piece is the span the chunker cut, from its start. The real TextChunkingService trims the text of a chunk but
+    // reports the start and end of the span BEFORE trimming, so a chunk cut at a blank line has a CharStart on the blank
+    // and a Text that no longer starts with one. The double reproduces that, as a Text that kept its blanks would hide it.
+    private void SetupTextChunks(params (int Start, string Span)[] pieces)
+    {
+        _textChunkingServiceMock
+            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(pieces.Select((p, i) => new TextChunk
+            {
+                Text = p.Span.Trim(), Index = i, CharStart = p.Start, CharEnd = p.Start + p.Span.Length, Page = 1,
+            }).ToList());
+    }
+
+    [Fact]
+    public async Task ChunkDocumentAsync_WithAPageMap_PutsEachChildOnThePageHoldingItsFirstCharacter()
+    {
+        SetupTextChunks((0, "page one text"), (15, "page two text"), (30, "page four text"));
+
+        var chunks = await _service.ChunkDocumentAsync(SingleSectionDocument(PagedSpans));
+
+        chunks.Where(c => !c.IsRoot).Select(c => c.Metadata.Page).Should().Equal(1, 2, 4);
+        chunks.Single(c => c.IsRoot).Metadata.Page.Should().Be(1, "the parent starts on page 1");
+    }
+
+    [Fact]
+    public async Task ChunkDocumentAsync_WithAPageMap_AChildStartingInTheBlankLineBetweenPages_IsOnThePageOfItsWords()
+    {
+        // Offset 13 is the first "\n" after page 1: the chunk starts on the blank line, its words are on page 2.
+        SetupTextChunks((13, "\n\npage two text"));
+
+        var chunks = await _service.ChunkDocumentAsync(SingleSectionDocument(PagedSpans));
+
+        chunks.Single(c => !c.IsRoot).Metadata.Page.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ChunkDocumentAsync_WithAPageMap_ASectionThatDoesNotBeginTheDocument_IsLookedUpAtItsOwnOffset()
+    {
+        // The map is over the text of the document: the section begins at 4, so its offsets are shifted by 4.
+        var document = new ExtractedDocument
+        {
+            Id = Guid.NewGuid(),
+            Content = "xx\n\n" + PagedContent,
+            PageSpans = [new(1, 0), new(2, 19), new(4, 34)],
+            Sections = [new() { Content = PagedContent, Page = 1, CharStart = 4, CharEnd = 4 + PagedContent.Length }],
+        };
+        SetupTextChunks((0, "page one text"), (15, "page two text"), (30, "page four text"));
+
+        var chunks = await _service.ChunkDocumentAsync(document);
+
+        chunks.Where(c => !c.IsRoot).Select(c => c.Metadata.Page).Should().Equal(1, 2, 4);
+    }
+
+    [Fact]
+    public async Task ChunkDocumentAsync_WithAPageMap_TheParentTakesThePageWhereItsTextStarts()
+    {
+        // The first pages had no text: the section starts on page 3, not on the 1 the section carries.
+        var document = new ExtractedDocument
+        {
+            Id = Guid.NewGuid(),
+            Content = "first words\n\nsecond words",
+            PageSpans = [new(3, 0), new(5, 13)],
+            Sections = [new() { Content = "first words\n\nsecond words", Page = 1, CharStart = 0, CharEnd = 25 }],
+        };
+        SetupTextChunks((0, "first words"), (13, "second words"));
+
+        var chunks = await _service.ChunkDocumentAsync(document);
+
+        chunks.Single(c => c.IsRoot).Metadata.Page.Should().Be(3);
+        chunks.Where(c => !c.IsRoot).Select(c => c.Metadata.Page).Should().Equal(3, 5);
+    }
+
+    [Fact]
+    public async Task ChunkDocumentAsync_WithoutAPageMap_EveryChunkKeepsThePageOfItsSection()
+    {
+        SetupTextChunks((0, "page one text"), (15, "page two text"), (30, "page four text"));
+
+        var chunks = await _service.ChunkDocumentAsync(SingleSectionDocument(null));
+
+        chunks.Select(c => c.Metadata.Page).Distinct().Should().Equal(1);
     }
 
     [Fact]

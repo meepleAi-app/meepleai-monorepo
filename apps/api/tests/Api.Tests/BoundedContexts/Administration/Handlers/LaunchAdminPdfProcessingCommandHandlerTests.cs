@@ -2,6 +2,11 @@ using Api.BoundedContexts.Administration.Application.Commands.GameWizard;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -85,7 +90,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Status.Should().Be("processing");
+        result.Status.Should().Be("queued");
         result.Priority.Should().Be("Admin");
         result.PdfDocumentId.Should().Be(pdfId);
         result.GameId.Should().Be(gameId);
@@ -158,7 +163,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert: handler found SharedGame + PDF directly
-        result.Status.Should().Be("processing");
+        result.Status.Should().Be("queued");
         result.Priority.Should().Be("Admin");
 
         var pdf = await _dbContext.PdfDocuments.FindAsync(pdfId);
@@ -244,8 +249,13 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
     // Pipeline dispatch: both ExtractPdfTextCommand and IndexPdfCommand are sent
     // ────────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// #4443 R3: the queue processes the document. The request used to enqueue AND run extraction and
+    /// indexing itself, so the worker started a second pipeline on the same PDF seconds later.
+    /// </summary>
     [Fact]
-    public async Task Handle_WhenSuccessful_DispatchesBothPipelineCommands()
+    [Trait("Issue", "4443")]
+    public async Task Handle_WhenSuccessful_EnqueuesOnly_AndRunsNoPipelineInTheRequest()
     {
         // Arrange
         var gameId = Guid.NewGuid();
@@ -269,24 +279,25 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         // Act
         await _handler.Handle(command, CancellationToken.None);
 
-        // Assert: enqueue + both pipeline commands were dispatched
+        // Assert: one enqueue at the wizard priority, no pipeline command in the request
         _mockMediator.Verify(
             m => m.Send(It.Is<EnqueuePdfCommand>(c => c.PdfDocumentId == pdfId && c.Priority == 100), It.IsAny<CancellationToken>()),
             Times.Once);
         _mockMediator.Verify(
-            m => m.Send(It.Is<ExtractPdfTextCommand>(c => c.PdfId == pdfId), It.IsAny<CancellationToken>()),
-            Times.Once);
+            m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         _mockMediator.Verify(
-            m => m.Send(It.Is<IndexPdfCommand>(c => c.PdfId == pdfId.ToString()), It.IsAny<CancellationToken>()),
-            Times.Once);
+            m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Enqueue: duplicate job is tolerated (ConflictException caught)
+    // Enqueue: an active job already exists — that is a success (ConflictException caught)
     // ────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Handle_WhenEnqueueThrowsConflict_StillProcessesPipeline()
+    [Trait("Issue", "4443")]
+    public async Task Handle_WhenAlreadyQueued_Succeeds_WithoutRunningThePipeline()
     {
         // Arrange
         var gameId = Guid.NewGuid();
@@ -317,10 +328,60 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert: pipeline still runs despite enqueue conflict
-        result.Status.Should().Be("processing");
+        // Assert: the existing job will process it; the request does not
+        result.Status.Should().Be("queued");
         _mockMediator.Verify(
-            m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+            m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// #4443 R8: «already has an active job» is a success for launch-processing, a full queue is not.
+    /// Both used to be <see cref="ConflictException"/>, so a full queue was swallowed as «already
+    /// queued» and the document was left with no job. The enqueue here is the real handler, with the
+    /// queue at <see cref="ProcessingJob.MaxQueueSize"/>, so the test follows whatever it throws.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4443")]
+    public async Task Handle_WhenTheQueueIsFull_FailsWithQueueFull_InsteadOfSkippingTheEnqueue()
+    {
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Terraforming Mars" });
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            SharedGameId = gameId,
+            FileName = "terraforming-mars.pdf",
+            FilePath = "/uploads/terraforming-mars.pdf",
+            UploadedByUserId = UserId
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var jobs = new Mock<IProcessingJobRepository>();
+        jobs.Setup(r => r.ExistsByPdfDocumentIdAsync(pdfId, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        jobs.Setup(r => r.CountByStatusAsync(JobStatus.Queued, It.IsAny<CancellationToken>())).ReturnsAsync(ProcessingJob.MaxQueueSize);
+        jobs.Setup(r => r.CountByStatusAsync(JobStatus.Processing, It.IsAny<CancellationToken>())).ReturnsAsync(0);
+        var pdfs = new Mock<IPdfDocumentRepository>();
+        pdfs.Setup(r => r.ExistsAsync(pdfId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var realEnqueue = new EnqueuePdfCommandHandler(jobs.Object, pdfs.Object, Mock.Of<IUnitOfWork>(), TimeProvider.System);
+        _mockMediator.Setup(m => m.Send(It.IsAny<EnqueuePdfCommand>(), It.IsAny<CancellationToken>()))
+            .Returns((EnqueuePdfCommand c, CancellationToken ct) => realEnqueue.Handle(c, ct));
+        SetupPipelineCommandsOnly();
+
+        var act = () => _handler.Handle(
+            new LaunchAdminPdfProcessingCommand(GameId: gameId, PdfDocumentId: pdfId, LaunchedByUserId: UserId),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ProcessingQueueFullException>();
+        _mockMediator.Verify(m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private void SetupPipelineCommandsOnly()
+    {
+        _mockMediator.Setup(m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ExtractPdfTextResultDto.CreateSuccess(1000, 5));
+        _mockMediator.Setup(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(IndexingResultDto.CreateSuccess("vec-doc-1", 10, DateTime.UtcNow));
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -338,11 +399,11 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Pipeline failure propagates
+    // Enqueue failure propagates
     // ────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Handle_WhenPipelineCommandThrows_ExceptionPropagates()
+    public async Task Handle_WhenEnqueueFailsUnexpectedly_ExceptionPropagates()
     {
         // Arrange
         var gameId = Guid.NewGuid();
@@ -360,9 +421,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         _mockMediator.Setup(m => m.Send(It.IsAny<EnqueuePdfCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Guid.NewGuid());
-        _mockMediator.Setup(m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Extraction service unavailable"));
+            .ThrowsAsync(new InvalidOperationException("Database unavailable"));
 
         var command = new LaunchAdminPdfProcessingCommand(
             GameId: gameId, PdfDocumentId: pdfId, LaunchedByUserId: UserId);
@@ -372,6 +431,6 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Extraction service unavailable");
+            .WithMessage("Database unavailable");
     }
 }

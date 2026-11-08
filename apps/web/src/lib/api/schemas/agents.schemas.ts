@@ -12,19 +12,32 @@ import { GameIdString } from './common.schemas';
 /**
  * Agent DTO Schema
  * Matches AgentDto from backend
+ *
+ * #4154 — esige solo i campi che qualcuno legge. `type` non c'e` piu`: ADR-094 lo ha ritirato e
+ * #4147 lo ha tolto da `AgentDto`; se un backend vecchio lo manda ancora durante un deploy, Zod lo
+ * scarta. `strategyName`/`strategyParameters` sono opzionali perche' Strategy e` la prossima voce
+ * a uscire da `AgentDefinition` (#4138): i lettori gestiscono gia` l'assenza. Contratto fissato in
+ * `__tests__/agent-dto.contract.test.ts` sul payload reale.
  */
 export const AgentDtoSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  type: z.string(),
-  strategyName: z.string(),
-  strategyParameters: z.record(z.string(), z.any()),
+  strategyName: z.string().optional(),
+  strategyParameters: z.record(z.string(), z.any()).optional(),
   isActive: z.boolean(),
   createdAt: z.string().datetime({ offset: true }),
   lastInvokedAt: z.string().datetime({ offset: true }).nullable(),
   invocationCount: z.number().int().nonnegative(),
   isRecentlyUsed: z.boolean(),
   isIdle: z.boolean(),
+  /**
+   * #4081 — agente definito dal sistema, non dall'utente.
+   *
+   * Obbligatorio, non `.optional()`: un campo assente leggerebbe `undefined`, cioe' falsy, cioe'
+   * «non di sistema» — che e' esattamente il difetto da chiudere, in silenzio. Meglio che la
+   * validazione fallisca rumorosamente se il backend smettesse di mandarlo.
+   */
+  isSystemDefined: z.boolean(),
   // Issue #4914: user-owned agent fields
   gameId: GameIdString.nullable().optional(),
   gameName: z.string().nullable().optional(),
@@ -163,36 +176,6 @@ export const ChessAgentResponseSchema = z.object({
 });
 
 export type ChessAgentResponse = z.infer<typeof ChessAgentResponseSchema>;
-
-/**
- * Setup Guide Response Step Schema (Issue #1977)
- * Matches SetupGuideStep from backend Contracts (non-streaming response)
- */
-export const SetupGuideResponseStepSchema = z.object({
-  stepNumber: z.number().int().positive(),
-  title: z.string(),
-  instruction: z.string(),
-  references: z.array(SnippetSchema),
-  isOptional: z.boolean(),
-});
-
-export type SetupGuideResponseStep = z.infer<typeof SetupGuideResponseStepSchema>;
-
-/**
- * Setup Guide Response Schema (Issue #1977)
- * Matches SetupGuideResponse from backend Contracts
- */
-export const SetupGuideResponseSchema = z.object({
-  gameTitle: z.string(),
-  steps: z.array(SetupGuideResponseStepSchema),
-  estimatedSetupTimeMinutes: z.number().int().nonnegative(),
-  promptTokens: z.number().int().nonnegative(),
-  completionTokens: z.number().int().nonnegative(),
-  totalTokens: z.number().int().nonnegative(),
-  confidence: z.number().nullable(),
-});
-
-export type SetupGuideResponse = z.infer<typeof SetupGuideResponseSchema>;
 
 // ========== Agent Documents (Issue #2399) ==========
 

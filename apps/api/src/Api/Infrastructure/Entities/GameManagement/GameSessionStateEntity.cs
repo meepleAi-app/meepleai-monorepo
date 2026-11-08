@@ -28,10 +28,16 @@ public class GameSessionStateEntity
     public string LastUpdatedBy { get; set; } = string.Empty;
 
     /// <summary>
-    /// Optimistic locking via PostgreSQL xmin (EF Core Timestamp).
+    /// Concurrency token (#3651, ADR-060) sulla colonna di sistema <c>xmin</c>.
+    ///
+    /// <para>
+    /// Il commento precedente diceva «Optimistic locking via PostgreSQL xmin (EF Core Timestamp)»:
+    /// <b>non era vero</b>. <c>[Timestamp]</c> su un <c>byte[]</c> produce una colonna <c>bytea</c>
+    /// che Postgres non popola, quindi EF confrontava <c>NULL = NULL</c> e nessun conflitto veniva
+    /// rilevato. È la quarta affermazione di questo tipo trovata da #3651.
+    /// </para>
     /// </summary>
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
+    public uint Xmin { get; set; }
 
     // Navigation properties
     public GameSessionEntity GameSession { get; set; } = null!;

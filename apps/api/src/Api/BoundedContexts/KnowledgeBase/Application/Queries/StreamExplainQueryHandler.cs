@@ -129,7 +129,8 @@ internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQ
         string topic,
         CancellationToken cancellationToken)
     {
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, cancellationToken).ConfigureAwait(false);
+        // #3737: the topic is what we search WITH, not indexed text -> e5 "query:" prefix.
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, EmbeddingPurpose.Query, cancellationToken).ConfigureAwait(false);
 
         if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
         {

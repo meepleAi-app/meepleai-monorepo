@@ -1,33 +1,35 @@
 /**
- * ChatEntryOrchestrator — Composes GameSelector, AgentSelector, QuickStartSuggestions,
- * and ThreadCreator into the full "new chat" flow.
+ * ChatEntryOrchestrator — Composes GameSelector, QuickStartSuggestions and ThreadCreator into the
+ * full "new chat" flow.
+ *
+ * Issue #4138: the per-game "custom agents" leg is gone, and with it the loading state, the
+ * auto-start-on-exactly-one-agent branch and the OFFSCREEN AgentSelector mount (#923).
+ * Issue #4730: the persona picker (Auto / Tutor / Arbitro / Stratega / Narratore) is gone too. What it
+ * picked never reached the thread — the create request carries no agent type — so it changed nothing
+ * but whether the start button was enabled; inside the thread there is a switcher of its own.
  *
  * Two modes:
- * 1. Full mode (no ?game param): Game grid → Agent grid → Start
- * 2. Direct game mode (?game=id from MeepleCard chat button):
- *    - 0 custom agents → show system agent selection
- *    - 1 custom agent  → auto-create thread and redirect
- *    - 2+ custom agents → show agent picker only
+ * 1. Full mode (no ?game param): Game grid → Start
+ * 2. Direct game mode (?game=id from MeepleCard chat button): the game is already chosen → Start
  */
 
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 
 import { MessageSquarePlus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { stashPendingFirstMessage } from '@/components/chat/shared';
 import { trackRulesChatStarted } from '@/lib/analytics/flywheel-events';
 import { cn } from '@/lib/utils';
 import type { Game } from '@/types';
 
-import { AgentSelector } from './AgentSelector';
-import { DEFAULT_AGENTS } from './constants';
 import { GameSelector } from './GameSelector';
 import { QuickStartSuggestions } from './QuickStartSuggestions';
 import { createThreadWithContext } from './ThreadCreator';
 
-import type { CustomAgent, PromptType } from './types';
+import type { PromptType } from './types';
 
 export interface ChatEntryOrchestratorProps {
   className?: string;
@@ -50,30 +52,13 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
 
   // Selection state
   const [selectedGameId, setSelectedGameId] = useState<string | null>(directGameId);
-  const [selectedAgentType, setSelectedAgentType] = useState<string | null>(
-    isDirectGameMode ? null : 'auto'
-  );
-  const [selectedCustomAgentId, setSelectedCustomAgentId] = useState<string | null>(null);
 
   // Loaded game list for title resolution
   const [allGames, setAllGames] = useState<Game[]>([]);
 
-  // Custom agents resolved by AgentSelector
-  const [customAgents, setCustomAgents] = useState<CustomAgent[]>([]);
-  const [isLoadingCustomAgents, setIsLoadingCustomAgents] = useState(isDirectGameMode);
-
   // Thread creation state
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Prevent double auto-start in direct game mode
-  const autoStartedRef = useRef(false);
-
-  // Pre-select agent from ?agent= param
-  useEffect(() => {
-    const agentParam = searchParams?.get('agent');
-    if (agentParam) setSelectedAgentType(agentParam);
-  }, [searchParams]);
 
   // Track games loaded from GameSelector
   const handleGamesLoaded = useCallback((games: Game[]) => {
@@ -85,71 +70,8 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
     });
   }, []);
 
-  // AgentSelector callback — track custom agents and loading state
-  const handleCustomAgentsResolved = useCallback((agents: CustomAgent[], isLoading: boolean) => {
-    setCustomAgents(agents);
-    setIsLoadingCustomAgents(isLoading);
-  }, []);
-
-  // Direct game mode: auto-start or show agent picker
-  useEffect(() => {
-    if (!isDirectGameMode || autoStartedRef.current) return;
-    if (isLoadingCustomAgents) return;
-    if (!selectedGameId) return;
-
-    if (customAgents.length === 0) {
-      // No custom agents — show system agent selection
-      autoStartedRef.current = true;
-    } else if (customAgents.length === 1) {
-      // Exactly 1 agent → auto-create thread
-      autoStartedRef.current = true;
-      setIsCreating(true);
-
-      const agent = customAgents[0];
-      const gameName = allGames.find(g => g.id === selectedGameId)?.title;
-
-      createThreadWithContext({
-        gameId: selectedGameId,
-        gameName,
-        selectedCustomAgentId: agent.id,
-        customAgents,
-        selectedKbIds,
-      })
-        .then(({ threadId }) => {
-          router.push(`/chat/${threadId}`);
-        })
-        .catch(() => {
-          setError('Errore nella creazione della conversazione');
-          setIsCreating(false);
-        });
-    }
-    // 2+ agents: fall through to show agent selection UI
-  }, [
-    isDirectGameMode,
-    isLoadingCustomAgents,
-    selectedGameId,
-    selectedKbIds,
-    customAgents,
-    allGames,
-    router,
-  ]);
-
-  // Handle game selection — reset agent selection
   const handleGameSelect = useCallback((gameId: string) => {
     setSelectedGameId(gameId);
-    setSelectedCustomAgentId(null);
-  }, []);
-
-  // Handle custom agent selection — clear system agent
-  const handleCustomAgentSelect = useCallback((agentId: string) => {
-    setSelectedCustomAgentId(agentId);
-    setSelectedAgentType(null);
-  }, []);
-
-  // Handle system agent selection — clear custom agent
-  const handleSystemAgentSelect = useCallback((agentType: string) => {
-    setSelectedAgentType(agentType);
-    setSelectedCustomAgentId(null);
   }, []);
 
   // Selected game name for display and thread title
@@ -168,8 +90,6 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
         const { threadId } = await createThreadWithContext({
           gameId: selectedGameId,
           gameName: selectedGame?.title,
-          selectedCustomAgentId,
-          customAgents,
           initialMessage,
           promptType,
           selectedKbIds,
@@ -180,6 +100,10 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
           promptType,
         });
 
+        // #4740: the server drops `initialMessage`, so the thread view has to ask the question;
+        // it must be waiting there before the thread opens.
+        if (initialMessage) stashPendingFirstMessage(threadId, initialMessage);
+
         router.push(`/chat/${threadId}`);
       } catch {
         setError('Errore nella creazione della conversazione');
@@ -187,14 +111,7 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
         setIsCreating(false);
       }
     },
-    [
-      selectedGameId,
-      selectedKbIds,
-      selectedGame?.title,
-      selectedCustomAgentId,
-      customAgents,
-      router,
-    ]
+    [selectedGameId, selectedKbIds, selectedGame?.title, router]
   );
 
   const handleQuickStart = useCallback(
@@ -204,49 +121,10 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
     [handleStartChat]
   );
 
-  const hasAgentAvailable = DEFAULT_AGENTS.length > 0 || customAgents.length > 0;
-  const canStart =
-    hasAgentAvailable && (selectedAgentType !== null || selectedCustomAgentId !== null);
-
-  // Direct game mode: loading spinner while resolving agents
-  // Issue #923: AgentSelector must be mounted (offscreen) so its useEffect
-  // fires the API call and resolves `isLoadingCustomAgents` via the
-  // onCustomAgentsResolved callback. Otherwise the page deadlocks on
-  // "Preparazione..." because the callback never runs.
-  if (
-    isDirectGameMode &&
-    (isLoadingCustomAgents || isCreating || (customAgents.length === 1 && !error))
-  ) {
-    return (
-      <div className="min-h-dvh bg-background flex items-center justify-center">
-        {/* Headless agent resolver — drives onCustomAgentsResolved while spinner is visible */}
-        <div aria-hidden="true" className="sr-only">
-          <AgentSelector
-            gameId={selectedGameId}
-            onSelectSystemAgent={handleSystemAgentSelect}
-            onSelectCustomAgent={handleCustomAgentSelect}
-            selectedAgentType={selectedAgentType}
-            selectedCustomAgentId={selectedCustomAgentId}
-            onCustomAgentsResolved={handleCustomAgentsResolved}
-          />
-        </div>
-        <div className="text-center">
-          <div className="h-8 w-8 border-3 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground font-nunito">
-            {isCreating ? 'Avvio chat in corso...' : 'Preparazione...'}
-          </p>
-          {error && (
-            <div
-              role="alert"
-              className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-lg text-sm border border-red-200 dark:border-red-500/20"
-            >
-              {error}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // #4715: the conversation needs a game. "Continue without a game" used to start a thread that never
+  // answers, so the start button now waits for one.
+  const hasGame = !!selectedGameId;
+  const canStart = hasGame;
 
   return (
     <div className={cn('min-h-dvh bg-background', className)}>
@@ -256,18 +134,14 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
           <div className="inline-flex items-center gap-3 mb-4">
             <MessageSquarePlus className="h-8 w-8 text-amber-500" />
             <h1 className="text-2xl sm:text-3xl font-bold font-quicksand text-foreground">
-              {isDirectGameMode ? 'Seleziona un agente' : 'Inizia una nuova conversazione'}
+              Inizia una nuova conversazione
             </h1>
           </div>
           <p className="text-muted-foreground font-nunito max-w-lg mx-auto">
-            {isDirectGameMode && selectedGame ? (
-              <>
-                Scegli un agente per{' '}
-                <span className="font-semibold text-foreground">{selectedGame.title}</span>
-              </>
-            ) : (
-              'Seleziona un gioco e un agente AI per iniziare. Puoi anche chattare senza un gioco specifico.'
-            )}
+            {/* In direct game mode GameSelector is hidden, so the game's title is never loaded here. */}
+            {isDirectGameMode
+              ? 'Le risposte si basano sul regolamento del gioco scelto.'
+              : 'Seleziona un gioco per iniziare: le risposte si basano sul suo regolamento.'}
           </p>
         </div>
 
@@ -293,22 +167,14 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
             />
           )}
 
-          {/* Agent Selection */}
-          <AgentSelector
-            gameId={selectedGameId}
-            onSelectSystemAgent={handleSystemAgentSelect}
-            onSelectCustomAgent={handleCustomAgentSelect}
-            selectedAgentType={selectedAgentType}
-            selectedCustomAgentId={selectedCustomAgentId}
-            onCustomAgentsResolved={handleCustomAgentsResolved}
-          />
-
-          {/* Quick Start */}
-          <QuickStartSuggestions
-            gameName={selectedGame?.title}
-            onSelect={handleQuickStart}
-            disabled={isCreating}
-          />
+          {/* Quick Start — only with a game: every suggestion is a question about one */}
+          {hasGame && (
+            <QuickStartSuggestions
+              gameName={selectedGame?.title}
+              onSelect={handleQuickStart}
+              disabled={isCreating}
+            />
+          )}
 
           {/* Start Button */}
           <div className="text-center">
@@ -335,6 +201,14 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
                 </>
               )}
             </button>
+            {!hasGame && (
+              <p
+                className="mt-3 text-sm text-muted-foreground font-nunito"
+                data-testid="start-needs-game"
+              >
+                Scegli un gioco per iniziare la conversazione.
+              </p>
+            )}
           </div>
         </div>
       </div>

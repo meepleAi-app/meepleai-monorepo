@@ -71,16 +71,6 @@ export const ChatSessionArraySchema = z.array(ChatSessionSummaryDtoSchema);
 
 export type ChatSessionListResponse = z.infer<typeof ChatSessionListResponseSchema>;
 
-// ========== Tier Limit ==========
-
-export const ChatSessionTierLimitSchema = z.object({
-  limit: z.number().int().nonnegative(),
-  used: z.number().int().nonnegative(),
-  tier: z.string(),
-});
-
-export type ChatSessionTierLimit = z.infer<typeof ChatSessionTierLimitSchema>;
-
 // ========== Add Message Response ==========
 
 // Backend returns AddChatSessionMessageResponse(Guid MessageId) — NOT a full ChatSessionDto

@@ -47,8 +47,6 @@ export type {
 } from './admin/adminContentClient';
 
 export type {
-  AgentTypology,
-  AgentTypologyListResponse,
   EmbeddingServiceInfo,
   EmbeddingServiceMetrics,
   RagExecutionListItem,

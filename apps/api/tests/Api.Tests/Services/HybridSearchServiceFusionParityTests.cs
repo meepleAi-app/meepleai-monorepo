@@ -29,6 +29,7 @@ namespace Api.Tests.Services;
 /// intentionally keeps <c>queryRoleHint</c> at its default (<see cref="GameBookRole.None"/>) so
 /// each case isolates the fusion mapping being characterized here.
 /// </summary>
+[Collection("VectorArmMetrics")]  // #3786: contatore condiviso, vedi VectorArmMetricsCollection
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class HybridSearchServiceFusionParityTests
@@ -41,7 +42,7 @@ public sealed class HybridSearchServiceFusionParityTests
     {
         var mock = new Mock<IEmbeddingService>();
         mock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]>
             {
                 new float[] { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f },

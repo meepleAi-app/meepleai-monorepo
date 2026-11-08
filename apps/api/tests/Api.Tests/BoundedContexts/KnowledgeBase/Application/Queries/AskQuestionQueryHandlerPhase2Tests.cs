@@ -3,9 +3,12 @@ using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
+using Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -23,7 +26,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Phase 2 tests for AskQuestionQueryHandler: ResponseLanguage translation,
-/// IPricingEngine quota enforcement, and IHouseRuleMatcher integration.
+/// the daily quota of the plan (#4168, 5g-b), and IHouseRuleMatcher integration.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
@@ -35,12 +38,10 @@ public class AskQuestionQueryHandlerPhase2Tests
     private readonly Mock<IChatThreadRepository> _mockThreadRepository;
     private readonly Mock<IPdfDocumentRepository> _mockPdfDocumentRepository;
     private readonly Mock<ILlmService> _mockLlmService;
-    private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
     private readonly Mock<IRagValidationPipelineService> _mockValidationPipeline;
     private readonly Mock<ISemanticResponseCache> _mockResponseCache;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<IHouseRuleMatcher> _mockHouseRuleMatcher;
-    private readonly Mock<IPricingEngine> _mockPricingEngine;
     private readonly Mock<IGenericTranslationService> _mockTranslationService;
     private readonly Mock<ILogger<AskQuestionQueryHandler>> _mockLogger;
     private readonly Mock<RrfFusionDomainService> _mockRrfService;
@@ -56,7 +57,7 @@ public class AskQuestionQueryHandlerPhase2Tests
         var mockSearchLogger = new Mock<ILogger<SearchQueryHandler>>();
 
         mockSearchEmbeddingService
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,
@@ -80,7 +81,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>());
 
         _mockRrfService
-            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>(), It.IsAny<IReadOnlyList<string>?>()))
+            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<float>(), It.IsAny<float>()))
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>());
 
         mockKeywordSearchService
@@ -101,22 +102,20 @@ public class AskQuestionQueryHandlerPhase2Tests
         _mockThreadRepository = new Mock<IChatThreadRepository>();
         _mockPdfDocumentRepository = new Mock<IPdfDocumentRepository>();
         _mockLlmService = new Mock<ILlmService>();
-        _mockPromptTemplateService = new Mock<IPromptTemplateService>();
         _mockValidationPipeline = new Mock<IRagValidationPipelineService>();
         _mockResponseCache = new Mock<ISemanticResponseCache>();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
         _mockHouseRuleMatcher = new Mock<IHouseRuleMatcher>();
-        _mockPricingEngine = new Mock<IPricingEngine>();
         _mockTranslationService = new Mock<IGenericTranslationService>();
         _mockLogger = new Mock<ILogger<AskQuestionQueryHandler>>();
 
         // Default: cache miss
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((CachedRagResponse?)null);
 
         _mockEmbeddingService
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[768] } });
     }
 
@@ -133,10 +132,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         const string translatedAnswer = "Il pedone avanza di una casella.";
 
         SetupDefaultMocksWithSearchResults(gameId, originalAnswer);
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -177,10 +172,6 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -204,43 +195,156 @@ public class AskQuestionQueryHandlerPhase2Tests
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Test 3: Quota denied throws ForbiddenException and no LLM call is made
+    // Test 3 (#4168, 5g-b): the daily quota of the plan. It replaces IPricingEngine, whose only
+    // implementation let every question through.
     // ─────────────────────────────────────────────────────────────────────────
 
+    private static AskQuestionQuery AQuestionFrom(Guid userId, Guid gameId) => new(
+        GameId: gameId,
+        Question: "How does the pawn move?",
+        Language: "en",
+        UserId: userId,
+        UserRole: "User");
+
+    private static void NothingWasCounted(Mock<Api.SharedKernel.Services.ITierEnforcementService> tiers) =>
+        tiers.Verify(
+            t => t.RecordUsageAsync(
+                It.IsAny<Guid>(), It.IsAny<Api.SharedKernel.Services.TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+    private static void OneAnswerWasCountedFor(Guid userId, Mock<Api.SharedKernel.Services.ITierEnforcementService> tiers) =>
+        tiers.Verify(
+            t => t.RecordUsageAsync(
+                userId, Api.SharedKernel.Services.TierAction.AgentQuery, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+    /// <summary>
+    /// Three answers delivered today on a plan of three: the fourth question stops with the 403
+    /// the other plan limits already use, before the cache is read and before the model is called.
+    /// </summary>
     [Fact]
-    public async Task Handle_WhenQuotaDenied_ThrowsForbiddenExceptionWithoutLlmCall()
+    public async Task Handle_OverTheQuotaOfThePlan_ThrowsTheTierLimit_BeforeTheCacheAndTheLlm()
     {
-        // Arrange
         var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused — the question never gets this far");
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 3, max: 3);
 
-        SetupDefaultMocks(gameId);
+        var act = () => BuildHandler(tiers: tiers.Object)
+            .Handle(AQuestionFrom(userId, gameId), TestContext.Current.CancellationToken);
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), "qa_question", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
-
-        _mockHouseRuleMatcher
-            .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
-
-        var query = new AskQuestionQuery(
-            GameId: gameId,
-            Question: "How does the pawn move?",
-            Language: "en");
-
-        var handler = BuildHandler();
-
-        // Act
-        var act = () => handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert
-        await act.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("*Quota*");
-
+        var refusal = (await act.Should().ThrowAsync<Api.SharedKernel.Exceptions.TierLimitExceededException>()).Which;
+        (refusal.LimitType, refusal.Current, refusal.Max, refusal.UpgradeUrl).Should().Be(("AgentQuery", 3, 3, "/pricing"));
+        _mockResponseCache.Verify(
+            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         _mockLlmService.Verify(
-            s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
-            Times.Never,
-            "LLM must not be called when quota is denied");
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        NothingWasCounted(tiers);
+    }
+
+    [Fact]
+    public async Task Handle_AnAnswerFromTheModel_IsCountedOnce()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 2, max: 3);
+
+        var result = await BuildHandler(tiers: tiers.Object)
+            .Handle(AQuestionFrom(userId, gameId), TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("The pawn moves forward one space.");
+        OneAnswerWasCountedFor(userId, tiers);
+    }
+
+    /// <summary>An answer served from the cache is a question answered: it counts like any other.</summary>
+    [Fact]
+    public async Task Handle_AnAnswerFromTheCache_IsCountedToo()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache");
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CachedRagResponse(
+                Answer: "Cached answer.",
+                Citations: new List<CachedCitation>(),
+                ModelUsed: "test-model",
+                CachedAt: DateTimeOffset.UtcNow));
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 2, max: 3);
+
+        var result = await BuildHandler(tiers: tiers.Object)
+            .Handle(AQuestionFrom(userId, gameId), TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("Cached answer.");
+        _mockLlmService.Verify(
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        OneAnswerWasCountedFor(userId, tiers);
+    }
+
+    /// <summary>The gateway stopped the call at the spending cap: no answer, nothing to count.</summary>
+    [Fact]
+    public async Task Handle_WhenTheGatewayRefuses_NothingIsCounted()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused");
+        _mockLlmService
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("Daily AI budget reached.") with
+            {
+                Metadata = new Dictionary<string, string> { ["error_code"] = "AI_BUDGET_DAILY_EXHAUSTED" },
+            });
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 2, max: 3);
+
+        var act = () => BuildHandler(tiers: tiers.Object)
+            .Handle(AQuestionFrom(Guid.NewGuid(), gameId), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<LlmCallRefusedException>();
+        NothingWasCounted(tiers);
+    }
+
+    /// <summary>Nothing was found, so the model was not asked and there is no answer to count.</summary>
+    [Fact]
+    public async Task Handle_WhenNothingIsFound_NothingIsCounted()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocks(gameId);
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 2, max: 3);
+
+        var result = await BuildHandler(tiers: tiers.Object)
+            .Handle(AQuestionFrom(Guid.NewGuid(), gameId), TestContext.Current.CancellationToken);
+
+        result.IsLowQuality.Should().BeTrue();
+        _mockLlmService.Verify(
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        NothingWasCounted(tiers);
+    }
+
+    /// <summary>
+    /// The only sender without a user is the auto-test of the admin wizard: no plan to ask, nothing
+    /// to count.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithoutAUser_ThePlanIsNotAsked()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 3, max: 3);
+
+        var result = await BuildHandler(tiers: tiers.Object).Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "How does the pawn move?", Language: "en"),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("The pawn moves forward one space.");
+        tiers.Verify(
+            t => t.CheckUsageAsync(
+                It.IsAny<Guid>(), It.IsAny<Api.SharedKernel.Services.TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        NothingWasCounted(tiers);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -269,25 +373,29 @@ public class AskQuestionQueryHandlerPhase2Tests
             UserId: userId,
             UserRole: "User");
 
-        var handler = BuildHandler(ragAccessService: denyRagAccess.Object);
+        // #4168 (5g-b): a plan already used up. Were the quota read first, this user would be told
+        // to upgrade a plan for a game they may not ask about at all.
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 3, max: 3);
+        var handler = BuildHandler(ragAccessService: denyRagAccess.Object, tiers: tiers.Object);
 
         // Act
         var act = () => handler.Handle(query, TestContext.Current.CancellationToken);
 
-        // Assert — access denial precedes quota + LLM (mirrors the enforcement order at
-        // AskQuestionQueryHandler.cs:137-145, ahead of the quota check at :175).
-        await act.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("*autorizzato*");
+        // Assert — step 1 (access) precedes step 2 (quota) and the LLM.
+        // #4155: the denial is typed and names the game, so the client can offer the declaration.
+        (await act.Should().ThrowAsync<RagOwnershipRequiredException>()).Which.GameId.Should().Be(gameId);
 
         denyRagAccess.Verify(
             s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()),
             Times.Once);
-        _mockPricingEngine.Verify(
-            p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        tiers.Verify(
+            t => t.CheckUsageAsync(
+                It.IsAny<Guid>(), It.IsAny<Api.SharedKernel.Services.TierAction>(), It.IsAny<CancellationToken>()),
             Times.Never,
-            "quota must not be consumed when RAG access is denied");
+            "the plan must not even be read when RAG access is denied");
+        NothingWasCounted(tiers);
         _mockLlmService.Verify(
-            s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "LLM must not be called when RAG access is denied");
     }
@@ -307,10 +415,6 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(houseRule);
@@ -322,8 +426,8 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         string? capturedUserPrompt = null;
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, RequestSource, CancellationToken>((sys, user, src, ct) => capturedUserPrompt = user)
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((r, _) => capturedUserPrompt = r.UserPrompt)
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: answer,
                 usage: new LlmUsage(10, 10, 20),
@@ -346,6 +450,500 @@ public class AskQuestionQueryHandlerPhase2Tests
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Test 4b (#3855): la house rule dev'essere AUTORIZZATA nel system prompt
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// #3855 — infilare la regola nel prompt utente non basta, e il difetto lo dimostrava.
+    ///
+    /// Il system prompt diceva «Answer ONLY using the provided rulebook context» e «Always cite
+    /// the page number»: la regola non era fra le fonti autorizzate, quindi il modello la
+    /// riformulava («chi ha giocato più di recente» tornava come «chi ha vinto l'ultima partita»),
+    /// e l'obbligo di citare senza eccezioni lo portava a inventarle una pagina — [Page 10], che
+    /// in quel manuale parla di come mescolare il mazzo.
+    ///
+    /// Il precedente e' nello stesso metodo: il blocco [Verified Rules] viene autorizzato
+    /// esplicitamente. Alla house rule non era mai stato fatto.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenHouseRuleMatched_SystemPromptForbidsParaphraseAndPageCitation()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        const string houseRule = "In our group, the pawn can also move diagonally.";
+        const string answer = "Based on your house rule, the pawn moves diagonally.";
+
+        SetupDefaultMocksWithSearchResults(gameId, answer);
+
+        _mockHouseRuleMatcher
+            .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(houseRule);
+
+        _mockTranslationService
+            .Setup(t => t.TranslateGenericAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string text, string src, string tgt, CancellationToken _) =>
+                TranslationResult.CreateSuccess(text, src, tgt, 0m));
+
+        string? capturedSystemPrompt = null;
+        _mockLlmService
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((r, _) => capturedSystemPrompt = r.SystemPrompt)
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                response: answer,
+                usage: new LlmUsage(10, 10, 20),
+                cost: new LlmCost { InputCost = 0.001m, OutputCost = 0.002m, ModelId = "test-model", Provider = "test" }));
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: userId);
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        capturedSystemPrompt.Should().NotBeNull();
+        capturedSystemPrompt.Should().Contain("[House Rule for this group]",
+            "il blocco dev'essere dichiarato fra le fonti autorizzate, altrimenti 'answer ONLY " +
+            "using the provided rulebook context' lo esclude e il modello lo riformula");
+        capturedSystemPrompt.Should().Contain("do not paraphrase",
+            "la regola va riportata com'e': riassumerla ne cambia il significato (#3855)");
+        capturedSystemPrompt.Should().Contain("never attach a [Page N] citation",
+            "l'obbligo incondizionato di citare una pagina fa inventare una fonte a contenuto " +
+            "che non ne ha");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // La cache semantica e le house rule (#3855)
+    //
+    // La correzione di #3875 vive tutta nell'assemblaggio del system prompt, e i suoi test
+    // girano su un cache-miss. Sul percorso di default (`BypassCache = false`) non entra mai in
+    // gioco: la chiave e' `rag:cache:{gameId}:*`, senza utente, mentre le house rule sono per
+    // utente e i giochi sono condivisi.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Una risposta modellata sulla house rule di un utente non deve finire in una cache
+    /// condivisa da tutto il gioco: chi non ha quella regola se la vedrebbe servire come se
+    /// fosse il regolamento.
+    ///
+    /// E' lo stesso trattamento gia' dato ai claim iniettati, per la stessa ragione scritta
+    /// sopra la guardia di lettura: la chiave non porta impronta del contenuto iniettato.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenHouseRuleMatched_DoesNotWriteToSharedCache()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        const string houseRule = "In our group, the pawn can also move diagonally.";
+        const string answer = "Based on your house rule, the pawn moves diagonally.";
+
+        SetupDefaultMocksWithSearchResults(gameId, answer);
+
+        _mockHouseRuleMatcher
+            .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(houseRule);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: userId);
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        _mockResponseCache.Verify(
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "la risposta cita la house rule verbatim (#3875) e la cache e' per gioco, non per " +
+            "utente: scriverla li' la rende servibile a chiunque interroghi lo stesso gioco");
+    }
+
+    /// <summary>
+    /// Chi ha una house rule non deve nemmeno leggere dalla cache condivisa: una risposta
+    /// generica gia' cacheata da un altro utente sopprimerebbe la regola, e il fix di #3875 non
+    /// entrerebbe mai in gioco.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenHouseRuleMatched_DoesNotReadFromSharedCache()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        const string houseRule = "In our group, the pawn can also move diagonally.";
+
+        SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
+
+        _mockHouseRuleMatcher
+            .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(houseRule);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: userId);
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        _mockResponseCache.Verify(
+            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "una risposta generica in cache non deve poter sopprimere la house rule di chi ce l'ha");
+    }
+
+    /// <summary>
+    /// #4279. Una domanda che nomina un thread riceve nel prompt la cronologia di quella
+    /// conversazione. La cache semantica è per gioco, lingua e versione: non conosce la
+    /// conversazione. Stessa regola delle house rule e dei claim: ciò che dà forma alla risposta e
+    /// non sta nella chiave tiene la risposta fuori dalla cache condivisa.
+    ///
+    /// Oggi nessun chiamante di produzione passa un thread a questo gestore; il controllo c'è perché
+    /// il primo che lo farà non debba saperlo.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheQuestionNamesAThread_DoesNotWriteToSharedCache()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "In your variant the pawn moves twice.");
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            ThreadId: Guid.NewGuid(),
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        _mockResponseCache.Verify(
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "una risposta nata dentro una conversazione non va servita a chi fa la stessa domanda fuori da essa");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheQuestionNamesAThread_DoesNotReadFromSharedCache()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            ThreadId: Guid.NewGuid(),
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        _mockResponseCache.Verify(
+            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "una domanda di seguito non deve ricevere la risposta in cache di un'altra conversazione");
+    }
+
+    /// <summary>
+    /// Su cache-hit le pagine citate devono essere quelle vere, non l'indice nella lista.
+    ///
+    /// E' il sintomo del titolo di #3855 — «le attribuisce a pagine del manuale che non le
+    /// contengono» — su un secondo percorso, indipendente dalle house rule e attivo su ogni hit.
+    /// `DocumentId` vuoto e `RelevanceScore` a zero sono assenze oneste; un numero di pagina
+    /// posizionale e' una fonte inventata, e il frontend lo tratta come coordinata navigabile.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_DoesNotFabricatePageNumbers()
+    {
+        var gameId = Guid.NewGuid();
+
+        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache");
+
+        // tre citazioni: con l'indice posizionale diventerebbero le pagine 1, 2, 3.
+        //
+        // La terza porta un DocumentId perche' qui si misura la pagina, non la servibilita':
+        // senza DocumentId la citazione viene omessa a monte (vedi
+        // Handle_OnCacheHit_WithNullDocumentIdCitation_OmitsOnlyThatCitation) e l'assenza di
+        // pagina che questo test vuole osservare non arriverebbe mai all'assert.
+        var cached = new CachedRagResponse(
+            Answer: "Cached answer.",
+            Citations: new List<CachedCitation>
+            {
+                new("Snippet from page 42.", 42, "doc-a"),
+                new("Snippet from page 7.", 7, "doc-b"),
+                new("Snippet without a page.", null, "doc-c"),
+            },
+            ModelUsed: "test-model",
+            CachedAt: DateTimeOffset.UtcNow);
+
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cached);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        var result = await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        result.Citations.Should().HaveCount(3);
+        // la forma con collezione esplicita, non `Equal(42, 7, null, "perche'")`: quel `params`
+        // leggerebbe la motivazione come un quarto elemento atteso
+        result.Citations!.Select(c => c.PageNumber).Should().Equal(
+            new int?[] { 42, 7, null },
+            "le pagine devono venire dalla voce in cache; 1,2,3 significherebbe che sono " +
+            "l'indice nella lista");
+        result.Citations!.Select(c => c.DocumentId).Should().Equal(
+            new string?[] { "doc-a", "doc-b", "doc-c" },
+            "il documentId deve venire dalla voce in cache");
+    }
+
+    /// <summary>
+    /// #4168 (ADR-095 D2): anche una risposta servita dalla cache dice con quale versione e in che
+    /// lingua è stata prodotta. La chiave della cache le contiene, quindi sono quelle di adesso.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_CarriesTheVersionAndTheLanguage()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache"); _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CachedRagResponse(
+                Answer: "Cached answer.",
+                Citations: new List<CachedCitation>(),
+                ModelUsed: "test-model",
+                CachedAt: DateTimeOffset.UtcNow));
+
+        var result = await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "How does the pawn move?", Language: "en", UserId: Guid.NewGuid()),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("Cached answer.");
+        result.ProfileVersionId.Should().Be(AnswerPipelineTestDoubles.SeedVersionId);
+        result.Language.Should().Be("en");
+    }
+
+    // -------------------------------------------------------------------------
+    // Cache-hit: una citazione senza DocumentId non e' servibile
+    //
+    // `CachedCitation.DocumentId` e' `string?` (#3855: «un'assenza dichiarata e' onesta, mentre
+    // un numero inventato e' una fonte falsa che il frontend tratta come coordinata navigabile»)
+    // mentre `CitationDto.DocumentId` e' `string`. Il percorso di cache-hit passava il primo al
+    // secondo e **non compilava in Release** (CS8604), cioe' l'immagine Docker dell'api non si
+    // costruiva. I tre test qui sotto inchiodano la correzione scelta — omettere la citazione —
+    // contro le due alternative che avrebbero fatto compilare senza risolvere: `?? ""`, che
+    // reintroduce la stringa vuota rimossa di proposito da #3855, e `!`, che e' una promessa al
+    // posto di una prova.
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// La citazione senza DocumentId sparisce; le altre restano, nell'ordine, intatte.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_WithNullDocumentIdCitation_OmitsOnlyThatCitation()
+    {
+        var gameId = Guid.NewGuid();
+
+        SetupDefaultMocksWithSearchResults(gameId, "unused - served from cache");
+
+        // la voce centrale e' anteriore a #3855: nessun DocumentId conservato
+        var cached = new CachedRagResponse(
+            Answer: "Cached answer.",
+            Citations: new List<CachedCitation>
+            {
+                new("Snippet from page 42.", 42, "doc-a"),
+                new("Snippet senza documento.", 7, null),
+                new("Snippet from page 13.", 13, "doc-c"),
+            },
+            ModelUsed: "test-model",
+            CachedAt: DateTimeOffset.UtcNow);
+
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cached);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        var result = await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be(
+            "Cached answer.",
+            "la risposta arriva dalla cache: se fosse quella dell'LLM il test non sta " +
+            "misurando il ramo di cache-hit");
+        result.Citations.Should().HaveCount(2);
+        result.Citations!.Select(c => c.DocumentId).Should().Equal(
+            new[] { "doc-a", "doc-c" },
+            "un DocumentId nullo non e' servibile e la citazione va omessa; una stringa vuota " +
+            "al suo posto sarebbe la coordinata inventata che #3855 ha rimosso");
+        result.Citations!.Select(c => c.Snippet).Should().NotContain(
+            "Snippet senza documento.",
+            "la citazione omessa non deve sopravvivere con un altro campo");
+        result.Citations!.Select(c => c.PageNumber).Should().Equal(
+            new int?[] { 42, 13 },
+            "le citazioni superstiti devono restare intatte, non ricompattate su nuovi indici");
+    }
+
+    /// <summary>
+    /// `RagQueryMetrics.CitationsCount` conta le citazioni **servite**, non quelle conservate.
+    ///
+    /// E' un cambio di comportamento deliberato: prima la metrica leggeva
+    /// `cached.Citations.Count`. Se tornasse a farlo, la dashboard di qualita' conterebbe fonti
+    /// che la risposta non contiene.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_CitationsCountMetric_CountsServedNotStored()
+    {
+        var gameId = Guid.NewGuid();
+
+        SetupDefaultMocksWithSearchResults(gameId, "unused - served from cache");
+
+        // 4 conservate, 2 servibili
+        var cached = new CachedRagResponse(
+            Answer: "Cached answer.",
+            Citations: new List<CachedCitation>
+            {
+                new("Con documento.", 1, "doc-a"),
+                new("Senza documento.", 2, null),
+                new("Documento vuoto.", 3, ""),
+                new("Con documento, di nuovo.", 4, "doc-d"),
+            },
+            ModelUsed: "test-model",
+            CachedAt: DateTimeOffset.UtcNow);
+
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cached);
+
+        var trackerMock = new Mock<IRagQualityTracker>();
+        var trackedMetrics = new List<RagQueryMetrics>();
+        trackerMock
+            .Setup(t => t.TrackQueryAsync(It.IsAny<RagQueryMetrics>(), It.IsAny<CancellationToken>()))
+            .Callback<RagQueryMetrics, CancellationToken>((m, _) => trackedMetrics.Add(m))
+            .Returns(Task.CompletedTask);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        var result = await BuildHandler(qualityTracker: trackerMock.Object)
+            .Handle(query, TestContext.Current.CancellationToken);
+
+        // il ramo di cache-hit traccia una volta e ritorna: se ci fossero due metriche il flusso
+        // e' proseguito fino all'LLM e la misura sotto non riguarda la cache
+        trackedMetrics.Should().HaveCount(1);
+        trackedMetrics[0].CacheHit.Should().BeTrue();
+        trackedMetrics[0].CitationsCount.Should().Be(
+            2,
+            "la metrica conta le citazioni servite; 4 significherebbe che e' tornata a leggere " +
+            "cached.Citations.Count e conta fonti che la risposta non contiene");
+        trackedMetrics[0].CitationsCount.Should().Be(
+            result.Citations!.Count,
+            "metrica e payload devono raccontare la stessa risposta");
+
+        // la stringa vuota e' trattata come assenza, non come documento di nome ""
+        result.Citations!.Select(c => c.DocumentId).Should().Equal(new[] { "doc-a", "doc-d" });
+    }
+
+    /// <summary>
+    /// La rete contro un filtro troppo avido: con tutti i DocumentId valorizzati non si perde
+    /// nulla, ne' nel payload ne' nella metrica.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_WithAllDocumentIdsPresent_LosesNoCitation()
+    {
+        var gameId = Guid.NewGuid();
+
+        SetupDefaultMocksWithSearchResults(gameId, "unused - served from cache");
+
+        // include una pagina assente e uno snippet vuoto: solo DocumentId decide la servibilita'
+        var cached = new CachedRagResponse(
+            Answer: "Cached answer.",
+            Citations: new List<CachedCitation>
+            {
+                new("Snippet A.", 42, "doc-a"),
+                new("", 7, "doc-b"),
+                new("Snippet C.", null, "doc-c"),
+            },
+            ModelUsed: "test-model",
+            CachedAt: DateTimeOffset.UtcNow);
+
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cached);
+
+        var trackerMock = new Mock<IRagQualityTracker>();
+        var trackedMetrics = new List<RagQueryMetrics>();
+        trackerMock
+            .Setup(t => t.TrackQueryAsync(It.IsAny<RagQueryMetrics>(), It.IsAny<CancellationToken>()))
+            .Callback<RagQueryMetrics, CancellationToken>((m, _) => trackedMetrics.Add(m))
+            .Returns(Task.CompletedTask);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        var result = await BuildHandler(qualityTracker: trackerMock.Object)
+            .Handle(query, TestContext.Current.CancellationToken);
+
+        result.Citations.Should().HaveCount(
+            3,
+            "il filtro guarda solo DocumentId: una pagina assente o uno snippet vuoto non " +
+            "rendono la citazione inservibile");
+        result.Citations!.Select(c => c.DocumentId).Should().Equal(new[] { "doc-a", "doc-b", "doc-c" });
+        result.Citations!.Select(c => c.PageNumber).Should().Equal(new int?[] { 42, 7, null });
+        trackedMetrics.Should().HaveCount(1);
+        trackedMetrics[0].CitationsCount.Should().Be(3);
+    }
+
+    /// <summary>
+    /// Senza house rule il system prompt non deve cambiare: l'istruzione e' condizionale, non
+    /// una zavorra su ogni richiesta.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenNoHouseRule_SystemPromptUnchanged()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        const string answer = "The pawn moves forward one space.";
+
+        SetupDefaultMocksWithSearchResults(gameId, answer);
+
+        _mockHouseRuleMatcher
+            .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        _mockTranslationService
+            .Setup(t => t.TranslateGenericAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string text, string src, string tgt, CancellationToken _) =>
+                TranslationResult.CreateSuccess(text, src, tgt, 0m));
+
+        string? capturedSystemPrompt = null;
+        _mockLlmService
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((r, _) => capturedSystemPrompt = r.SystemPrompt)
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                response: answer,
+                usage: new LlmUsage(10, 10, 20),
+                cost: new LlmCost { InputCost = 0.001m, OutputCost = 0.002m, ModelId = "test-model", Provider = "test" }));
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: userId);
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        capturedSystemPrompt.Should().NotBeNull();
+        capturedSystemPrompt.Should().NotContain("[House Rule for this group]");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Test 5: HouseRuleMatcher throws — warning logged, flow continues
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -358,10 +956,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         const string answer = "The pawn moves forward one space.";
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -411,10 +1005,6 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         SetupDefaultMocksWithSearchResults(gameId, originalAnswer);
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -461,10 +1051,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         const string answer = "The pawn moves forward one space.";
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -527,16 +1113,12 @@ public class AskQuestionQueryHandlerPhase2Tests
         var captured = new System.Collections.Generic.List<string>();
         capturedUserPrompts = captured;
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => captured.Add(user))
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((r, _) => captured.Add(r.UserPrompt))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: "In una partita a 3 si usa la plancia standard. [Page 3]",
                 usage: new LlmUsage(1, 1, 2),
-                cost: new LlmCost { InputCost = 0m, OutputCost = 0m, ModelId = "test", Provider = "test" }));
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        // QualityTrackingDomainService is mocked in this class → its virtual confidence methods return
+                cost: new LlmCost { InputCost = 0m, OutputCost = 0m, ModelId = "test", Provider = "test" }));        // QualityTrackingDomainService is mocked in this class → its virtual confidence methods return
         // null by default; the handler dereferences .Value on each. Return Zero for the full LLM path.
         _mockQualityService
             .Setup(q => q.CalculateSearchConfidence(It.IsAny<System.Collections.Generic.List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>()))
@@ -597,38 +1179,147 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         result.Answer.Should().Be(NoContextSentinel);
         _mockLlmService.Verify(
-            s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
+    // #4476: il flag dell'ordinamento v3 deve arrivare al renderer anche dalla domanda singola.
+
+    private static PublishedMechanicCardDto CardWithV3SetupClaims(Guid gameId)
+    {
+        var ruleId = Guid.NewGuid();
+        PublishedMechanicCardClaimDto Claim(Guid id, string text, MechanicClaimKind kind, MechanicRulePriority priority, params Guid[] overrides) =>
+            new(id, text, new[] { new PublishedMechanicCardCitationDto(Guid.NewGuid(), 1, "q") }, kind, priority, overrides, null);
+
+        return new(
+            CardId: Guid.NewGuid(), SharedGameId: gameId, Title: "T", Version: 1, PublishedAt: DateTime.UtcNow,
+            GameName: "Terraforming Mars", Publisher: null, Language: "it",
+            Sections: new[]
+            {
+                new PublishedMechanicCardSectionDto("Setup", new[]
+                {
+                    Claim(ruleId, "A generale", MechanicClaimKind.Rule, MechanicRulePriority.Base),
+                    Claim(Guid.NewGuid(), "B eccezione", MechanicClaimKind.Exception, MechanicRulePriority.Card, ruleId),
+                    Claim(Guid.NewGuid(), "E esempio", MechanicClaimKind.Example, MechanicRulePriority.Base),
+                }),
+            },
+            SourceAnalysisId: Guid.NewGuid(), PublicationYear: null, DocumentName: null);
+    }
+
+    private async Task<string> CapturePromptWithV3CardAsync(bool v3Ordering)
+    {
+        var gameId = Guid.NewGuid();
+        SetupSuccessfulLlm(out var capturedPrompts);
+
+        var providerMock = new Mock<IMechanicCardProvider>();
+        providerMock
+            .Setup(p => p.GetActiveCardAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CardWithV3SetupClaims(gameId));
+        var flagMock = new Mock<IFeatureFlagService>();
+        flagMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlagConstants.MechanicCardInjectionKey, It.IsAny<UserRole?>()))
+            .ReturnsAsync(true);
+        flagMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlagConstants.MechanicClaimsV3OrderingKey, It.IsAny<UserRole?>()))
+            .ReturnsAsync(v3Ordering);
+
+        var handler = BuildHandler(mechanicCardProvider: providerMock.Object, featureFlags: flagMock.Object);
+        var query = new AskQuestionQuery(GameId: gameId, Question: "Setup per 3 giocatori", UserId: Guid.NewGuid(), UserRole: "User");
+        await handler.Handle(query, TestContext.Current.CancellationToken);
+
+        capturedPrompts.Should().ContainSingle();
+        return capturedPrompts[0];
+    }
+
+    [Fact]
+    public async Task Handle_V3OrderingFlagOn_OrdersClaimsAndLabelsExceptions()
+    {
+        var prompt = await CapturePromptWithV3CardAsync(v3Ordering: true);
+
+        prompt.Should().Contain("[V1] B eccezione [Page 1] (Eccezione a [V2])");
+        prompt.Should().Contain("[V2] A generale [Page 1]");
+        prompt.Should().NotContain("E esempio");
+    }
+
+    [Fact]
+    public async Task Handle_V3OrderingFlagOff_KeepsArrivalOrder()
+    {
+        var prompt = await CapturePromptWithV3CardAsync(v3Ordering: false);
+
+        prompt.Should().Contain("[V1] A generale [Page 1]\n[V2] B eccezione [Page 1]\n[V3] E esempio [Page 1]");
+        prompt.Should().NotContain("Eccezione a");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // #4819 — un documento che non sa dire la pagina dei suoi passaggi (#4782) si cita senza pagina
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_CitesADocumentThatCannotVouchForItsPagesWithoutOne()
+    {
+        var gameId = Guid.NewGuid();
+        var flat = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "Answer [Page 4]", pdfDocumentId: flat, pageNumber: 4);
+        var handler = BuildHandler(
+            pageTrust: Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles
+                .WithoutAPage(flat.ToString()));
+
+        var result = await handler.Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "Come si gioca?", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        result.Citations.Should().ContainSingle().Which.PageNumber.Should().BeNull();
+        // The legacy `sources` of the same response do not contradict the citations: 0 is «no page».
+        result.Sources.Should().ContainSingle().Which.PageNumber.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_CitesTheDeclaredPageOfADocumentThatCanVouchForIt()
+    {
+        var gameId = Guid.NewGuid();
+        var measured = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "Answer [Page 4]", pdfDocumentId: measured, pageNumber: 4);
+        var handler = BuildHandler(
+            pageTrust: Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles
+                .WithoutAPage(Guid.NewGuid().ToString()));
+
+        var result = await handler.Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "Come si gioca?", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        result.Citations.Should().ContainSingle().Which.PageNumber.Should().Be(4);
+        result.Sources.Should().ContainSingle().Which.PageNumber.Should().Be(4);
+    }
+
     private AskQuestionQueryHandler BuildHandler(
-        Api.Configuration.LlmQueryComplexityRoutingOptions? routingOverrides = null,
         IRagAccessService? ragAccessService = null,
         Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
-        Api.Services.IFeatureFlagService? featureFlags = null) =>
+        Api.Services.IFeatureFlagService? featureFlags = null,
+        IRagQualityTracker? qualityTracker = null,
+        Api.SharedKernel.Services.ITierEnforcementService? tiers = null,
+        Api.BoundedContexts.KnowledgeBase.Application.Services.ICitedPageTrust? pageTrust = null) =>
         new(
-            _searchHandler,
-            CreatePassthroughReranker(),
+            AnswerPipelineTestDoubles.Retrieval(_searchHandler, CreatePassthroughReranker()),
+            AnswerPipelineTestDoubles.ProfileReader(),
+            AnswerPipelineTestDoubles.UncertainLanguageDetection(),
             _mockQualityService.Object,
             _mockChatContextService.Object,
             _mockThreadRepository.Object,
             _mockPdfDocumentRepository.Object,
             _mockLlmService.Object,
-            _mockPromptTemplateService.Object,
             _mockValidationPipeline.Object,
-            ragAccessService ?? CreatePermissiveRagAccessServiceMock(),
-            Mock.Of<IRagQualityTracker>(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(ragAccessService ?? CreatePermissiveRagAccessServiceMock(), tiers),
+            qualityTracker ?? Mock.Of<IRagQualityTracker>(),
             new QueryComplexityAnalyzer(),
             _mockResponseCache.Object,
             _mockEmbeddingService.Object,
             _mockHouseRuleMatcher.Object,
-            _mockPricingEngine.Object,
             _mockTranslationService.Object,
             // D7: use the real classifier (pure, stateless, no dependencies).
             new IntentClassifierService(),
-            BuildRoutingMonitor(routingOverrides ?? new Api.Configuration.LlmQueryComplexityRoutingOptions()),
             mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),
+            pageTrust ?? Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved(),
             _mockLogger.Object);
 
     private static Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking.ICrossEncoderReranker CreatePassthroughReranker()
@@ -647,14 +1338,6 @@ public class AskQuestionQueryHandlerPhase2Tests
                         .ToList(),
                     "test-model", 1.0));
         return mock.Object;
-    }
-
-    private static Microsoft.Extensions.Options.IOptionsMonitor<Api.Configuration.LlmQueryComplexityRoutingOptions> BuildRoutingMonitor(
-        Api.Configuration.LlmQueryComplexityRoutingOptions value)
-    {
-        var monitor = new Mock<Microsoft.Extensions.Options.IOptionsMonitor<Api.Configuration.LlmQueryComplexityRoutingOptions>>();
-        monitor.Setup(m => m.CurrentValue).Returns(value);
-        return monitor.Object;
     }
 
     private void SetupDefaultMocks(Guid gameId)
@@ -679,20 +1362,17 @@ public class AskQuestionQueryHandlerPhase2Tests
             .Setup(s => s.EnrichPromptWithHistory(It.IsAny<string>(), It.IsAny<string>()))
             .Returns<string, string>((b, _) => b);
 
-        _mockPromptTemplateService
-            .Setup(s => s.GetActivePromptAsync("rag-system-prompt", It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Test system prompt");
-
         _mockValidationPipeline
-            .Setup(v => v.ValidateWithMultiModelAsync(
+            .Setup(v => v.ValidateResponseAsync(
                 It.IsAny<Api.Models.QaResponse>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RagValidationResult
             {
                 IsValid = true,
-                LayersPassed = 4,
-                TotalLayers = 4,
+                LayersPassed = 3,
+                TotalLayers = 3,
                 ConfidenceValidation = new ConfidenceValidationResult
                 {
                     IsValid = true,
@@ -700,32 +1380,6 @@ public class AskQuestionQueryHandlerPhase2Tests
                     Severity = ValidationSeverity.Pass,
                     ActualConfidence = 0.8,
                     RequiredThreshold = 0.7
-                },
-                MultiModelConsensus = new MultiModelConsensusResult
-                {
-                    HasConsensus = true,
-                    SimilarityScore = 0.95,
-                    RequiredThreshold = 0.90,
-                    Gpt4Response = new ModelResponse
-                    {
-                        ModelId = "gpt-4",
-                        ResponseText = "Test response",
-                        IsSuccess = true,
-                        DurationMs = 100,
-                        Usage = new LlmUsage(50, 25, 75)
-                    },
-                    ClaudeResponse = new ModelResponse
-                    {
-                        ModelId = "claude-3",
-                        ResponseText = "Test response",
-                        IsSuccess = true,
-                        DurationMs = 100,
-                        Usage = new LlmUsage(50, 25, 75)
-                    },
-                    ConsensusResponse = "Test response",
-                    Message = "Consensus achieved",
-                    TotalDurationMs = 200,
-                    Severity = ConsensusSeverity.High
                 },
                 CitationValidation = new CitationValidationResult
                 {
@@ -744,14 +1398,14 @@ public class AskQuestionQueryHandlerPhase2Tests
                     Message = "No hallucinations detected",
                     Severity = HallucinationSeverity.None
                 },
-                ValidationAccuracyMetrics = "Validation accuracy tracking enabled",
                 Message = "All validations passed",
                 Severity = RagValidationSeverity.Pass,
                 DurationMs = 10
             });
     }
 
-    private void SetupDefaultMocksWithSearchResults(Guid gameId, string llmAnswer)
+    private void SetupDefaultMocksWithSearchResults(
+        Guid gameId, string llmAnswer, Guid pdfDocumentId = default, int pageNumber = 1)
     {
         SetupDefaultMocks(gameId);
 
@@ -761,10 +1415,11 @@ public class AskQuestionQueryHandlerPhase2Tests
             new(id: Guid.NewGuid(),
                 vectorDocumentId: Guid.NewGuid(),
                 textContent: "Sample rulebook text for testing.",
-                pageNumber: 1,
+                pageNumber: pageNumber,
                 relevanceScore: new Confidence(0.85),
                 rank: 1,
-                searchMethod: "hybrid")
+                searchMethod: "hybrid",
+                pdfDocumentId: pdfDocumentId)
         };
         _mockRrfService
             .Setup(r => r.FuseResults(
@@ -772,11 +1427,11 @@ public class AskQuestionQueryHandlerPhase2Tests
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
                 It.IsAny<int>(),
                 It.IsAny<GameBookRole>(),
-                It.IsAny<IReadOnlyList<string>?>()))
+                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<float>(), It.IsAny<float>()))
             .Returns(oneResult);
 
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: llmAnswer,
                 usage: new LlmUsage(10, 10, 20),
@@ -798,122 +1453,152 @@ public class AskQuestionQueryHandlerPhase2Tests
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Issue #562 — per-tier LLM model dispatch tests
+    // #4168 — il modello e i parametri vengono dalla versione pubblicata del profilo
+    //
+    // Sostituisce i test di #562: l'override del modello per livello di complessità
+    // (`LlmRouting:QueryComplexityModels`) è stato tolto. Era configurato vuoto, quindi non cambiava
+    // nulla, e con la pipeline il modello lo decide solo il profilo.
     // ─────────────────────────────────────────────────────────────────────────
 
-    [Fact]
-    public async Task Handle_WithLowTierOverride_DispatchesGenerateCompletionWithModelAsync()
+    [Theory]
+    [InlineData("What is the winning condition?")]
+    [InlineData("Explain the full interaction between the trading phase, the robber and the longest road bonus in a 4-player game")]
+    public async Task Handle_WhateverTheComplexity_AsksTheGatewayForTheModelOfThePublishedProfile(string question)
     {
-        // Arrange — short factual query → Low tier (per QueryComplexityAnalyzer).
-        // Config sets explicit override for Low.
         var gameId = Guid.NewGuid();
-        SetupDefaultMocksWithSearchResults(gameId, "answer");
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _mockHouseRuleMatcher
-            .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
-
+        SetupDefaultMocksWithSearchResults(gameId, "Answer [Page 1]");
+        LlmAnswerRequest? sent = null;
         _mockLlmService
-            .Setup(s => s.GenerateCompletionWithModelAsync(
-                "openai/gpt-4o-mini",
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<RequestSource>(),
-                It.IsAny<int?>(),
-                It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((r, _) => sent = r)
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
-                response: "answer",
+                response: "Answer [Page 1]",
                 usage: new LlmUsage(10, 10, 20),
-                cost: new LlmCost
-                {
-                    InputCost = 0.001m,
-                    OutputCost = 0.002m,
-                    ModelId = "openai/gpt-4o-mini",
-                    Provider = "openai"
-                }));
+                cost: new LlmCost { InputCost = 0.001m, OutputCost = 0.002m, ModelId = "deepseek-flash", Provider = "DeepSeek" }));
 
-        // "Quanti giocatori?" matches LowComplexityPrefix "quanti" → Low tier.
-        var query = new AskQuestionQuery(GameId: gameId, Question: "Quanti giocatori sono?");
+        await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: question, UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
 
-        var handler = BuildHandler(new Api.Configuration.LlmQueryComplexityRoutingOptions
-        {
-            Low = "openai/gpt-4o-mini"
-        });
-
-        // Act
-        await handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert — override dispatched, default path NOT called.
-        _mockLlmService.Verify(s => s.GenerateCompletionWithModelAsync(
-            "openai/gpt-4o-mini",
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<RequestSource>(),
-            It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()),
-            Times.Once);
-        _mockLlmService.Verify(s => s.GenerateCompletionAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<RequestSource>(),
-            It.IsAny<CancellationToken>()),
-            Times.Never);
+        sent.Should().NotBeNull();
+        sent!.PrimaryModelId.Should().Be("deepseek-flash");
+        sent.FallbackModelId.Should().Be("meta-llama/llama-3.3-70b-instruct");
+        sent.ProfileVersionId.Should().Be(AnswerPipelineTestDoubles.SeedVersionId);
     }
 
+    /// <summary>
+    /// #4168: un rifiuto del gateway diventava una risposta vuota, servita come riuscita. Ora è un
+    /// errore con il codice del gateway, e nella cache non finisce niente.
+    /// </summary>
     [Fact]
-    public async Task Handle_WithNoTierOverride_FallsBackToDefaultGenerateCompletionAsync()
+    public async Task Handle_WhenTheGatewayRefuses_ThrowsWithTheCode_AndCachesNothing()
     {
-        // Arrange — empty routing config → handler uses default GenerateCompletionAsync path.
         var gameId = Guid.NewGuid();
-        SetupDefaultMocksWithSearchResults(gameId, "answer");
+        SetupDefaultMocksWithSearchResults(gameId, "unused");
+        var refusal = LlmCompletionResult.CreateFailure("Daily AI budget reached.") with
+        {
+            Metadata = new Dictionary<string, string> { ["error_code"] = "AI_BUDGET_DAILY_EXHAUSTED" },
+        };
+        _mockLlmService.Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>())).ReturnsAsync(refusal);
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _mockHouseRuleMatcher
-            .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
+        var act = () => BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "How do I win?", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
 
-        var query = new AskQuestionQuery(GameId: gameId, Question: "Quanti giocatori sono?");
-        var handler = BuildHandler(); // default empty options
-
-        // Act
-        await handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert — fall back to default path, NO override dispatch.
-        _mockLlmService.Verify(s => s.GenerateCompletionAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<RequestSource>(),
-            It.IsAny<CancellationToken>()),
-            Times.Once);
-        _mockLlmService.Verify(s => s.GenerateCompletionWithModelAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<RequestSource>(),
-            It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()),
+        (await act.Should().ThrowAsync<LlmCallRefusedException>()).Which.ErrorCode.Should().Be("AI_BUDGET_DAILY_EXHAUSTED");
+        _mockResponseCache.Verify(
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
-    [Fact]
-    public void LlmQueryComplexityRoutingOptions_ResolveOverride_ReturnsNullForEmptyOrWhitespace()
+    [Theory]
+    [InlineData(null, "en")]
+    [InlineData("it", "it")]
+    public async Task Handle_TheSemanticCache_IsScopedToThePublishedVersionAndTheAnswerLanguage(string? requested, string expected)
     {
-        // Contract: empty/whitespace tier overrides resolve to null so the handler
-        // dispatches to GenerateCompletionAsync (backward-compatible no-op).
-        var opts = new Api.Configuration.LlmQueryComplexityRoutingOptions
-        {
-            Low = "",
-            Medium = "   ",
-            High = "openai/gpt-4o"
-        };
+        // #4168: la cache semantica e' per gioco e per somiglianza; l'ambito (versione del profilo,
+        // lingua della risposta) sta nella chiave, cosi' una risposta di un'altra versione o lingua
+        // non si trova nemmeno — e non nasconde quelle buone.
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "Fresh answer [Page 1]");
+        _mockEmbeddingService
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[] { 1f, 0f } }));
 
-        opts.ResolveOverride(QueryRoutingTier.Low).Should().BeNull();
-        opts.ResolveOverride(QueryRoutingTier.Medium).Should().BeNull();
-        opts.ResolveOverride(QueryRoutingTier.High).Should().Be("openai/gpt-4o");
+        await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "How do I win?", Language: requested, UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        var scope = new SemanticCacheScope(AnswerPipelineTestDoubles.SeedVersionId, expected);
+        _mockResponseCache.Verify(c => c.TryGetAsync(gameId, scope, It.IsAny<float[]>(), It.IsAny<CancellationToken>()), Times.Once);
+        _mockResponseCache.Verify(
+            c => c.SetAsync(gameId, scope, It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // #3850: la rinuncia nella lingua della risposta. Il modello la dice in inglese, come chiede il
+    // prompt del profilo; chi chiede in italiano la legge in italiano, e resta una rinuncia per la
+    // cache (non si conserva).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private const string ItalianRefusal = "Questa informazione non è disponibile nel regolamento fornito.";
+
+    [Fact]
+    public async Task Handle_ItalianQuestion_TheEnglishRefusalOfTheModel_IsAnsweredInItalian_AndNotCached()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "This information is not available in the provided rulebook.");
+
+        var result = await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "Si può?", Language: "it", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be(ItalianRefusal);
+        result.Language.Should().Be("it");
+        _mockResponseCache.Verify(
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "a refusal is not cached, in whatever language it is written");
+    }
+
+    [Fact]
+    public async Task Handle_ItalianQuestion_AnOldCachedAnswerWithTheEnglishRefusalInTail_IsServedInItalian()
+    {
+        // Review di #4494: le voci scritte prima della correzione portano la frase inglese in coda a
+        // una risposta parziale (la rinuncia intera non va in cache). Restano servibili per il TTL.
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused");
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CachedRagResponse(
+                "- Il brigante ruba una carta [Page 1].\n\nThis information is not available in the provided rulebook.",
+                [new CachedCitation("Sample rulebook text", 1, Guid.NewGuid().ToString())],
+                "test-model",
+                DateTimeOffset.UtcNow));
+
+        var result = await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "Si può?", Language: "it", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("- Il brigante ruba una carta [Page 1].\n\n" + ItalianRefusal);
+        _mockLlmService.Verify(
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()), Times.Never,
+            "the answer came from the cache");
+    }
+
+    [Fact]
+    public async Task Handle_ItalianQuestion_WhenNoPassageIsFound_TheRefusalIsItalian()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocks(gameId);
+
+        var result = await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "Si può?", Language: "it", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be(ItalianRefusal);
+        _mockLlmService.Verify(
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

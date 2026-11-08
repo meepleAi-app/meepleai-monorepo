@@ -32,7 +32,6 @@ public sealed class TierAwareLlmRoutingTests
     private readonly IOptions<AiProviderSettings> _aiSettings;
     private readonly Mock<IStrategyModelMappingService> _mockStrategyMappingService;
     private readonly Mock<ITierStrategyAccessService> _mockTierAccessService;
-    private readonly Mock<ILlmModelOverrideService> _mockOverrideService;
     private readonly Mock<IServiceScopeFactory> _mockScopeFactory;
     private readonly Mock<IServiceScope> _mockScope;
     private readonly Mock<IServiceProvider> _mockServiceProvider;
@@ -54,7 +53,6 @@ public sealed class TierAwareLlmRoutingTests
 
         _mockStrategyMappingService = new Mock<IStrategyModelMappingService>();
         _mockTierAccessService = new Mock<ITierStrategyAccessService>();
-        _mockOverrideService = new Mock<ILlmModelOverrideService>();
         _mockScopeFactory = new Mock<IServiceScopeFactory>();
         _mockScope = new Mock<IServiceScope>();
         _mockServiceProvider = new Mock<IServiceProvider>();
@@ -86,8 +84,6 @@ public sealed class TierAwareLlmRoutingTests
                 var mapping = StrategyModelMapping.Default(strategy);
                 return mapping.FallbackModels;
             });
-
-        _mockOverrideService.Setup(s => s.IsInBudgetMode()).Returns(false);
     }
 
     private HybridAdaptiveRoutingStrategy CreateStrategy()
@@ -96,8 +92,7 @@ public sealed class TierAwareLlmRoutingTests
             _mockStrategyMappingService.Object,
             _mockScopeFactory.Object,
             _aiSettings,
-            _logger,
-            _mockOverrideService.Object);
+            _logger);
     }
 
     // ─── LlmUserContextMapper tier mapping tests ────────────────────────────

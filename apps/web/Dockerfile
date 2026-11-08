@@ -7,7 +7,7 @@
 # output is pure JS (arch-independent); the only native module, canvas, is
 # test-only (transitive via jsdom devDependency) and is NOT in the standalone
 # bundle, so node arm64 runs the portable JS without it.
-FROM --platform=$BUILDPLATFORM node:20.18-alpine3.21 AS deps
+FROM --platform=$BUILDPLATFORM node:24.22-alpine3.24 AS deps
 WORKDIR /app
 
 # Install build dependencies for canvas package (Issue #4168)
@@ -26,7 +26,7 @@ RUN apk add --no-cache \
 RUN npm install -g pnpm@10
 
 # Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install dependencies (including devDependencies for build stage)
 RUN pnpm install --frozen-lockfile
@@ -34,7 +34,7 @@ RUN pnpm install --frozen-lockfile
 # ==============================================================================
 # Stage 2: Builder - Build the Next.js application
 # ==============================================================================
-FROM --platform=$BUILDPLATFORM node:20.18-alpine3.21 AS builder
+FROM --platform=$BUILDPLATFORM node:24.22-alpine3.24 AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage and install pnpm
@@ -58,11 +58,18 @@ ARG NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=false
 # compose `env_file` arrives too late and the header ships with the closed default. Defaults to
 # false — prod/staging images are unaffected.
 ARG NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB=false
+# Issue #3878: accende la UI di avanzamento dell'elaborazione PDF (pannello di
+# progresso allo step 2 del wizard + tracker allo step 4). Stessa ragione del
+# flag qui sopra: `process.env.NEXT_PUBLIC_*` è letto a livello di modulo e
+# congelato da `next build`, quindi fornirlo solo a runtime non ha alcun effetto
+# e il sintomo è indistinguibile dal flag lasciato a false. Default false.
+ARG NEXT_PUBLIC_ENABLE_PROGRESS_UI=false
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=$NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED
 ENV NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB=$NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB
+ENV NEXT_PUBLIC_ENABLE_PROGRESS_UI=$NEXT_PUBLIC_ENABLE_PROGRESS_UI
 
 # Ensure public directory exists (Next.js may need it)
 RUN mkdir -p public
@@ -86,7 +93,7 @@ RUN pnpm run build
 # ==============================================================================
 # Stage 3: Runner - Production runtime environment
 # ==============================================================================
-FROM node:20.18-alpine3.21 AS runner
+FROM node:24.22-alpine3.24 AS runner
 WORKDIR /app
 
 # Set environment to production

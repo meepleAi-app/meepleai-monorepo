@@ -88,6 +88,29 @@ public sealed class LlmSystemConfigProviderTests
     }
 
     [Fact]
+    public async Task GetBudgetPolicyAsync_WithDbConfig_ReturnsTheSavedPolicy()
+    {
+        var config = LlmSystemConfig.CreateDefault();
+        config.UpdateBudgetLimits(2.00m, 40.00m);
+        config.UpdateBudgetPolicy(75, 35, 10);
+        _repoMock.Setup(r => r.GetCurrentAsync(It.IsAny<CancellationToken>())).ReturnsAsync(config);
+
+        var policy = await CreateProvider().GetBudgetPolicyAsync();
+
+        policy.Should().Be(new LlmBudgetPolicy(2.00m, 40.00m, 75, 35, 10));
+    }
+
+    [Fact]
+    public async Task GetBudgetPolicyAsync_WithoutDbConfig_ReturnsTheDefaults()
+    {
+        _repoMock.Setup(r => r.GetCurrentAsync(It.IsAny<CancellationToken>())).ReturnsAsync((LlmSystemConfig?)null);
+
+        var policy = await CreateProvider().GetBudgetPolicyAsync();
+
+        policy.Should().Be(new LlmBudgetPolicy(1.00m, 20.00m, 80, 30, 20));
+    }
+
+    [Fact]
     public async Task GetDailyBudgetUsdAsync_WithoutDbConfig_ReturnsHardcodedDefault()
     {
         _repoMock.Setup(r => r.GetCurrentAsync(It.IsAny<CancellationToken>())).ReturnsAsync((LlmSystemConfig?)null);
@@ -95,7 +118,7 @@ public sealed class LlmSystemConfigProviderTests
         var provider = CreateProvider();
         var result = await provider.GetDailyBudgetUsdAsync();
 
-        result.Should().Be(10.00m); // Hardcoded fallback
+        result.Should().Be(LlmSystemConfig.DefaultDailyBudgetUsd); // #4166: 1 $, il vincolo di ADR-095
     }
 
     [Fact]

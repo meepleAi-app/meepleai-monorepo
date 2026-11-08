@@ -222,7 +222,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(hybridResults);
 
         _llmServiceMock
@@ -276,7 +276,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Semantic, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Semantic, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(semanticResults);
 
         _llmServiceMock
@@ -328,7 +328,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Keyword, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Keyword, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(keywordResults);
 
         _llmServiceMock
@@ -448,7 +448,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(hybridResults);
 
         _llmServiceMock
@@ -497,7 +497,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(hybridResults);
 
         var callCount = 0;
@@ -552,7 +552,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         };
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), It.IsAny<SearchMode>(), 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), It.IsAny<SearchMode>(), 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(hybridResults);
 
         var callCount = 0;
@@ -650,7 +650,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         var query = "Non-existent rule";
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(query, Guid.Parse(gameId), SearchMode.Hybrid, 5, null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
         // Act

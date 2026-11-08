@@ -236,76 +236,46 @@ test.describe('Session live — accessibility @a11y', () => {
     await expect(tabs.nth(5)).toHaveAttribute('aria-selected', 'false');
   });
 
-  test('G1 keyboard traversal — Tab order reaches LEFT column (chat) before RIGHT column tabs', async ({
+  test('G1 column order — LEFT main column precedes RIGHT column tabs, which Tab reaches', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await gotoSessionLive(page, '?fixture=host');
 
-    // Wait for the LEFT-column primitives to mount. Scope to :visible — the shell
-    // mounts a desktop ChatAgentPanel (in <main>) AND a mobile one (in the
-    // bottom-sheet) so a bare [data-slot="chat-agent-panel"] resolves to 2 nodes
-    // and trips Playwright strict mode; at 1280px only the desktop copy is
-    // visible (the mobile body is display:none), so :visible narrows to 1 (#3289).
-    await expect(page.locator('[data-slot="chat-agent-panel"]:visible')).toBeVisible();
-    await expect(page.locator('[data-slot="action-log-timeline"]:visible')).toBeVisible();
-    await expect(page.locator('[data-slot="right-column-tabs"]:visible')).toBeVisible();
+    // #4156 (D5): the legacy agent chat left the LEFT column, so the only thing left there is
+    // ActionLogTimeline, which has no focusable elements. The contract this test protected —
+    // the main column comes before the tablist (R-3 + Asse B) — is now checked on document
+    // order, and the tablist must still be reachable from the keyboard.
+    // Scope to :visible — the shell mounts a desktop and a mobile copy (#3289).
+    const actionLog = page.locator('[data-slot="action-log-timeline"]:visible');
+    const rightTabs = page.locator('[data-slot="right-column-tabs"]:visible');
+    await expect(actionLog).toBeVisible();
+    await expect(rightTabs).toBeVisible();
+    await expect(page.locator('[data-slot="chat-agent-panel"]')).toHaveCount(0);
 
-    // Walk focus through the document and collect the *highest* data-slot
-    // ancestor seen for each step (LEFT-column-side OR RIGHT-column-side).
-    // We classify each focused element into one of:
-    //   - 'left'   when it sits inside ChatAgentPanel or ActionLogTimeline
-    //     (note: LiveAgentChat input is inside ChatAgentPanel and has its
-    //     own data-slot="live-agent-chat", so `closest('[data-slot]')` may
-    //     return the inner slot — we walk all ancestor slots and check
-    //     membership in the LEFT set).
-    //   - 'right'  when it sits inside RightColumnTabs.
-    //   - null     for anything else (topbar chrome, dev-tools widgets, etc.).
-    //
-    // The DOM contract: LEFT (`<main>` of DesktopBody) precedes RIGHT
-    // (`<aside>`) — so the FIRST 'left' index must be ≤ the FIRST 'right'
-    // index in the Tab walk after we enter the body region.
-    const LEFT_SLOTS = new Set(['chat-agent-panel', 'live-agent-chat', 'action-log-timeline']);
-    const RIGHT_SLOTS = new Set(['right-column-tabs']);
-
-    let firstLeftIdx = -1;
-    let firstRightIdx = -1;
+    const leftPrecedesRight = await page.evaluate(() => {
+      const isVisible = (el: Element): boolean => (el as HTMLElement).offsetParent !== null;
+      const left = [...document.querySelectorAll('[data-slot="action-log-timeline"]')].find(
+        isVisible
+      );
+      const right = [...document.querySelectorAll('[data-slot="right-column-tabs"]')].find(
+        isVisible
+      );
+      if (left == null || right == null) return false;
+      return (left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    });
+    expect(leftPrecedesRight).toBe(true);
 
     // 60 Tab presses is enough to cycle past the topbar nav + skip-link +
     // user menu + search button without timing out.
-    for (let i = 0; i < 60; i++) {
+    let reachedRight = false;
+    for (let i = 0; i < 60 && !reachedRight; i++) {
       await page.keyboard.press('Tab');
-      const slotChain = await page.evaluate(() => {
-        const active = document.activeElement;
-        if (!active || active === document.body) return [];
-        const chain: string[] = [];
-        let el: Element | null = active;
-        while (el !== null) {
-          const slot = el.getAttribute('data-slot');
-          if (slot) chain.push(slot);
-          el = el.parentElement;
-        }
-        return chain;
-      });
-
-      const isLeft = slotChain.some(s => LEFT_SLOTS.has(s));
-      const isRight = slotChain.some(s => RIGHT_SLOTS.has(s));
-      if (isLeft && firstLeftIdx === -1) firstLeftIdx = i;
-      if (isRight && firstRightIdx === -1) firstRightIdx = i;
-
-      // Stop once we've seen both — the ordering is locked.
-      if (firstLeftIdx !== -1 && firstRightIdx !== -1) break;
+      reachedRight = await page.evaluate(
+        () => document.activeElement?.closest('[data-slot="right-column-tabs"]') != null
+      );
     }
-
-    // We must reach the LEFT column at some point — if ChatAgentPanel +
-    // ActionLogTimeline together produce zero focusables (defensive guard),
-    // the test would fail here and that's a real regression worth catching.
-    expect(firstLeftIdx).toBeGreaterThanOrEqual(0);
-
-    // RIGHT column tabs must be reachable AFTER the LEFT column. This is the
-    // R-3 + Asse B contract: tablist sits after the main column in the Tab
-    // ring, not before it.
-    expect(firstRightIdx).toBeGreaterThan(firstLeftIdx);
+    expect(reachedRight).toBe(true);
   });
 
   test('G1 R-3 mitigation — only ONE tablist above-the-fold on /live route (parent miniNav suppressed)', async ({
@@ -313,6 +283,12 @@ test.describe('Session live — accessibility @a11y', () => {
   }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await gotoSessionLive(page, '?fixture=host');
+    // gotoSessionLive returns on the LOADING shell too (same data-slot): count only once the
+    // view is in its default state and the right-column tablist has rendered.
+    await expect(
+      page.locator('[data-slot="session-live-view"][data-ui-state="default"]')
+    ).toBeVisible();
+    await expect(page.locator('[data-slot="right-column-tabs"]:visible')).toBeVisible();
 
     // Parent layout (sessions/[id]/layout.tsx L63-75) sets `tabs: []` when
     // pathname endsWith('/live'), so the topbar mini-nav has zero entries on
@@ -341,15 +317,15 @@ test.describe('Session live — accessibility @a11y', () => {
   // ── WAI-ARIA: mobile bottom-sheet drawer (G1 #2374 T9 sess.46r) ────────────
   //
   // T9 refactored MobileBody from a 4-tab bottom-nav (Foundation #746) to the
-  // mockup canonical bottom-sheet pattern: main = full-width ChatAgentPanel +
-  // ActionLogTimeline; floating action button opens MobileBottomSheetDrawer
+  // mockup canonical bottom-sheet pattern: main = full-width ActionLogTimeline
+  // (the ChatAgentPanel left it with #4156 D5); floating action button opens MobileBottomSheetDrawer
   // hosting the 4 polymorphic tabs (Score/Turn/Widget/Notes) — same content
   // as desktop RIGHT. The old `[data-slot="mobile-body-tab"]` surface no
   // longer exists; tabs now live inside `[data-slot="mobile-bottom-sheet"]`.
   //
   // Reference mockup: admin-mockups/design_files/sp4-session-skeleton-parts.jsx L266-286.
 
-  test('WAI-ARIA: mobile main column renders ChatAgentPanel + ActionLogTimeline (no bottom-nav)', async ({
+  test('WAI-ARIA: mobile main column renders ActionLogTimeline (no bottom-nav, no agent chat)', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -357,10 +333,10 @@ test.describe('Session live — accessibility @a11y', () => {
     // MobileBody is hidden on desktop (lg:hidden) — use mobile viewport.
     await expect(page.locator('[data-slot="mobile-body"]')).toBeVisible();
 
-    // Mockup canonical: main column is full-width = ChatAgentPanel + ActionLogTimeline.
+    // Main column is full-width = ActionLogTimeline; the legacy agent chat is gone (#4156 D5).
     const mobileBody = page.locator('[data-slot="mobile-body"]');
-    await expect(mobileBody.locator('[data-slot="chat-agent-panel"]')).toBeVisible();
     await expect(mobileBody.locator('[data-slot="action-log-timeline"]')).toBeVisible();
+    await expect(mobileBody.locator('[data-slot="chat-agent-panel"]')).toHaveCount(0);
 
     // Legacy bottom-nav surface MUST NOT exist (T9 deletion).
     await expect(page.locator('[data-slot="mobile-body-tab"]')).toHaveCount(0);

@@ -51,7 +51,6 @@ internal static class AgentTypologiesEndpoints
         .Produces(401)
         .WithTags("AgentTypologies")
         .WithSummary("List agent typologies")
-        .WithDescription("Returns Published agent definitions used as user-facing typology dropdown source. Issue #649.")
-        .WithOpenApi();
+        .WithDescription("Returns Published agent definitions used as user-facing typology dropdown source. Issue #649.");
     }
 }

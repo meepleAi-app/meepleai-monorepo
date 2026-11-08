@@ -1,0 +1,51 @@
+# infra/compose.bake.yml
+#
+# Override per il bake dello snapshot (#3998).
+#
+# `restart: unless-stopped` su `api` (in docker-compose.yml) e' giusto in sviluppo, dove un
+# riavvio automatico risparmia un comando. Nel bake fa il contrario di quel che serve:
+# nasconde il fallimento invece di ripararlo.
+#
+# Un container che riparte azzera `State.Health.Status` a `starting` e `State.StartedAt` a
+# ogni giro, quindi lo start_period riparte e `FailingStreak` non arriva mai alla soglia:
+# `wait-for-healthy` non osserva ne' `healthy` ne' `unhealthy` e consuma tutto il timeout
+# riportando `starting`. E' cio' che il bake ha fatto per cinque settimane, con tredici
+# riavvii in centottanta secondi. In piu' `ExitCode`, `FinishedAt` e `OOMKilled` letti su un
+# container `running` descrivono una terminazione passata, non la morte che si sta cercando.
+#
+# Con `restart: "no"` il container resta `exited`, lo script lo rileva e fallisce subito, e
+# quei tre campi diventano significativi. Il primo smoke cosi' configurato ha dato
+# `exit=139` (128+11 = SIGSEGV) con `oom=false`: il processo non esce, segfaulta, circa due
+# secondi dopo la fine del seeding.
+services:
+  api:
+    restart: "no"
+
+    # I .pdb restano nell'immagine del bake. Senza di loro `createdump` scrive `?!?` al posto
+    # di ogni frame gestito, e il crash report da' il tipo dell'eccezione senza il punto in cui
+    # nasce — che e' stato il limite della diagnosi per cinque settimane. Qui l'immagine vive
+    # un job e viene scartata, quindi i ~10MB non contano; sull'immagine di staging si'
+    # (default `KEEP_PDB=0` nel Dockerfile).
+    build:
+      args:
+        KEEP_PDB: "1"
+
+    # Il tratto in cui muore — `Program.cs` fra la fine del seeding e `RunAsync()` — non
+    # logga nulla per costruzione: quattro registrazioni di gauge osservabili piu' il
+    # mapping degli endpoint. Il silenzio nei log quindi non e' un indizio e non dice dove
+    # l'esecuzione sia arrivata; serve lo stack del thread che e' morto.
+    #
+    # `DOTNET_EnableCrashReport=1` fa scrivere al runtime, accanto al dump, un
+    # `<dump>.crashreport.json` con lo stack di ogni thread in chiaro: si legge con `cat`,
+    # senza lldb ne' `dotnet-dump analyze`. Il tipo 1 (mini) tiene stack e moduli e resta
+    # piccolo, e `/tmp` e' scrivibile da `apiuser` senza toccare volumi ne' permessi.
+    environment:
+      DOTNET_DbgEnableMiniDump: "1"
+      DOTNET_DbgMiniDumpType: "1"
+      DOTNET_DbgMiniDumpName: "/tmp/crash.%p.dmp"
+      DOTNET_EnableCrashReport: "1"
+
+    # `createdump` legge il processo che sta morendo via ptrace: senza questa capability non
+    # produce ne' dump ne' crash report, e scrive soltanto un errore.
+    cap_add:
+      - SYS_PTRACE

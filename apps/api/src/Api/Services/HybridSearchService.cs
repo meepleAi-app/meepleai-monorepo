@@ -4,7 +4,10 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Helpers;
 using Api.Infrastructure;
+using Api.Observability;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
@@ -42,11 +45,12 @@ internal class HybridSearchService : IHybridSearchService
         Guid gameId,
         SearchMode mode = SearchMode.Hybrid,
         int limit = 10,
-        List<Guid>? documentIds = null,
+        List<Guid>? pdfDocumentIds = null,
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
         double keywordMinScore = 0.0,
         GameBookRole queryRoleHint = GameBookRole.None,
+        QueryEmbedding? precomputedQueryEmbedding = null,
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation
@@ -61,22 +65,26 @@ internal class HybridSearchService : IHybridSearchService
         // Security: Cap limit parameter to prevent resource exhaustion
         var safeLimit = Math.Min(Math.Max(limit, 1), 100); // Min: 1, Max: 100
 
+        // #4243: an empty filter means no filter, for BOTH arms. The vector arm already read it that
+        // way and the keyword arm did not (it kept nothing), so the two disagreed on an empty list.
+        var documentFilter = pdfDocumentIds is { Count: > 0 } ? pdfDocumentIds : null;
+
         _logger.LogInformation(
             "Hybrid search started: query='{Query}', gameId={GameId}, mode={Mode}, documentFilter={HasFilter}, vectorWeight={VectorWeight}, keywordWeight={KeywordWeight}, limit={Limit}, roleHint={RoleHint}",
-            query, gameId, mode, documentIds != null, vectorWeight, keywordWeight, limit, queryRoleHint);
+            query, gameId, mode, documentFilter != null, vectorWeight, keywordWeight, limit, queryRoleHint);
 
         try
         {
             switch (mode)
             {
                 case SearchMode.Semantic:
-                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentIds, queryRoleHint, cancellationToken).ConfigureAwait(false);
+                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentFilter, queryRoleHint, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Keyword:
-                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentIds, keywordMinScore, queryRoleHint, cancellationToken).ConfigureAwait(false);
+                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentFilter, keywordMinScore, queryRoleHint, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Hybrid:
-                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentIds, keywordMinScore, queryRoleHint, cancellationToken).ConfigureAwait(false);
+                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentFilter, keywordMinScore, queryRoleHint, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
                 default:
                     throw new ArgumentException($"Unsupported search mode: {mode}", nameof(mode));
@@ -108,12 +116,13 @@ internal class HybridSearchService : IHybridSearchService
         string query,
         Guid gameId,
         int limit,
-        List<Guid>? documentIds,
+        List<Guid>? pdfDocumentIds,
         GameBookRole queryRoleHint,
+        QueryEmbedding? precomputedQueryEmbedding,
         CancellationToken cancellationToken)
     {
         var vectorResults = await ExecuteVectorSearchAsync(
-            query, gameId, limit, documentIds, cancellationToken).ConfigureAwait(false);
+            query, gameId, limit, pdfDocumentIds, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
         var results = vectorResults.Select((r, index) =>
         {
@@ -142,7 +151,8 @@ internal class HybridSearchService : IHybridSearchService
                 KeywordRank = null,
                 MatchedTerms = new List<string>(),
                 Mode = SearchMode.Semantic,
-                RoleTags = chunkRoleTags
+                RoleTags = chunkRoleTags,
+                Language = embedding.Language
             };
         }).ToList();
 
@@ -166,7 +176,7 @@ internal class HybridSearchService : IHybridSearchService
         string query,
         Guid gameId,
         int limit,
-        List<Guid>? documentIds,
+        List<Guid>? pdfDocumentIds,
         double keywordMinScore,
         GameBookRole queryRoleHint,
         CancellationToken cancellationToken)
@@ -181,9 +191,9 @@ internal class HybridSearchService : IHybridSearchService
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Issue #2051: Filter by document IDs if specified
-        var filteredResults = documentIds == null
+        var filteredResults = pdfDocumentIds == null
             ? keywordResults
-            : keywordResults.Where(r => documentIds.Any(id => string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal))).ToList();
+            : keywordResults.Where(r => pdfDocumentIds.Any(id => string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal))).ToList();
 
         _logger.LogInformation(
             "Keyword search: {TotalResults} results from PostgreSQL, {FilteredResults} after document filter",
@@ -234,9 +244,10 @@ internal class HybridSearchService : IHybridSearchService
         int limit,
         float vectorWeight,
         float keywordWeight,
-        List<Guid>? documentIds,
+        List<Guid>? pdfDocumentIds,
         double keywordMinScore,
         GameBookRole queryRoleHint,
+        QueryEmbedding? precomputedQueryEmbedding,
         CancellationToken cancellationToken)
     {
         var fetchLimit = Math.Max(limit * 2, 20);
@@ -248,28 +259,54 @@ internal class HybridSearchService : IHybridSearchService
             .ResolveFtsConfigAsync(gameId, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
-        // Run vector and keyword searches in parallel
-        var vectorTask = ExecuteVectorSearchAsync(
-            query, gameId, fetchLimit, documentIds, cancellationToken);
+        // #3768: il titolo serve a ESCLUDERE i suoi token dai termini di heading-match, non a
+        // cercarli — questa ricerca gira gia' filtrata per gameId. Seconda query indicizzata per
+        // GameId sullo stesso percorso di ResolveFtsConfigAsync; il costo per-gioco di questo
+        // percorso e' tracciato in #3786.
+        var gameTitle = await _keywordSearchService
+            .ResolveGameTitleAsync(gameId, cancellationToken)
+            .ConfigureAwait(false);
 
-        var keywordTask = _keywordSearchService.SearchAsync(
+        // #3786: i due bracci girano in SEQUENZA, non con Task.WhenAll.
+        //
+        // Entrambi risolvono dallo stesso scope — quello creato per gioco da
+        // MultiGameHybridSearchService.SearchGameSafeAsync — quindi condividono la stessa istanza
+        // di MeepleAiDbContext: il vettoriale via GetDbConnection() in PgVectorStoreAdapter, il
+        // lessicale via SqlQueryRaw in KeywordSearchService. DbContext non e' thread-safe, e
+        // sovrapporli produceva:
+        //
+        //   System.InvalidOperationException: A second operation was started on this context
+        //   instance before a previous operation completed.
+        //
+        // Misurato su staging in una sola raccolta di 11 query: 267 eccezioni e 428 ricerche
+        // per-gioco con vectorCount=0 su 1759. Il vettoriale eccepiva, l'eccezione veniva catturata
+        // (vedi ExecuteVectorSearchAsync) e la ricerca proseguiva SOLO LESSICALE, senza alcun
+        // segnale nel risultato: dall'esterno indistinguibile da un gioco senza corrispondenze.
+        //
+        // Il parallelismo qui non comprava niente. Il percorso e' dominato dall'embedding della
+        // query (~1,4 s di HTTP dentro ExecuteVectorSearchAsync); le due query al DB sono
+        // millisecondi, quindi si passa da max(1,4s, ms) a 1,4s + ms. Uno scope per braccio
+        // conserverebbe quei millisecondi al prezzo di raddoppiare DbContext e connessioni su un
+        // percorso che ne apre gia' uno per gioco (~160 per richiesta cross-gioco).
+        //
+        // #2480 aveva gia' corretto la stessa classe di errore FRA giochi, dando a ciascuno il
+        // proprio scope; questo e' il caso residuo DENTRO un singolo gioco.
+        var vectorEmbeddings = await ExecuteVectorSearchAsync(
+            query, gameId, fetchLimit, pdfDocumentIds, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
+
+        var keywordResults = await _keywordSearchService.SearchAsync(
             query,
             gameId,
             fetchLimit,
             phraseSearch: query.Contains('"'),
             boostTerms: _config.BoostTerms,
             minScore: keywordMinScore,
-            cancellationToken: cancellationToken);
-
-        await Task.WhenAll(vectorTask, keywordTask).ConfigureAwait(false);
-
-        var vectorEmbeddings = await vectorTask.ConfigureAwait(false);
-        var keywordResults = await keywordTask.ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Apply document filter to keyword results
-        var filteredKeywordResults = documentIds == null
+        var filteredKeywordResults = pdfDocumentIds == null
             ? keywordResults
-            : keywordResults.Where(r => documentIds.Any(id =>
+            : keywordResults.Where(r => pdfDocumentIds.Any(id =>
                 string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal))).ToList();
 
         // Convert pgvector results to SearchResultItem for RRF fusion.
@@ -291,7 +328,9 @@ internal class HybridSearchService : IHybridSearchService
             // fusion (same cast as the semantic-only path). pgvector already SELECTs role_tags.
             RoleTags = (GameBookRole)se.Embedding.RoleTags,
             // #3270: carry the chunk heading (JOIN-resolved) so vector-arm chunks get the heading boost.
-            Heading = se.Embedding.Heading
+            Heading = se.Embedding.Heading,
+            // #3740: carry the chunk language now that the adapter actually SELECTs it.
+            Language = se.Embedding.Language
         }).ToArray();
 
         _logger.LogInformation(
@@ -304,7 +343,7 @@ internal class HybridSearchService : IHybridSearchService
         // (setup -> preparazione/allestimento) so an English-loanword query boosts a native-lexeme heading.
         // Reuses the ftsConfig resolved once at the top of this method.
         var headingTerms = KeywordSearchService.ExpandHeadingMatchTerms(
-            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig);
+            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig, gameTitle);
 
         var fusedResults = FuseSearchResults(
             vectorItems,
@@ -315,6 +354,8 @@ internal class HybridSearchService : IHybridSearchService
             _config.RrfConstant ?? FusionSignals.DefaultRrfK,
             queryRoleHint,
             headingTerms);
+
+        LogPerGameArenaForTuning(query, gameId, ftsConfig, headingTerms, queryRoleHint, fusedResults);
 
         var topResults = fusedResults
             .OrderByDescending(r => r.HybridScore)
@@ -329,6 +370,100 @@ internal class HybridSearchService : IHybridSearchService
     }
 
     /// <summary>
+    /// Prefisso stabile della riga di diagnostica per-gioco. Il consumatore offline
+    /// (<c>infra/scripts/rag-fusion-bench.py</c>) filtra su questo con <c>grep -F</c>: cambiarlo
+    /// rompe l'estrazione.
+    /// </summary>
+    internal const string PerGameTuningLogPrefix = "[RAG-TUNE-GAME]";
+
+    private static readonly JsonSerializerOptions PerGameTuningJsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    /// <summary>
+    /// Emette la scomposizione del punteggio di OGNI candidato fuso di questo gioco, prima della
+    /// troncatura a <c>limit</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Perché esiste.</b> Il dump <c>[RAG-TUNE]</c> di <c>MultiGameHybridSearchService</c> mostra
+    /// i candidati che <i>arrivano</i> alla fusione globale, mai quelli che questo stadio ha
+    /// <i>rifiutato</i>. Su staging, per <c>catan-setup-it</c>, il chunk con le regole di setup è
+    /// rango 1 del braccio vettoriale dentro Catan (cosine 0.80544) e non arriva: al suo posto
+    /// arriva il colophon <c>catan.com ®</c> (cosine 0.77997, rango 14). Senza questa riga la
+    /// diagnosi ha richiesto una lettura del DB per ipotesi, e le prime due — le penalità
+    /// moltiplicative — erano entrambe a zero su quel chunk.
+    /// </para>
+    /// <para>
+    /// <b>Perché la scomposizione e non il solo punteggio.</b> `HybridScore` da solo non distingue
+    /// una cosine alta da un boost additivo, e i due boost valgono <c>0.15</c> contro un
+    /// <c>rrfSum</c> che satura a <c>1/61 = 0.0164</c>: quando uno si attiva, l'ordinamento per
+    /// rilevanza smette di contare. I due termini vanno quindi visti separati.
+    /// </para>
+    /// <para>
+    /// <b>Perché tutti i candidati e non il top-K.</b> Il chunk pertinente è, per definizione del
+    /// difetto, fuori dal risultato: un dump troncato non mostrerebbe mai ciò che serve. Il volume
+    /// è limitato dal <c>fetchLimit</c> dei due bracci (≤ 40 candidati per gioco).
+    /// </para>
+    /// <para>
+    /// <b>Cosa NON porta.</b> Il testo dei chunk: è il grosso del volume e i due fattori che se ne
+    /// derivano (<c>lg</c>, <c>nn</c>) sono già qui, precalcolati. Una variante che volesse tararli
+    /// deve estendere questo payload.
+    /// </para>
+    /// <para>
+    /// I fattori sono ricalcolati con le stesse funzioni pure usate dalla fusione, sugli stessi
+    /// input, quindi coincidono con quelli applicati. Il campo <c>s</c> è invece il punteggio
+    /// <i>reale</i> letto dal risultato fuso: è l'àncora con cui la replica offline si valida, e
+    /// ricalcolarlo qui la farebbe confermare se stessa.
+    /// </para>
+    /// </remarks>
+    private void LogPerGameArenaForTuning(
+        string query,
+        Guid gameId,
+        string? ftsConfig,
+        IReadOnlyList<string>? headingTerms,
+        GameBookRole queryRoleHint,
+        IReadOnlyList<HybridSearchResult> fused)
+    {
+        if (!_logger.IsEnabled(LogLevel.Debug))
+            return;
+
+        var payload = new
+        {
+            q = query,
+            g = gameId,
+            f = ftsConfig,
+            t = headingTerms,
+            n = fused.Count,
+            c = fused.Select(r => new
+            {
+                d = r.PdfDocumentId,
+                i = r.ChunkIndex,
+                vr = r.VectorRank,
+                kr = r.KeywordRank,
+                v = r.VectorScore,
+                k = r.KeywordScore,
+                lg = FusionSignals.ComputeLegendPenaltyFactor(r.Content),
+                nn = FusionSignals.ComputeNumberNoiseFactor(r.Content),
+                rb = FusionSignals.ComputeRoleMatchBoost(queryRoleHint, r.RoleTags),
+                hb = FusionSignals.ComputeHeadingMatchBoost(headingTerms, r.Heading),
+                h = r.Heading,
+                // #3740: omessa quando è null (candidato solo-lessicale). La porta anche il dump
+                // globale: averla qui rende questo payload sufficiente da solo a pilotare la
+                // replica offline di FuseGlobally, senza doverlo ri-unire all'altro.
+                l = r.Language,
+                s = r.HybridScore
+            }).ToList()
+        };
+
+        _logger.LogDebug(
+            "{Prefix} {Payload}",
+            PerGameTuningLogPrefix,
+            JsonSerializer.Serialize(payload, PerGameTuningJsonOptions));
+    }
+
+    /// <summary>
     /// Generates query embedding and performs pgvector cosine similarity search.
     /// Falls back to empty results if embedding generation or search fails (graceful degradation).
     /// </summary>
@@ -336,24 +471,61 @@ internal class HybridSearchService : IHybridSearchService
         string query,
         Guid gameId,
         int limit,
-        List<Guid>? documentIds,
+        List<Guid>? pdfDocumentIds,
+        QueryEmbedding? precomputedQueryEmbedding,
         CancellationToken cancellationToken)
     {
         try
         {
-            var embeddingResult = await _embeddingService
-                .GenerateEmbeddingAsync(query, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (!embeddingResult.Success || embeddingResult.Embeddings is not { Count: > 0 })
+            // #3786: il vettore della query e' UNO per l'intera richiesta. Su un fan-out
+            // cross-gioco il chiamante lo calcola una volta e lo passa qui; generarlo dentro
+            // questo metodo significava ricalcolarlo una volta per gioco — 1546 chiamate al
+            // servizio di embedding per 11 query, a ~1,4 s l'una, misurate su staging.
+            float[] queryEmbedding;
+            if (precomputedQueryEmbedding is not null)
             {
-                _logger.LogWarning(
-                    "Query embedding generation failed: {Error}. Falling back to keyword-only.",
-                    embeddingResult.ErrorMessage);
-                return new List<KbEntities.ScoredEmbedding>();
+                if (!precomputedQueryEmbedding.Succeeded)
+                {
+                    // Il tentativo e' gia' stato fatto una volta per questa richiesta ed e'
+                    // fallito. Ritentare qui restituirebbe al percorso cross-gioco proprio le
+                    // ~160 chiamate che questa correzione toglie, per giunta verso un servizio
+                    // che si e' appena dimostrato irraggiungibile.
+                    _logger.LogWarning(
+                        "Query embedding was already attempted upstream and failed. Falling back to keyword-only for gameId={GameId}.",
+                        gameId);
+                    MeepleAiMetrics.RecordVectorArmOutcome(MeepleAiMetrics.RagArmOutcome.Failed);
+                    return new List<KbEntities.ScoredEmbedding>();
+                }
+
+                queryEmbedding = precomputedQueryEmbedding.Vector as float[]
+                    ?? precomputedQueryEmbedding.Vector!.ToArray();
+            }
+            else
+            {
+                // #3737: this is the retrieval question, not indexed text, so it must carry the
+                // e5 "query:" prefix. With "passage:" the best chunk of the manual named by the
+                // canonical `catan-setup` query sat at cosine rank 10 instead of 1 on the real
+                // 56k-chunk corpus — and the vector arm is the signal that distinguishes manuals
+                // from one another (see MultiGameHybridSearchService.FuseGlobally, weight 0.7).
+                var embeddingResult = await _embeddingService
+                    .GenerateEmbeddingAsync(query, EmbeddingPurpose.Query, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (!embeddingResult.Success || embeddingResult.Embeddings is not { Count: > 0 })
+                {
+                    _logger.LogWarning(
+                        "Query embedding generation failed: {Error}. Falling back to keyword-only.",
+                        embeddingResult.ErrorMessage);
+                    // #3786: la ricerca vettoriale non e' stata ESEGUITA. Senza questo segnale il
+                    // chiamante riceve una lista vuota indistinguibile da «nessuna corrispondenza».
+                    MeepleAiMetrics.RecordVectorArmOutcome(MeepleAiMetrics.RagArmOutcome.Failed);
+                    return new List<KbEntities.ScoredEmbedding>();
+                }
+
+                queryEmbedding = embeddingResult.Embeddings[0];
             }
 
-            var queryVector = new Vector(embeddingResult.Embeddings[0]);
+            var queryVector = new Vector(queryEmbedding);
 
             // #2568: use the scored variant so the raw cosine similarity is preserved on each
             // hit. The cross-game merge (MultiGameHybridSearchService) needs a globally-
@@ -364,12 +536,19 @@ internal class HybridSearchService : IHybridSearchService
                 queryVector,
                 topK: limit,
                 minScore: 0.3,
-                documentIds: documentIds,
+                pdfDocumentIds: pdfDocumentIds,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "pgvector search returned {Count} results for gameId={GameId}",
                 results.Count, gameId);
+
+            // #3786: `empty` e' un esito LEGITTIMO — un gioco senza contenuto indicizzato (su
+            // staging ~34 su 161 non hanno PDF) o senza chunk sopra minScore. Tenerlo distinto da
+            // `failed` e' cio' che rende utile un allarme su quest'ultimo.
+            MeepleAiMetrics.RecordVectorArmOutcome(results.Count > 0
+                ? MeepleAiMetrics.RagArmOutcome.Hit
+                : MeepleAiMetrics.RagArmOutcome.Empty);
 
             return results;
         }
@@ -379,6 +558,11 @@ internal class HybridSearchService : IHybridSearchService
             _logger.LogWarning(ex,
                 "Vector search failed, falling back to keyword-only for gameId={GameId}",
                 gameId);
+            // #3786: IL percorso per cui la metrica esiste. Catturare qui e' corretto — una
+            // ricerca per-gioco fallita non deve far cadere la query cross-gioco — ma senza
+            // segnale la degradazione e' invisibile: 428 ricerche su 1759 senza braccio
+            // vettoriale, misurate su staging solo alzando i log a Debug (#3789).
+            MeepleAiMetrics.RecordVectorArmOutcome(MeepleAiMetrics.RagArmOutcome.Failed);
             return new List<KbEntities.ScoredEmbedding>();
         }
 #pragma warning restore CA1031
@@ -471,7 +655,9 @@ internal class HybridSearchService : IHybridSearchService
                 MatchedTerms = matchedTerms,
                 Mode = SearchMode.Hybrid,
                 RoleTags = f.RoleTags,
-                Heading = f.Heading
+                Heading = f.Heading,
+                // #3740: only the vector arm knows the chunk language — null for keyword-only hits.
+                Language = v?.Language
             });
         }
 

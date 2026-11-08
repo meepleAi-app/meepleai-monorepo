@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using FluentAssertions;
 using Xunit;
+using Api.Tests.Infrastructure;
 
 namespace Api.Tests.Integration;
 
@@ -17,6 +18,12 @@ public class BggRateLimitTestFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // #3978 / REQ-AI-TEST-001 — guardia fail-closed sugli host AI a pagamento.
+        // Questa factory era una delle sei (su otto che costruiscono un host) che NON la
+        // installava: senza, una richiesta verso un provider a consumo USCIVA dalla macchina
+        // e moriva con 401 lato provider, cioe il divieto valeva per fortuna, non per costruzione.
+        builder.ConfigureServices(services => services.AddPaidAiHostGuard());
+
         builder.ConfigureAppConfiguration((context, config) =>
         {
             // Enable rate limiting for integration tests
@@ -25,6 +32,10 @@ public class BggRateLimitTestFactory : WebApplicationFactory<Program>
                 ["BggRateLimit:FreeTier"] = "5",
                 ["BggRateLimit:NormalTier"] = "10",
                 ["BggRateLimit:PremiumTier"] = "20",
+                // #3887: this factory WANTS the real limiter (it exercises BGG tier limits),
+                // so it states the per-host switch explicitly instead of depending on whatever
+                // another factory left in the process environment.
+                ["RateLimiting:Enabled"] = "true",
                 ["DISABLE_RATE_LIMITING"] = "false"
             });
         });
@@ -59,7 +70,7 @@ public class BggRateLimitIntegrationTests : IClassFixture<BggRateLimitTestFactor
         });
     }
 
-    private const string SkipReason = "Requires real auth token infrastructure — placeholder 'test-token' returns 401";
+    private const string SkipReason = "LIMITE: richiede un infrastruttura di token reali — placeholder 'test-token' returns 401";
 
     [Fact(Skip = SkipReason)]
     public async Task BggSearch_WithinLimit_ReturnsSuccessWithHeaders()

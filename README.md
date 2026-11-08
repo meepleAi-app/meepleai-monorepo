@@ -6,7 +6,7 @@
 
 MeepleAI answers rules questions, assists with strategy, and guides game setup by
 combining hybrid retrieval (RAG) over uploaded rulebooks with a multi-agent AI layer.
-This repository is a monorepo: a .NET 9 backend, a Next.js frontend, and a set of
+This repository is a monorepo: a .NET 10 backend, a Next.js frontend, and a set of
 Python AI microservices, all orchestrated with Docker Compose.
 
 New here? Start with **[Quick Start](#quick-start)**, then read
@@ -73,7 +73,7 @@ cd apps/web && pnpm dev             # Web  → http://localhost:3000
 
 ## Tech Stack
 
-**Backend** (.NET 9)
+**Backend** (.NET 10)
 - ASP.NET Minimal APIs + MediatR (CQRS)
 - PostgreSQL 16 + EF Core, with **pgvector** for vector search
 - Redis
@@ -111,7 +111,7 @@ branching strategy are documented in **[CLAUDE.md](./CLAUDE.md)**.
 
 ```
 apps/
-├── api/                  # .NET 9 backend — BoundedContexts/, Routing/, Infrastructure/
+├── api/                  # .NET 10 backend — BoundedContexts/, Routing/, Infrastructure/
 ├── web/                  # Next.js 16 frontend — src/app/, components/, lib/
 ├── embedding-service/    # Python: embeddings
 ├── reranker-service/     # Python: reranking

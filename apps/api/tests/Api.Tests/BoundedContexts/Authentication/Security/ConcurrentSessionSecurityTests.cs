@@ -114,7 +114,10 @@ public class ConcurrentSessionSecurityTests : IDisposable
             await _unitOfWork.SaveChangesAsync(CancellationToken.None);
 
             // Simulate session limit enforcement
+            // #3866: the test itself simulates the enforcement — it mutates these rows and saves,
+            // so they have to be tracked now that the context defaults to NoTracking like production.
             var activeSessions = await _dbContext.UserSessions
+                .AsTracking()
                 .Where(s => s.UserId == user.Id && s.RevokedAt == null)
                 .OrderBy(s => s.CreatedAt)
                 .ToListAsync();
@@ -259,7 +262,10 @@ public class ConcurrentSessionSecurityTests : IDisposable
         await _sessionRepository.AddAsync(newSession, CancellationToken.None);
 
         // Revoke all other sessions
+        // #3866: the test mutates these rows and saves them — tracked on purpose now that the
+        // context defaults to NoTracking like production.
         var otherSessions = await _dbContext.UserSessions
+            .AsTracking()
             .Where(s => s.UserId == user.Id && s.Id != newSession.Id && s.RevokedAt == null)
             .ToListAsync();
 

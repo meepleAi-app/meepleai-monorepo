@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.E2E.Infrastructure;
 using FluentAssertions;
@@ -58,7 +59,26 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         DbContext.SharedGames.Add(sharedGame);
         await DbContext.SaveChangesAsync();
         _testGameId = sharedGame.Id;
-        _testSessionId = Guid.NewGuid(); // Test session ID for workflow
+
+        // #3662: la GameSession dev'essere reale. `ValidateMoveCommandHandler` la carica da
+        // `IGameSessionRepository.GetByIdAsync` e lancia `NotFoundException` → 404 se non esiste.
+        // Qui c'era `_testSessionId = Guid.NewGuid()`, cioè un id inventato: i test passavano
+        // finché l'endpoint non validava l'esistenza della sessione, e quando la validazione è
+        // arrivata il gate E2E non girava più da mesi, quindi nessuno se n'è accorto.
+        // È l'aggregato `GameSession` — non `LiveGameSession` né `SessionTracking.Session`,
+        // che vivono in spazi di id distinti (ADR-089).
+        var gameSession = new GameSessionEntity
+        {
+            Id = Guid.NewGuid(),
+            GameId = sharedGame.Id,
+            Status = "InProgress",
+            StartedAt = DateTime.UtcNow,
+            PlayersJson = """[{"PlayerName":"E2E Player","PlayerOrder":1}]"""
+        };
+
+        DbContext.GameSessions.Add(gameSession);
+        await DbContext.SaveChangesAsync();
+        _testSessionId = gameSession.Id;
     }
 
     #region Happy Path Tests
@@ -82,19 +102,21 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         // Act
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
-        // Assert - Skip if orchestration service unavailable in test environment
-        await AssertSuccessOrSkipIfServiceUnavailable(response, "ValidateMove_ValidOpeningMove");
+        // #4023: nessuna sonda qui — vedi la nota in ValidateMove_InvalidMove. Il check
+        // 'orchestrator' non esiste in questo host, e questo test passava senza di esso.
+        await AssertSuccessAsync(response, "ValidateMove_ValidOpeningMove");
 
         if (response.IsSuccessStatusCode)
         {
             var result = await response.Content.ReadFromJsonAsync<ValidateMoveResponse>();
             result.Should().NotBeNull();
-            // IsValid can be true or false - both are valid responses
-            result.Reason.Should().NotBeEmpty();
+            // Decision e' VALID | INVALID | UNCERTAIN: tutte e tre sono risposte legittime.
+            result!.Decision.Should().NotBeNullOrEmpty();
+            result.Reasoning.Should().NotBeEmpty();
             result.Confidence.Should().BeInRange(0.0, 1.0);
-            result.AppliedRuleIds.Should().NotBeNull();
-            result.Citations.Should().NotBeNull();
-            result.ExecutionTimeMs.Should().BeGreaterThan(0);
+            result.ViolatedRules.Should().NotBeNull();
+            result.ApplicableRules.Should().NotBeNull();
+            result.LatencyMs.Should().BeGreaterThan(0);
         }
     }
 
@@ -118,8 +140,14 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("ValidateMove_InvalidMove returned 500 — service likely unavailable");
+        // #4023: nessuna sonda qui. La prima stesura ne metteva una sul check 'orchestrator', e
+        // quel check non e' registrato in questo host: la sonda lo leggeva come «servizio assente»
+        // e saltava. Misurato: nel run 37108228227 questo test era Ignorato, nel run di controllo
+        // su main-dev 37109312581 era Passato. Se passa senza l orchestration service, non ne
+        // dipende — e un prerequisito che il test non ha non va sondato. Il 500 resta un
+        // fallimento, che e' il punto di #4023.
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "ValidateMove_InvalidMove ha risposto 500: " + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.BadRequest);
@@ -129,7 +157,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
             var result = await response.Content.ReadFromJsonAsync<ValidateMoveResponse>();
             result.Should().NotBeNull();
             // Invalid moves can return either false or validation errors
-            result!.Reason.Should().NotBeEmpty();
+            result!.Reasoning.Should().NotBeEmpty();
         }
     }
 
@@ -159,13 +187,13 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
             result.Should().NotBeNull();
 
             // Verify all required fields present
-            // IsValid can be true or false - both are valid responses
-            result.Reason.Should().NotBeNullOrEmpty();
-            result.AppliedRuleIds.Should().NotBeNull();
+            result!.Decision.Should().NotBeNullOrEmpty();
+            result.Reasoning.Should().NotBeNullOrEmpty();
+            result.ViolatedRules.Should().NotBeNull();
             result.Confidence.Should().BeInRange(0.0, 1.0);
-            result.Citations.Should().NotBeNull();
-            result.ExecutionTimeMs.Should().BeGreaterThan(0);
-            // ErrorMessage is optional
+            result.ApplicableRules.Should().NotBeNull();
+            result.LatencyMs.Should().BeGreaterThan(0);
+            // Suggestions e' opzionale
         }
     }
 
@@ -173,59 +201,18 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
     #region Multi-Turn Workflow Tests
 
-    [Fact]
-    public async Task TutorToArbitroWorkflow_CompleteSequence_Succeeds()
-    {
-        // Arrange
-        var email = $"arbitro_workflow_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
-        SetSessionCookie(sessionToken);
-
-        // Step 1: Query Tutor agent for setup help
-        var tutorPayload = new
-        {
-            gameSessionId = _testSessionId,
-            playerName = "E2E Player",
-            query = "How do I set up the chess board?"
-        };
-
-        var tutorResponse = await Client.PostAsJsonAsync("/api/v1/agents/tutor/query", tutorPayload);
-
-        await AssertSuccessOrSkipIfServiceUnavailable(tutorResponse, "TutorToArbitroWorkflow tutor query");
-
-        if (tutorResponse.IsSuccessStatusCode)
-        {
-            var tutorResult = await tutorResponse.Content.ReadFromJsonAsync<TutorQueryResponse>();
-            tutorResult.Should().NotBeNull();
-            tutorResult!.AgentType.Should().Be("tutor");
-            tutorResult.Response.Should().NotBeEmpty();
-        }
-
-        // Step 2: Validate a move with Arbitro agent (same session context)
-        var arbitroPayload = new
-        {
-            gameSessionId = _testSessionId,
-            playerName = "E2E Player",
-            action = "e4",
-            position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
-        };
-
-        var arbitroResponse = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", arbitroPayload);
-
-        await AssertSuccessOrSkipIfServiceUnavailable(arbitroResponse, "TutorToArbitroWorkflow arbitro validate");
-
-        if (arbitroResponse.IsSuccessStatusCode)
-        {
-            var arbitroResult = await arbitroResponse.Content.ReadFromJsonAsync<ValidateMoveResponse>();
-            arbitroResult.Should().NotBeNull();
-            // IsValid can be true or false - both are valid
-            arbitroResult.Confidence.Should().BeGreaterThan(0);
-        }
-
-        // Step 3: Verify session maintained state (both requests used same sessionId)
-        // This validates that context is preserved across agent interactions
-        _testSessionId.Should().NotBeEmpty();
-    }
+    // 🔴 Issue #3662 — RIMOSSO: TutorToArbitroWorkflow_CompleteSequence_Succeeds.
+    //
+    // Il primo passo del test chiamava `POST /api/v1/agents/tutor/query`, che **non esiste**
+    // nell'API: nessuna rotta `tutor` e' mappata in Routing/. Da li' il 404 che faceva fallire il
+    // test (via EnsureSuccessStatusCode dentro AssertSuccessOrSkipIfServiceUnavailable, che
+    // rilancia tutto cio' che non e' 500). Il "workflow multi-agente" che dichiarava di coprire
+    // non e' una capacita' del prodotto.
+    //
+    // Tolto quel passo, restava la validazione di una mossa nella stessa sessione — gia' coperta
+    // da MultiTurnValidation_SequentialMoves_MaintainsContext qui sotto. Il test e' stato rimosso
+    // invece che ridotto a un duplicato. Se la rotta tutor verra' introdotta, il test va riscritto
+    // contro il contratto vero, non ripristinato.
 
     [Fact]
     public async Task MultiTurnValidation_SequentialMoves_MaintainsContext()
@@ -307,7 +294,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
             result.Should().NotBeNull();
 
             // API reports execution time from orchestration service
-            result!.ExecutionTimeMs.Should().BeGreaterThan(0);
+            result!.LatencyMs.Should().BeGreaterThan(0);
 
             // Total E2E time (including network, API overhead) - relaxed for test env
             // Production target: <500ms; Test environment: <2000ms (orchestration startup overhead)
@@ -360,8 +347,14 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
         // Assert - Should handle invalid state gracefully
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("ValidateMove_InvalidGameState returned 500 — service likely unavailable");
+        // #4023: nessuna sonda qui. La prima stesura ne metteva una sul check 'orchestrator', e
+        // quel check non e' registrato in questo host: la sonda lo leggeva come «servizio assente»
+        // e saltava. Misurato: nel run 37108228227 questo test era Ignorato, nel run di controllo
+        // su main-dev 37109312581 era Passato. Se passa senza l orchestration service, non ne
+        // dipende — e un prerequisito che il test non ha non va sondato. Il 500 resta un
+        // fallimento, che e' il punto di #4023.
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "ValidateMove_InvalidGameState ha risposto 500: " + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK, // Returns validation result with error
             HttpStatusCode.BadRequest); // Validation rejects invalid state
@@ -406,21 +399,36 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
     #region Response DTOs
 
-    private sealed record TutorQueryResponse(
-        string Response,
-        string AgentType,
-        double Confidence,
-        List<string> Citations,
-        double ExecutionTimeMs);
-
+    /// <summary>
+    /// Rispecchia <c>MoveValidationResultDto</c>, il tipo che l'endpoint restituisce davvero.
+    ///
+    /// <para>
+    /// 🔴 Issue #3662. La versione precedente dichiarava <c>IsValid</c>, <c>Reason</c>,
+    /// <c>AppliedRuleIds</c>, <c>Citations</c>, <c>ExecutionTimeMs</c>: di quei cinque campi
+    /// <b>nessuno</b> esiste nel contratto (sono <c>Decision</c>, <c>Reasoning</c>,
+    /// <c>ViolatedRules</c>, <c>ApplicableRules</c>, <c>LatencyMs</c>), quindi la
+    /// deserializzazione riusciva ma riempiva tutto di <c>null</c> e <c>0</c>. Combaciava solo
+    /// <c>Confidence</c>. Tre test E2E fallivano da mesi asserendo su quei default, con messaggi
+    /// — «Expected collection not to be null», «Expected value to be greater than 0.0» — che
+    /// sembrano difetti del prodotto e sono invece un DTO di test invecchiato.
+    /// </para>
+    /// <para>
+    /// Non servono <c>TokenUsage</c> e <c>CostBreakdown</c>: System.Text.Json ignora le proprieta'
+    /// del JSON che non hanno corrispondenza qui.
+    /// </para>
+    /// </summary>
     private sealed record ValidateMoveResponse(
-        bool IsValid,
-        string Reason,
-        List<Guid> AppliedRuleIds,
+        Guid ValidationId,
+        string Decision,
         double Confidence,
-        List<string> Citations,
-        double ExecutionTimeMs,
-        string? ErrorMessage = null);
+        string Reasoning,
+        List<string> ViolatedRules,
+        List<ArbitroRuleAtom> ApplicableRules,
+        int LatencyMs,
+        DateTime Timestamp,
+        List<string>? Suggestions = null);
+
+    private sealed record ArbitroRuleAtom(string Id, string Text, string? Section, string? Page, string? Line);
 
     #endregion
 }

@@ -20,9 +20,27 @@ internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkReposito
     {
     }
 
+    /// <summary>
+    /// Il collegamento, <b>tracciato</b>.
+    /// </summary>
+    /// <remarks>
+    /// #3858 — il DbContext ha come default <c>QueryTrackingBehavior.NoTracking</c> (PERF-06).
+    /// Senza <c>AsTracking()</c> l'entita' restituita qui non e' tracciata: il
+    /// <c>link.Delete()</c> dell'handler mutava un oggetto scollegato, <c>SaveChangesAsync</c> non
+    /// trovava nulla da scrivere e l'endpoint rispondeva <b>204 senza cancellare</b>. Nessun
+    /// errore, in nessun log — il fallimento aveva la forma esatta del successo.
+    ///
+    /// Il tracciamento e' preferibile a un <c>Update()</c> esplicito su entita' scollegata: quella
+    /// strada rompe la concorrenza ottimistica sulle entita' che usano <c>xmin</c>, perche' il
+    /// valore originale parte da 0 e la <c>WHERE</c> non combacia mai.
+    ///
+    /// L'unico chiamante e' il comando di cancellazione, quindi il costo del tracciamento non
+    /// ricade su alcun percorso di sola lettura.
+    /// </remarks>
     public async Task<EntityLink?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbContext.EntityLinks
+            .AsTracking()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -68,17 +86,28 @@ internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkReposito
         MeepleEntityType targetEntityType,
         Guid targetEntityId,
         EntityLinkType linkType,
+        EntityLinkScope scope,
+        Guid ownerUserId,
         CancellationToken cancellationToken = default)
     {
-        return await DbContext.EntityLinks
-            .AnyAsync(x =>
-                x.SourceEntityType == sourceEntityType &&
-                x.SourceEntityId == sourceEntityId &&
-                x.TargetEntityType == targetEntityType &&
-                x.TargetEntityId == targetEntityId &&
-                x.LinkType == linkType,
-                cancellationToken)
-            .ConfigureAwait(false);
+        var sameTriple = DbContext.EntityLinks.Where(x =>
+            x.SourceEntityType == sourceEntityType &&
+            x.SourceEntityId == sourceEntityId &&
+            x.TargetEntityType == targetEntityType &&
+            x.TargetEntityId == targetEntityId &&
+            x.LinkType == linkType);
+
+        // #4641: the slot of a Shared link is the triple; the slot of a User link is the triple of its owner, and a
+        // Shared link already on the triple makes a personal copy of it pointless. The two unique indexes say the same.
+        return scope == EntityLinkScope.Shared
+            ? await sameTriple
+                .AnyAsync(x => x.Scope == EntityLinkScope.Shared, cancellationToken)
+                .ConfigureAwait(false)
+            : await sameTriple
+                .AnyAsync(x => x.Scope == EntityLinkScope.Shared
+                               || (x.Scope == EntityLinkScope.User && x.OwnerUserId == ownerUserId),
+                    cancellationToken)
+                .ConfigureAwait(false);
     }
 
     public async Task<int> GetCountForEntityAsync(
@@ -86,13 +115,31 @@ internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkReposito
         Guid entityId,
         CancellationToken cancellationToken = default)
     {
-        return await DbContext.EntityLinks
-            .CountAsync(x =>
-                (x.SourceEntityType == entityType && x.SourceEntityId == entityId) ||
-                (x.IsBidirectional && x.TargetEntityType == entityType && x.TargetEntityId == entityId),
-                cancellationToken)
+        return await LinksOfEntity(entityType, entityId)
+            .CountAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    public async Task<int> GetCountForEntityVisibleToAsync(
+        Guid viewerUserId,
+        MeepleEntityType entityType,
+        Guid entityId,
+        CancellationToken cancellationToken = default)
+    {
+        return await VisibleTo(LinksOfEntity(entityType, entityId), viewerUserId)
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>The links where the entity is the source, or the target of a bidirectional link.</summary>
+    private IQueryable<EntityLink> LinksOfEntity(MeepleEntityType entityType, Guid entityId) =>
+        DbContext.EntityLinks.Where(x =>
+            (x.SourceEntityType == entityType && x.SourceEntityId == entityId) ||
+            (x.IsBidirectional && x.TargetEntityType == entityType && x.TargetEntityId == entityId));
+
+    /// <summary>A <c>User</c>-scope link is personal: only its owner sees it. Any other scope is for everybody (#4637).</summary>
+    private static IQueryable<EntityLink> VisibleTo(IQueryable<EntityLink> links, Guid viewerUserId) =>
+        links.Where(x => x.Scope != EntityLinkScope.User || x.OwnerUserId == viewerUserId);
 
     public async Task<IReadOnlyList<EntityLink>> GetForEntityAsync(
         MeepleEntityType entityType,
@@ -102,11 +149,34 @@ internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkReposito
         MeepleEntityType? targetEntityType = null,
         CancellationToken cancellationToken = default)
     {
-        // Bidirectional query: entity as source OR as target of a bilateral link
-        var query = DbContext.EntityLinks.Where(x =>
-            (x.SourceEntityType == entityType && x.SourceEntityId == entityId) ||
-            (x.IsBidirectional && x.TargetEntityType == entityType && x.TargetEntityId == entityId));
+        return await FilteredLinks(LinksOfEntity(entityType, entityId), entityType, scope, linkType, targetEntityType)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 
+    public async Task<IReadOnlyList<EntityLink>> GetForEntityVisibleToAsync(
+        Guid viewerUserId,
+        MeepleEntityType entityType,
+        Guid entityId,
+        EntityLinkScope? scope = null,
+        EntityLinkType? linkType = null,
+        MeepleEntityType? targetEntityType = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await FilteredLinks(
+                VisibleTo(LinksOfEntity(entityType, entityId), viewerUserId),
+                entityType, scope, linkType, targetEntityType)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static IQueryable<EntityLink> FilteredLinks(
+        IQueryable<EntityLink> query,
+        MeepleEntityType entityType,
+        EntityLinkScope? scope,
+        EntityLinkType? linkType,
+        MeepleEntityType? targetEntityType)
+    {
         if (scope.HasValue)
             query = query.Where(x => x.Scope == scope.Value);
 
@@ -121,10 +191,7 @@ internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkReposito
                 (x.SourceEntityType == entityType && x.TargetEntityType == targetEntityType.Value) ||
                 (x.IsBidirectional && x.TargetEntityType == entityType && x.SourceEntityType == targetEntityType.Value));
 
-        return await query
-            .OrderByDescending(x => x.CreatedAt)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        return query.OrderByDescending(x => x.CreatedAt);
     }
 
     public async Task AddAsync(EntityLink entityLink, CancellationToken cancellationToken = default)

@@ -1,4 +1,4 @@
-# Victory Section (v1.0.0)
+# Victory Section (v1.2.0)
 
 Extract the **victory conditions** exactly as described by the rulebook. Do not invent alternatives.
 
@@ -13,6 +13,9 @@ Extract the **victory conditions** exactly as described by the rulebook. Do not 
     ],
     "isPointBased": true,
     "targetPoints": 15,
+    "kind": "rule|exception|clarification|example (optional, default rule)",
+    "priority": "base|expansion|card|scenario (optional, default base)",
+    "trigger": {"phase": "string (optional)", "action": "string (optional)", "component": "string (optional)"},
     "citations": [
       {
         "pdf_page": 12,
@@ -31,6 +34,7 @@ Extract the **victory conditions** exactly as described by the rulebook. Do not 
 - `isPointBased`: `true` if victory is decided by accumulated points; `false` for objective/last-player-standing/elimination games.
 - `targetPoints`: Integer threshold if the game ends when a player reaches a specific point total. Omit otherwise.
 - `citations`: At least one citation covering `primary`. Add more when alternatives or `targetPoints` come from different pages.
+- `kind`, `priority`, `trigger`: optional, apply to the whole `victory` object (see Rule structure in the system prompt). `overrides` is NOT allowed here: there is a single item.
 
 ## Failure modes
 

@@ -634,6 +634,127 @@ public class AdminStatsServiceUnitTests : IDisposable
 
     #endregion
 
+    #region Cache Key Tests (#4542)
+
+    /// <summary>
+    /// #4542: la chiave non conteneva FromDate/ToDate, quindi un secondo intervallo con gli stessi filtri
+    /// riceveva i dati del primo. userTrend ha un punto per giorno dell'intervallo calcolato.
+    /// </summary>
+    [Fact]
+    public async Task GetDashboardStatsAsync_SameFiltersOtherRange_ComputesTheOtherRange()
+    {
+        var first = await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(
+            FromDate: Utc(2025, 1, 1), ToDate: Utc(2025, 1, 3), Days: 30, GameId: "g", RoleFilter: "admin"));
+        var second = await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(
+            FromDate: Utc(2025, 3, 1), ToDate: Utc(2025, 3, 3), Days: 30, GameId: "g", RoleFilter: "admin"));
+
+        first.UserTrend[0].Date.Should().Be(Utc(2025, 1, 1));
+        second.UserTrend[0].Date.Should().Be(Utc(2025, 3, 1),
+            "un altro intervallo è un'altra voce di cache, anche con gli stessi Days, GameId e RoleFilter");
+        second.UserTrend[^1].Date.Should().Be(Utc(2025, 3, 3));
+        _cache.MissCount.Should().Be(2);
+    }
+
+    /// <summary>
+    /// #4542: le query filtrano per istante (<c>CreatedAt &gt;= fromDate</c>), non per giorno. Due
+    /// intervalli negli stessi giorni ma con orari diversi danno numeri diversi: una chiave arrotondata al
+    /// giorno li confonderebbe.
+    /// </summary>
+    [Fact]
+    public async Task GetDashboardStatsAsync_RangesWithinTheSameDays_AreDistinctEntries()
+    {
+        _dbContext.Users.Add(new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = "early@test.com",
+            PasswordHash = "hash",
+            Role = "user",
+            CreatedAt = Utc(2025, 1, 1).AddHours(6),
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var fromMidnight = await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(
+            FromDate: Utc(2025, 1, 1), ToDate: Utc(2025, 1, 1).AddHours(23)));
+        var fromNoon = await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(
+            FromDate: Utc(2025, 1, 1).AddHours(12), ToDate: Utc(2025, 1, 1).AddHours(23)));
+
+        fromMidnight.UserTrend.Sum(p => p.Count).Should().Be(1);
+        fromNoon.UserTrend.Sum(p => p.Count).Should().Be(0,
+            "l'utente è stato creato alle 06:00, prima dell'inizio del secondo intervallo");
+    }
+
+    /// <summary>
+    /// #4542: l'intervallo di default si misura da adesso (<c>now - Days</c> → <c>now</c>), ma la chiave
+    /// non deve contenere l'istante corrente, o la cache non servirebbe mai la stessa voce due volte.
+    /// </summary>
+    [Fact]
+    public async Task GetDashboardStatsAsync_DefaultRange_StaysCachedWhileTheClockMoves()
+    {
+        var first = await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(Days: 30));
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+        var second = await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(Days: 30));
+
+        _cache.MissCount.Should().Be(1);
+        _cache.HitCount.Should().Be(1);
+        second.GeneratedAt.Should().Be(first.GeneratedAt);
+    }
+
+    /// <summary>
+    /// #4542: lo stesso istante scritto con un altro <see cref="DateTimeKind"/> è lo stesso intervallo
+    /// (la regola di #4063: senza fuso vale UTC; Local nomina già un istante), e con un FromDate
+    /// esplicito Days non entra nel calcolo. Le due cose non devono frammentare la cache.
+    /// </summary>
+    [Fact]
+    public async Task GetDashboardStatsAsync_SameRangeExpressedDifferently_SharesTheEntry()
+    {
+        var utc = Utc(2025, 1, 1).AddHours(10);
+        var unspecified = DateTime.SpecifyKind(utc, DateTimeKind.Unspecified);
+        var local = utc.ToLocalTime();
+
+        await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(FromDate: utc, ToDate: Utc(2025, 1, 3), Days: 30));
+        await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(FromDate: unspecified, ToDate: Utc(2025, 1, 3), Days: 7));
+        await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(FromDate: local, ToDate: Utc(2025, 1, 3), Days: 90));
+
+        _cache.MissCount.Should().Be(1);
+        _cache.HitCount.Should().Be(2);
+    }
+
+    /// <summary>
+    /// #4542: senza FromDate, Days decide l'inizio dell'intervallo e deve restare nella chiave.
+    /// </summary>
+    [Fact]
+    public async Task GetDashboardStatsAsync_DefaultRangeOtherDays_ComputesTheOtherRange()
+    {
+        var sevenDays = await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(Days: 7));
+        var thirtyDays = await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(Days: 30));
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        sevenDays.UserTrend[0].Date.Should().Be(now.AddDays(-7).Date);
+        thirtyDays.UserTrend[0].Date.Should().Be(now.AddDays(-30).Date);
+    }
+
+    /// <summary>
+    /// #4542: GameId e RoleFilter sono testo libero. Unite con ':' nella chiave vecchia, due coppie
+    /// diverse potevano dare la stessa stringa: <c>("x:admin", null)</c> e <c>("x", "admin:")</c>
+    /// diventavano entrambe <c>…:x:admin:</c>, con risultati diversi (il secondo filtra per un ruolo che
+    /// non esiste).
+    /// </summary>
+    [Fact]
+    public async Task GetDashboardStatsAsync_GameIdAndRoleSplitDifferently_DoNotCollide()
+    {
+        await SeedUsersWithRolesAsync(_timeProvider.GetUtcNow().UtcDateTime, adminCount: 1, userCount: 1);
+
+        var noRole = await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(Days: 30, GameId: "x:admin", RoleFilter: null));
+        var oddRole = await _service.GetDashboardStatsAsync(new AnalyticsQueryParams(Days: 30, GameId: "x", RoleFilter: "admin:"));
+
+        noRole.UserTrend.Sum(p => p.Count).Should().Be(2);
+        oddRole.UserTrend.Sum(p => p.Count).Should().Be(0, "nessun utente ha il ruolo \"admin:\"");
+    }
+
+    private static DateTime Utc(int year, int month, int day) => new(year, month, day, 0, 0, 0, DateTimeKind.Utc);
+
+    #endregion
+
     #region Helper Methods
 
     private async Task SeedUsersWithRolesAsync(DateTime now, int adminCount, int userCount)

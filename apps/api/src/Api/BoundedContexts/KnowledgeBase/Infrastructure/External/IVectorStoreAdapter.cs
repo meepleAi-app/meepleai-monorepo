@@ -11,14 +11,16 @@ internal interface IVectorStoreAdapter
 {
     /// <summary>
     /// Performs vector similarity search.
-    /// Issue #2051: Supports document filtering via documentIds
+    /// Issue #2051: supports document filtering.
+    /// Issue #4243: the filter is a list of <c>pdf_documents.Id</c>, the identity the keyword arm
+    /// compares, never <c>vector_documents.Id</c>.
     /// </summary>
     Task<List<Embedding>> SearchAsync(
         Guid gameId,
         Vector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -31,13 +33,34 @@ internal interface IVectorStoreAdapter
         Vector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Indexes a batch of embeddings into the vector store.
     /// </summary>
     Task IndexBatchAsync(
+        List<Embedding> embeddings,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replaces ALL the embeddings of a vector document with <paramref name="embeddings"/>, atomically: the
+    /// old ones are deleted and the new ones inserted in ONE transaction, so an insert that fails leaves the
+    /// old embeddings in place (#4660). A re-index that deleted first and inserted after, as two separate
+    /// statements, left a vector document that says "completed" with no embeddings at all when the insert
+    /// failed. If the context already has a transaction open the replacement joins it and follows its outcome.
+    /// An empty batch does nothing: there is nothing to replace the index with, and deleting it because of an
+    /// upstream mistake is worse than keeping the old one. Every embedding must carry
+    /// <paramref name="vectorDocumentId"/>, or the call throws <see cref="ArgumentException"/> before touching
+    /// anything.
+    /// </summary>
+    /// <remarks>
+    /// Atomic on the pgvector table only. Whatever else the caller saved before (the text chunks of the same
+    /// run, in the queue pipeline) is not part of the transaction: if the insert fails the old embeddings
+    /// stay, but their <c>source_chunk_id</c> may point at text chunks that run has already replaced.
+    /// </remarks>
+    Task ReplaceByVectorDocumentIdAsync(
+        Guid vectorDocumentId,
         List<Embedding> embeddings,
         CancellationToken cancellationToken = default);
 
@@ -67,7 +90,7 @@ internal interface IVectorStoreAdapter
         Vector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -20,6 +20,7 @@ import { AuthLayout } from '@/components/layouts';
 import { Btn } from '@/components/ui/btn';
 import { InputField } from '@/components/ui/input-field';
 import { PwdInput } from '@/components/ui/pwd-input';
+import { getApiBase } from '@/lib/api/core/httpClient';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // ──────────────────────────────────────────────
@@ -58,13 +59,6 @@ const validatePassword = (password: string): PasswordValidation => {
     hasNumber,
     isValid: minLength && hasUppercase && hasLowercase && hasNumber,
   };
-};
-
-const getApiBase = (): string => {
-  if (typeof window !== 'undefined') {
-    return process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
-  }
-  return '';
 };
 
 // ──────────────────────────────────────────────

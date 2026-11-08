@@ -25,9 +25,12 @@ internal class CardDeckAdapter
     /// Creates a standard 52-card deck (optionally with jokers).
     /// </summary>
     public async Task<SessionDeck> CreateStandardDeckAsync(
-        Guid sessionId, string name, bool includeJokers, CancellationToken cancellationToken)
+        Guid toolboxId, string name, bool includeJokers, CancellationToken cancellationToken)
     {
-        var deck = SessionDeck.CreateStandardDeck(sessionId, name, includeJokers);
+        // #3856 — il parametro e' un id di TOOLBOX, non di sessione. Passandolo alla factory delle
+        // sessioni la chiave esterna verso session_tracking_sessions lo rifiutava (23503) e
+        // l'endpoint rispondeva 500 a ogni chiamata.
+        var deck = SessionDeck.CreateStandardDeckForToolbox(toolboxId, name, includeJokers);
         await _deckRepository.AddAsync(deck, cancellationToken).ConfigureAwait(false);
         await _deckRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return deck;
@@ -37,9 +40,9 @@ internal class CardDeckAdapter
     /// Creates a custom deck with specified cards.
     /// </summary>
     public async Task<SessionDeck> CreateCustomDeckAsync(
-        Guid sessionId, string name, List<Card> cards, CancellationToken cancellationToken)
+        Guid toolboxId, string name, List<Card> cards, CancellationToken cancellationToken)
     {
-        var deck = SessionDeck.CreateCustomDeck(sessionId, name, cards);
+        var deck = SessionDeck.CreateCustomDeckForToolbox(toolboxId, name, cards);
         await _deckRepository.AddAsync(deck, cancellationToken).ConfigureAwait(false);
         await _deckRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return deck;

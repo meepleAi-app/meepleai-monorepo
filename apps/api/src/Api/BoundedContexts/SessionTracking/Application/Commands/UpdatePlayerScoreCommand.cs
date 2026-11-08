@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 /// Command for a player to update their own score.
 /// Implements IRequireSessionRole to enforce Player-level authorization via the
 /// ValidatePlayerRoleBehavior MediatR pipeline behavior.
-/// Includes optimistic concurrency RowVersion for conflict detection.
+/// Includes the optimistic concurrency token (xmin, #3651) for conflict detection.
 /// Issue #4765 - Player Action Endpoints + Host Validation + Conflict Resolution
 /// </summary>
 public record UpdatePlayerScoreCommand(

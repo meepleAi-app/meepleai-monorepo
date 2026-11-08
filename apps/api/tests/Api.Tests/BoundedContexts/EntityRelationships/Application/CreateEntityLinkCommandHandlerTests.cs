@@ -46,6 +46,7 @@ public class CreateEntityLinkCommandHandlerTests
                 MeepleEntityType.Game, _sourceId,
                 MeepleEntityType.Game, _targetId,
                 EntityLinkType.ExpansionOf,
+                EntityLinkScope.User, _ownerId,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
@@ -74,6 +75,7 @@ public class CreateEntityLinkCommandHandlerTests
         _repoMock
             .Setup(r => r.ExistsAsync(It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(),
                 It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(), It.IsAny<EntityLinkType>(),
+                It.IsAny<EntityLinkScope>(), It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
@@ -95,6 +97,7 @@ public class CreateEntityLinkCommandHandlerTests
         _repoMock
             .Setup(r => r.ExistsAsync(It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(),
                 It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(), It.IsAny<EntityLinkType>(),
+                It.IsAny<EntityLinkScope>(), It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
@@ -116,6 +119,7 @@ public class CreateEntityLinkCommandHandlerTests
         _repoMock
             .Setup(r => r.ExistsAsync(It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(),
                 It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(), It.IsAny<EntityLinkType>(),
+                It.IsAny<EntityLinkScope>(), It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
@@ -143,6 +147,7 @@ public class CreateEntityLinkCommandHandlerTests
                 MeepleEntityType.Game, _sourceId,
                 MeepleEntityType.Game, _targetId,
                 EntityLinkType.ExpansionOf,
+                EntityLinkScope.User, _ownerId,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 

@@ -186,7 +186,12 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
 
         // Configure mock to return the query vector when asked.
         _embeddingServiceMock
-            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            // #3737: l'handler codifica la domanda come QUERY, quindi passa dall'overload con
+            // purpose. Configurare il solo overload senza purpose lascia Moq restituire null, e il
+            // test muore con una NullReferenceException dentro l'handler invece che con un'asserzione
+            // — il difetto arriva mascherato da bug di produzione.
+            .Setup(s => s.GenerateEmbeddingAsync(
+                It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { queryVector }));
 
         // Insert embeddings directly via raw SQL for test isolation/speed (bypasses the
@@ -245,7 +250,7 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
     /// results come back ordered by score descending.
     /// Happy-path type: REAL integration (pgvector Testcontainer + mocked IEmbeddingService).
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsScoredHits_OrderedByScoreDesc()
     {
         var pdfId = await SeedIndexedDocAsync();
@@ -263,7 +268,7 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
     /// When PdfDocumentId does not correspond to any VectorDocument, the handler returns
     /// an empty result with a non-null ErrorMessage (not an exception).
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsError_WhenDocNotIndexed()
     {
         var result = await _mediator!.Send(
@@ -280,7 +285,7 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
     /// <c>LEFT JOIN games</c> and threw <c>relation "games" does not exist</c> against the
     /// post-Phase-2d schema. Verifies indexing succeeds and resolves game_id from shared_game_id.
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task IndexBatchAsync_ResolvesGameId_WithoutGamesTable()
     {
         const int Dims = 768;

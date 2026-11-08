@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
-import { Dialog, DialogContent } from '@/components/ui/overlays/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
 
 export interface SoftWarningCreditsLabels {
   readonly title: string;
@@ -39,7 +39,7 @@ export function SoftWarningCredits({
     // We hide its default close X and keep our own custom X (consistent
     // with the mockup styling).
     return (
-      <Dialog open onOpenChange={(open) => !open && onDismiss()}>
+      <Dialog open onOpenChange={open => !open && onDismiss()}>
         <DialogContent
           data-slot="soft-warning-modal"
           aria-labelledby="soft-warning-title"
@@ -54,9 +54,12 @@ export function SoftWarningCredits({
               🟡
             </div>
             <div className="flex flex-1 flex-col gap-1">
-              <h3 id="soft-warning-title" className="text-base font-bold text-foreground">
-                {labels.title}
-              </h3>
+              {/* #3836 — vedi CheckoutModal: asChild conserva l'elemento visibile. */}
+              <DialogTitle asChild>
+                <h3 id="soft-warning-title" className="text-base font-bold text-foreground">
+                  {labels.title}
+                </h3>
+              </DialogTitle>
               <p className="text-xs leading-relaxed text-muted-foreground">
                 {labels.subtitle(used, total, remaining)}
               </p>

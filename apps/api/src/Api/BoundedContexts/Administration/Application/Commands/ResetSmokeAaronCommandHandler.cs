@@ -83,36 +83,48 @@ internal sealed class ResetSmokeAaronCommandHandler
 
         var junctionRows = await _db.ChatThreadCollections
             .Where(j => threadIds.Contains(j.ChatThreadId))
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         _db.ChatThreadCollections.RemoveRange(junctionRows);
 
         var threads = await _db.ChatThreads
             .Where(t => t.UserId == SmokeAaronUserId)
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         _db.ChatThreads.RemoveRange(threads);
 
         var sessions = await _db.ChatSessions
             .Where(s => s.UserId == SmokeAaronUserId)
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         _db.ChatSessions.RemoveRange(sessions);
 
         var jobs = await _db.KbReindexJobs
             .Where(j => j.UserId == SmokeAaronUserId)
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         _db.KbReindexJobs.RemoveRange(jobs);
 
         var pdfs = await _db.PdfDocuments
             .Where(p => p.UploadedByUserId == SmokeAaronUserId)
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         _db.PdfDocuments.RemoveRange(pdfs);
 
         var games = await _db.PrivateGames
             .Where(g => g.OwnerId == SmokeAaronUserId)
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         _db.PrivateGames.RemoveRange(games);

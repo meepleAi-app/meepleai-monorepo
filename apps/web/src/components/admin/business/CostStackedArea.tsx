@@ -12,8 +12,8 @@
  * Provider stack order: usa `providerTotals` (sorted DESC by total) così la
  * stacking direction matches l'aspettativa "i più costosi in basso".
  *
- * Cap line: quando AppBudget configurato, mostra reference line orizzontale
- * a `monthlyLimit / 30` (daily budget cap).
+ * #4169: niente linea del tetto. Disegnava `AppBudget / 30`, un budget che il gateway non applicava;
+ * e questa serie comprende anche l'infrastruttura, che i tetti del gateway LLM non coprono.
  */
 
 import { useMemo } from 'react';
@@ -22,14 +22,12 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 
-import { useBudget } from '@/hooks/useBudget';
 import { useCostBreakdown } from '@/hooks/useCostBreakdown';
 import type {
   CostBreakdownByProvider,
@@ -126,15 +124,9 @@ interface CostStackedAreaProps {
 
 export function CostStackedArea({ range, className }: CostStackedAreaProps) {
   const { data, isLoading, isError, error } = useCostBreakdown(range);
-  const { budget } = useBudget();
 
   const flatData = useMemo(() => (data ? flattenForChart(data) : []), [data]);
   const sortedProviders = useMemo(() => (data?.providerTotals ?? []).map(p => p.provider), [data]);
-
-  // Daily budget cap: monthlyLimit / 30 — simple approximation matching the
-  // mockup's "linea budget cap" reference. When the user selects a non-30d
-  // range, we still apply daily cap because the chart is per-day.
-  const dailyCap = budget ? budget.monthlyLimit / 30 : null;
 
   if (isLoading) {
     return (
@@ -224,21 +216,6 @@ export function CostStackedArea({ range, className }: CostStackedAreaProps) {
               width={50}
             />
             <Tooltip content={<ChartTooltip />} />
-            {dailyCap != null && (
-              <ReferenceLine
-                y={dailyCap}
-                stroke="hsl(var(--c-event))"
-                strokeDasharray="4 4"
-                strokeWidth={1.5}
-                label={{
-                  value: `cap ${formatCurrency(dailyCap)}/d`,
-                  position: 'insideTopRight',
-                  fill: 'hsl(var(--c-event))',
-                  fontSize: 10,
-                  fontFamily: 'var(--font-mono)',
-                }}
-              />
-            )}
             {sortedProviders.map((provider, idx) => (
               <Area
                 key={provider}

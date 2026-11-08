@@ -18,22 +18,28 @@ export const CONTEXTUAL_TABS: Record<string, ContextualTab[]> = {
     { label: 'Completate', href: '/sessions?tab=completed' },
     { label: 'Pianificate', href: '/sessions?tab=planned' },
   ],
-  '/chat': [
-    { label: 'Thread', href: '/chat' },
-    { label: 'Agenti', href: '/agents' },
-  ],
-  '/agents': [
-    { label: 'Thread', href: '/chat' },
-    { label: 'Agenti', href: '/agents' },
-  ],
+  // Issue #4138: the Thread/Agenti pair is gone with the /agents section. A
+  // single remaining tab is not a tab bar, so /chat has no contextual tabs.
   '/dashboard': [
     { label: 'Overview', href: '/dashboard' },
     { label: 'Attivita recente', href: '/dashboard?tab=activity' },
   ],
+  // #3938: these were inert — nothing navigated to `/settings`, so
+  // `getTabsForPathname` was never called with it. They also used `?tab=` and
+  // named sections (`account`) that do not exist. The hub is addressed by
+  // sub-route (ADR-091) and its ids come from `SETTINGS_SECTIONS`.
+  // The criterion for listing a section is `placeholder: true` in
+  // `settings-sections.ts`, which now holds for `services` alone: `notifications`
+  // renders the real `NotificationPreferences` panel since #3961, and it is where
+  // the footer of every email points, so leaving it out hid the one destination
+  // users arrive at from outside the app.
   '/settings': [
-    { label: 'Profilo', href: '/settings?tab=profile' },
-    { label: 'Preferenze', href: '/settings?tab=preferences' },
-    { label: 'Account', href: '/settings?tab=account' },
+    { label: 'Profilo', href: '/settings/profile' },
+    { label: 'Sicurezza', href: '/settings/security' },
+    { label: 'AI e dati', href: '/settings/ai-consent' },
+    { label: 'Notifiche', href: '/settings/notifications' },
+    { label: 'Preferenze', href: '/settings/preferences' },
+    { label: 'Chiavi API', href: '/settings/api-keys' },
   ],
 };
 

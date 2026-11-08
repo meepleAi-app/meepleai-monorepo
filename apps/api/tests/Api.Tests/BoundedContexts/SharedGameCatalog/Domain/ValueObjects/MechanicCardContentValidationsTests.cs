@@ -27,7 +27,7 @@ public sealed class MechanicCardContentValidationsTests
 
         var content = MechanicCardContent.FromAnalysis(analysis, ctx, Now);
 
-        content.SchemaVersion.Should().Be(2);
+        content.SchemaVersion.Should().Be(3);
         var claim = content.Claims.Single();
         claim.Validations.Single(v => v.Rule == "T2").Passed.Should().BeFalse();
         claim.Validations.Single(v => v.Rule == "T3b").Passed.Should().BeTrue();

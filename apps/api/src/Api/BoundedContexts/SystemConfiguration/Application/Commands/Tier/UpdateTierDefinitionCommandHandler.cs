@@ -1,7 +1,9 @@
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.Infrastructure;
+using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Commands.Tier;
 
@@ -14,13 +16,22 @@ internal class UpdateTierDefinitionCommandHandler
 {
     private readonly MeepleAiDbContext _db;
 
-    public UpdateTierDefinitionCommandHandler(MeepleAiDbContext db) => _db = db;
+    private readonly IMemoryCache _cache;
+
+    public UpdateTierDefinitionCommandHandler(MeepleAiDbContext db, IMemoryCache cache)
+    {
+        _db = db;
+        _cache = cache;
+    }
 
     public async Task<TierDefinitionDto> Handle(
         UpdateTierDefinitionCommand request, CancellationToken cancellationToken)
     {
         var normalizedName = request.Name.ToLowerInvariant();
+        // #4212: AsTracking — the context defaults to NoTracking (#3866), and an untracked plan
+        // made SaveChanges a no-op: every admin edit answered with the new values and was lost.
         var tier = await _db.TierDefinitions
+            .AsTracking()
             .FirstOrDefaultAsync(t => t.Name == normalizedName, cancellationToken)
             .ConfigureAwait(false);
 
@@ -37,6 +48,10 @@ internal class UpdateTierDefinitionCommandHandler
             tier.SetDefault(request.IsDefault.Value);
 
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4212: TierEnforcementService caches a plan for five minutes. Without the eviction an
+        // admin edit would reach the limits it governs up to five minutes later.
+        _cache.Remove(TierEnforcementService.TierDefinitionCacheKey(tier.Name));
 
         return TierDefinitionDto.FromEntity(tier);
     }

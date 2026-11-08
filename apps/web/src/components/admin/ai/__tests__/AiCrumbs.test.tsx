@@ -45,10 +45,10 @@ describe('AiCrumbs', () => {
     expect(screen.getByText(/Requests/)).toBeInTheDocument();
   });
 
-  it('renders the Config label for ?tab=config', () => {
+  it('renders the Budget label for ?tab=config (#4169)', () => {
     mockUseSearchParams.mockReturnValue(makeParams('config'));
     render(<AiCrumbs />);
-    expect(screen.getByText(/Config/)).toBeInTheDocument();
+    expect(screen.getByText(/Budget/)).toBeInTheDocument();
   });
 
   it('falls back to "Agents" for an unknown tab', () => {

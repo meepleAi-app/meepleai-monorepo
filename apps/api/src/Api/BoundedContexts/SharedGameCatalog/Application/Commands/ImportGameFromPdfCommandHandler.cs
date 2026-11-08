@@ -1,35 +1,56 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
 /// <summary>
-/// Handler for ImportGameFromPdfCommand.
-///
-/// Executes a 3-step saga with compensation:
-///   Step 1 — CreateSharedGameCommand  → gameId
-///   Step 2 — AddDocumentToSharedGameCommand  (COMPENSATE with DeleteSharedGame on failure)
-///   Step 3 — IndexDocumentCommand (fire-and-forget via Task.Run; failure = warning only)
+/// Handler for <see cref="ImportGameFromPdfCommand"/>: completes the wizard's draft game.
 /// </summary>
+/// <remarks>
+/// #4401: this used to create the game, link the "orphaned" PDF and send <c>IndexDocumentCommand</c>
+/// from a <c>Task.Run</c>. None of it worked: the upload of an orphaned PDF was refused, the link
+/// never set <c>pdf_documents.shared_game_id</c> (the column the retrieval reads), and
+/// <c>IndexDocumentCommand</c> had no handler, so the failure ended in the log while the wizard
+/// showed the indexing as pending. Now the game exists before the upload and the upload ties and
+/// indexes the PDF; what is left is the metadata. No compensation: each step can be repeated, so a
+/// failed attempt is retried rather than undone.
+/// </remarks>
 internal sealed class ImportGameFromPdfCommandHandler
     : ICommandHandler<ImportGameFromPdfCommand, ImportGameFromPdfResult>
 {
-    private const string PlaceholderImageUrl = "/images/game-placeholder.svg";
+    private const int DefaultMinPlayers = 1;
+    private const int DefaultMaxPlayers = 4;
+    private const int DefaultPlayingTimeMinutes = 60;
+    private const int DefaultMinAge = 10;
+    private const string RulebookVersion = "1.0";
 
     private readonly IMediator _mediator;
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ISharedGameRepository _gameRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly MeepleAiDbContext _dbContext;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<ImportGameFromPdfCommandHandler> _logger;
 
     public ImportGameFromPdfCommandHandler(
         IMediator mediator,
-        IServiceScopeFactory scopeFactory,
+        ISharedGameRepository gameRepository,
+        IUnitOfWork unitOfWork,
+        MeepleAiDbContext dbContext,
+        TimeProvider timeProvider,
         ILogger<ImportGameFromPdfCommandHandler> logger)
     {
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -39,136 +60,108 @@ internal sealed class ImportGameFromPdfCommandHandler
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        _logger.LogInformation(
-            "ImportGameFromPdf saga started: Title={Title}, PdfDocumentId={PdfDocumentId}, User={UserId}",
-            command.Metadata.Title, command.PdfDocumentId, command.RequestedBy);
-
-        // ─── Step 1: Create SharedGame ────────────────────────────────────────
-        var gameId = await CreateSharedGameAsync(command, cancellationToken).ConfigureAwait(false);
-        _logger.LogInformation("Step 1 complete: SharedGame created with Id={GameId}", gameId);
-
-        // ─── Step 2: Link PDF to SharedGame (with compensation) ───────────────
-        try
+        var game = await _gameRepository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("SharedGame", command.GameId.ToString());
+        if (game.Status != GameStatus.Draft)
         {
-            await LinkPdfToGameAsync(gameId, command, cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("Step 2 complete: PdfDocument {PdfId} linked to game {GameId}", command.PdfDocumentId, gameId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "Step 2 FAILED: AddDocumentToSharedGame failed for game {GameId}. Running compensation (delete game).",
-                gameId);
-
-            // Compensation: delete the just-created game
-            try
-            {
-                await _mediator.Send(new DeleteSharedGameCommand(gameId, command.RequestedBy), CancellationToken.None)
-                    .ConfigureAwait(false);
-                _logger.LogInformation("Compensation complete: SharedGame {GameId} deleted", gameId);
-            }
-            catch (Exception compEx)
-            {
-                _logger.LogError(compEx, "Compensation FAILED: could not delete SharedGame {GameId}", gameId);
-            }
-
-            throw new InvalidOperationException(
-                $"Failed to link PDF to game. The game was not created. Details: {ex.Message}", ex);
+            throw new ConflictException("Only a draft game can be completed by the import wizard.");
         }
 
-        // ─── Step 3: Enqueue indexing (fire-and-forget, non-blocking) ─────────
-        string indexingStatus;
-        string? warning = null;
-
-        try
+        var pdf = await _dbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.Id == command.PdfDocumentId)
+            .Select(p => new { p.SharedGameId, p.ProcessingState })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
+        if (pdf.SharedGameId != command.GameId)
         {
-            // Dispatch asynchronously using a new DI scope to avoid ObjectDisposedException
-            // when the request scope is disposed before Task.Run completes.
-            var pdfId = command.PdfDocumentId;
-            var scopeFactory = _scopeFactory;
-            var logger = _logger;
-            _ = Task.Run(async () =>
-            {
-                var scope = scopeFactory.CreateAsyncScope();
-                await using (scope.ConfigureAwait(false))
-                {
-                    var scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                    try
-                    {
-                        await scopedMediator.Send(
-                            new IndexDocumentCommand(pdfId, gameId),
-                            CancellationToken.None).ConfigureAwait(false);
-                        logger.LogInformation("Step 3 complete: IndexDocumentCommand dispatched for pdfId={PdfId}, gameId={GameId}",
-                            pdfId, gameId);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex,
-                            "Step 3 async FAILED: IndexDocumentCommand failed for pdfId={PdfId}, gameId={GameId}",
-                            pdfId, gameId);
-                    }
-                }
-            }, CancellationToken.None);
+            // Registered as the rulebook of a game it is not tied to, it would show in the game's
+            // documents and never be found by the retrieval.
+            throw new ConflictException("The PDF was not uploaded for this game.");
+        }
 
-            indexingStatus = "pending";
-            _logger.LogInformation("Step 3: IndexDocumentCommand enqueued (fire-and-forget) for game {GameId}", gameId);
-        }
-        catch (Exception ex)
+        // ─── 1: the reviewed metadata ─────────────────────────────────────────
+        await _mediator.Send(BuildUpdate(command, game.ImageUrl, game.ThumbnailUrl), cancellationToken).ConfigureAwait(false);
+
+        // ─── 2: out of the skeleton state ─────────────────────────────────────
+        // Reloaded: the update above saved its own copy of the aggregate, and left it tracked. Its
+        // changes are saved, so the tracker can go; otherwise attaching the reloaded copy below
+        // fails with "another instance with the same key is already being tracked".
+        _dbContext.ChangeTracker.Clear();
+        var updated = await _gameRepository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("SharedGame", command.GameId.ToString());
+        if (updated.GameDataStatus == GameDataStatus.Skeleton)
         {
-            _logger.LogWarning(ex,
-                "Step 3 FAILED to enqueue indexing for game {GameId}. Game created and PDF linked, but indexing not started.",
-                gameId);
-            indexingStatus = "failed";
-            warning = "Indicizzazione non avviata. Il gioco è stato creato ma il PDF non è ancora searchable via RAG. Riprova tra qualche minuto dall'apposita sezione.";
+            updated.CompleteFromReviewedImport(command.RequestedBy);
+            _gameRepository.Update(updated);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
+
+        // ─── 3: the rulebook ──────────────────────────────────────────────────
+        var alreadyRegistered = await _dbContext.SharedGameDocuments
+            .AsNoTracking()
+            .AnyAsync(d => d.SharedGameId == command.GameId && d.PdfDocumentId == command.PdfDocumentId, cancellationToken)
+            .ConfigureAwait(false);
+        if (!alreadyRegistered)
+        {
+            await _mediator.Send(
+                new AddDocumentToSharedGameCommand(
+                    SharedGameId: command.GameId,
+                    PdfDocumentId: command.PdfDocumentId,
+                    DocumentType: SharedGameDocumentType.Rulebook,
+                    Version: RulebookVersion,
+                    Tags: null,
+                    SetAsActive: true,
+                    CreatedBy: command.RequestedBy),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        var indexingStatus = pdf.ProcessingState switch
+        {
+            "Ready" => "ready",
+            "Failed" => "failed",
+            _ => "pending",
+        };
+        var warning = string.Equals(indexingStatus, "failed", StringComparison.Ordinal)
+            ? "Il gioco è stato creato, ma l'elaborazione del PDF è fallita: il manuale non è consultabile. Ricaricalo dalla knowledge base del gioco."
+            : null;
 
         _logger.LogInformation(
-            "ImportGameFromPdf saga completed: GameId={GameId}, IndexingStatus={Status}",
-            gameId, indexingStatus);
+            "PDF import completed: game {GameId}, PDF {PdfId}, processing {State}",
+            command.GameId, command.PdfDocumentId, pdf.ProcessingState);
 
-        return new ImportGameFromPdfResult(gameId, command.PdfDocumentId, indexingStatus, warning);
+        return new ImportGameFromPdfResult(command.GameId, command.PdfDocumentId, indexingStatus, warning);
     }
 
-    private async Task<Guid> CreateSharedGameAsync(ImportGameFromPdfCommand cmd, CancellationToken ct)
+    private UpdateSharedGameCommand BuildUpdate(ImportGameFromPdfCommand command, string currentImageUrl, string currentThumbnailUrl)
     {
-        var m = cmd.Metadata;
-        var imageUrl = cmd.CoverImageUrl ?? PlaceholderImageUrl;
+        var m = command.Metadata;
+        var minPlayers = m.MinPlayers ?? DefaultMinPlayers;
 
-        var createCmd = new CreateSharedGameCommand(
+        // A cover that is not an absolute http(s) URL (the wizard's previews are blob: URLs that
+        // live in the admin's browser) would be saved as a dead link: keep the game's own.
+        var hasCover = Uri.TryCreate(command.CoverImageUrl, UriKind.Absolute, out var cover)
+            && (string.Equals(cover.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal)
+                || string.Equals(cover.Scheme, Uri.UriSchemeHttp, StringComparison.Ordinal));
+
+        return new UpdateSharedGameCommand(
+            GameId: command.GameId,
             Title: m.Title,
-            YearPublished: m.YearPublished ?? DateTime.UtcNow.Year,
+            YearPublished: m.YearPublished ?? _timeProvider.GetUtcNow().Year,
             Description: m.Description ?? string.Empty,
-            MinPlayers: m.MinPlayers ?? 1,
-            MaxPlayers: m.MaxPlayers ?? 4,
-            PlayingTimeMinutes: m.PlayingTimeMinutes ?? 60,
-            MinAge: m.MinAge ?? 10,
+            MinPlayers: minPlayers,
+            MaxPlayers: m.MaxPlayers ?? Math.Max(minPlayers, DefaultMaxPlayers),
+            PlayingTimeMinutes: m.PlayingTimeMinutes ?? DefaultPlayingTimeMinutes,
+            MinAge: m.MinAge ?? DefaultMinAge,
             ComplexityRating: null,
             AverageRating: null,
-            ImageUrl: imageUrl,
-            ThumbnailUrl: imageUrl,
+            ImageUrl: hasCover ? command.CoverImageUrl! : currentImageUrl,
+            ThumbnailUrl: hasCover ? command.CoverImageUrl! : currentThumbnailUrl,
             Rules: null,
-            CreatedBy: cmd.RequestedBy,
-            BggId: null,
+            ModifiedBy: command.RequestedBy,
             Categories: m.Categories,
             Mechanics: m.Mechanics,
             Designers: m.Designers,
-            Publishers: m.Publishers
-        );
-
-        return await _mediator.Send(createCmd, ct).ConfigureAwait(false);
-    }
-
-    private async Task LinkPdfToGameAsync(Guid gameId, ImportGameFromPdfCommand cmd, CancellationToken ct)
-    {
-        var linkCmd = new AddDocumentToSharedGameCommand(
-            SharedGameId: gameId,
-            PdfDocumentId: cmd.PdfDocumentId,
-            DocumentType: SharedGameDocumentType.Rulebook,
-            Version: "1.0",
-            Tags: null,
-            SetAsActive: true,
-            CreatedBy: cmd.RequestedBy
-        );
-
-        await _mediator.Send(linkCmd, ct).ConfigureAwait(false);
+            Publishers: m.Publishers);
     }
 }

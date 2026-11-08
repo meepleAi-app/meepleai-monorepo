@@ -75,6 +75,21 @@ describe('CitationSheet', () => {
     expect(screen.queryByText('Testo originale protetto.')).not.toBeInTheDocument();
   });
 
+  it.each([null, 0])(
+    'titles the sheet with the source, not a page, when the page is %s (#4819)',
+    page => {
+      render(
+        <CitationSheet
+          open={true}
+          citation={makeCitation({ pageNumber: page })}
+          onOpenChange={vi.fn()}
+        />
+      );
+      expect(screen.getByTestId('sheet-title')).toHaveTextContent('Fonte');
+      expect(screen.getByTestId('sheet-title')).not.toHaveTextContent('Pagina');
+    }
+  );
+
   it('renders relevance percentage', () => {
     const citation = makeCitation({ relevanceScore: 0.75 });
     render(<CitationSheet open={true} citation={citation} onOpenChange={vi.fn()} />);

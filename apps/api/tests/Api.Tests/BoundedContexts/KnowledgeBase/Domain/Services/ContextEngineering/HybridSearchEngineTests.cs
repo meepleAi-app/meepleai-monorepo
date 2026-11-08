@@ -157,6 +157,7 @@ public class HybridSearchEngineTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(hybridResults);
 
@@ -201,6 +202,7 @@ public class HybridSearchEngineTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
@@ -240,6 +242,7 @@ public class HybridSearchEngineTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Test error"));
 
@@ -294,9 +297,10 @@ public class HybridSearchEngineTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, Guid, SearchMode, int, List<Guid>?, float, float, double, GameBookRole, CancellationToken>(
-                (q, g, m, l, d, vw, kw, ms, rh, ct) =>
+            .Callback<string, Guid, SearchMode, int, List<Guid>?, float, float, double, GameBookRole, QueryEmbedding?, CancellationToken>(
+                (q, g, m, l, d, vw, kw, ms, rh, pe, ct) =>
                 {
                     capturedVectorWeight = vw;
                     capturedKeywordWeight = kw;
@@ -345,9 +349,10 @@ public class HybridSearchEngineTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, Guid, SearchMode, int, List<Guid>?, float, float, double, GameBookRole, CancellationToken>(
-                (q, g, m, l, d, vw, kw, ms, rh, ct) => capturedVectorWeight = vw)
+            .Callback<string, Guid, SearchMode, int, List<Guid>?, float, float, double, GameBookRole, QueryEmbedding?, CancellationToken>(
+                (q, g, m, l, d, vw, kw, ms, rh, pe, ct) => capturedVectorWeight = vw)
             .ReturnsAsync(new List<HybridSearchResult>());
 
         var engine = new HybridSearchEngine(
@@ -384,6 +389,7 @@ public class HybridSearchEngineTests
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {

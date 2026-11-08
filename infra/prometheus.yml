@@ -32,6 +32,8 @@ rule_files:
   - '/etc/prometheus/wikidata-enrichment.yml'
   # Issue #3082 — BGG ToS-compliance SLO=0 alert (any nonzero render attempt = P1).
   - '/etc/prometheus/bgg-tos-compliance.yml'
+  # Issue #3786 — degradazione silenziosa del braccio vettoriale (failed vs empty).
+  - '/etc/prometheus/rag-vector-arm.yml'
   # #3495 M2 — SSRF egress guard (manual-cover private_ip/denylist_hit SLO=0).
   - '/etc/prometheus/egress-guard.yml'
   # #3373 D4 / #3383 — tripwire single-pod: count(up{job="meepleai-api"}) > 1.
@@ -48,6 +50,11 @@ rule_files:
   - '/etc/prometheus/copyright-enforcement.yml'
   # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (ungrounded-rate on RAG live path).
   - '/etc/prometheus/agent-grounding.yml'
+  # Issue #3798 — presenti nel repo ma mai referenziati qui: alert mai valutati.
+  - '/etc/prometheus/infrastructure.yml'
+  - '/etc/prometheus/provider-quota.yml'
+  # Issue #3814 — pipeline PDF: estrazione per stage, qualita', durata, upload.
+  - '/etc/prometheus/pdf-processing.yml'
 
 # Scrape configurations
 scrape_configs:
@@ -151,3 +158,22 @@ scrape_configs:
         labels:
           service: 'node-exporter'
           component: 'host-metrics'
+
+  # #3813 — senza questi due job `pg_up` e `redis_up` non esistono, e DatabaseDown/RedisDown
+  # restano caricati ma ciechi: valutano un'espressione che non trova serie e quindi tacciono,
+  # esattamente come un sistema sano.
+  - job_name: 'postgres-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres-exporter'
+          component: 'database-metrics'
+
+  - job_name: 'redis-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis-exporter'
+          component: 'cache-metrics'

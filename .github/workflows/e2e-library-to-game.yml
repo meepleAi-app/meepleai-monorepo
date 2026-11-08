@@ -43,12 +43,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa  # v4
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d  # v4
         with:
-          version: 9
+          # pnpm 10: gli override di apps/web stanno in pnpm-workspace.yaml,
+          # che pnpm 9 non legge (#3891) -> --frozen-lockfile fallirebbe.
+          version: 10
 
       - name: Get pnpm store directory
         shell: bash

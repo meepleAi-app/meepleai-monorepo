@@ -21,6 +21,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
+// #3994: nella stessa collection di RagPromptAssemblyServiceRetrievalEmptyMetricsTests.
+// `MeepleAiMetrics.RagRetrievalEmpty` e' un contatore statico globale al processo, e il
+// percorso di retrieval vuoto di questo servizio lo incrementa (RagPromptAssemblyService.cs:341):
+// girando in parallelo, questi test contaminavano l'assertion "non deve incrementare" di T3-AC-2.
+[Collection("RetrievalEmptyMetrics")]
 public class RagPromptAssemblyEnhancementsTests
 {
     private readonly Mock<IEmbeddingService> _embeddingMock;
@@ -67,7 +72,7 @@ public class RagPromptAssemblyEnhancementsTests
 
         // Default: successful embedding
         _embeddingMock
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess([TestEmbedding]));
 
         // Default: empty text search (no FTS results)
@@ -169,7 +174,7 @@ public class RagPromptAssemblyEnhancementsTests
 
         // Assert: Search services should NOT be called when adaptive routing skips retrieval
         _embeddingMock.Verify(
-            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _textSearchMock.Verify(
             t => t.FullTextSearchAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
@@ -271,7 +276,7 @@ public class RagPromptAssemblyEnhancementsTests
 
         // Embeddings should be generated for all 3 query variants
         _embeddingMock.Verify(
-            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Exactly(3));
     }
 
@@ -392,7 +397,7 @@ public class RagPromptAssemblyEnhancementsTests
 
         // Standard pipeline should still run (embedding + search)
         _embeddingMock.Verify(
-            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.AtLeastOnce);
         _textSearchMock.Verify(
             t => t.FullTextSearchAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
@@ -428,7 +433,7 @@ public class RagPromptAssemblyEnhancementsTests
 
         // Standard pipeline should still run
         _embeddingMock.Verify(
-            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.AtLeastOnce);
     }
 

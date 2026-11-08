@@ -4,6 +4,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Moq;
@@ -27,11 +28,11 @@ public class GetLibraryShareLinkQueryHandlerTests
         _mockShareLinkRepository = new Mock<ILibraryShareLinkRepository>();
         _mockConfiguration = new Mock<IConfiguration>();
 
-        _mockConfiguration.Setup(c => c["App:BaseUrl"]).Returns("https://meepleai.com");
+        _mockConfiguration.Setup(c => c["Frontend:BaseUrl"]).Returns("https://meepleai.com");
 
         _handler = new GetLibraryShareLinkQueryHandler(
             _mockShareLinkRepository.Object,
-            _mockConfiguration.Object);
+            PublicBaseUrlTestSupport.ProviderFor(_mockConfiguration.Object));
     }
 
     #region Successful Retrieval Tests
@@ -155,7 +156,7 @@ public class GetLibraryShareLinkQueryHandlerTests
             null);
         var query = new GetLibraryShareLinkQuery(userId);
 
-        _mockConfiguration.Setup(c => c["App:BaseUrl"]).Returns((string?)null);
+        _mockConfiguration.Setup(c => c["Frontend:BaseUrl"]).Returns((string?)null);
 
         _mockShareLinkRepository
             .Setup(r => r.GetActiveByUserIdAsync(userId, It.IsAny<CancellationToken>()))

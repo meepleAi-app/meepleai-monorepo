@@ -95,7 +95,7 @@ export function RejectClaimDialog({
               onConfirm(note.trim());
             }}
             disabled={!isValid || isPending}
-            className="bg-rose-600 hover:bg-rose-700"
+            className="bg-rose-700 hover:bg-rose-800 text-white"
             data-testid="reject-claim-confirm-button"
           >
             {isPending ? <Loader2Icon className="mr-1 h-4 w-4 animate-spin" /> : null}

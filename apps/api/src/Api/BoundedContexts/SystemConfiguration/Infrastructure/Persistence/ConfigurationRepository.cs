@@ -10,6 +10,30 @@ namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 
 internal class ConfigurationRepository : RepositoryBase, IConfigurationRepository
 {
+    /// <summary>
+    /// Le colonne di <c>system_configurations</c> che l'aggregato non porta (#4612). <see cref="UpdateAsync"/> non
+    /// le scrive mai: le possiede <c>RegisterCommandHandler</c>, sull'entità.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>BootstrapAdminCreated</c> e <c>BootstrapAdminCreatedAt</c> sono il flag single-use del claim del primo
+    /// admin. <c>DbSet.Update</c> su un'entità detached segna come modificata ogni colonna, e una colonna che
+    /// <c>MapToPersistence</c> non copia arrivava al database al valore di default della classe (<c>false</c> e
+    /// <c>NULL</c>): ogni update, toggle, rollback o import della riga <c>Authentication:BootstrapAdmin</c> riapriva
+    /// il claim. Stesso schema di <c>SharedGameRepository.ColumnsNotOwnedByTheAggregate</c> (#4585) e
+    /// <c>PdfDocumentRepository.ColumnsNotOwnedByTheAggregate</c> (#4347).
+    /// </para>
+    /// <para>
+    /// Il test <c>ConfigurationRepositoryTests</c> prende le colonne dal modello EF: una colonna aggiunta domani
+    /// all'entità, senza mapping e senza essere qui, lo fa fallire con il suo nome.
+    /// </para>
+    /// </remarks>
+    internal static readonly IReadOnlyList<string> ColumnsNotOwnedByTheAggregate =
+    [
+        nameof(Api.Infrastructure.Entities.SystemConfigurationEntity.BootstrapAdminCreated),
+        nameof(Api.Infrastructure.Entities.SystemConfigurationEntity.BootstrapAdminCreatedAt),
+    ];
+
     public ConfigurationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
     {
@@ -138,12 +162,25 @@ internal class ConfigurationRepository : RepositoryBase, IConfigurationRepositor
     {
         CollectDomainEvents(config);
         var entity = MapToPersistence(config);
-        DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Update(entity);
+        var entry = DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Update(entity);
+
+        // #4612: Update() segna come modificata anche ogni colonna che il mapper lascia al default. Quelle
+        // dell'elenco restano come sono nella riga. Nell'entità che resta nel contesto valgono invece il default:
+        // chi la rilegge tracciata nello stesso contesto le sovrascriva, non le usi. L'UPDATE parte comunque,
+        // perché le altre colonne restano modificate.
+        foreach (var column in ColumnsNotOwnedByTheAggregate)
+        {
+            entry.Property(column).IsModified = false;
+        }
+
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(SystemConfigurationAggregate config, CancellationToken cancellationToken = default)
     {
+        // Il ConfigurationDeletedEvent di MarkAsDeleted() vive sull'aggregato: senza questa raccolta non arriva
+        // mai all'outbox, e la cancellazione non lascia traccia (#4608).
+        CollectDomainEvents(config);
         var entity = MapToPersistence(config);
         DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Remove(entity);
         return Task.CompletedTask;
@@ -157,43 +194,25 @@ internal class ConfigurationRepository : RepositoryBase, IConfigurationRepositor
 
     private static SystemConfigurationAggregate MapToDomain(Api.Infrastructure.Entities.SystemConfigurationEntity entity)
     {
-        var key = new ConfigKey(entity.Key);
-
-        var config = new SystemConfigurationAggregate(
+        // Reconstitute, non il costruttore pubblico (#4608): quello è di una configurazione nuova, e solleva
+        // ConfigurationCreatedEvent a ogni lettura.
+        return SystemConfigurationAggregate.Reconstitute(
             id: entity.Id,
-            key: key,
+            key: new ConfigKey(entity.Key),
             value: entity.Value,
             valueType: entity.ValueType,
-            createdByUserId: entity.CreatedByUserId,
             description: entity.Description,
             category: entity.Category,
+            isActive: entity.IsActive,
+            requiresRestart: entity.RequiresRestart,
             environment: entity.Environment,
-            requiresRestart: entity.RequiresRestart
-        );
-
-        // Override properties from DB via reflection
-        var isActiveProp = typeof(SystemConfigurationAggregate).GetProperty("IsActive");
-        isActiveProp?.SetValue(config, entity.IsActive);
-
-        var versionProp = typeof(SystemConfigurationAggregate).GetProperty("Version");
-        versionProp?.SetValue(config, entity.Version);
-
-        var previousValueProp = typeof(SystemConfigurationAggregate).GetProperty("PreviousValue");
-        previousValueProp?.SetValue(config, entity.PreviousValue);
-
-        var createdAtProp = typeof(SystemConfigurationAggregate).GetProperty("CreatedAt");
-        createdAtProp?.SetValue(config, entity.CreatedAt);
-
-        var updatedAtProp = typeof(SystemConfigurationAggregate).GetProperty("UpdatedAt");
-        updatedAtProp?.SetValue(config, entity.UpdatedAt);
-
-        var updatedByUserIdProp = typeof(SystemConfigurationAggregate).GetProperty("UpdatedByUserId");
-        updatedByUserIdProp?.SetValue(config, entity.UpdatedByUserId);
-
-        var lastToggledAtProp = typeof(SystemConfigurationAggregate).GetProperty("LastToggledAt");
-        lastToggledAtProp?.SetValue(config, entity.LastToggledAt);
-
-        return config;
+            version: entity.Version,
+            previousValue: entity.PreviousValue,
+            createdAt: entity.CreatedAt,
+            updatedAt: entity.UpdatedAt,
+            createdByUserId: entity.CreatedByUserId,
+            updatedByUserId: entity.UpdatedByUserId,
+            lastToggledAt: entity.LastToggledAt);
     }
 
     private static Api.Infrastructure.Entities.SystemConfigurationEntity MapToPersistence(SystemConfigurationAggregate domain)

@@ -38,8 +38,13 @@ public class CatalogSeedDraftEntity
     public DateTime? ApprovedAt { get; set; }
     public Guid? ApprovedByUserId { get; set; }
 
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
+    /// <summary>
+    /// Concurrency token (#3651, ADR-060). Prima era <c>[Timestamp] byte[]? RowVersion</c> su una
+    /// colonna <c>bytea</c>: Postgres non la popola, quindi il valore restava <c>null</c> e EF
+    /// confrontava <c>NULL = NULL</c> a ogni update — protezione dichiarata e inesistente.
+    /// Ora è la colonna di sistema <c>xmin</c>, gestita dal database: EF la legge, non la scrive.
+    /// </summary>
+    public uint Xmin { get; set; }
 
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }

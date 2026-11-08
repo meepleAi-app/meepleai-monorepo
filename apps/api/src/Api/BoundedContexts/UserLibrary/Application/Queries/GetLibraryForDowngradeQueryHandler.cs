@@ -29,17 +29,14 @@ internal class GetLibraryForDowngradeQueryHandler : IQueryHandler<GetLibraryForD
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Fetch all library entries for this user (up to 1000 — reasonable upper bound for a personal library)
-        var (entries, _) = await _libraryRepository.GetUserLibraryPaginatedAsync(
-            userId: query.UserId,
-            search: null,
-            favoritesOnly: null,
-            stateFilter: null,
+        // Every library entry of this user, page by page (#4187). It used to ask for one page of
+        // 1000 "for the whole library": the repository serves at most 100, so the preview
+        // silently split only the first 100 games.
+        var (entries, _) = await _libraryRepository.GetAllUserLibraryEntriesAsync(
+            query.UserId,
             sortBy: "addedAt",
             descending: true,
-            page: 1,
-            pageSize: 1000,
-            cancellationToken: cancellationToken
+            cancellationToken
         ).ConfigureAwait(false);
 
         if (entries.Count == 0)

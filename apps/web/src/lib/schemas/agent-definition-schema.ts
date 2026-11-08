@@ -63,7 +63,8 @@ const StrategyParametersSchema = z.record(z.string(), z.unknown()).optional();
 export const AgentFormSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
   description: z.string().max(1000, 'Description must be 1000 characters or less').optional(),
-  type: z.string(), // Accept any string from API, validate in UI
+  // Issue #4138: `type` stood here. Retired with AgentDefinition.Type - the builder has
+  // no type to collect, and the backend validators that demanded one are gone too.
   model: z.string().min(1, 'Model is required'),
   maxTokens: z.number().int().min(100, 'Min 100 tokens').max(32000, 'Max 32000 tokens'),
   temperature: z.number().min(0, 'Min temperature is 0').max(2, 'Max temperature is 2'),
@@ -126,7 +127,6 @@ export type AgentDefinitionResponse = z.infer<typeof AgentDefinitionResponseSche
 export const defaultAgentForm: AgentForm = {
   name: '',
   description: '',
-  type: 'RAG',
   model: 'gpt-4',
   maxTokens: 2048,
   temperature: 0.7,

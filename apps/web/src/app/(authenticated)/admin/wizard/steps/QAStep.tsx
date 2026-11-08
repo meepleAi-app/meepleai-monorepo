@@ -293,7 +293,7 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset, onNext }: QASt
             <Link href={`/chat/new?game=${gameId}`}>Apri Chat Completa</Link>
           </Button>
           {onNext ? (
-            <Button onClick={onNext} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={onNext} className="bg-green-700 hover:bg-green-800 text-white">
               Avanti: Pubblica →
             </Button>
           ) : (

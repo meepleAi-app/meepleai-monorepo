@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.Configuration;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
@@ -113,7 +114,7 @@ internal static class AuthenticationEndpoints
             // fallback is opaque and the user can change it later via
             // /users/profile.
             var displayName = string.IsNullOrWhiteSpace(payload.DisplayName)
-                ? $"Player-{Guid.NewGuid():N}"[..14]
+                ? GeneratedDisplayName.Create()
                 : payload.DisplayName.Trim();
 
             var command = new DddRegisterCommand(
@@ -124,7 +125,9 @@ internal static class AuthenticationEndpoints
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString(),
                 BootstrapToken: payload.BootstrapToken,
-                TermsAccepted: payload.TermsAccepted);
+                TermsAccepted: payload.TermsAccepted,
+                Locale: payload.Locale,
+                AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString());
 
             logger.LogInformation("User registration attempt for {Email}", DataMasking.MaskEmail(payload.Email));
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -649,7 +652,8 @@ internal static class AuthenticationEndpoints
             var command = new AcceptInvitationCommand(
                 payload.Token,
                 payload.Password,
-                payload.ConfirmPassword);
+                payload.ConfirmPassword,
+                context.Request.Headers.AcceptLanguage.ToString());
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
@@ -745,7 +749,8 @@ internal static class AuthenticationEndpoints
 
             logger.LogInformation("Account activation attempt via invitation token");
 
-            var command = new ActivateInvitedAccountCommand(payload.Token, payload.Password);
+            var command = new ActivateInvitedAccountCommand(
+                payload.Token, payload.Password, context.Request.Headers.AcceptLanguage.ToString());
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             // Set auth cookie for immediate login (follows existing login pattern)

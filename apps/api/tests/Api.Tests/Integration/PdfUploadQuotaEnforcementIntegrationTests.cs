@@ -13,6 +13,7 @@ using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Utilities;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using DotNet.Testcontainers.Builders;
@@ -34,11 +35,19 @@ namespace Api.Tests.Integration;
 /// Integration tests for PDF upload quota enforcement.
 /// Tests the complete quota system: tracking, limits, tier-based quotas, admin bypass.
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
-///
-/// Note: Tests run sequentially (via [Collection] attribute) to avoid Redis state
-/// conflicts between tests. Redis state persists within a single container lifecycle,
-/// so parallel execution could cause unpredictable quota counts.
 /// </summary>
+/// <remarks>
+/// <para><b>Redis:</b> è quello della fixture. In CI è il service container dello shard
+/// (<c>TEST_REDIS_CONNSTRING</c>), condiviso con le collection che girano in parallelo; in locale
+/// può essere il Redis dello stack di sviluppo (<c>make ci-be-integration-fast</c>). Per questo i
+/// test non fanno mai <c>FLUSHDB</c> (#4528): cancellava le chiavi degli altri test.</para>
+/// <para>Il flush non serviva: le chiavi di <see cref="PdfUploadQuotaService"/> sono per utente
+/// (<c>pdf:upload:daily:{userId}:…</c>, <c>pdf:upload:weekly:{userId}:…</c>,
+/// <c>pdf:quota:reservation:{userId}:…</c>, <c>pdf:upload:game:{userId}:…</c>) e ogni test crea i suoi
+/// utenti con <c>Guid.NewGuid()</c>, quindi nessun test legge i contatori di un altro.
+/// <c>DisposeAsync</c> cancella solo le chiavi degli utenti creati dal test: alcuni test le scrivono
+/// senza TTL, e su un Redis che non muore col job resterebbero per sempre.</para>
+/// </remarks>
 [Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
@@ -51,6 +60,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     private IServiceProvider? _serviceProvider;
     private IConnectionMultiplexer? _redis;
     private IPdfUploadQuotaService? _quotaService;
+    private readonly List<Guid> _createdUserIds = [];
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -66,49 +76,65 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         _databaseName = $"test_quota_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        // Use SharedTestcontainersFixture Redis (no separate container needed!)
-        var redisConnectionString = _fixture.RedisConnectionString;
+        // Se da qui in poi qualcosa lancia, xUnit NON chiama DisposeAsync: il database isolato, la
+        // connessione Redis e il service provider resterebbero. Succede davvero: il Timeout del test
+        // copre anche InitializeAsync; allo scadere xUnit passa al test successivo e qui la lettura
+        // del token del test lancia (ObjectDisposedException, osservato in #4528).
+        try
+        {
+            // Use SharedTestcontainersFixture Redis (no separate container needed!)
+            var redisConnectionString = _fixture.RedisConnectionString;
 
-        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+            var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
-        // Register Redis
-        _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
-        services.AddSingleton<IConnectionMultiplexer>(_redis);
+            // Register Redis
+            _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
+            services.AddSingleton<IConnectionMultiplexer>(_redis);
 
-        // FIX: Clear Redis state before each test to prevent interference
-        // from previous tests (quota counts persist in Redis across test runs)
-        var db = _redis.GetDatabase();
-        await db.ExecuteAsync("FLUSHDB");
+            // Register repositories
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
 
-        // Register repositories
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+            // Register configuration service mock
+            var configServiceMock = new Mock<IConfigurationService>();
+            configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string?>()))
+                .ReturnsAsync((int?)null); // Use default limits
+            services.AddSingleton<IConfigurationService>(configServiceMock.Object);
 
-        // Register configuration service mock
-        var configServiceMock = new Mock<IConfigurationService>();
-        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string?>()))
-            .ReturnsAsync((int?)null); // Use default limits
-        services.AddSingleton<IConfigurationService>(configServiceMock.Object);
+            // Register quota service
+            services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();
 
-        // Register quota service
-        services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();
+            _serviceProvider = services.BuildServiceProvider();
+            _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+            _quotaService = _serviceProvider.GetRequiredService<IPdfUploadQuotaService>();
 
-        _serviceProvider = services.BuildServiceProvider();
-        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
-        _quotaService = _serviceProvider.GetRequiredService<IPdfUploadQuotaService>();
+            await _dbContext.Database.MigrateAsync(TestCancellationToken);
+        }
+        catch
+        {
+            // DisposeAsync regge lo stato parziale: ogni campo è controllato, la lista utenti è
+            // vuota, e il drop del database non usa il token del test (cancellato o già smaltito).
+            try
+            {
+                await DisposeAsync();
+            }
+            catch
+            {
+                // L'eccezione da riportare è quella dell'inizializzazione.
+            }
 
-        await _dbContext.Database.MigrateAsync(TestCancellationToken);
+            throw;
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
-        // FIX: Clear Redis state BEFORE disposing to prevent interference with next tests
-        if (_redis != null)
+        // #4528: solo le chiavi degli utenti creati da questo test, mai l'intero database Redis.
+        foreach (var userId in _createdUserIds)
         {
             try
             {
-                var db = _redis.GetDatabase();
-                await db.ExecuteAsync("FLUSHDB");
+                await _fixture.FlushRedisByPrefixAsync($"pdf:*:{userId}:*");
             }
             catch
             {
@@ -156,6 +182,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         await userRepo.AddAsync(user, TestCancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        _createdUserIds.Add(user.Id);
 
         return user;
     }
@@ -170,47 +197,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         await _quotaService!.IncrementUploadCountAsync(userId, TestCancellationToken);
     }
 
-    /// <summary>
-    /// Clears all Redis state to ensure test isolation.
-    /// MUST be called at the start of each test to prevent interference from previous tests.
-    /// </summary>
-    private async Task CleanRedisStateAsync()
-    {
-        var db = _redis!.GetDatabase();
-        await db.ExecuteAsync("FLUSHDB");
-    }
-
-    private static string GetWeekKey(DateTime date)
-    {
-        // ISO 8601 week: yyyy-Www (e.g., 2025-W47)
-        // Same logic as PdfUploadQuotaService.GetWeekKey
-        var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
-        var weekRule = System.Globalization.CalendarWeekRule.FirstFourDayWeek;
-        var firstDayOfWeek = DayOfWeek.Monday;
-
-        var year = date.Year;
-        var week = calendar.GetWeekOfYear(date, weekRule, firstDayOfWeek);
-
-        // Handle ISO 8601 year transitions
-        // Jan 1-3 might be in week 52/53 of previous year
-        if (week >= 52 && date.Month == 1)
-        {
-            year--;
-        }
-        // Dec 29-31 might be in week 1 of next year
-        else if (week == 1 && date.Month == 12)
-        {
-            year++;
-        }
-
-        return $"{year}-W{week:D2}";
-    }
-    [Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
+    [Fact(Timeout = 90_000)]
     public async Task FreeTier_FiveUploadsInDay_SixthUploadDenied()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create free tier user
         var user = await CreateUserAsync(UserTier.Free);
 
@@ -242,12 +231,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateFreeTier();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task FreeTier_TwentyUploadsInWeek_TwentyFirstUploadDenied()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create free tier user
         var user = await CreateUserAsync(UserTier.Free);
 
@@ -273,12 +259,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateFreeTierLimit();
         deniedCheck.ErrorMessage.ShouldIndicateFreeTier();
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task NormalTier_TwentyUploadsInDay_AllAllowed()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create normal tier user
         var user = await CreateUserAsync(UserTier.Normal);
 
@@ -310,12 +293,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateNormalTier();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task NormalTier_HundredUploadsInWeek_AllAllowed()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create normal tier user
         var user = await CreateUserAsync(UserTier.Normal);
 
@@ -324,7 +304,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var db = _redis!.GetDatabase();
         var now = TimeProvider.System.GetUtcNow().DateTime;
         var today = now.ToString("yyyy-MM-dd");
-        var weekKey = $"pdf:upload:weekly:{user.Id}:{GetWeekKey(now)}";
+        var weekKey = $"pdf:upload:weekly:{user.Id}:{IsoWeekKey.For(now)}";
         await db.StringSetAsync($"pdf:upload:daily:{user.Id}:{today}", 100);
         await db.StringSetAsync(weekKey, 100);
 
@@ -344,12 +324,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateNormalTierLimit();
         deniedCheck.ErrorMessage.ShouldIndicateNormalTier();
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task PremiumTier_HundredUploadsInDay_AllAllowed()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create premium tier user
         var user = await CreateUserAsync(UserTier.Premium);
 
@@ -358,7 +335,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var db = _redis!.GetDatabase();
         var now = TimeProvider.System.GetUtcNow().DateTime;
         var today = now.ToString("yyyy-MM-dd");
-        var weekKey = $"pdf:upload:weekly:{user.Id}:{GetWeekKey(now)}";
+        var weekKey = $"pdf:upload:weekly:{user.Id}:{IsoWeekKey.For(now)}";
         await db.StringSetAsync($"pdf:upload:daily:{user.Id}:{today}", 100);
         await db.StringSetAsync(weekKey, 100);
 
@@ -377,12 +354,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateDailyLimitReached();
         deniedCheck.ErrorMessage.ShouldIndicatePremiumTierDailyLimit();
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task AdminUser_UnlimitedUploads_NoQuotaCheck()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create admin user (tier doesn't matter for admin)
         var user = await CreateUserAsync(UserTier.Free, AuthRole.Admin);
 
@@ -391,7 +365,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var db = _redis!.GetDatabase();
         var now = TimeProvider.System.GetUtcNow().DateTime;
         var today = now.ToString("yyyy-MM-dd");
-        var weekKey = $"pdf:upload:weekly:{user.Id}:{GetWeekKey(now)}";
+        var weekKey = $"pdf:upload:weekly:{user.Id}:{IsoWeekKey.For(now)}";
         await db.StringSetAsync($"pdf:upload:daily:{user.Id}:{today}", 1000);
         await db.StringSetAsync(weekKey, 1000);
 
@@ -411,12 +385,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(int.MaxValue); // WeeklyRemaining computed
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task EditorUser_UnlimitedUploads_NoQuotaCheck()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create editor user
         var user = await CreateUserAsync(UserTier.Normal, AuthRole.Editor);
 
@@ -425,7 +396,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var db = _redis!.GetDatabase();
         var now = TimeProvider.System.GetUtcNow().DateTime;
         var today = now.ToString("yyyy-MM-dd");
-        var weekKey = $"pdf:upload:weekly:{user.Id}:{GetWeekKey(now)}";
+        var weekKey = $"pdf:upload:weekly:{user.Id}:{IsoWeekKey.For(now)}";
         await db.StringSetAsync($"pdf:upload:daily:{user.Id}:{today}", 500);
         await db.StringSetAsync(weekKey, 500);
 
@@ -442,12 +413,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
         info.IsUnlimited.Should().BeTrue();
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UserUpgrade_FreeToPremium_QuotaLimitIncreases()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create free tier user and upload 5 PDFs (at limit)
         var user = await CreateUserAsync(UserTier.Free);
 
@@ -479,12 +447,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         (quotaCheckAfter.DailyLimit - quotaCheckAfter.DailyUploadsUsed).Should().Be(95); // DailyRemaining computed
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UserDowngrade_PremiumToFree_QuotaLimitDecreases()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create premium tier user and upload 10 PDFs
         var user = await CreateUserAsync(UserTier.Premium);
 
@@ -515,12 +480,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         quotaCheckAfter.DailyLimit.Should().Be(5);
         quotaCheckAfter.ErrorMessage.ShouldIndicateDailyLimitReached();
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task MultipleUsers_QuotaTrackedIndependently()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create 3 users with different tiers
         var user1 = await CreateUserAsync(UserTier.Free);
         var user2 = await CreateUserAsync(UserTier.Normal);
@@ -552,12 +514,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         info3.DailyUploadsUsed.Should().Be(50);
         (info3.DailyLimit - info3.DailyUploadsUsed).Should().Be(50); // DailyRemaining computed
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task QuotaTracking_PersistsInRedis_AcrossServiceInstances()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create user and upload 3 PDFs with first service instance
         var user = await CreateUserAsync(UserTier.Free);
 
@@ -583,5 +542,73 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         (info.DailyLimit - info.DailyUploadsUsed).Should().Be(2); // DailyRemaining computed
         info.WeeklyUploadsUsed.Should().Be(3);
         (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(17); // WeeklyRemaining computed
+    }
+
+    private PdfUploadQuotaService CreateQuotaService(TimeProvider clock)
+    {
+        var configServiceMock = new Mock<IConfigurationService>();
+        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string?>()))
+            .ReturnsAsync((int?)null);
+
+        return new PdfUploadQuotaService(
+            _redis!,
+            configServiceMock.Object,
+            _serviceProvider!.GetRequiredService<ILogger<PdfUploadQuotaService>>(),
+            clock);
+    }
+
+    private async Task<int> ReadCounterAsync(string key)
+    {
+        var value = await _redis!.GetDatabase().StringGetAsync(key);
+        return value.HasValue ? (int)value : 0;
+    }
+
+    // #4547: il rilascio decrementa i contatori del periodo della prenotazione. Prima decrementava
+    // quelli del rilascio: dopo la mezzanotte di domenica scendevano di uno il giorno e la settimana
+    // nuovi, e l'utente aveva un upload in piu' del limite.
+    [Fact(Timeout = 90_000)]
+    public async Task ReleaseQuota_AfterSundayMidnight_RestoresOnlyTheReservationPeriod()
+    {
+        var user = await CreateUserAsync(UserTier.Free);
+        var clock = new TestTimeProvider(new DateTime(2026, 10, 18, 23, 50, 0, DateTimeKind.Utc)); // domenica, 2026-W42
+        var service = CreateQuotaService(clock);
+
+        (await service.ReserveQuotaAsync(user.Id, "pdf-sunday", TestCancellationToken)).Reserved.Should().BeTrue();
+        clock.SetUtcNow(new DateTime(2026, 10, 19, 0, 10, 0, DateTimeKind.Utc)); // lunedi', 2026-W43
+        (await service.ReserveQuotaAsync(user.Id, "pdf-monday", TestCancellationToken)).Reserved.Should().BeTrue();
+
+        await service.ReleaseQuotaAsync(user.Id, "pdf-sunday", TestCancellationToken);
+
+        (await ReadCounterAsync($"pdf:upload:daily:{user.Id}:2026-10-18")).Should().Be(0);
+        (await ReadCounterAsync($"pdf:upload:weekly:{user.Id}:2026-W42")).Should().Be(0);
+        (await ReadCounterAsync($"pdf:upload:daily:{user.Id}:2026-10-19")).Should().Be(1);
+        (await ReadCounterAsync($"pdf:upload:weekly:{user.Id}:2026-W43")).Should().Be(1);
+        var db = _redis!.GetDatabase();
+        (await db.KeyExistsAsync($"pdf:quota:reservation:{user.Id}:pdf-sunday")).Should().BeFalse();
+        (await db.KeyExistsAsync($"pdf:quota:reservation:{user.Id}:pdf-monday")).Should().BeTrue();
+
+        var info = await service.GetQuotaInfoAsync(user.Id, user.Tier, user.Role, TestCancellationToken);
+        info.DailyUploadsUsed.Should().Be(1);
+        info.WeeklyUploadsUsed.Should().Be(1);
+    }
+
+    // Piu' rilasci della stessa prenotazione nello stesso momento: decrementa uno solo. Prima il
+    // controllo (EXISTS) e la cancellazione (DEL) erano comandi separati, con i decrementi in mezzo.
+    [Fact(Timeout = 90_000)]
+    public async Task ReleaseQuota_SameReservationReleasedConcurrently_DecrementsOnce()
+    {
+        var user = await CreateUserAsync(UserTier.Free);
+        var clock = new TestTimeProvider(new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc));
+        var service = CreateQuotaService(clock);
+
+        (await service.ReserveQuotaAsync(user.Id, "pdf-a", TestCancellationToken)).Reserved.Should().BeTrue();
+        (await service.ReserveQuotaAsync(user.Id, "pdf-b", TestCancellationToken)).Reserved.Should().BeTrue();
+
+        await Task.WhenAll(Enumerable.Range(0, 8).Select(_ =>
+            Task.Run(() => service.ReleaseQuotaAsync(user.Id, "pdf-a", TestCancellationToken), TestCancellationToken)));
+        await service.ReleaseQuotaAsync(user.Id, "pdf-a", TestCancellationToken);
+
+        (await ReadCounterAsync($"pdf:upload:daily:{user.Id}:2026-10-14")).Should().Be(1);
+        (await ReadCounterAsync($"pdf:upload:weekly:{user.Id}:2026-W42")).Should().Be(1);
     }
 }

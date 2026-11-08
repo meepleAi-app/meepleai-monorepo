@@ -16,6 +16,7 @@ internal class UserBuilder
     private PasswordHash _passwordHash = PasswordHash.Create("DefaultUnusualPwd123!");
     private Role _role = Role.User;
     private UserTier? _tier;
+    private string? _language;
     private bool _enable2FA;
     private string? _totpSecret;
 
@@ -101,11 +102,38 @@ internal class UserBuilder
     }
 
     /// <summary>
+    /// Sets the user as creator (Epic #4068).
+    /// </summary>
+    public UserBuilder AsCreator()
+    {
+        _role = Role.Creator;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the user as superadmin (issue #3873: the role every exact-match guard forgets).
+    /// </summary>
+    public UserBuilder AsSuperAdmin()
+    {
+        _role = Role.SuperAdmin;
+        return this;
+    }
+
+    /// <summary>
     /// Sets the user tier.
     /// </summary>
     public UserBuilder WithTier(UserTier tier)
     {
         _tier = tier;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the language the account starts with (#4783); without it the account is English.
+    /// </summary>
+    public UserBuilder WithLanguage(string language)
+    {
+        _language = language;
         return this;
     }
 
@@ -134,7 +162,7 @@ internal class UserBuilder
     /// </summary>
     public User Build()
     {
-        var user = new User(_id, _email, _displayName, _passwordHash, _role, _tier);
+        var user = new User(_id, _email, _displayName, _passwordHash, _role, _tier, _language);
 
         if (_enable2FA && _totpSecret != null)
         {

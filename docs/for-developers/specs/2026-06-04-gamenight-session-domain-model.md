@@ -172,7 +172,23 @@ Le 5 tensioni aperte dal gap report sono state risolte in sessione socratic dedi
 
 **Motivazione**: coerente con pattern "navigate-to-live è scelta esplicita" già adottato. La data/ora pianificata resta solo info, mai trigger automatico. Evita falsi positivi (es: GameNight programmata che diventa in-progress da sola alle 20:00 anche se la serata è stata annullata).
 
-→ **Invariante #15**: GameNight transition `planned → in-progress` triggered by first Session creation (draft or live).
+→ **Invariante #15**: GameNight transition `planned → in-progress` triggered by the first Session **going live** (`HandleFirstSessionStarted`), non dalla sua creazione.
+
+> 🔴 **Superata da Epic #3188 Slice 3 (D1 / #19), 2026.** Il testo originale diceva «first
+> Session creation **(draft or live)**», e quella parentesi non vale più: #3188 —
+> «*session-live model canonicalization — decouple create from go-live on the direct-create
+> path*» — ha deciso che una serata ad-hoc **nasce `Published`** e passa a `InProgress` solo
+> quando una sessione va live. La decisione è citata in sei punti del codice
+> (`CreateSessionCommandHandler` righe 207, 319, 407, 419, 443; `GameNightEvent` riga 669).
+>
+> Questa riga è rimasta non aggiornata per due anni, e nel frattempo ha fatto fallire
+> `Handle_NoGameNightProvided_CreatesAdHocNightImplicitly`, che la seguiva alla lettera
+> asserendo `InProgress` dove il prodotto scrive `Published` (#4074). Il test è stato
+> allineato; questa nota esiste perché la prossima persona non rifaccia il giro.
+>
+> ⚠️ `GameNightEvent.CreateAdHoc()` imposta ancora `InProgress` ed è usata **solo dai test**:
+> il percorso ad-hoc di produzione è `CreateSessionCommandHandler.ResolveGameNightAsync`, che
+> costruisce la entity EF con `Published`. Non "correggere" l'handler per usare la factory.
 
 ### Tensione 2 — Tagging vs RSVP
 
@@ -241,7 +257,7 @@ Il modello consolidato 2026-06-04 ha ora **20 invarianti** (5 originali + 15 der
 - Invariante #12: sorting Session = createdAt ascending
 - Invariante #13: salvataggio draft con live attiva permesso + warning non bloccante
 - Invariante #14: "ora di inizio" derived da startedAt
-- **Invariante #15**: GameNight `planned → in-progress` triggered by first Session creation (draft or live)
+- **Invariante #15**: GameNight `planned → in-progress` triggered by the first Session **going live** — non dalla creazione. Superata da Epic #3188 Slice 3 (D1/#19); vedi la nota sopra, nella sezione delle invarianti originali
 - **Invariante #16**: GameNight player ha 2 stati: tagged (no notifica) vs invited (notifica spedita)
 - **Invariante #17**: Invited player vede GameNight in dashboard solo come pending fino a RSVP confermato
 - **Invariante #18**: Game Detail tab "Partite" è self-contained con paginazione inline (no navigate a /sessions)

@@ -24,19 +24,18 @@ internal class PdfValidationDomainService
     }
 
     /// <summary>
-    /// Business rule: File size must not exceed configured maximum.
-    /// Default: 50 MB (configurable via Pdf:MaxFileSizeMb)
+    /// Business rule: File size must not exceed the PDF size limit.
+    /// #4449: the limit is the caller's to pass — the single <c>PdfProcessing:MaxFileSizeBytes</c>. It
+    /// used to be read here from <c>Pdf:MaxFileSizeMb</c>, a second key that had to be kept equal to
+    /// the first by hand, with a different default in code (50 MB).
     /// </summary>
-    public ValidationResult ValidateFileSize(FileSize fileSize)
+    public ValidationResult ValidateFileSize(FileSize fileSize, long maxBytes)
     {
-        var maxMb = _config.GetValue<int>("Pdf:MaxFileSizeMb", 50);
-        var maxBytes = maxMb * 1024L * 1024L;
-
         if (!fileSize.IsWithinLimit(maxBytes))
         {
             return ValidationResult.Failure(
                 "fileSize",
-                $"File size ({fileSize.Megabytes:F1} MB) exceeds maximum of {maxMb:F0} MB");
+                $"File size ({fileSize.Megabytes:F1} MB) exceeds maximum of {maxBytes / (1024 * 1024)} MB");
         }
 
         return ValidationResult.Success();

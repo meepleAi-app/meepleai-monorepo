@@ -54,6 +54,7 @@ import type {
   UpdateLibraryShareLinkRequest,
 } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
+import { datetimeLocalValueToIso } from '@/lib/utils/datetimeLocal';
 
 interface ShareLibraryModalProps {
   isOpen: boolean;
@@ -95,7 +96,13 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
   const hasActiveLink = shareLink && shareLink.isActive;
 
   const handleCreateOrUpdate = async () => {
-    const expiresAtDate = expiresAt ? new Date(expiresAt).toISOString() : null;
+    // #4840: the field lets the year run past four digits and `new Date('12345-10-30T20:00').toISOString()` throws,
+    // here before the `try`: the click ended in an unhandled rejection, with no message and nothing saved.
+    const expiresAtDate = expiresAt ? datetimeLocalValueToIso(expiresAt) : null;
+    if (expiresAt && expiresAtDate === null) {
+      toast.error('La data di scadenza non è valida.');
+      return;
+    }
 
     try {
       if (hasActiveLink) {
@@ -122,9 +129,7 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
       }
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Errore durante il salvataggio delle impostazioni.'
+        error instanceof Error ? error.message : 'Errore durante il salvataggio delle impostazioni.'
       );
     }
   };
@@ -148,9 +153,7 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
       toast.success('Link di condivisione revocato.');
       setShowRevokeConfirm(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Errore durante la revoca del link.'
-      );
+      toast.error(error instanceof Error ? error.message : 'Errore durante la revoca del link.');
     }
   };
 
@@ -212,7 +215,7 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
               <Label className="text-sm font-medium">Livello di Privacy</Label>
               <RadioGroup
                 value={privacyLevel}
-                onValueChange={(v) => setPrivacyLevel(v as PrivacyLevel)}
+                onValueChange={v => setPrivacyLevel(v as PrivacyLevel)}
                 className="grid grid-cols-2 gap-4"
               >
                 <label
@@ -222,11 +225,7 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
                     privacyLevel === 'unlisted' && 'border-primary bg-primary/5'
                   )}
                 >
-                  <RadioGroupItem
-                    value="unlisted"
-                    id="privacy-unlisted"
-                    className="sr-only"
-                  />
+                  <RadioGroupItem value="unlisted" id="privacy-unlisted" className="sr-only" />
                   <Lock className="h-6 w-6 text-muted-foreground" />
                   <span className="font-medium">Non elencato</span>
                   <span className="text-center text-xs text-muted-foreground">
@@ -240,11 +239,7 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
                     privacyLevel === 'public' && 'border-primary bg-primary/5'
                   )}
                 >
-                  <RadioGroupItem
-                    value="public"
-                    id="privacy-public"
-                    className="sr-only"
-                  />
+                  <RadioGroupItem value="public" id="privacy-public" className="sr-only" />
                   <Globe className="h-6 w-6 text-muted-foreground" />
                   <span className="font-medium">Pubblico</span>
                   <span className="text-center text-xs text-muted-foreground">
@@ -260,15 +255,9 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
                 <Label htmlFor="include-notes" className="font-medium">
                   Includi Note Personali
                 </Label>
-                <p className="text-xs text-muted-foreground">
-                  Mostra le tue note ai visitatori
-                </p>
+                <p className="text-xs text-muted-foreground">Mostra le tue note ai visitatori</p>
               </div>
-              <Switch
-                id="include-notes"
-                checked={includeNotes}
-                onCheckedChange={setIncludeNotes}
-              />
+              <Switch id="include-notes" checked={includeNotes} onCheckedChange={setIncludeNotes} />
             </div>
 
             {/* Expiration Date */}
@@ -281,7 +270,7 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
                 id="expires-at"
                 type="datetime-local"
                 value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
+                onChange={e => setExpiresAt(e.target.value)}
                 min={getMinDateTime()}
                 className="w-full"
               />
@@ -308,8 +297,8 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="h-5 w-5 text-destructive" />
                       <p className="text-sm text-destructive">
-                        Questa azione disabiliterà permanentemente il link di condivisione.
-                        Chiunque abbia il link non potrà più accedere alla tua libreria.
+                        Questa azione disabiliterà permanentemente il link di condivisione. Chiunque
+                        abbia il link non potrà più accedere alla tua libreria.
                       </p>
                     </div>
                     <div className="flex gap-2">

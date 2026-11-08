@@ -43,18 +43,18 @@ internal class MonthlyOptimizationReportService : IMonthlyOptimizationReportServ
         var startDate = new DateOnly(year, month, 1);
         var endDate = startDate.AddMonths(1).AddDays(-1);
 
-        // Run all analyses in parallel for efficiency
-        var efficiencyTask = _efficiencyAnalyzer.AnalyzeEfficiencyAsync(startDate, endDate, cancellationToken);
-        var cacheTask = _cacheAnalyzer.AnalyzeCacheEffectivenessAsync(startDate, endDate, cancellationToken);
-        var modelComparisonTask = _recommendationService.CompareModelsAsync(cancellationToken);
-        var recommendationTask = _recommendationService.GetRecommendationAsync("qa", prioritizeCost: false, cancellationToken);
-
-        await Task.WhenAll(efficiencyTask, cacheTask, modelComparisonTask, recommendationTask).ConfigureAwait(false);
-
-        var efficiencyAnalysis = await efficiencyTask.ConfigureAwait(false);
-        var cacheAnalysis = await cacheTask.ConfigureAwait(false);
-        var modelComparisons = await modelComparisonTask.ConfigureAwait(false);
-        var recommendation = await recommendationTask.ConfigureAwait(false);
+        // Sequential on purpose: the four analyzers all query through the request-scoped
+        // DbContext, which EF Core forbids using concurrently. Under Task.WhenAll the endpoint
+        // answered 500 on every call (#3859). The reads are cheap; the parallelism bought
+        // nothing and cost the whole report.
+        var efficiencyAnalysis = await _efficiencyAnalyzer
+            .AnalyzeEfficiencyAsync(startDate, endDate, cancellationToken).ConfigureAwait(false);
+        var cacheAnalysis = await _cacheAnalyzer
+            .AnalyzeCacheEffectivenessAsync(startDate, endDate, cancellationToken).ConfigureAwait(false);
+        var modelComparisons = await _recommendationService
+            .CompareModelsAsync(cancellationToken).ConfigureAwait(false);
+        var recommendation = await _recommendationService
+            .GetRecommendationAsync("qa", prioritizeCost: false, cancellationToken).ConfigureAwait(false);
 
         // Calculate total savings opportunity
         var cacheSavings = cacheAnalysis.EstimatedSavingsUsd;

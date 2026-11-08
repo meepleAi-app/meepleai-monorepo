@@ -1,17 +1,19 @@
 'use client';
 
 /**
- * CoverImagePicker — 3-tab cover image selector for the PDF import wizard.
+ * CoverImagePicker — cover selector for the PDF import wizard.
  *
  * Tab 1: Placeholder (default, entity color)
- * Tab 2: Extract from PDF page
- * Tab 3: Upload custom image (PNG/JPG, max 5 MB)
+ * Tab 2: A page of the PDF. The page becomes the cover at step 5, once the PDF is ready (#4413).
+ *
+ * #4413: no "upload an image" tab. It had no server path and the choice was dropped; an external
+ * image goes through the cover editor, which records its license.
  */
 
 import { type ChangeEvent, useCallback, useState } from 'react';
 import type { JSX } from 'react';
 
-import { ImageIcon, FileText, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { ImageIcon, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
@@ -26,9 +28,7 @@ export interface CoverImagePickerProps {
   onChange: (selection: CoverImageSelection) => void;
 }
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
-
-type TabKey = 'placeholder' | 'pdf-page' | 'upload';
+type TabKey = 'placeholder' | 'pdf-page';
 
 interface TabConfig {
   key: TabKey;
@@ -39,7 +39,6 @@ interface TabConfig {
 const TABS: TabConfig[] = [
   { key: 'placeholder', label: 'Nessuna', icon: <ImageIcon className="h-4 w-4" /> },
   { key: 'pdf-page', label: 'Dal PDF', icon: <FileText className="h-4 w-4" /> },
-  { key: 'upload', label: 'Carica', icon: <Upload className="h-4 w-4" /> },
 ];
 
 export function CoverImagePicker({
@@ -47,22 +46,20 @@ export function CoverImagePicker({
   value,
   onChange,
 }: CoverImagePickerProps): JSX.Element {
-  const activeTab = value.mode;
+  // A state saved before #4413 may still say 'upload': it is shown as the placeholder.
+  const activeTab: TabKey = value.mode === 'pdf-page' ? 'pdf-page' : 'placeholder';
   const [pageNumber, setPageNumber] = useState(1);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [loadingPage, setLoadingPage] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const selectTab = useCallback(
     (tab: TabKey) => {
       if (tab === 'placeholder') {
         onChange({ mode: 'placeholder', imageUrl: null });
         setPdfPreviewUrl(null);
-      } else if (tab === 'pdf-page') {
-        onChange({ mode: 'pdf-page', imageUrl: null });
       } else {
-        onChange({ mode: 'upload', imageUrl: null });
+        onChange({ mode: 'pdf-page', imageUrl: null });
       }
     },
     [onChange]
@@ -100,30 +97,6 @@ export function CoverImagePicker({
     const val = parseInt(e.target.value);
     if (!isNaN(val) && val > 0) setPageNumber(val);
   }, []);
-
-  // Handle custom image upload
-  const handleImageUpload = useCallback(
-    async (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setUploadError(null);
-
-      if (!['image/png', 'image/jpeg'].includes(file.type)) {
-        setUploadError('Formato non supportato. Usa PNG o JPG.');
-        return;
-      }
-      if (file.size > MAX_IMAGE_SIZE) {
-        setUploadError(
-          `Immagine troppo grande (max 5 MB, attuale ${(file.size / 1024 / 1024).toFixed(1)} MB)`
-        );
-        return;
-      }
-
-      const objectUrl = URL.createObjectURL(file);
-      onChange({ mode: 'upload', imageUrl: objectUrl });
-    },
-    [onChange]
-  );
 
   return (
     <div className="space-y-3">
@@ -205,52 +178,25 @@ export function CoverImagePicker({
               <p className="flex items-center gap-1 text-xs text-green-600">
                 <CheckCircle className="h-3 w-3" /> Pagina selezionata come copertina
               </p>
+              <p className="text-xs text-muted-foreground">
+                Diventa la copertina del gioco quando il PDF ha finito l&apos;elaborazione, allo
+                step 5. Per un&apos;immagine esterna usa l&apos;editor delle copertine del gioco.
+              </p>
             </div>
           )}
 
-          {!pdfPreviewUrl && !loadingPage && (
+          {!pdfPreviewUrl && !loadingPage && value.pdfPageNumber != null && (
+            <p className="flex items-center gap-1 text-xs text-green-600">
+              <CheckCircle className="h-3 w-3" /> Pagina {value.pdfPageNumber} selezionata come
+              copertina
+            </p>
+          )}
+
+          {!pdfPreviewUrl && !loadingPage && value.pdfPageNumber == null && (
             <p className="text-xs text-muted-foreground">
               Inserisci il numero di pagina e clicca &quot;Carica anteprima&quot; per selezionare
               una copertina dal PDF.
             </p>
-          )}
-        </div>
-      )}
-
-      {/* Tab: Custom upload */}
-      {activeTab === 'upload' && (
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="cover-image-upload">Carica immagine (PNG/JPG, max 5 MB)</Label>
-            <Input
-              id="cover-image-upload"
-              type="file"
-              accept="image/png,image/jpeg"
-              onChange={handleImageUpload}
-              className="cursor-pointer file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
-            />
-          </div>
-
-          {uploadError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-sm">{uploadError}</AlertDescription>
-            </Alert>
-          )}
-
-          {value.imageUrl && value.mode === 'upload' && (
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Anteprima</p>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={value.imageUrl}
-                alt="Copertina caricata"
-                className="max-h-48 rounded border object-contain"
-              />
-              <p className="flex items-center gap-1 text-xs text-green-600">
-                <CheckCircle className="h-3 w-3" /> Immagine selezionata
-              </p>
-            </div>
           )}
         </div>
       )}

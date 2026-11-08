@@ -33,6 +33,13 @@ public sealed class ApplyModelReplacementCommandHandlerTests : IDisposable
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _compatibilityRepoMock = new Mock<IModelCompatibilityRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        // Issue #3866: the unit of work is a mock, so nothing was ever written — the assertions
+        // below used to pass only because a tracking-by-default test context resolved the reload to
+        // the same in-memory instance the handler had mutated. They verified the mutation, not the
+        // persistence. Wiring the mock to the real SaveChangesAsync makes them verify what they claim.
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken ct) => _dbContext.SaveChangesAsync(ct));
 
         _handler = new ApplyModelReplacementCommandHandler(
             _dbContext,

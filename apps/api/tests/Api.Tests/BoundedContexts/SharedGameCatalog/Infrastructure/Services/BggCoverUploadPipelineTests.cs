@@ -41,6 +41,60 @@ public sealed class BggCoverUploadPipelineTests : IDisposable
 
     public void Dispose() => _mockS3Client.Reset();
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // #4085/#4016 causa A — DisablePayloadSigning was hardcoded `true`, which AWS SDK
+    // rejects against a plain-HTTP endpoint ("the request must be sent over HTTPS").
+    // Must now follow S3BlobStorageService.DisablePayloadSigningForEndpoint: false on
+    // HTTP (MinIO locale), true on HTTPS (R2/AWS in staging/prod — unchanged there).
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UploadAsync_PlainHttpEndpoint_DisablesPayloadSigningIsFalse()
+    {
+        var options = new S3StorageOptions
+        {
+            Endpoint = "http://minio:9000",
+            AccessKey = "test-access-key",
+            SecretKey = "test-secret-key",
+            BucketName = "test-bucket",
+            Region = "auto",
+            PresignedUrlExpirySeconds = 3600,
+            EnableEncryption = true,
+            ForcePathStyle = false,
+        };
+        var sut = new BggCoverUploadPipeline(_mockS3Client.Object, options, _mockLogger.Object);
+        PutObjectRequest? captured = null;
+        _mockS3Client
+            .Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<PutObjectRequest, CancellationToken>((req, _) => captured = req)
+            .ReturnsAsync(new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        await sut.UploadAsync(42, new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "png", CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        captured!.DisablePayloadSigning.Should().Be(
+            false,
+            "AWS SDK rejects DisablePayloadSigning=true over plain HTTP — this was the measured #4016 failure");
+    }
+
+    [Fact]
+    public async Task UploadAsync_HttpsEndpoint_DisablesPayloadSigningIsTrue()
+    {
+        // _sut (ctor) is already built against the HTTPS test endpoint.
+        PutObjectRequest? captured = null;
+        _mockS3Client
+            .Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<PutObjectRequest, CancellationToken>((req, _) => captured = req)
+            .ReturnsAsync(new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        await _sut.UploadAsync(42, new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "png", CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        captured!.DisablePayloadSigning.Should().Be(
+            true,
+            "R2/AWS over HTTPS keeps the pre-existing behaviour — staging/prod must not change");
+    }
+
     [Fact]
     public async Task UploadAsync_ValidBytes_PutsObjectWithDeterministicKeyIncludingExtension()
     {
@@ -176,6 +230,9 @@ public sealed class BggCoverUploadPipelineDiTests
                 ["S3_SECRET_KEY"] = "sk",
                 ["S3_BUCKET_NAME"] = "bucket",
                 ["S3_REGION"] = "auto",
+                // #3886: la registrazione e' ora condizionata a STORAGE_PROVIDER=s3, come in #3363.
+                // Questo test verifica il ramo cloud, quindi lo dichiara.
+                ["STORAGE_PROVIDER"] = "s3",
             })
             .Build();
 
@@ -186,12 +243,47 @@ public sealed class BggCoverUploadPipelineDiTests
         // "No service for type 'IConfiguration'" instead of returning the pipeline.
         services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(config);
         Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection.SharedGameCatalogServiceExtensions
-            .RegisterBggCoverUploadPipelineForTests(services);
+            .RegisterBggCoverUploadPipelineForTests(services, config);
 
         using var provider = services.BuildServiceProvider();
         var pipeline = provider.GetService<Api.BoundedContexts.SharedGameCatalog.Application.Services.IBggCoverUploadPipeline>();
 
         pipeline.Should().NotBeNull();
         pipeline.Should().BeOfType<BggCoverUploadPipeline>();
+    }
+
+    /// <summary>
+    /// #3886 (stesso difetto di #3363, altro bounded context): la factory pretende le <c>S3_*</c> e
+    /// lancia alla <b>risoluzione</b>, non all'uso. Il consumer viene risolto da MediatR mentre
+    /// costruisce l'handler, quindi in un ambiente local-storage la richiesta moriva con
+    /// «S3_ENDPOINT is required» <b>prima</b> di entrare nell'handler: 500 su qualunque input, non
+    /// solo sul percorso che carica una cover. Misurato sul wizard, dove un <c>PdfDocumentId</c>
+    /// inesistente rispondeva 500 invece del 404 prodotto dall'handler.
+    ///
+    /// <para>In modalita' locale la pipeline deve restare <b>non registrata</b>, cosi' l'iniezione
+    /// opzionale risolve a null e il passo cover — arricchimento best-effort — si salta.</para>
+    /// </summary>
+    [Fact]
+    public void LocalStorage_LeavesBggCoverUploadPipelineUnregistered()
+    {
+        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["STORAGE_PROVIDER"] = "local",
+                // Nessuna S3_*: e' esattamente lo stato di `make dev` e del bake CI.
+            })
+            .Build();
+
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(config);
+        Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection.SharedGameCatalogServiceExtensions
+            .RegisterBggCoverUploadPipelineForTests(services, config);
+
+        using var provider = services.BuildServiceProvider();
+
+        var resolve = () => provider.GetService<Api.BoundedContexts.SharedGameCatalog.Application.Services.IBggCoverUploadPipeline>();
+
+        resolve.Should().NotThrow("in local-storage la risoluzione non deve lanciare: e' quella eccezione che faceva 500 ogni richiesta");
+        resolve().Should().BeNull("non registrata significa iniezione opzionale a null, e passo cover saltato");
     }
 }

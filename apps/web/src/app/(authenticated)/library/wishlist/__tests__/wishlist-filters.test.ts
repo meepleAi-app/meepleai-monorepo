@@ -21,11 +21,6 @@ import {
   type WishlistFilterState,
 } from '../_lib/wishlist-filters';
 
-const GAME_NAME_MAP = new Map<string, string>([
-  ['game-1', 'Wingspan'],
-  ['game-2', 'Catan'],
-]);
-
 function makeItem(overrides: Partial<WishlistItemDto> = {}): WishlistItemDto {
   return {
     id: 'item-1',
@@ -88,17 +83,17 @@ describe('filterItems', () => {
       makeItem({ id: 'a', gameName: 'Wingspan' }),
       makeItem({ id: 'b', gameName: 'Catan' }),
     ];
-    const result = filterItems(items, baseFilterState({ search: 'wing' }), GAME_NAME_MAP);
+    const result = filterItems(items, baseFilterState({ search: 'wing' }));
     expect(result.map(i => i.id)).toEqual(['a']);
   });
 
-  it('falls back to gameNameMap when item.gameName is absent', () => {
+  it('matches an item without gameName (game no longer in the catalog) on its notes only', () => {
     const items = [
-      makeItem({ id: 'a', gameId: 'game-1', gameName: undefined }),
-      makeItem({ id: 'b', gameId: 'game-2', gameName: undefined }),
+      makeItem({ id: 'a', gameName: undefined, notes: 'regalo per Catan' }),
+      makeItem({ id: 'b', gameName: undefined, notes: null }),
     ];
-    const result = filterItems(items, baseFilterState({ search: 'catan' }), GAME_NAME_MAP);
-    expect(result.map(i => i.id)).toEqual(['b']);
+    const result = filterItems(items, baseFilterState({ search: 'catan' }));
+    expect(result.map(i => i.id)).toEqual(['a']);
   });
 
   it('matches search against notes (case-insensitive)', () => {
@@ -106,13 +101,13 @@ describe('filterItems', () => {
       makeItem({ id: 'a', gameName: 'Wingspan', notes: 'Waiting for Black Friday sale' }),
       makeItem({ id: 'b', gameName: 'Catan', notes: null }),
     ];
-    const result = filterItems(items, baseFilterState({ search: 'BLACK FRIDAY' }), GAME_NAME_MAP);
+    const result = filterItems(items, baseFilterState({ search: 'BLACK FRIDAY' }));
     expect(result.map(i => i.id)).toEqual(['a']);
   });
 
   it('returns all items when search is empty', () => {
     const items = [makeItem({ id: 'a' }), makeItem({ id: 'b' })];
-    const result = filterItems(items, baseFilterState(), GAME_NAME_MAP);
+    const result = filterItems(items, baseFilterState());
     expect(result).toHaveLength(2);
   });
 
@@ -122,23 +117,19 @@ describe('filterItems', () => {
       makeItem({ id: 'b', priority: 'medium' }),
       makeItem({ id: 'c', priority: 'low' }),
     ];
-    const result = filterItems(
-      items,
-      baseFilterState({ priorities: ['high', 'low'] }),
-      GAME_NAME_MAP
-    );
+    const result = filterItems(items, baseFilterState({ priorities: ['high', 'low'] }));
     expect(result.map(i => i.id)).toEqual(['a', 'c']);
   });
 
   it('treats an empty priorities array as "match all"', () => {
     const items = [makeItem({ id: 'a', priority: 'high' }), makeItem({ id: 'b', priority: 'low' })];
-    const result = filterItems(items, baseFilterState({ priorities: [] }), GAME_NAME_MAP);
+    const result = filterItems(items, baseFilterState({ priorities: [] }));
     expect(result).toHaveLength(2);
   });
 
   it('normalizes a stray-cased priority when matching the priorities filter', () => {
     const items = [makeItem({ id: 'a', priority: 'HIGH' })];
-    const result = filterItems(items, baseFilterState({ priorities: ['high'] }), GAME_NAME_MAP);
+    const result = filterItems(items, baseFilterState({ priorities: ['high'] }));
     expect(result.map(i => i.id)).toEqual(['a']);
   });
 
@@ -150,8 +141,7 @@ describe('filterItems', () => {
     ];
     const result = filterItems(
       items,
-      baseFilterState({ search: 'wingspan', priorities: ['high'] }),
-      GAME_NAME_MAP
+      baseFilterState({ search: 'wingspan', priorities: ['high'] })
     );
     expect(result.map(i => i.id)).toEqual(['a']);
   });

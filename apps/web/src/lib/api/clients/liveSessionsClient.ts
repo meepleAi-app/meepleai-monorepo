@@ -45,6 +45,10 @@ import {
   LiveSessionDiaryEntryDtoSchema,
   type LiveSessionDiaryEntryDto,
   type AddDiaryEntryRequest,
+  AssistantProposalDtoSchema,
+  SessionAssistantPanelDtoSchema,
+  type AssistantProposalDto,
+  type SessionAssistantPanelDto,
 } from '../schemas/live-sessions.schemas';
 import {
   SessionSaveResultSchema,
@@ -52,12 +56,6 @@ import {
   type SessionSaveResult,
   type SessionResumeContext,
 } from '../schemas/save-resume.schemas';
-import {
-  ScoreParseResultSchema,
-  type ScoreParseResult,
-  type ParseScoreRequest,
-  type ConfirmScoreRequest,
-} from '../schemas/score-tracking.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -198,13 +196,27 @@ export interface LiveSessionsClient {
    */
   getDisputes(sessionId: string): Promise<RuleDisputeDto[]>;
 
-  // ========== AI Score Tracking (Issue #121) ==========
+  // ========== In-game assistant (#4238 A4) ==========
 
-  /** Parse a natural language message for score data, optionally auto-record */
-  parseScore(sessionId: string, request: ParseScoreRequest): Promise<ScoreParseResult>;
+  /**
+   * Host only (#4372). Whether the assistant answers (and, if not, the code the turn would
+   * return), the conversation and the proposals: what the panel shows on mount and on reload.
+   * `language` is the UI language: it picks the prompt, so it decides availability too.
+   */
+  getAssistant(sessionId: string, language?: string): Promise<SessionAssistantPanelDto>;
 
-  /** Confirm and record a previously parsed score */
-  confirmScore(sessionId: string, request: ConfirmScoreRequest): Promise<void>;
+  /**
+   * Host only. Applies a proposal, optionally with the host's correction of the points. A second
+   * call returns the current state; a closed proposal answers 409 with its code.
+   */
+  confirmAssistantProposal(
+    sessionId: string,
+    proposalId: string,
+    points?: number
+  ): Promise<AssistantProposalDto>;
+
+  /** Host only. Rejects a proposal; a second call returns it already rejected. */
+  rejectAssistantProposal(sessionId: string, proposalId: string): Promise<AssistantProposalDto>;
 
   // ========== Enhanced Save/Resume (Issue #122) ==========
 
@@ -354,6 +366,30 @@ export function createLiveSessionsClient({
       return z.array(LiveSessionDiaryEntryDtoSchema).parse(response ?? []);
     },
 
+    async getAssistant(sessionId, language) {
+      const query = language ? `?language=${encodeURIComponent(language)}` : '';
+      const response = await httpClient.get<unknown>(
+        `${BASE}/${encodeURIComponent(sessionId)}/assistant${query}`
+      );
+      if (!response) throw new Error('Session not found');
+      return SessionAssistantPanelDtoSchema.parse(response);
+    },
+
+    async confirmAssistantProposal(sessionId, proposalId, points) {
+      const response = await httpClient.post<unknown>(
+        `${BASE}/${encodeURIComponent(sessionId)}/assistant/proposals/${encodeURIComponent(proposalId)}/confirm`,
+        points === undefined ? {} : { points }
+      );
+      return AssistantProposalDtoSchema.parse(response);
+    },
+
+    async rejectAssistantProposal(sessionId, proposalId) {
+      const response = await httpClient.post<unknown>(
+        `${BASE}/${encodeURIComponent(sessionId)}/assistant/proposals/${encodeURIComponent(proposalId)}/reject`
+      );
+      return AssistantProposalDtoSchema.parse(response);
+    },
+
     async getDisputes(sessionId) {
       const response = await httpClient.get<unknown>(
         `${BASE}/${encodeURIComponent(sessionId)}/disputes`
@@ -494,21 +530,6 @@ export function createLiveSessionsClient({
       await httpClient.put(`${BASE}/${encodeURIComponent(sessionId)}/notes`, request);
     },
 
-    // ========== AI Score Tracking (Issue #121) ==========
-
-    async parseScore(sessionId, request) {
-      const response = await httpClient.post<ScoreParseResult>(
-        `${BASE}/${encodeURIComponent(sessionId)}/scores/parse`,
-        request
-      );
-      if (!response) throw new Error('Parse score failed');
-      return ScoreParseResultSchema.parse(response);
-    },
-
-    async confirmScore(sessionId, request) {
-      await httpClient.post(`${BASE}/${encodeURIComponent(sessionId)}/scores/confirm`, request);
-    },
-
     // ========== Enhanced Save/Resume (Issue #122) ==========
 
     async saveComplete(sessionId) {
@@ -530,9 +551,15 @@ export function createLiveSessionsClient({
     // ========== Game Night Improvvisata ==========
 
     async submitDispute(sessionId, description, raisedByPlayerName) {
+      // #4751: every attempt is a paid model call, and not an idempotent one. The server answers 503
+      // when the arbitro gave no verdict or the AI gateway refused the call, and the HTTP client retries
+      // 502/503 by default: one click would cost several model calls and a minute of spinner before the
+      // message arrives. The player asks again with the button, if they want to.
       const response = await httpClient.post<RuleDisputeResponse>(
         `${GAME_NIGHT_BASE}/sessions/${encodeURIComponent(sessionId)}/disputes`,
-        { description, raisedByPlayerName }
+        { description, raisedByPlayerName },
+        undefined,
+        { retry: { skipRetry: true } }
       );
       if (!response) throw new Error('Dispute submission failed');
       return RuleDisputeResponseSchema.parse(response);

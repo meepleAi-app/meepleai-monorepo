@@ -35,6 +35,12 @@ internal class BulkUpdateConfigsCommandHandler : ICommandHandler<BulkUpdateConfi
             throw new InvalidOperationException($"Configurations not found: {string.Join(", ", missingIds)}");
         }
 
+        // Prima di toccare qualunque riga: l'aggiornamento è atomico, una voce rifiutata rifiuta tutta la richiesta.
+        foreach (var config in configs)
+        {
+            ReservedConfigurationKeyGuard.EnsureNotReserved(config.Key.Value);
+        }
+
         var updatedConfigs = new List<ConfigurationDto>();
         foreach (var update in command.Updates)
         {

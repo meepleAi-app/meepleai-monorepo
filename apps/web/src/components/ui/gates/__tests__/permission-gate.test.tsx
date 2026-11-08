@@ -32,8 +32,7 @@ describe('PermissionGate', () => {
       tier: 'pro',
       role: 'user',
       status: 'Active',
-      limits: { maxGames: 500, storageQuotaMB: 5000 },
-      accessibleFeatures: ['wishlist', 'bulk-select']
+      accessibleFeatures: ['wishlist', 'bulk-select'],
     };
 
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -53,8 +52,7 @@ describe('PermissionGate', () => {
       tier: 'free',
       role: 'user',
       status: 'Active',
-      limits: { maxGames: 50, storageQuotaMB: 100 },
-      accessibleFeatures: ['wishlist']
+      accessibleFeatures: ['wishlist'],
     };
 
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -75,8 +73,7 @@ describe('PermissionGate', () => {
       tier: 'free',
       role: 'user',
       status: 'Active',
-      limits: { maxGames: 50, storageQuotaMB: 100 },
-      accessibleFeatures: []
+      accessibleFeatures: [],
     };
 
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);

@@ -6,28 +6,12 @@ groups:
     interval: 1m
     rules:
       # WARNING: High memory usage
-      - alert: HighMemoryUsage
-        expr: |
-          process_working_set_bytes / process_memory_limit_bytes > 0.8
-        for: 5m
-        labels:
-          severity: warning
-          service: meepleai-api
-          category: resources
-          component: infrastructure
-        annotations:
-          summary: "API memory usage is high"
-          description: |
-            Memory usage: {{ $value | humanizePercentage }}.
-            The API may be approaching memory limits.
-            Check for memory leaks or increase container resources.
-          dashboard_url: "http://localhost:3001/d/infrastructure"
+      # #3798: HighMemoryUsage viveva anche qui, identico a quello di
+      # prometheus-rules.yml (stessa expr, stesso for, stessa severity). Rimosso da questo
+      # file quando e' stato montato: due copie della stessa regola raddoppiano le
+      # notifiche dello stesso evento, e divergono senza che nessuno se ne accorga --
+      # e' successo a SlowResponseTime, che aveva soglia 5 in una copia e 3 nell'altra.
 
-      # WARNING: Disk space below 15 GB on staging VPS root filesystem (#1575).
-      # 15 GB = ~80% used on a 75 GB disk. Triggers when the daily prune is
-      # no longer keeping pace with growth (the exact canary failure mode
-      # we hit on 2026-05-25/26 — see audits/2026-05-26-disk-cleanup-1575.md).
-      # Sustained for 10 min to filter out transient deploy-time spikes.
       - alert: DiskSpaceLowOnRoot
         expr: |
           node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs"} < 15 * 1024 * 1024 * 1024

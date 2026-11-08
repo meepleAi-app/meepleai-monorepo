@@ -464,6 +464,7 @@ internal static class SessionPlayerActionsEndpoints
         group.MapPost("/game-sessions/{sessionId:guid}/media", async (
             Guid sessionId,
             UploadSessionMediaCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -472,7 +473,16 @@ internal static class SessionPlayerActionsEndpoints
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard (#3756): l'identita' e' derivata dal principal e sovrascrive qualunque
+            // RequestedBy arrivato dal body. L'handler verifica via ISessionAccessGuard che il
+            // chiamante sia owner o partecipante registrato della sessione.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/game-sessions/{sessionId}/media/{result.MediaId}", result);
         })
         .RequireAuthenticatedUser()
@@ -483,6 +493,7 @@ internal static class SessionPlayerActionsEndpoints
         .Produces(201)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -562,6 +573,7 @@ internal static class SessionPlayerActionsEndpoints
         group.MapPost("/game-sessions/{sessionId:guid}/chat", async (
             Guid sessionId,
             SendSessionChatMessageCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -570,7 +582,16 @@ internal static class SessionPlayerActionsEndpoints
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard (#3756): l'identita' e' derivata dal principal e sovrascrive qualunque
+            // RequestedBy arrivato dal body. L'handler verifica via ISessionAccessGuard che il
+            // chiamante sia owner o partecipante registrato della sessione.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/game-sessions/{sessionId}/chat/{result.MessageId}", result);
         })
         .RequireAuthenticatedUser()
@@ -580,6 +601,7 @@ internal static class SessionPlayerActionsEndpoints
         .Produces(201)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -587,10 +609,20 @@ internal static class SessionPlayerActionsEndpoints
     {
         group.MapPost("/game-sessions/{sessionId:guid}/chat/ask-agent", async (
             Guid sessionId,
+            HttpContext httpContext,
             HttpRequest httpRequest,
             IMediator mediator,
             CancellationToken ct) =>
         {
+            // #4776: who is asking comes from the principal, never from the body. `senderId` is the participant
+            // the message is written as, and the client picks it: the RAG ownership gate (ADR-096) is judged
+            // on the caller, so a participant id read off the session cannot borrow someone else's ownership.
+            var callerId = httpContext.User.GetUserId();
+            if (callerId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
             AskSessionAgentCommand command;
 
             if (httpRequest.HasFormContentType)
@@ -644,7 +676,7 @@ internal static class SessionPlayerActionsEndpoints
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            var result = await mediator.Send(command with { RequestedBy = callerId }, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
@@ -723,8 +755,7 @@ internal static class SessionPlayerActionsEndpoints
         .WithName("UpdateToolkitWidgetState")
         .WithTags("Toolkit")
         .WithSummary("Update a widget's runtime state in a session")
-        .WithDescription("Persists the runtime state for a single widget (turn count, scores, resources etc.). Auto-creates the state record on first save. Issue #5148.")
-        .WithOpenApi();
+        .WithDescription("Persists the runtime state for a single widget (turn count, scores, resources etc.). Auto-creates the state record on first save. Issue #5148.");
     }
 
     // ========== Session Diary Write Endpoints (Issue #276) ==========

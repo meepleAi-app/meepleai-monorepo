@@ -19,9 +19,11 @@ export function MiniNavSlot() {
   return (
     <div
       data-testid="mini-nav-slot"
-      className="h-12 flex items-center gap-1 px-7 pl-[104px] border-b border-[var(--glass-border)] bg-[var(--bg)]"
+      // Below md the strip scrolls inside itself (a 390px phone fits four tabs only by overflowing: measured 510px, which
+      // made the whole page scroll sideways and pushed the last tabs off screen) and drops the desktop gutter.
+      className="h-12 flex items-center gap-1 overflow-x-auto pl-4 pr-4 md:overflow-visible md:pl-[104px] md:pr-7 border-b border-[var(--glass-border)] bg-[var(--bg)]"
     >
-      <div className="text-xs font-semibold text-muted-foreground mr-5">
+      <div className="hidden md:block text-xs font-semibold text-muted-foreground mr-5">
         <span aria-hidden>›</span> {config.breadcrumb}
       </div>
       {config.tabs.map(tab => {
@@ -32,7 +34,7 @@ export function MiniNavSlot() {
             href={tab.href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'relative px-3.5 py-2 rounded-lg text-[0.78rem] font-bold flex items-center gap-1.5 transition-colors',
+              'relative shrink-0 whitespace-nowrap px-2.5 md:px-3.5 py-2 rounded-lg text-[0.78rem] font-bold flex items-center gap-1.5 transition-colors',
               active ? 'text-[var(--text)]' : 'text-[var(--text-sec)] hover:bg-[var(--bg-card)]'
             )}
           >
@@ -45,7 +47,7 @@ export function MiniNavSlot() {
             {active && (
               <span
                 aria-hidden
-                className="absolute bottom-[-12px] left-3.5 right-3.5 h-0.5 rounded-t"
+                className="absolute bottom-0 md:bottom-[-12px] left-2.5 right-2.5 md:left-3.5 md:right-3.5 h-0.5 rounded-t"
                 style={{ background: 'hsl(25 95% 45%)' }}
               />
             )}
@@ -58,7 +60,7 @@ export function MiniNavSlot() {
         <button
           type="button"
           onClick={config.primaryAction.onClick}
-          className="px-3.5 py-2 rounded-[10px] text-[0.78rem] font-bold text-white border-none cursor-pointer flex items-center gap-1.5 transition-all hover:-translate-y-px"
+          className="shrink-0 whitespace-nowrap px-3.5 py-2 rounded-[10px] text-[0.78rem] font-bold text-white border-none cursor-pointer flex items-center gap-1.5 transition-all hover:-translate-y-px"
           style={{
             background: 'linear-gradient(135deg, hsl(25 95% 48%), hsl(25 95% 40%))',
             boxShadow: '0 2px 6px hsla(25, 95%, 45%, 0.3)',

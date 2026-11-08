@@ -32,13 +32,13 @@ test.describe('Arbitro Mode — Rule Dispute Resolution', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const arbiterBtn = page.getByTestId('quick-action-arbiter').first();
-    const arbiterVisible = await arbiterBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    const arbiterVisible = await arbiterBtn.isVisible({ timeout: 5000 });
 
     if (arbiterVisible) {
       await arbiterBtn.click();
 
       const chip = page.getByText(/chi ha ragione/i).first();
-      const chipVisible = await chip.isVisible({ timeout: 3000 }).catch(() => false);
+      const chipVisible = await chip.isVisible({ timeout: 3000 });
       expect(chipVisible).toBe(true);
     }
 
@@ -50,14 +50,14 @@ test.describe('Arbitro Mode — Rule Dispute Resolution', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const quickActions = page.getByTestId('quick-actions').first();
-    const actionsVisible = await quickActions.isVisible({ timeout: 5000 }).catch(() => false);
+    const actionsVisible = await quickActions.isVisible({ timeout: 5000 });
 
     if (actionsVisible) {
       const rules = page.getByTestId('quick-action-rules').first();
       const arbiter = page.getByTestId('quick-action-arbiter').first();
 
-      const rulesVisible = await rules.isVisible().catch(() => false);
-      const arbiterVisible = await arbiter.isVisible().catch(() => false);
+      const rulesVisible = await rules.isVisible();
+      const arbiterVisible = await arbiter.isVisible();
       expect(rulesVisible || arbiterVisible).toBe(true);
     }
 

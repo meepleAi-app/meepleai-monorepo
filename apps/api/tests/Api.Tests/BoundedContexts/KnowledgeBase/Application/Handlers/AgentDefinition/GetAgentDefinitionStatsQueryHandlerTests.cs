@@ -18,6 +18,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.AgentDefi
 [Trait("Issue", "3708")]
 public sealed class GetAgentDefinitionStatsQueryHandlerTests
 {
+    // Issue #4138: assertions on `DistributionByType` stood in three of these tests.
+    // With one system agent and no type field there is no axis to distribute over, so
+    // both the result field and the `TypeDistribution` record are gone. The tests keep
+    // their other assertions (totals, active/inactive, recency, date range).
+
     private readonly Mock<IAgentDefinitionRepository> _mockRepository;
     private readonly GetAgentDefinitionStatsQueryHandler _handler;
 
@@ -33,9 +38,9 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
         // Arrange
         var definitions = new List<AgentDefinitionEntity>
         {
-            AgentDefinitionEntity.Create("Agent1", "Desc1", AgentType.RagAgent, AgentDefinitionConfig.Default()),
-            AgentDefinitionEntity.Create("Agent2", "Desc2", AgentType.CitationAgent, AgentDefinitionConfig.Default()),
-            AgentDefinitionEntity.Create("Agent3", "Desc3", AgentType.RagAgent, AgentDefinitionConfig.Default())
+            AgentDefinitionEntity.Create("Agent1", "Desc1", AgentDefinitionConfig.Default()),
+            AgentDefinitionEntity.Create("Agent2", "Desc2", AgentDefinitionConfig.Default()),
+            AgentDefinitionEntity.Create("Agent3", "Desc3", AgentDefinitionConfig.Default())
         };
         // Create() sets IsActive=false; activate the first two so we have 2 active + 1 inactive
         definitions[0].Activate();
@@ -55,18 +60,15 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
         result.TotalDefinitions.Should().Be(3);
         result.ActiveDefinitions.Should().Be(2);
         result.InactiveDefinitions.Should().Be(1);
-        result.DistributionByType.Should().HaveCount(2);
-        result.DistributionByType.Should().Contain(d => d.Type == "RAG" && d.Count == 2);
-        result.DistributionByType.Should().Contain(d => d.Type == "Citation" && d.Count == 1);
     }
 
     [Fact]
     public async Task Handle_WithActiveOnlyFilter_ShouldReturnOnlyActive()
     {
         // Arrange
-        var activeAgent = AgentDefinitionEntity.Create("Active", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var activeAgent = AgentDefinitionEntity.Create("Active", "Desc", AgentDefinitionConfig.Default());
         activeAgent.Activate(); // Create() defaults to inactive; explicitly activate
-        var inactiveAgent = AgentDefinitionEntity.Create("Inactive", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var inactiveAgent = AgentDefinitionEntity.Create("Inactive", "Desc", AgentDefinitionConfig.Default());
         // inactiveAgent is already inactive from Create() — no need to call Deactivate()
 
         _mockRepository
@@ -101,7 +103,6 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
         result.TotalDefinitions.Should().Be(0);
         result.ActiveDefinitions.Should().Be(0);
         result.InactiveDefinitions.Should().Be(0);
-        result.DistributionByType.Should().BeEmpty();
         result.RecentDefinitions.Should().BeEmpty();
         result.OldestCreatedAt.Should().BeNull();
         result.NewestCreatedAt.Should().BeNull();
@@ -113,11 +114,11 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
         // Arrange
         var definitions = new List<AgentDefinitionEntity>
         {
-            AgentDefinitionEntity.Create("RAG1", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()),
-            AgentDefinitionEntity.Create("RAG2", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()),
-            AgentDefinitionEntity.Create("Citation1", "Desc", AgentType.CitationAgent, AgentDefinitionConfig.Default()),
-            AgentDefinitionEntity.Create("Confidence1", "Desc", AgentType.ConfidenceAgent, AgentDefinitionConfig.Default()),
-            AgentDefinitionEntity.Create("Rules1", "Desc", AgentType.RulesInterpreter, AgentDefinitionConfig.Default())
+            AgentDefinitionEntity.Create("RAG1", "Desc", AgentDefinitionConfig.Default()),
+            AgentDefinitionEntity.Create("RAG2", "Desc", AgentDefinitionConfig.Default()),
+            AgentDefinitionEntity.Create("Citation1", "Desc", AgentDefinitionConfig.Default()),
+            AgentDefinitionEntity.Create("Confidence1", "Desc", AgentDefinitionConfig.Default()),
+            AgentDefinitionEntity.Create("Rules1", "Desc", AgentDefinitionConfig.Default())
         };
 
         _mockRepository
@@ -130,9 +131,6 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result.DistributionByType.Should().HaveCount(4);
-        result.DistributionByType.First().Type.Should().Be("RAG"); // Most common first
-        result.DistributionByType.First().Count.Should().Be(2);
     }
 
     [Fact]
@@ -141,8 +139,8 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
         // Arrange
         var definitions = new List<AgentDefinitionEntity>
         {
-            AgentDefinitionEntity.Create("Old", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()),
-            AgentDefinitionEntity.Create("New", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default())
+            AgentDefinitionEntity.Create("Old", "Desc", AgentDefinitionConfig.Default()),
+            AgentDefinitionEntity.Create("New", "Desc", AgentDefinitionConfig.Default())
         };
 
         _mockRepository

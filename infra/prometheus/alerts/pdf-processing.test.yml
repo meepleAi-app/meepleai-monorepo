@@ -1,0 +1,123 @@
+# promtool test — #3814: gli alert PDF diventano montabili, quindi servono gli esempi.
+#
+# Questo file era uno dei tre senza `.test.yml` su quindici. Montare un alert senza un esempio
+# eseguibile che ne dimostri scatto e non-scatto rimette in circolo la stessa classe di difetto
+# che #3798 e #3814 hanno passato giorni a spegnere.
+#
+# I due casi che contano sono opposti e vanno provati entrambi:
+#   1. SENZA dati gli alert che confrontano con `<` devono restare SPENTI. Prima di questa
+#      correzione le recording rules avevano `OR on() vector(0)`: la regola valeva 0, e zero e'
+#      minore di qualunque soglia. Montare il file cosi' com'era avrebbe acceso cinque alert al
+#      primo deploy, nessuno per una condizione reale.
+#   2. CON dati sotto soglia devono scattare, o il punto 1 passerebbe anche cancellando le regole.
+#
+# Sul limite dei nomi: `input_series` li DICHIARA, quindi questo file non puo' accorgersi se una
+# metrica sparisse. Quella meta' la copre verify-alert-metric-names.sh, che nel gate di #3821
+# confronta le regole con le dichiarazioni C#.
+
+rule_files:
+  - pdf-processing.yml
+
+evaluation_interval: 1m
+
+tests:
+  # ── Nessun PDF processato: nessun alert di qualita' o di successo deve scattare ────────────
+  - interval: 1m
+    name: "senza metriche PDF gli alert letti con `<` restano spenti"
+    input_series:
+      # serie irrilevante, serve solo a dare un asse temporale al test
+      - series: 'up{job="meepleai-api"}'
+        values: '1+0x180'
+    alert_rule_test:
+      # il `for` piu' lungo fra questi alert e' 1h: valuto a 2h per essere oltre ogni soglia
+      - eval_time: 2h
+        alertname: LowPdfQualityScore
+        exp_alerts: []
+      - eval_time: 2h
+        alertname: DegradedPdfQuality
+        exp_alerts: []
+      - eval_time: 2h
+        alertname: UnstructuredStageFailure
+        exp_alerts: []
+      - eval_time: 2h
+        alertname: LowPdfUploadSuccessRate
+        exp_alerts: []
+      # `(1 - stage_success_rate) > 0.40`: con la serie assente l'espressione non produce nulla.
+      # Con il fallback a zero avrebbe dato 1, cioe' "100% di fallimenti", e sarebbe scattato.
+      - eval_time: 2h
+        alertname: HighPdfExtractionFailureRate
+        exp_alerts: []
+
+  # ── Controprova: qualita' reale sotto soglia ──────────────────────────────────────────────
+  #
+  # `meepleai.pdf.quality.score` e' un histogram: la media viene da _sum/_count, non da una serie
+  # col nome nudo. Ogni minuto arriva una misurazione da 0.40, quindi rate(_sum)/rate(_count)
+  # vale 0.40 — sotto entrambe le soglie (0.60 critical, 0.75 warning).
+  - interval: 1m
+    name: "con qualita' reale a 0.40 i due alert di qualita' scattano"
+    input_series:
+      - series: 'meepleai_pdf_quality_score_sum'
+        values: '0+0.4x180'
+      - series: 'meepleai_pdf_quality_score_count'
+        values: '0+1x180'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: LowPdfQualityScore
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: meepleai-api
+              category: pdf
+            exp_annotations:
+              summary: "PDF extraction quality is critically low"
+              description: |
+                Average PDF quality score is 40% (threshold: 60%).
+                Extracted text quality is below acceptable standards.
+                Check extraction services, OCR configuration, and input PDF quality.
+              runbook_url: "https://docs.meepleai.dev/runbooks/pdf-quality-low"
+              dashboard_url: "http://localhost:3001/d/pdf-processing"
+      - eval_time: 2h
+        alertname: DegradedPdfQuality
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: meepleai-api
+              category: pdf
+            exp_annotations:
+              summary: "PDF extraction quality is degraded"
+              description: |
+                Average quality score: 40% (threshold: 75%).
+                Extraction quality is below optimal levels.
+                Monitor input PDF quality and extraction stage performance.
+              runbook_url: "https://docs.meepleai.dev/runbooks/pdf-quality-low"
+              dashboard_url: "http://localhost:3001/d/pdf-processing"
+
+  # ── Controprova: estrazione che fallisce davvero ──────────────────────────────────────────
+  #
+  # 1 tentativo al minuto per lo stage "unstructured", nessun successo: il rapporto vale 0 per
+  # una ragione reale, non per assenza di dati. La distinzione fra i due casi e' esattamente
+  # cio' che #3814 ha reso possibile.
+  - interval: 1m
+    name: "con estrazione che fallisce davvero UnstructuredStageFailure scatta"
+    input_series:
+      - series: 'meepleai_pdf_extraction_stage_attempts_total{stage="unstructured"}'
+        values: '0+1x180'
+      - series: 'meepleai_pdf_extraction_stage_success_successes_total{stage="unstructured"}'
+        values: '0+0x180'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: UnstructuredStageFailure
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: meepleai-api
+              category: pdf
+              stage: unstructured
+            exp_annotations:
+              summary: "Unstructured PDF extraction (Stage 1) is failing"
+              description: |
+                Stage 1 success rate: 0% (threshold: 50%).
+                Primary extraction method is degraded, forcing fallback to slower stages.
+                Check Unstructured service at http://unstructured:8001/health
+              runbook_url: "https://docs.meepleai.dev/runbooks/pdf-stage-failure"
+              dashboard_url: "http://localhost:3001/d/pdf-processing"

@@ -30,7 +30,13 @@ internal class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRul
     public async Task<RuleCommentDto> Handle(UnresolveRuleCommentCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+        // Issue #3866: `.AsTracking()` is REQUIRED. The DbContext default is NoTracking (PERF-06),
+        // so this read returned a DETACHED entity: the mutations below reached no change tracker and
+        // SaveChangesAsync wrote nothing, silently. Resolving — and unresolving — a rule comment did
+        // not do anything at all in production; the endpoint answered 200 with the DTO it had just
+        // built in memory.
         var comment = await _dbContext.RuleSpecComments
+            .AsTracking()
             .Include(c => c.ParentComment)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
 .ConfigureAwait(false) ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
@@ -50,7 +56,9 @@ internal class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRul
         // Unresolve parent if requested and exists
         if (command.UnresolveParent && comment.ParentCommentId.HasValue)
         {
+            // #3866: tracked — the parent is mutated a few lines below.
             var parent = await _dbContext.RuleSpecComments
+                .AsTracking()
                 .FirstOrDefaultAsync(c => c.Id == comment.ParentCommentId.Value, cancellationToken).ConfigureAwait(false);
 
             if (parent != null && parent.IsResolved)

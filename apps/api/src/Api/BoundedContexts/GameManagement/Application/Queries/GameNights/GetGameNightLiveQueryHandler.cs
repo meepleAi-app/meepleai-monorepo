@@ -77,6 +77,26 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
         bool IsLiveFor(GameNightSession s) =>
             liveStates.TryGetValue(s.SessionId, out var live) && live;
 
+        // #4752: the live game of each sitting, reached from the tracking Session the link points at.
+        // One batched, AsNoTracking read scoped to this night's sessionIds (same shape as the two
+        // above). If more than one live game carries a tracking id — which the bridge never creates —
+        // the oldest wins, the same rule as ILiveSessionRepository.GetByTrackingSessionIdAsync.
+        var liveSessionRows = sessionIds.Count == 0
+            ? []
+            : await _db.LiveGameSessions.AsNoTracking()
+                .Where(l => l.TrackingSessionId != null && sessionIds.Contains(l.TrackingSessionId.Value))
+                .Select(l => new { TrackingSessionId = l.TrackingSessionId!.Value, l.Id, l.CreatedAt })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        var liveSessionIds = liveSessionRows
+            .GroupBy(row => row.TrackingSessionId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderBy(row => row.CreatedAt).ThenBy(row => row.Id).First().Id);
+
+        Guid? LiveSessionIdFor(GameNightSession s) =>
+            liveSessionIds.TryGetValue(s.SessionId, out var liveId) ? liveId : null;
+
         var sessions = gameNight.Sessions
             .OrderBy(s => s.PlayOrder)
             .Select(s => new GameNightSessionDto(
@@ -89,7 +109,8 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
                 s.WinnerId,
                 WinnerNameFor(s),
                 s.StartedAt,
-                s.CompletedAt))
+                s.CompletedAt,
+                LiveSessionIdFor(s)))
             .ToList();
 
         // The winner picker candidates = the participants of the (single) live session, where "live"

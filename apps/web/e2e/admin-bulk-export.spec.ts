@@ -197,7 +197,7 @@ test.describe('Bulk Export RuleSpecs E2E Tests', () => {
     // Progress indicator should appear briefly
     // Note: This may be too fast to test reliably, so we check if it exists in DOM
     const progressIndicator = page.locator('[data-testid="export-progress"]');
-    const hasProgress = await progressIndicator.isVisible({ timeout: 1000 }).catch(() => false);
+    const hasProgress = await progressIndicator.isVisible({ timeout: 1000 });
 
     // Test passes whether progress is visible or not (depends on timing)
     expect(true).toBe(true);

@@ -13,8 +13,10 @@ describe('getCtaForPathname', () => {
       expect(getCtaForPathname('/library')?.label).toBe('Esplora Catalogo');
     });
 
-    it('href è "/catalog"', () => {
-      expect(getCtaForPathname('/library')?.href).toBe('/catalog');
+    it('href è "/games"', () => {
+      // #3938: era '/catalog', una route che non è mai esistita. Il catalogo
+      // per un utente autenticato è `/games` (tab di default: Discover).
+      expect(getCtaForPathname('/library')?.href).toBe('/games');
     });
 
     it('gradient è definito', () => {
@@ -39,8 +41,12 @@ describe('getCtaForPathname', () => {
       expect(getCtaForPathname('/game-nights')?.label).toBe('+ Organizza serata');
     });
 
-    it('/agents → label "+ Nuovo agente"', () => {
-      expect(getCtaForPathname('/agents')?.label).toBe('+ Nuovo agente');
+    // Issue #4138: la CTA "+ Nuovo agente" esce con la sezione /agents.
+    // Nota: questo modulo ha DUE file di test, in due alberi diversi
+    // (`src/config/__tests__/contextual-cta.test.ts` e questo). Correggerne uno
+    // solo lascia l'altro rosso — ed e' il secondo che l'ha rivelato.
+    it('/agents → null (sezione ritirata)', () => {
+      expect(getCtaForPathname('/agents')).toBeNull();
     });
 
     it('/settings → null (nessun CTA definito)', () => {

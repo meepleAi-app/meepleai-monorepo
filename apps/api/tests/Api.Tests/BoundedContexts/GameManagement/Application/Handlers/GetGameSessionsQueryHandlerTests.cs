@@ -17,12 +17,17 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 public class GetGameSessionsQueryHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;
+    private readonly Mock<ILiveSessionLinkReader> _liveLinksMock;
     private readonly GetGameSessionsQueryHandler _handler;
 
     public GetGameSessionsQueryHandlerTests()
     {
         _sessionRepositoryMock = new Mock<IGameSessionRepository>();
-        _handler = new GetGameSessionsQueryHandler(_sessionRepositoryMock.Object);
+        _liveLinksMock = new Mock<ILiveSessionLinkReader>();
+        _liveLinksMock
+            .Setup(r => r.GetLiveSessionIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, Guid>());
+        _handler = new GetGameSessionsQueryHandler(_sessionRepositoryMock.Object, _liveLinksMock.Object);
     }
 
     [Fact]

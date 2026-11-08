@@ -18,6 +18,19 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.BackgroundServices;
 
 /// <summary>
+/// La fixture di <see cref="CatalogSyncCronServiceTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class CatalogSyncCronServiceTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "test_cron");
+
+/// <summary>
 /// Integration tests for <see cref="CatalogSyncCronService"/> (#1861 Phase 5).
 /// Exercises the single-tick body (<see cref="CatalogSyncCronService.TryTriggerSyncAsync"/>)
 /// against a real PostgreSQL database via <see cref="IntegrationWebApplicationFactory"/>.
@@ -26,29 +39,22 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.BackgroundS
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class CatalogSyncCronServiceTests : IAsyncLifetime
+public sealed class CatalogSyncCronServiceTests
+    : IClassFixture<CatalogSyncCronServiceTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly CatalogSyncCronServiceTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private CatalogSyncCronService _cronService = null!;
 
-    public CatalogSyncCronServiceTests(SharedTestcontainersFixture fixture)
+    public CatalogSyncCronServiceTests(CatalogSyncCronServiceTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"test_cron_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync(TestContext.Current.CancellationToken);
-        }
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
 
         var config = Options.Create(new CatalogSyncCronConfiguration
         {
@@ -63,11 +69,8 @@ public sealed class CatalogSyncCronServiceTests : IAsyncLifetime
             config);
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ============================================================
     // Tick body

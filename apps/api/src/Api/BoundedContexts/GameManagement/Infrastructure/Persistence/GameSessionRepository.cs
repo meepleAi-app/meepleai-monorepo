@@ -82,10 +82,13 @@ internal class GameSessionRepository : RepositoryBase, IGameSessionRepository
         return sessions;
     }
 
-    public async Task<IReadOnlyList<GameSession>> FindActiveAsync(int? limit = null, int? offset = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GameSession>> FindActiveAsync(Guid ownerUserId, int? limit = null, int? offset = null, CancellationToken cancellationToken = default)
     {
         IQueryable<Api.Infrastructure.Entities.GameSessionEntity> query = DbContext.GameSessions
             .AsNoTracking()
+            // #4080: owner filter FIRST. `CreatedByUserId` is nullable, so `== ownerUserId`
+            // also excludes ownerless sessions, which is the intended fail-closed direction.
+            .Where(s => s.CreatedByUserId == ownerUserId)
             .Where(s => s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused")
             .OrderByDescending(s => s.StartedAt);
 
@@ -97,14 +100,6 @@ internal class GameSessionRepository : RepositoryBase, IGameSessionRepository
 
         var sessionEntities = await query.ToListAsync(cancellationToken).ConfigureAwait(false);
         return sessionEntities.Select(MapToDomain).ToList();
-    }
-
-    public async Task<int> CountActiveAsync(CancellationToken cancellationToken = default)
-    {
-        return await DbContext.GameSessions
-            .AsNoTracking()
-            .Where(s => s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused")
-            .CountAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

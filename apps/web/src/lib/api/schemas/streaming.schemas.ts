@@ -45,7 +45,7 @@ export type StreamingStateUpdate = z.infer<typeof StreamingStateUpdateSchema>;
  * Real wire fields (BE CitationDto, Contracts.cs:137-144):
  *   documentId, pageNumber, relevanceScore, snippetPreview, copyrightTier, paraphrasedSnippet, isPublic
  *
- * Legacy fields kept optional for backward compat with other consumers (kb-ask, RulesExplainer):
+ * Legacy fields kept optional for backward compat with other consumers (kb-ask):
  *   source, page, line, text, snippet, score
  *
  * C2 (#2500): `source` was required — relaxed to optional so safeParse succeeds on the real wire

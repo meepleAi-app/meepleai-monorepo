@@ -22,14 +22,17 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  /** #4335: la risposta si è fermata prima della fine. Il testo è quello arrivato: non è completo. */
+  interrupted?: boolean;
 }
 
 interface InlineChatPanelProps {
-  agentId: string | null;
+  /** Issue #4139: was `agentId` - the stream is scoped by game. */
+  gameId: string | null;
   chatThreadId: string | null;
 }
 
-export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps) {
+export function InlineChatPanel({ gameId, chatThreadId }: InlineChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [threadId, setThreadId] = useState(chatThreadId);
@@ -50,6 +53,21 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
         setThreadId(metadata.chatThreadId);
       }
     },
+    // The reason is in the alert under the messages. #4335: the words that arrived before the end
+    // stay, marked as incomplete — the streaming bubble that showed them goes away with the stream.
+    onError: (_error, { partialAnswer }) => {
+      if (!partialAnswer) return;
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: partialAnswer,
+          timestamp: new Date(),
+          interrupted: true,
+        },
+      ]);
+    },
   });
 
   // Auto-scroll to bottom on new messages
@@ -58,7 +76,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
   }, [messages, state.currentAnswer]);
 
   const handleSend = () => {
-    if (!input.trim() || !agentId || state.isStreaming) return;
+    if (!input.trim() || !gameId || state.isStreaming) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -68,7 +86,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
     };
 
     setMessages(prev => [...prev, userMessage]);
-    sendMessage(agentId, input.trim(), threadId ?? undefined);
+    sendMessage(gameId, input.trim(), threadId ?? undefined);
     setInput('');
   };
 
@@ -80,7 +98,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
   };
 
   // Empty state when no agent
-  if (!agentId) {
+  if (!gameId) {
     return (
       <Card>
         <CardHeader>
@@ -134,6 +152,14 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
                 )}
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
+                {msg.interrupted && (
+                  <p
+                    data-testid="inline-chat-interrupted"
+                    className="mt-1 text-xs italic text-foreground"
+                  >
+                    Risposta interrotta: non è completa.
+                  </p>
+                )}
               </div>
               {msg.role === 'user' && (
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
@@ -166,7 +192,10 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
 
           {/* Error message */}
           {state.error && (
-            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive">
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive"
+            >
               {state.error}
             </div>
           )}

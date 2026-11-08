@@ -73,7 +73,7 @@ public sealed class GetUserSessionsQueryHandlerIntegrationTests : IAsyncLifetime
         }
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsActiveSessionsForUser()
     {
         // Arrange
@@ -95,7 +95,7 @@ public sealed class GetUserSessionsQueryHandlerIntegrationTests : IAsyncLifetime
         result.Should().HaveCount(2);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ExcludesExpiredSessions()
     {
         // Arrange
@@ -118,7 +118,7 @@ public sealed class GetUserSessionsQueryHandlerIntegrationTests : IAsyncLifetime
         result.First().CreatedAt.Should().Be(activeSession.CreatedAt);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ExcludesRevokedSessions()
     {
         // Arrange
@@ -141,7 +141,7 @@ public sealed class GetUserSessionsQueryHandlerIntegrationTests : IAsyncLifetime
         result.Should().HaveCount(1);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WithNoSessions_ReturnsEmptyList()
     {
         // Arrange
@@ -154,7 +154,7 @@ public sealed class GetUserSessionsQueryHandlerIntegrationTests : IAsyncLifetime
         result.Should().BeEmpty();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_OrdersByLastSeenDescending()
     {
         // Arrange

@@ -223,7 +223,7 @@ public class AddPlayerToSessionCommandHandlerTests
         result.Players.Count.Should().Be(4);
     }
     [Fact]
-    public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
+    public async Task Handle_NonExistentSession_ThrowsNotFoundException()
     {
         // Arrange
         var sessionId = Guid.NewGuid();
@@ -240,9 +240,9 @@ public class AddPlayerToSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        exception.Message.Should().ContainEquivalentOf($"Session with ID {sessionId} not found");
+        exception.Message.Should().ContainEquivalentOf($"GameSession with identifier '{sessionId}' was not found");
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -390,7 +390,7 @@ public class AddPlayerToSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SessionWith100Players_ThrowsInvalidOperationException()
+    public async Task Handle_SessionWith100Players_ThrowsConflictException()
     {
         // Arrange - At the 100 player limit
         var sessionId = Guid.NewGuid();

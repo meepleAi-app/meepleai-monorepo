@@ -30,6 +30,13 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
     // Cross-BC reference to SharedGameCatalog (Issue #5185, aligned with infra entity Issue #4921)
     public Guid? SharedGameId { get; private set; }
 
+    /// <summary>
+    /// Issue #4244: the private game of the indexed PDF, when it belongs to one. Carried through
+    /// the mapper in both directions: a field the mapper drops is written back as null by the first
+    /// update that goes through it.
+    /// </summary>
+    public Guid? PrivateGameId { get; private set; }
+
     // Metadata
     public string? Metadata { get; private set; }
 
@@ -140,7 +147,8 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         DateTime indexedAt,
         Guid? sharedGameId,
         string? metadata = null,
-        int totalCharacters = 0)
+        int totalCharacters = 0,
+        Guid? privateGameId = null)
     {
         var doc = new VectorDocument(
             id: id,
@@ -152,6 +160,7 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
             indexedAt: indexedAt,
             sharedGameId: sharedGameId);
         doc.Metadata = metadata;
+        doc.PrivateGameId = privateGameId;
         return doc;
     }
 

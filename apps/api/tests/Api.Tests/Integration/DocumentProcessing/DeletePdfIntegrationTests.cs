@@ -19,6 +19,7 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -130,6 +131,11 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         cacheMock.Setup(c => c.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         services.AddSingleton<IAiResponseCacheService>(cacheMock.Object);
+
+        // #4628: DeletePdfCommandHandler has taken the semantic cache since #3982, and this collection did not register
+        // it: the handler could not be built, from the container or by hand with GetRequiredService, and none of the
+        // tests of the class ran the handler. A double is enough: these tests are about the rows, the links and the blob.
+        services.AddSingleton(Mock.Of<ISemanticResponseCache>());
     }
 
     private async Task SeedTestDataAsync()
@@ -162,6 +168,12 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         _dbContext.SharedGames.Add(game);
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Issue #3866: production starts every request with an empty change tracker. Leaving the
+        // seed tracked here means the code under test — which reads with the production NoTracking
+        // default and then attaches what it read — gets a SECOND instance of the same row and
+        // throws an identity conflict that no real scope can produce.
+        _dbContext.ChangeTracker.Clear();
     }
 
     private async Task<Guid> CreateTestPdfAsync(string name = "Test.pdf", bool withVectorDoc = false)
@@ -308,8 +320,10 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
-            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>(),
+            _serviceProvider!.GetRequiredService<IHybridCacheService>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -364,7 +378,14 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<DeletePdfCommandHandler>>();
         var entityLinks = scope.ServiceProvider.GetRequiredService<IEntityLinkRepository>();
 
-        return new DeletePdfCommandHandler(dbContext, blobStorage, cache, logger, entityLinks);
+        return new DeletePdfCommandHandler(
+            dbContext,
+            blobStorage,
+            cache,
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
+            logger,
+            entityLinks,
+            _serviceProvider!.GetRequiredService<IHybridCacheService>());
     }
     [Fact]
     public async Task DeleteWithDbUpdateException_ThrowsPdfStorageException()
@@ -385,8 +406,10 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             disposedContext,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
-            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>(),
+            _serviceProvider!.GetRequiredService<IHybridCacheService>()
         );
 
         // Act
@@ -407,8 +430,10 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
-            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>(),
+            _serviceProvider!.GetRequiredService<IHybridCacheService>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -444,8 +469,10 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             blobStorageMock.Object,
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
-            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>(),
+            _serviceProvider!.GetRequiredService<IHybridCacheService>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -554,7 +581,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         // Act: delete issued on behalf of Game B (the caller), not the uploader Game A.
         var result = await handler.Handle(command, TestCancellationToken);
 
-        // Assert: success, record + vectors preserved (linkCount was 2).
+        // Assert: success, record + vectors preserved (another game still uses it).
         result.Success.Should().BeTrue();
 
         var pdfExists = await _dbContext.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);

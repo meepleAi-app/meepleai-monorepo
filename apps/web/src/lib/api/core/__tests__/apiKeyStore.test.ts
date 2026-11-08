@@ -342,16 +342,23 @@ describe('apiKeyStore', () => {
       expect(isHydrationComplete()).toBe(true);
     });
 
-    it('should return immediately if already hydrated', async () => {
+    it('should resolve without re-hydrating when hydration is already complete', async () => {
       // Trigger hydration
       await hydrateApiKey();
+      expect(isHydrationComplete()).toBe(true);
 
-      const startTime = Date.now();
-      await waitForHydration();
-      const endTime = Date.now();
-
-      // Should be nearly instant
-      expect(endTime - startTime).toBeLessThan(10);
+      // Qui c'era `expect(endTime - startTime).toBeLessThan(10)`. La soglia è stata
+      // RIMOSSA, non alzata, chiudendo #3953: `Date.now()` su runner condiviso misura
+      // la contesa di CPU, non l'early-return.
+      // Nota per chi legge: «immediately» NON è osservabile dall'esterno senza
+      // cronometro. Il ramo `if (isHydrated) return` e il ramo `await hydrateApiKey()`
+      // sono indistinguibili dal chiamante, perché `hydrationPromise` è memoizzata e
+      // quindi anche il secondo percorso risolve senza I/O. Ciò che resta verificabile
+      // in modo deterministico è l'idempotenza: dopo l'idratazione, `waitForHydration`
+      // risolve e non altera lo stato. Se serve davvero asserire l'early-return,
+      // l'unica strada è esporre un contatore nel modulo — non un `Date.now()`.
+      await expect(waitForHydration()).resolves.toBeUndefined();
+      expect(isHydrationComplete()).toBe(true);
     });
   });
 

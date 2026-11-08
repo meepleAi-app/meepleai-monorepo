@@ -47,8 +47,12 @@ internal sealed class AiToolkitSuggestionCacheRepository
         ArgumentNullException.ThrowIfNull(entry);
         CollectDomainEvents(entry);
 
-        // Look up existing by game_id (UNIQUE). Use tracked query so EF detects modification.
+        // Look up existing by game_id (UNIQUE). Issue #3866: the comment here said "use tracked
+        // query so EF detects modification" but nothing made it tracked — the DbContext default is
+        // NoTracking (PERF-06). The update branch below mutated a detached row, so a second
+        // suggestion for the same game never replaced the first one in the cache.
         var existing = await DbContext.AiToolkitSuggestionCache
+            .AsTracking()
             .FirstOrDefaultAsync(e => e.GameId == entry.GameId, ct)
             .ConfigureAwait(false);
 

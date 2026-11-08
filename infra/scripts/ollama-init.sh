@@ -12,7 +12,17 @@
 set -e
 
 OLLAMA_HOST="${OLLAMA_HOST:-http://localhost:11434}"
-OLLAMA_MODELS="${OLLAMA_MODELS:-qwen2.5:1.5b mxbai-embed-large}"
+
+# #3978 — questi default erano `qwen2.5:1.5b mxbai-embed-large`, cioe' DUE modelli che nessun'altra
+# parte del progetto chiede, mentre questo script non e' invocato da nulla (ne' Makefile, ne' compose,
+# ne' workflow: verificato con grep). Risultato: una terza lista di modelli, divergente sia dal
+# compose sia dal codice, che prometteva di preparare Ollama e preparava il modello sbagliato.
+#
+# Ora combaciano con i default del servizio `ollama-pull` in docker-compose.yml, che a loro volta
+# combaciano col codice: `nomic-embed-text` = default di EMBEDDING_MODEL (Program.cs),
+# `llama3:8b` = AgentDefaults.OllamaFallbackModel. La fonte autorevole e' il compose: se cambi la' ,
+# cambia anche qui, altrimenti questo script torna a essere una trappola.
+OLLAMA_MODELS="${OLLAMA_MODELS:-nomic-embed-text llama3:8b}"
 
 echo "Waiting for Ollama to be ready at ${OLLAMA_HOST}..."
 until curl -sf "${OLLAMA_HOST}/api/tags" > /dev/null 2>&1; do

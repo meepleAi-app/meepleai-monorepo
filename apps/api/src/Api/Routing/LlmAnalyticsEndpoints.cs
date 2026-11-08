@@ -13,7 +13,7 @@ internal static class LlmAnalyticsEndpoints
 {
     public static void MapLlmAnalyticsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/llm")
+        var group = app.MapGroup("/admin/llm")
             .WithTags("Admin - LLM Analytics")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 

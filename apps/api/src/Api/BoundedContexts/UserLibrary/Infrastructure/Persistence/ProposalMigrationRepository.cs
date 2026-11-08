@@ -113,7 +113,11 @@ public sealed class ProposalMigrationRepository : RepositoryBase, IProposalMigra
             Choice = (int)migration.Choice,
             CreatedAt = migration.CreatedAt,
             ChoiceAt = migration.ChoiceAt,
-            SourceEventId = migration.SourceEventId
+            SourceEventId = migration.SourceEventId,
+            // #3651/#3688: round-trip del concurrency token. UpdateAsync ha un ramo che riattacca
+            // un grafo detached (:97), dove EF usa i valori correnti come original values: senza
+            // questa riga la WHERE conterrebbe xmin = 0 e ogni scrittura fallirebbe.
+            Xmin = migration.Xmin,
         };
     }
 
@@ -138,6 +142,11 @@ public sealed class ProposalMigrationRepository : RepositoryBase, IProposalMigra
             .SetValue(migration, entity.CreatedAt);
         typeof(ProposalMigration).GetProperty(nameof(ProposalMigration.ChoiceAt))!
             .SetValue(migration, entity.ChoiceAt);
+
+        // #3651: il token letto viaggia con l'aggregato, così MapToEntity può riproporlo sul ramo
+        // detached di UpdateAsync. Metodo dedicato invece di riflessione: il setter è privato ma
+        // qui l'intento è esplicito, e SetXmin lo rende usato anche per S1144.
+        migration.SetXmin(entity.Xmin);
         typeof(ProposalMigration).GetProperty(nameof(ProposalMigration.SourceEventId))!
             .SetValue(migration, entity.SourceEventId);
 

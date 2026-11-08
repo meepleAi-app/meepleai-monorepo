@@ -213,7 +213,7 @@ public sealed class ProcessingMetricsServiceTests : IDisposable
         eta!.Value.TotalSeconds.Should().BeGreaterThanOrEqualTo(60);
     }
 
-    [Fact(Skip = "ExecuteDeleteAsync not supported by InMemory provider - requires integration test")]
+    [Fact(Skip = "LIMITE: ExecuteDeleteAsync non e supportato dal provider InMemory - requires integration test")]
     public async Task CleanupOldMetricsAsync_RetainsCorrectCount()
     {
         // Arrange

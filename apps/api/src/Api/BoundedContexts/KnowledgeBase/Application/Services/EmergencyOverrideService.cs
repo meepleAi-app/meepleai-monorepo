@@ -180,7 +180,7 @@ internal sealed class EmergencyOverrideService : IEmergencyOverrideService
                 var json = await db.StringGetAsync(KeyPrefix + action).ConfigureAwait(false);
                 if (json.IsNullOrEmpty) continue;
 
-                var payload = JsonSerializer.Deserialize<OverridePayload>(json!);
+                var payload = JsonSerializer.Deserialize<OverridePayload>(((string?)json)!);
                 if (payload == null) continue;
 
                 var remaining = (int)Math.Max(0, (payload.ExpiresAt - DateTime.UtcNow).TotalMinutes);

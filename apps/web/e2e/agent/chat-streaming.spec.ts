@@ -95,7 +95,7 @@ test.describe('Chat SSE Streaming', () => {
     await expect(userMessage).toContainText('How do pawns move?');
 
     // Step 2: Verify typing indicator shows
-    const typingIndicator = page.locator('[data-testid="typing-indicator"]');
+    const typingIndicator = page.locator('[data-slot="typing-indicator"]');
     await expect(typingIndicator).toBeVisible({ timeout: 2000 });
 
     // Step 3: Verify streaming cursor (▊) is visible during streaming

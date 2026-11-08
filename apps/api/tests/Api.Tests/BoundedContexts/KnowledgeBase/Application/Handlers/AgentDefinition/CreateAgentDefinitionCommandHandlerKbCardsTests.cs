@@ -46,7 +46,6 @@ public sealed class CreateAgentDefinitionCommandHandlerKbCardsTests
         var command = new CreateAgentDefinitionCommand(
             Name: "TestAgent",
             Description: "Desc",
-            Type: "RAG",
             Model: "gpt-4",
             MaxTokens: 2048,
             Temperature: 0.7f);
@@ -67,7 +66,6 @@ public sealed class CreateAgentDefinitionCommandHandlerKbCardsTests
         var command = new CreateAgentDefinitionCommand(
             Name: "TestAgent",
             Description: "Desc",
-            Type: "RAG",
             Model: "gpt-4",
             MaxTokens: 2048,
             Temperature: 0.7f,
@@ -88,7 +86,6 @@ public sealed class CreateAgentDefinitionCommandHandlerKbCardsTests
         var command = new CreateAgentDefinitionCommand(
             Name: "TestAgent",
             Description: "Desc",
-            Type: "RAG",
             Model: "gpt-4",
             MaxTokens: 2048,
             Temperature: 0.7f,
@@ -109,7 +106,6 @@ public sealed class CreateAgentDefinitionCommandHandlerKbCardsTests
         var command = new CreateAgentDefinitionCommand(
             Name: "TestAgent",
             Description: "Desc",
-            Type: "RAG",
             Model: "gpt-4",
             MaxTokens: 2048,
             Temperature: 0.7f,

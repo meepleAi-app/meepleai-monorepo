@@ -34,9 +34,24 @@ const labels = {
   },
   error: {
     connection: { title: 'Connessione persa', body: 'Retry automatico…', action: 'Riprova ora' },
-    timeout: { title: 'Risposta lenta', body: '>30s', action: 'Continua attesa', alt: 'Cancella' },
-    partial: { title: 'Risposta incompleta', body: 'Stream interrotto', action: 'Ripeti query' },
+    timeout: {
+      title: 'Nessuna risposta',
+      body: 'Nessuna risposta per 30 secondi.',
+      action: 'Chiedi di nuovo',
+      alt: "Fai un'altra domanda",
+    },
     server: { title: 'Errore del server', body: 'Riprova', action: 'Riprova' },
+    busy: {
+      title: 'Troppe richieste',
+      body: 'Hai già due risposte in corso. Aspetta che una finisca, poi riprova.',
+      action: 'Riprova',
+    },
+    interrupted: {
+      title: 'Risposta interrotta',
+      body: 'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.',
+      action: 'Chiedi di nuovo',
+      alt: "Fai un'altra domanda",
+    },
   },
 };
 
@@ -50,6 +65,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -74,6 +90,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -103,6 +120,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -138,6 +156,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={onEmptyCta}
       />
@@ -161,6 +180,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -169,7 +189,7 @@ describe('DrawerShell — FSM state rendering', () => {
     expect(screen.getByText(/connessione persa/i)).toBeInTheDocument();
   });
 
-  it('renders error[timeout]: continue + cancel actions', () => {
+  it('renders error[timeout]: ask again + ask another question', () => {
     const state: KbAskStreamState = {
       ...baseState,
       status: 'error',
@@ -183,35 +203,14 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
     );
     expect(screen.getByTestId('drawer-state-error-timeout')).toBeInTheDocument();
-    expect(screen.getByText(/cancella/i)).toBeInTheDocument();
-  });
-
-  it('renders error[partial]: shows accumulated partial text + [stream interrotto]', () => {
-    const state: KbAskStreamState = {
-      ...baseState,
-      status: 'error',
-      partialText: 'La classe Scout inizia con',
-      error: { kind: 'partial', message: 'LLM crashed' },
-    };
-    render(
-      <DrawerShell
-        state={state}
-        labels={labels}
-        suggestions={[]}
-        onAsk={vi.fn()}
-        onStop={vi.fn()}
-        onReset={vi.fn()}
-        onClose={vi.fn()}
-        onEmptyCta={vi.fn()}
-      />
-    );
-    expect(screen.getByTestId('drawer-state-error-partial')).toBeInTheDocument();
-    expect(screen.getByText(/la classe scout inizia con/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Chiedi di nuovo/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Fai un'altra domanda" })).toBeInTheDocument();
   });
 
   it('renders error[server]: shows code', () => {
@@ -228,12 +227,337 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
     );
     expect(screen.getByTestId('drawer-state-error-server')).toBeInTheDocument();
     expect(screen.getByText(/RBAC_RESOLUTION_FAILED/)).toBeInTheDocument();
+    // Un guasto si può riprovare.
+    expect(screen.getByRole('button', { name: /Riprova/ })).toBeInTheDocument();
+  });
+
+  /**
+   * #4388: la terza domanda con due risposte già aperte riceve 429. Non è un guasto del server:
+   * il riquadro dice di aspettare, con la frase della chat, e offre di riprovare.
+   */
+  it('renders error[busy]: says to wait for an answer in progress, and offers to try again', async () => {
+    const onRetry = vi.fn();
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: { kind: 'busy', message: labels.error.busy.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={onRetry}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('drawer-state-error-busy')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Troppe richieste');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Hai già due risposte in corso. Aspetta che una finisca, poi riprova.'
+    );
+    expect(screen.queryByTestId('drawer-state-error-server')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Riprova/ }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * #4510: la risposta si è interrotta prima della fine. La parte arrivata resta, segnata come
+   * incompleta, e il riquadro dice perché, con la frase della chat. Testo piccolo su `bg-muted`:
+   * `text-foreground`, non `text-muted-foreground` (4,43:1 in tema scuro, sotto AA).
+   */
+  it('renders error[interrupted]: keeps the words that arrived, marked as incomplete, and says why', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      partialText: 'La classe Scout inizia con',
+      error: { kind: 'interrupted', message: labels.error.interrupted.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('drawer-state-error-interrupted')).toBeInTheDocument();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Risposta interrotta');
+    expect(alert).toHaveTextContent(
+      'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.'
+    );
+
+    const partial = screen.getByTestId('drawer-error-partial-text');
+    expect(partial).toHaveTextContent('La classe Scout inizia con');
+    expect(partial).toHaveClass('text-foreground');
+    expect(partial).not.toHaveClass('text-muted-foreground');
+    const mark = screen.getByText('Risposta interrotta: non è completa.');
+    expect(mark).toHaveClass('text-foreground');
+  });
+
+  it('renders error[interrupted] without words: only the reason', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: { kind: 'interrupted', message: labels.error.interrupted.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Risposta interrotta');
+    expect(screen.queryByTestId('drawer-error-partial-text')).not.toBeInTheDocument();
+  });
+
+  /**
+   * #4510: «Chiedi di nuovo» rifà la stessa domanda (`onRetry`). Prima il pulsante chiamava
+   * `onAsk(state.partialText)`: mandava come domanda il pezzo di risposta arrivato, o una domanda
+   * vuota, che il backend rifiuta.
+   */
+  it('asks the same question again through onRetry, not the partial answer through onAsk', async () => {
+    const onAsk = vi.fn();
+    const onRetry = vi.fn();
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      partialText: 'La classe Scout inizia con',
+      error: { kind: 'interrupted', message: labels.error.interrupted.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={onAsk}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={onRetry}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Chiedi di nuovo/ }));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onAsk).not.toHaveBeenCalled();
+  });
+
+  it('lets the user leave an interrupted answer and ask another question', async () => {
+    const onReset = vi.fn();
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      partialText: 'La classe Scout inizia con',
+      error: { kind: 'interrupted', message: labels.error.interrupted.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={onReset}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: "Fai un'altra domanda" }));
+
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  /** Il riquadro d'errore, per ogni tipo: testo leggibile (AA) in entrambi i temi. */
+  it('writes the error title and body with text-foreground', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: { kind: 'server', message: 'RBAC failed', code: 'RBAC_RESOLUTION_FAILED' },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Errore del server')).toHaveClass('text-foreground');
+    expect(screen.getByText('Riprova', { selector: 'div' })).toHaveClass('text-foreground');
+    // Review di #4524: anche il codice. `text-muted-foreground` lì fa 4,52:1 in tema scuro, al limite.
+    expect(screen.getByText('RBAC_RESOLUTION_FAILED')).toHaveClass('text-foreground');
+    expect(screen.getByText('RBAC_RESOLUTION_FAILED')).not.toHaveClass('text-muted-foreground');
+    expect(screen.getByRole('button', { name: /Riprova/ })).toHaveClass(
+      'bg-primary',
+      'text-primary-foreground'
+    );
+  });
+
+  /**
+   * #4168 (5g-b): la quota del piano non è un guasto. Niente riquadro d'errore, niente codice in
+   * chiaro, e soprattutto niente «Riprova»: riproverebbe la stessa domanda, fermata allo stesso
+   * modo fino a domani. Al suo posto l'avviso della chat, con i numeri del piano e il link ai piani.
+   */
+  it('renders the plan quota as a notice with the way to the plans, not as a server error', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: {
+        kind: 'server',
+        message: 'Tier limit exceeded: AgentQuery (3/3)',
+        code: 'TIER_LIMIT_EXCEEDED',
+        tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+      },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    const notice = screen.getByTestId('tier-limit-exceeded');
+    expect(notice).toHaveTextContent(
+      'Hai usato tutte le domande di oggi previste dal tuo piano (3 su 3)'
+    );
+    expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
+    expect(screen.queryByTestId('drawer-state-error-server')).not.toBeInTheDocument();
+    expect(screen.queryByText(/TIER_LIMIT_EXCEEDED/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tier limit exceeded/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Riprova/ })).not.toBeInTheDocument();
+  });
+
+  /** Senza i numeri (un backend che non li manda) l'avviso c'è lo stesso, e porta ai piani. */
+  it('renders the plan quota notice even when the numbers are missing', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: { kind: 'server', message: 'Tier limit exceeded', code: 'TIER_LIMIT_EXCEEDED' },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('tier-limit-exceeded')).toHaveTextContent(
+      'Hai usato tutte le domande di oggi previste dal tuo piano.'
+    );
+    expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
+  });
+
+  /**
+   * Il pannello resta montato quando lo si chiude: senza un modo di lasciare l'avviso, riaprirlo
+   * lo rimostrerebbe, anche il giorno dopo. «Ho capito» riporta il pannello alla domanda.
+   */
+  it('lets the user leave the plan quota notice and go back to the question', async () => {
+    const onReset = vi.fn();
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: {
+        kind: 'server',
+        message: 'Tier limit exceeded: AgentQuery (3/3)',
+        code: 'TIER_LIMIT_EXCEEDED',
+        tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+      },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={onReset}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ho capito' }));
+
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Il posto dell'avviso è nel pannello da prima, vuoto: l'avviso arriva dopo l'invio senza che il
+   * fuoco si sposti, e una regione viva montata già piena non viene annunciata da tutti gli screen
+   * reader.
+   */
+  it('keeps the place for the plan quota notice in the drawer, empty', () => {
+    render(
+      <DrawerShell
+        state={baseState}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    const region = screen.getByTestId('tier-limit-region');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+    expect(screen.queryByRole('button', { name: 'Ho capito' })).not.toBeInTheDocument();
   });
 
   it('calls onClose when header close pressed (all states)', async () => {
@@ -246,6 +570,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={onClose}
         onEmptyCta={vi.fn()}
       />
@@ -264,6 +589,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={onAsk}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -283,6 +609,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={onStop}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -312,6 +639,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -345,6 +673,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -386,6 +715,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
         onCitationClick={onCitationClick}
@@ -399,5 +729,57 @@ describe('DrawerShell — FSM state rendering', () => {
       page: 14,
       chunkId: 'doc-1_3',
     });
+  });
+});
+
+describe('DrawerShell — citazione senza pagina (#4819)', () => {
+  const renderCompleted = (partialText: string, page: number | null) => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'completed',
+      partialText,
+      citations: [{ docId: 'd1', source: 'd1', page, snippet: 'cite uno', score: 0.9 }],
+      totalTokens: 100,
+      elapsedMs: 500,
+    };
+    return render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+  };
+
+  it('lists the citation without a page in the fallback list', () => {
+    renderCompleted('Risposta semplice senza marker.', null);
+
+    const row = screen.getByTestId('citation-list').querySelector('li');
+    expect(row).not.toBeNull();
+    expect(row?.textContent).toContain('cite uno');
+    expect(row?.textContent).not.toContain('p.');
+    expect(row).not.toHaveAttribute('data-citation-page');
+  });
+
+  it('still lists the page of a citation that has one', () => {
+    renderCompleted('Risposta semplice senza marker.', 14);
+
+    const row = screen.getByTestId('citation-list').querySelector('li');
+    expect(row?.textContent).toContain('p.14 · cite uno');
+    expect(row).toHaveAttribute('data-citation-page', '14');
+  });
+
+  it('names an inline pill "Fonte" when its citation has no page', () => {
+    renderCompleted('La classe Scout [1].', null);
+
+    const pill = screen.getByRole('button', { name: /citation 1/i });
+    expect(pill).toHaveTextContent('Fonte');
+    expect(pill).toHaveAttribute('aria-label', 'Citation 1, document d1');
   });
 });

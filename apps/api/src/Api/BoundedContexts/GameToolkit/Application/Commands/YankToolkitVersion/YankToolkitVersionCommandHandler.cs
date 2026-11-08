@@ -64,6 +64,8 @@ internal sealed class YankToolkitVersionCommandHandler
 
         // 1) Tracked load — we mutate IsPublished on the cascade path below.
         var toolkit = await _context.GameToolkits
+            // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(t => t.Id == request.ToolkitId, cancellationToken)
             .ConfigureAwait(false);
 

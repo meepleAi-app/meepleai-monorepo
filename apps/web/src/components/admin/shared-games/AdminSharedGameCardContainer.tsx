@@ -5,7 +5,8 @@
  *
  * React Query container that fetches all data for a SharedGame admin
  * ExtraCard panel and renders SharedGameExtraMeepleCard.
- * Handles PDF upload dialog and AgentBuilderModal.
+ * Handles the PDF upload dialog. Issue #4138: it also mounted AgentBuilderModal, a
+ * per-game "Crea Agente" flow; with one system agent (ADR-094) that flow is gone.
  */
 
 import { useState } from 'react';
@@ -22,7 +23,6 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { api } from '@/lib/api';
 
-import { AgentBuilderModal } from './AgentBuilderModal';
 import { PdfUploadSection } from './PdfUploadSection';
 import { SharedGameExtraMeepleCard } from './SharedGameExtraMeepleCard';
 
@@ -45,7 +45,6 @@ export function AdminSharedGameCardContainer({
 }: AdminSharedGameCardContainerProps) {
   const queryClient = useQueryClient();
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [agentBuilderOpen, setAgentBuilderOpen] = useState(false);
 
   // ── Game detail ───────────────────────────────────────────────────────────
   const { data: game, isLoading: isLoadingGame } = useQuery({
@@ -68,13 +67,6 @@ export function AdminSharedGameCardContainer({
     queryFn: () => api.sharedGames.getKbCards(gameId),
     enabled: !!gameId,
     refetchInterval: 5000,
-  });
-
-  // ── Linked Agent ──────────────────────────────────────────────────────────
-  const { data: agent } = useQuery({
-    queryKey: ['admin-shared-game-card-agent', gameId],
-    queryFn: () => api.sharedGames.getLinkedAgent(gameId),
-    enabled: !!gameId,
   });
 
   // ── Assemble view model ───────────────────────────────────────────────────
@@ -114,7 +106,6 @@ export function AdminSharedGameCardContainer({
           version: card.version,
           isActive: card.isActive,
         })),
-        linkedAgent: agent ? { id: agent.id, name: agent.name, isActive: agent.isActive } : null,
       }
     : null;
 
@@ -124,7 +115,6 @@ export function AdminSharedGameCardContainer({
         data={detailData ?? ({} as SharedGameDetailData)}
         loading={isLoadingGame || !detailData}
         onUploadPdf={() => setUploadOpen(true)}
-        onCreateAgent={() => setAgentBuilderOpen(true)}
       />
 
       {/* PDF Upload Dialog */}
@@ -150,24 +140,6 @@ export function AdminSharedGameCardContainer({
           />
         </DialogContent>
       </Dialog>
-
-      {/* Agent Builder Modal */}
-      {game && (
-        <AgentBuilderModal
-          open={agentBuilderOpen}
-          onClose={() => setAgentBuilderOpen(false)}
-          sharedGameContext={{
-            gameId: game.id,
-            gameTitle: game.title,
-            gameDescription: game.description,
-          }}
-          onSuccess={() => {
-            void queryClient.invalidateQueries({
-              queryKey: ['admin-shared-game-card-agent', gameId],
-            });
-          }}
-        />
-      )}
     </>
   );
 }

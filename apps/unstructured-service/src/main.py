@@ -137,7 +137,10 @@ async def extract_pdf(
     strategy: Literal["fast", "hi_res"] = Form(
         default="fast", description="Extraction strategy"
     ),
-    language: str = Form(default="ita", description="Document language"),
+    language: str = Form(
+        default=settings.language,
+        description="OCR languages: Tesseract codes joined by '+', the first is the primary (e.g. 'ita+eng+deu')",
+    ),
 ):
     """
     Extract text from PDF with semantic chunking
@@ -145,7 +148,7 @@ async def extract_pdf(
     Args:
         file: PDF file (multipart/form-data)
         strategy: Extraction strategy (fast or hi_res)
-        language: Document language (ISO 639-3 code)
+        language: OCR languages, Tesseract codes joined by '+' (the adapter splits them)
 
     Returns:
         PdfExtractionResponse with text, chunks, and quality score

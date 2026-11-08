@@ -1,7 +1,8 @@
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.Services;
 using Api.BoundedContexts.UserLibrary.Infrastructure.Services;
-using Api.Services;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
+using Api.SharedKernel.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -16,19 +17,24 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Infrastructure.Services;
 public class GameLibraryQuotaServiceTests
 {
     private readonly Mock<IUserLibraryRepository> _libraryRepositoryMock;
-    private readonly Mock<IConfigurationService> _configServiceMock;
+    private readonly Mock<ITierEnforcementService> _tiersMock;
     private readonly GameLibraryQuotaService _service;
 
     public GameLibraryQuotaServiceTests()
     {
         _libraryRepositoryMock = new Mock<IUserLibraryRepository>();
-        _configServiceMock = new Mock<IConfigurationService>();
+        _tiersMock = new Mock<ITierEnforcementService>();
 
         _service = new GameLibraryQuotaService(
             _libraryRepositoryMock.Object,
-            _configServiceMock.Object,
+            _tiersMock.Object,
             NullLogger<GameLibraryQuotaService>.Instance);
     }
+
+    /// <summary>Issue #4212: the library limit comes from the user's plan.</summary>
+    private void PlanAllows(Guid userId, int maxGames) =>
+        _tiersMock.Setup(t => t.GetLimitsAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.FreeTier with { MaxLibraryGames = maxGames });
 
     #region CheckQuotaAsync - Role Bypass Tests
 
@@ -77,6 +83,47 @@ public class GameLibraryQuotaServiceTests
             Times.Never);
     }
 
+    /// <summary>
+    /// Issue #3873 — DoD 5. Tabella dell'esenzione da quota sui CINQUE ruoli.
+    /// L'esenzione deve coincidere con <c>HasPermission(Role.Editor)</c> = {editor, admin, superadmin};
+    /// <c>creator</c> e <c>user</c> restano soggetti alla quota di tier.
+    /// La libreria e' esattamente AL limite free (5): un ruolo esente passa comunque,
+    /// un ruolo soggetto a quota viene negato — cosi' il caso non-bypass non puo' passare per caso.
+    /// </summary>
+    [Theory]
+    [InlineData("superadmin", true, int.MaxValue, 0)]
+    [InlineData("admin", true, int.MaxValue, 0)]
+    [InlineData("editor", true, int.MaxValue, 0)]
+    [InlineData("creator", false, 5, 5)]
+    [InlineData("user", false, 5, 5)]
+    public async Task CheckQuotaAsync_AllFiveRoles_ExemptsOnlyEditorAdminSuperAdmin(
+        string roleValue, bool expectedIsAllowed, int expectedMaxAllowed, int expectedCurrentCount)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.Parse(roleValue);
+
+        // I ruoli soggetti a quota percorrono repository + piano: senza questi setup
+        // fallirebbero per la ragione sbagliata (conteggio 0 di default).
+        _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(5); // esattamente al limite free
+
+        PlanAllows(userId, 5);
+
+        // Act
+        var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
+
+        // Assert
+        result.IsAllowed.Should().Be(
+            expectedIsAllowed,
+            "il ruolo '{0}' {1} essere esente dalla quota (HasPermission(Role.Editor))",
+            roleValue,
+            expectedIsAllowed ? "deve" : "NON deve");
+        result.MaxAllowed.Should().Be(expectedMaxAllowed);
+        result.CurrentCount.Should().Be(expectedCurrentCount);
+    }
+
     #endregion
 
     #region CheckQuotaAsync - Tier Limit Tests
@@ -96,8 +143,7 @@ public class GameLibraryQuotaServiceTests
         _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(currentCount);
 
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null); // Use defaults
+        PlanAllows(userId, maxGames);
 
         // Act
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
@@ -124,8 +170,7 @@ public class GameLibraryQuotaServiceTests
         _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(currentCount);
 
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null); // Use defaults
+        PlanAllows(userId, maxGames);
 
         // Act
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
@@ -155,8 +200,7 @@ public class GameLibraryQuotaServiceTests
         _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(currentCount);
 
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null); // Use defaults
+        PlanAllows(userId, maxGames);
 
         // Act
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
@@ -179,8 +223,7 @@ public class GameLibraryQuotaServiceTests
         _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null);
+        PlanAllows(userId, 5);
 
         // Act
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
@@ -189,60 +232,6 @@ public class GameLibraryQuotaServiceTests
         result.IsAllowed.Should().BeTrue();
         result.CurrentCount.Should().Be(0);
         result.MaxAllowed.Should().Be(5);
-    }
-
-    #endregion
-
-    #region CheckQuotaAsync - Custom Configuration Tests
-
-    [Fact]
-    public async Task CheckQuotaAsync_CustomConfiguredLimit_UsesConfigValue()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var userTier = UserTier.Free;
-        var userRole = AuthRole.User;
-        var customLimit = 100;
-        var currentCount = 50;
-
-        _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(currentCount);
-
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>("LibraryLimits:free:MaxGames", null, null))
-            .ReturnsAsync(customLimit);
-
-        // Act
-        var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
-
-        // Assert
-        result.IsAllowed.Should().BeTrue();
-        result.CurrentCount.Should().Be(currentCount);
-        result.MaxAllowed.Should().Be(customLimit); // Custom limit, not default 5
-    }
-
-    [Fact]
-    public async Task CheckQuotaAsync_CustomConfiguredLimitExceeded_ReturnsDenied()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var userTier = UserTier.Premium;
-        var userRole = AuthRole.User;
-        var customLimit = 200;
-        var currentCount = 200;
-
-        _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(currentCount);
-
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>("LibraryLimits:premium:MaxGames", null, null))
-            .ReturnsAsync(customLimit);
-
-        // Act
-        var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
-
-        // Assert
-        result.IsAllowed.Should().BeFalse();
-        result.DenialReason.Should().Contain("200 games");
-        result.MaxAllowed.Should().Be(customLimit);
     }
 
     #endregion
@@ -292,6 +281,46 @@ public class GameLibraryQuotaServiceTests
         info.MaxGames.Should().Be(int.MaxValue);
     }
 
+    /// <summary>
+    /// Issue #3873 — DoD 5. Stessa tabella di <see cref="CheckQuotaAsync_AllFiveRoles_ExemptsOnlyEditorAdminSuperAdmin"/>
+    /// applicata a <c>GetQuotaInfoAsync</c>: l'esenzione vive in una seconda guardia (riga 86) che
+    /// va fissata separatamente. Tier free (limite 5), libreria a 3.
+    /// </summary>
+    [Theory]
+    [InlineData("superadmin", true, int.MaxValue, int.MaxValue)]
+    [InlineData("admin", true, int.MaxValue, int.MaxValue)]
+    [InlineData("editor", true, int.MaxValue, int.MaxValue)]
+    [InlineData("creator", false, 5, 2)]
+    [InlineData("user", false, 5, 2)]
+    public async Task GetQuotaInfoAsync_AllFiveRoles_ExemptsOnlyEditorAdminSuperAdmin(
+        string roleValue, bool expectedIsUnlimited, int expectedMaxGames, int expectedRemainingSlots)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.Parse(roleValue);
+        const int actualCount = 3;
+
+        // Entrambi i rami leggono il conteggio reale; solo il ramo non-esente legge il piano.
+        _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(actualCount);
+
+        PlanAllows(userId, 5);
+
+        // Act
+        var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
+
+        // Assert
+        info.IsUnlimited.Should().Be(
+            expectedIsUnlimited,
+            "il ruolo '{0}' {1} avere quota illimitata (HasPermission(Role.Editor))",
+            roleValue,
+            expectedIsUnlimited ? "deve" : "NON deve");
+        info.MaxGames.Should().Be(expectedMaxGames);
+        info.RemainingSlots.Should().Be(expectedRemainingSlots);
+        info.GamesInLibrary.Should().Be(actualCount, "il conteggio reale e' restituito in entrambi i rami");
+    }
+
     #endregion
 
     #region GetQuotaInfoAsync - Quota Info Tests
@@ -311,8 +340,7 @@ public class GameLibraryQuotaServiceTests
         _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(currentCount);
 
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null); // Use defaults
+        PlanAllows(userId, maxGames);
 
         // Act
         var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
@@ -336,8 +364,7 @@ public class GameLibraryQuotaServiceTests
         _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(currentCount);
 
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null);
+        PlanAllows(userId, 5);
 
         // Act
         var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
@@ -359,8 +386,7 @@ public class GameLibraryQuotaServiceTests
         _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null);
+        PlanAllows(userId, 50);
 
         // Act
         var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
@@ -374,27 +400,6 @@ public class GameLibraryQuotaServiceTests
     #endregion
 
     #region Edge Cases and Validation
-
-    [Fact]
-    public async Task CheckQuotaAsync_UnknownTier_DefaultsToFreeLimit()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var userTier = UserTier.Free; // Using Free as we can't create unknown tiers easily
-        var userRole = AuthRole.User;
-
-        _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(4);
-
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null);
-
-        // Act
-        var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
-
-        // Assert
-        result.MaxAllowed.Should().Be(5); // Default free tier limit
-    }
 
     [Fact]
     public async Task CheckQuotaAsync_NullUserTier_ThrowsArgumentNullException()
@@ -454,76 +459,4 @@ public class GameLibraryQuotaServiceTests
 
     #endregion
 
-    #region Configuration Key Tests
-
-    [Fact]
-    public async Task CheckQuotaAsync_UsesCorrectConfigKey_FreeTier()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var userTier = UserTier.Free;
-        var userRole = AuthRole.User;
-
-        _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
-
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null);
-
-        // Act
-        await _service.CheckQuotaAsync(userId, userTier, userRole);
-
-        // Assert - Verify correct config key was used
-        _configServiceMock.Verify(
-            c => c.GetValueAsync<int?>("LibraryLimits:free:MaxGames", null, null),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task CheckQuotaAsync_UsesCorrectConfigKey_NormalTier()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var userTier = UserTier.Normal;
-        var userRole = AuthRole.User;
-
-        _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
-
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null);
-
-        // Act
-        await _service.CheckQuotaAsync(userId, userTier, userRole);
-
-        // Assert
-        _configServiceMock.Verify(
-            c => c.GetValueAsync<int?>("LibraryLimits:normal:MaxGames", null, null),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task CheckQuotaAsync_UsesCorrectConfigKey_PremiumTier()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var userTier = UserTier.Premium;
-        var userRole = AuthRole.User;
-
-        _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
-
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
-            .ReturnsAsync((int?)null);
-
-        // Act
-        await _service.CheckQuotaAsync(userId, userTier, userRole);
-
-        // Assert
-        _configServiceMock.Verify(
-            c => c.GetValueAsync<int?>("LibraryLimits:premium:MaxGames", null, null),
-            Times.Once);
-    }
-
-    #endregion
 }

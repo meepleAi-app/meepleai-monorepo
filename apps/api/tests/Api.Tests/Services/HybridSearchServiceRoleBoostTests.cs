@@ -22,6 +22,7 @@ namespace Api.Tests.Services;
 /// is unchanged. Integration coverage of the full hybrid pipeline lives elsewhere
 /// (Testcontainers + Qdrant + pgvector) and is out of scope for this unit test.
 /// </summary>
+[Collection("VectorArmMetrics")]  // #3786: contatore condiviso, vedi VectorArmMetricsCollection
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class HybridSearchServiceRoleBoostTests
@@ -275,7 +276,7 @@ public sealed class HybridSearchServiceRoleBoostTests
     {
         var mock = new Mock<IEmbeddingService>();
         mock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]>
             {
                 new float[] { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f },

@@ -7,15 +7,19 @@
  * Features:
  * - Shows user's library games in a scrollable list
  * - Each game shows real-time KB readiness status via GamePickerItem
- * - Search/filter games by title
+ * - Search games by title on the server (#4187), so a game past the first page is found
  * - Games without ready KB are disabled with tooltip
- * - On selection: creates session via contextual hand store, navigates to it
- * - Optional gameNightEventId for adding games to existing nights
+ * - On selection: starts the game within the night (`POST /game-nights/{id}/sessions`, the same call
+ *   as the "▶ Avvia" action of the night live page) and goes to that page; a refusal is said in the dialog
+ *
+ * #4752: it used to create the session through the contextual hand store, on `POST /games/{id}/sessions`,
+ * a route the backend does not register (405), with no word to the user. The only place this dialog is
+ * mounted is a night, so the night is no longer optional.
  *
  * Plan 2 Task 6 — Session Flow v2.1
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Gamepad2, Loader2, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -29,8 +33,9 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { TooltipProvider } from '@/components/ui/overlays/tooltip';
 import { Input } from '@/components/ui/primitives/input';
-import { useLibrary } from '@/hooks/queries/useLibrary';
-import { useContextualHandStore } from '@/stores/contextual-hand';
+import { useLibrarySearch } from '@/hooks/queries/useLibrarySearch';
+import { startGameErrorMessage, useStartNextGame } from '@/lib/game-nights/hooks/useStartNextGame';
+import { startedGameHref } from '@/lib/game-nights/liveGameHref';
 
 import { GamePickerItem, type GamePickerGame } from './GamePickerItem';
 
@@ -39,8 +44,8 @@ import { GamePickerItem, type GamePickerGame } from './GamePickerItem';
 export interface GamePickerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** When adding a game to an existing game night */
-  gameNightEventId?: string;
+  /** The game night the chosen game is added to. */
+  gameNightEventId: string;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -49,19 +54,52 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
   const router = useRouter();
   const [search, setSearch] = useState('');
 
-  // Fetch user's full library (up to 200 games)
-  const { data: libraryData, isLoading: isLibraryLoading } = useLibrary(
-    { page: 1, pageSize: 200 },
-    open // only fetch when dialog is open
-  );
+  // #4187: it asked for 200 games "to have them all", the server returns at most 100 and
+  // said nothing, and the filter ran on the client. Now the server searches the library.
+  const {
+    items: libraryItems,
+    totalCount,
+    isLoading: isLibraryLoading,
+    resultsMatchQuery,
+    term,
+  } = useLibrarySearch(search, {
+    enabled: open, // only fetch when dialog is open
+  });
 
-  const startSession = useContextualHandStore(s => s.startSession);
-  const isStarting = useContextualHandStore(s => s.isLoading);
+  // The page that mounted the dialog may be gone by the time the request ends (route change): the game
+  // started, but going to its night page then would bring back someone who has left.
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // The way out sits on the hook, not on `mutate()`: a per-call callback is dropped when the mutation is reset
+  // or the component unmounts, and the game would start with nothing happening here.
+  const startGame = useStartNextGame(gameNightEventId, {
+    onSuccess: started => {
+      if (!isMounted.current) return;
+      onOpenChange(false);
+      // #4752: the game is played on its live page; the night page only when the backend did not say.
+      router.push(startedGameHref(gameNightEventId, started));
+    },
+  });
+  const { reset: resetStartGame } = startGame;
+  const isStarting = startGame.isPending;
+
+  // A refusal belongs to the attempt that was refused: closing the dialog must not leave it for the next opening.
+  // Never while the request is pending: `reset()` clears `isPending`, so a dialog closed and reopened mid-request
+  // would enable the game again and send a second POST (the backend refuses it with a 409 that the reopened
+  // dialog would then show, while the first request is about to take the page away). It resets once it settles.
+  useEffect(() => {
+    if (!open && !startGame.isPending) resetStartGame();
+  }, [open, startGame.isPending, resetStartGame]);
 
   // Map library entries to the picker shape
   const games: GamePickerGame[] = useMemo(() => {
-    const items = libraryData?.items ?? [];
-    return items.map(entry => ({
+    return libraryItems.map(entry => ({
       id: entry.id,
       gameId: entry.gameId,
       gameTitle: entry.gameTitle,
@@ -71,25 +109,18 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
       minPlayers: entry.minPlayers,
       maxPlayers: entry.maxPlayers,
     }));
-  }, [libraryData]);
+  }, [libraryItems]);
 
-  // Filter by search
-  const filtered = useMemo(() => {
-    if (!search.trim()) return games;
-    const q = search.toLowerCase();
-    return games.filter(g => g.gameTitle.toLowerCase().includes(q));
-  }, [games, search]);
+  // An empty list that belongs to an older text says nothing about the current one: keep
+  // the loading state until the answer arrives, instead of "no games".
+  const isSearching = isLibraryLoading || (!resultsMatchQuery && games.length === 0);
 
-  // Handle game selection: start session and navigate
-  const handleSelect = async (gameId: string) => {
-    await startSession(gameId, [], gameNightEventId);
-
-    // Read the newly created session from the store
-    const { currentSession } = useContextualHandStore.getState();
-    if (currentSession?.sessionId) {
-      onOpenChange(false);
-      router.push(`/sessions/${currentSession.sessionId}`);
-    }
+  // Handle game selection: start the game in the night and go to the night page, where it is played.
+  // The sessions of a night are SessionTracking sessions with no page under /sessions/{id} (#4156 D7).
+  const handleSelect = (gameId: string) => {
+    const game = games.find(g => g.gameId === gameId);
+    if (!game) return;
+    startGame.mutate({ gameId, gameTitle: game.gameTitle });
   };
 
   return (
@@ -127,22 +158,22 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
             className="overflow-y-auto flex-1 min-h-0 space-y-1 pr-1 -mr-1"
             data-testid="game-picker-list"
           >
-            {isLibraryLoading ? (
+            {isSearching ? (
               <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span className="text-sm">Caricamento libreria...</span>
               </div>
-            ) : filtered.length === 0 ? (
+            ) : games.length === 0 ? (
               <div className="py-12 text-center">
                 <Gamepad2 className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  {games.length === 0
-                    ? 'Nessun gioco nella tua libreria.'
-                    : 'Nessun gioco trovato per la ricerca.'}
+                  {term
+                    ? 'Nessun gioco trovato per la ricerca.'
+                    : 'Nessun gioco nella tua libreria.'}
                 </p>
               </div>
             ) : (
-              filtered.map(game => (
+              games.map(game => (
                 <GamePickerItem
                   key={game.id}
                   game={game}
@@ -154,10 +185,20 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
           </div>
         </TooltipProvider>
 
+        {startGame.isError && (
+          <p
+            role="alert"
+            data-testid="game-picker-start-error"
+            className="mt-3 break-words rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {startGameErrorMessage(startGame.error)}
+          </p>
+        )}
+
         {/* Footer: count */}
-        {!isLibraryLoading && games.length > 0 && (
+        {!isSearching && games.length > 0 && (
           <div className="pt-3 border-t text-xs text-muted-foreground text-center">
-            {filtered.length} di {games.length} giochi
+            {games.length} di {totalCount} giochi
           </div>
         )}
       </DialogContent>

@@ -258,8 +258,12 @@ internal static class GameEndpoints
         .Produces<PaginatedSessionsResponseDto>(200)
         .Produces(401)
         .WithTags("Sessions")
-        .WithSummary("Get all active sessions")
-        .WithDescription("Returns paginated list of all currently active game sessions across all games. Supports limit and offset query parameters. Requires authentication.");
+        .WithSummary("Get the caller's active sessions")
+        // #4080: this used to say "all currently active game sessions across all games", and
+        // the handler honoured it — any authenticated account, including one created seconds
+        // earlier, received every user's sessions with their playerName, notes and scoreData.
+        // Admins who need the cross-user view already have GET /api/v1/admin/sessions.
+        .WithDescription("Returns a paginated list of the authenticated caller's currently active game sessions (Setup, InProgress, Paused), across the games they created sessions for. Supports limit and offset query parameters. Requires authentication.");
 
         // Get session history (with filters and pagination)
         group.MapGet("/sessions/history", HandleGetSessionHistory)
@@ -372,7 +376,6 @@ internal static class GameEndpoints
     private static async Task<IResult> HandleGetGameAgents(
         Guid id,
         IMediator mediator,
-        HttpContext context,
         CancellationToken ct)
     {
         // Validate game exists first
@@ -389,45 +392,9 @@ internal static class GameEndpoints
         var agents = await mediator.Send(agentsQuery, ct).ConfigureAwait(false);
         var agentList = agents.ToList();
 
-        // Also include user's custom agent if configured for this game.
-        // Custom agents are stored in user_library_entries.CustomAgentConfigJson,
-        // not in the agents table — so the journey step check (agents.length > 0) would
-        // otherwise never see them.
-        if (context.Items.TryGetValue(nameof(SessionStatusDto), out var sessionObj) &&
-            sessionObj is SessionStatusDto sessionForAgents &&
-            sessionForAgents.Principal?.Subject != null)
-        {
-            var agentConfigQuery = new GetGameAgentConfigQuery(sessionForAgents.Principal!.Subject.Id, id);
-            var agentConfig = await mediator.Send(agentConfigQuery, ct).ConfigureAwait(false);
-
-            if (agentConfig != null)
-            {
-                // Deterministic synthetic ID: XOR userId and gameId bytes so the same
-                // user+game pair always produces the same ID across requests. This prevents
-                // React Query from treating each response as a cache miss (agent.id is used
-                // as cache key in KnowledgeBaseTab via agentDocumentsKeys.byAgent(agent.id)).
-                var userBytes = sessionForAgents.Principal!.Subject.Id.ToByteArray();
-                var gameBytes = id.ToByteArray();
-                var deterministicBytes = new byte[16];
-                for (var i = 0; i < 16; i++)
-                    deterministicBytes[i] = (byte)(userBytes[i] ^ gameBytes[i]);
-
-                agentList.Add(new AgentDto(
-                    Id: new Guid(deterministicBytes),
-                    Name: agentConfig.Personality ?? "Custom Agent",
-                    Type: "Custom",
-                    StrategyName: "custom",
-                    StrategyParameters: new Dictionary<string, object>(StringComparer.Ordinal),
-                    IsActive: true,
-                    CreatedAt: DateTime.UtcNow,
-                    LastInvokedAt: null,
-                    InvocationCount: 0,
-                    IsRecentlyUsed: false,
-                    IsIdle: false,
-                    GameId: id,
-                    CreatedByUserId: sessionForAgents.Principal!.Subject.Id));
-            }
-        }
+        // Issue #4138: a second entry used to be appended here, synthesized from the caller's
+        // per-game library agent config (user_library_entries.CustomAgentConfigJson). That
+        // config reached no answer and is retired; the system agents above are the whole list.
 
         return Results.Ok(new { success = true, agents = agentList, count = agentList.Count });
     }
@@ -570,10 +537,18 @@ internal static class GameEndpoints
     private static async Task<IResult> HandleGetActiveSessions(
         [FromQuery] int? limit,
         [FromQuery] int? offset,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
-        var query = new GetActiveSessionsQuery(Limit: limit, Offset: offset);
+        // #4080: scope to the caller. Without this the query carried no identity at all.
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetActiveSessionsQuery(OwnerUserId: userId, Limit: limit, Offset: offset);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Ok(result);

@@ -20,6 +20,19 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
 
     private const string TableName = "pgvector_embeddings";
 
+    /// <summary>
+    /// The vector documents of the PDFs named by the document filter.
+    /// </summary>
+    /// <remarks>
+    /// Issue #4243. The filter is a list of <c>pdf_documents.Id</c>: it is what <c>text_chunks</c>
+    /// carries, so it is what the keyword arm compares, and it is what KbQuality and the global
+    /// search facets pass. This table knows a chunk only by its vector document, whose id is a
+    /// different Guid: comparing the list with <c>vector_document_id</c> matched nothing, and the
+    /// vector arm came back empty whenever a caller filtered by document.
+    /// </remarks>
+    private const string VectorDocumentsOfPdfs =
+        "SELECT \"Id\" FROM vector_documents WHERE \"PdfDocumentId\" = ANY(@pdfDocumentIds)";
+
     public PgVectorStoreAdapter(
         MeepleAiDbContext context,
         ILogger<PgVectorStoreAdapter> logger)
@@ -33,26 +46,32 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         DomainVector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         // Build SQL with cosine distance operator.
         // pgvector <=> returns cosine distance (0 = identical, 2 = opposite).
         // Similarity = 1 - distance.
+        // #3740: `lang` (column 8) is SELECTed and carried onto Embedding.Language. Omitting it does
+        // not surface as a null — Embedding.Language has the initializer "en", so every candidate
+        // reached callers marked English whatever the chunk's real language was.
         var sql = $"""
             SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
-                   1 - (vector <=> @queryVector) AS similarity
+                   1 - (vector <=> @queryVector) AS similarity,
+                   lang,
+                   is_translation
             FROM {TableName}
             WHERE game_id = @gameId
               AND 1 - (vector <=> @queryVector) >= @minScore
             """;
 
-        if (documentIds is { Count: > 0 })
+        if (pdfDocumentIds is { Count: > 0 })
         {
-            sql += "\n  AND vector_document_id = ANY(@documentIds)";
+            sql += "\n  AND vector_document_id IN (" + VectorDocumentsOfPdfs + ")";
         }
 
         sql += $"""
@@ -72,9 +91,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             command.Parameters.AddWithValue("@minScore", minScore);
             command.Parameters.AddWithValue("@topK", topK);
 
-            if (documentIds is { Count: > 0 })
+            if (pdfDocumentIds is { Count: > 0 })
             {
-                command.Parameters.AddWithValue("@documentIds", documentIds.ToArray());
+                command.Parameters.AddWithValue("@pdfDocumentIds", pdfDocumentIds.ToArray());
             }
 
             var results = new List<Embedding>();
@@ -92,6 +111,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var pageNumber = reader.GetInt32(5);
                     // Issue #1391: denormalized role_tags (mirrors text_chunks.role_tags).
                     var roleTags = reader.GetInt32(6);
+                    // #3740 column 8: chunk language. Nullable for pre-AI-09 rows → fall back to "en",
+                    // which is what those rows resolved to before this column was projected.
+                    var lang = await ReadLanguageAsync(reader, 8, cancellationToken).ConfigureAwait(false);
 
                     // Use placeholder vector for search results (actual vector not needed by callers)
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
@@ -103,6 +125,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         model: model,
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
+                        language: lang,
+                        // #4482 column 9: the English translation of a chunk of a non-English PDF.
+                        isTranslation: reader.GetBoolean(9),
                         roleTags: roleTags);
 
                     results.Add(embedding);
@@ -129,11 +154,12 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         DomainVector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         // RRF fusion-key fix: JOIN vector_documents to resolve the owning PdfDocumentId so hybrid
         // fusion can key vector results on {PdfDocumentId}_{ChunkIndex} (matching the keyword arm).
@@ -150,7 +176,10 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                    vd."PdfDocumentId",
                    1 - (e.vector <=> @queryVector) AS similarity,
                    tc."Heading",
-                   tc.char_start, tc.char_end, tc.bounding_boxes_json
+                   tc.char_start, tc.char_end, tc.bounding_boxes_json,
+                   e.lang,
+                   e.source_chunk_id,
+                   e.is_translation
             FROM {TableName} e
             JOIN vector_documents vd ON vd."Id" = e.vector_document_id
             LEFT JOIN text_chunks tc ON tc."Id" = e.source_chunk_id
@@ -158,9 +187,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
               AND 1 - (e.vector <=> @queryVector) >= @minScore
             """;
 
-        if (documentIds is { Count: > 0 })
+        if (pdfDocumentIds is { Count: > 0 })
         {
-            sql += "\n  AND e.vector_document_id = ANY(@documentIds)";
+            sql += "\n  AND vd.\"PdfDocumentId\" = ANY(@pdfDocumentIds)";
         }
 
         sql += $"""
@@ -180,9 +209,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             command.Parameters.AddWithValue("@minScore", minScore);
             command.Parameters.AddWithValue("@topK", topK);
 
-            if (documentIds is { Count: > 0 })
+            if (pdfDocumentIds is { Count: > 0 })
             {
-                command.Parameters.AddWithValue("@documentIds", documentIds.ToArray());
+                command.Parameters.AddWithValue("@pdfDocumentIds", pdfDocumentIds.ToArray());
             }
 
             var results = new List<ScoredEmbedding>();
@@ -218,6 +247,16 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var boundingBoxesJson = await reader.IsDBNullAsync(12, cancellationToken).ConfigureAwait(false)
                         ? null
                         : reader.GetString(12);
+                    // #3740 Column 13: chunk language. This is the arm the RAG gate measures, so an
+                    // "en"-for-everything projection made any per-language reasoning unfalsifiable.
+                    var lang = await ReadLanguageAsync(reader, 13, cancellationToken).ConfigureAwait(false);
+                    // #4288 Column 14: the text_chunks row the embedding came from. KbQuality scores a
+                    // hit by this id. Null when the embedding was written without it: a photo batch
+                    // (no row to point to), a pre-SP2 embedding, or a row whose text chunk was not saved.
+                    // #4384 linked the writers that left it null and backfilled the old rows.
+                    var sourceChunkId = await reader.IsDBNullAsync(14, cancellationToken).ConfigureAwait(false)
+                        ? (Guid?)null
+                        : reader.GetGuid(14);
 
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
                     var embedding = new Embedding(
@@ -228,6 +267,11 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         model: model,
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
+                        language: lang,
+                        sourceChunkId: sourceChunkId,
+                        // #4482 Column 15: the English translation of a chunk of a non-English PDF. Like
+                        // lang (#3740), an unprojected column would read as the default (false) for all.
+                        isTranslation: reader.GetBoolean(15),
                         roleTags: roleTags,
                         pdfDocumentId: pdfDocumentId,
                         heading: heading,
@@ -253,27 +297,32 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         DomainVector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
         if (gameIds is not { Count: > 0 })
             return new List<Embedding>();
 
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         // Build SQL with IN clause for multiple game_ids
+        // #3740: same `lang` projection as SearchAsync (column 8) — session-aware RAG spans a primary
+        // game plus its expansions, so a mixed-language candidate set is the normal case here.
         var sql = $"""
             SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
-                   1 - (vector <=> @queryVector) AS similarity
+                   1 - (vector <=> @queryVector) AS similarity,
+                   lang,
+                   is_translation
             FROM {TableName}
             WHERE game_id = ANY(@gameIds)
               AND 1 - (vector <=> @queryVector) >= @minScore
             """;
 
-        if (documentIds is { Count: > 0 })
+        if (pdfDocumentIds is { Count: > 0 })
         {
-            sql += "\n  AND vector_document_id = ANY(@documentIds)";
+            sql += "\n  AND vector_document_id IN (" + VectorDocumentsOfPdfs + ")";
         }
 
         sql += $"""
@@ -293,9 +342,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             command.Parameters.AddWithValue("@minScore", minScore);
             command.Parameters.AddWithValue("@topK", topK);
 
-            if (documentIds is { Count: > 0 })
+            if (pdfDocumentIds is { Count: > 0 })
             {
-                command.Parameters.AddWithValue("@documentIds", documentIds.ToArray());
+                command.Parameters.AddWithValue("@pdfDocumentIds", pdfDocumentIds.ToArray());
             }
 
             var results = new List<Embedding>();
@@ -312,6 +361,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var chunkIndex = reader.GetInt32(4);
                     var pageNumber = reader.GetInt32(5);
                     var roleTags = reader.GetInt32(6);
+                    var lang = await ReadLanguageAsync(reader, 8, cancellationToken).ConfigureAwait(false);
 
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
                     var embedding = new Embedding(
@@ -322,6 +372,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         model: model,
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
+                        language: lang,
+                        // #4482 column 9: the English translation of a chunk of a non-English PDF.
+                        isTranslation: reader.GetBoolean(9),
                         roleTags: roleTags);
 
                     results.Add(embedding);
@@ -343,8 +396,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         if (embeddings is not { Count: > 0 })
             return;
 
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         // Resolve game_id from vector_documents table via the embedding's VectorDocumentId.
         // All embeddings in a batch typically share the same VectorDocumentId.
@@ -359,9 +413,15 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             // after Phase 2d (#1345) dropped that table; resolution now relies on the modern
             // vd.shared_game_id column populated by post-Phase 2d ingestion, with a defensive
             // fallback to vd.GameId for legacy rows.
+            //
+            // #4244: and to vd."PrivateGameId" for the PDF of a private game, whose two other
+            // columns are null. pgvector_embeddings.game_id is ONE id with NO foreign key, shared
+            // or private: a deliberate exception to the "a column per kind of game" rule the other
+            // tables follow. It is a search index; splitting it would cost a data migration and
+            // buy nothing. Do not "fix" it.
             lookupCmd.CommandText = """
                 SELECT vd."Id",
-                       COALESCE(vd.shared_game_id, vd."GameId") AS resolved_game_id
+                       COALESCE(vd.shared_game_id, vd."GameId", vd."PrivateGameId") AS resolved_game_id
                 FROM vector_documents vd
                 WHERE vd."Id" = ANY(@ids)
                 """;
@@ -429,12 +489,56 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             embeddings.Count, embeddings[0].VectorDocumentId);
     }
 
+    public async Task ReplaceByVectorDocumentIdAsync(
+        Guid vectorDocumentId,
+        List<Embedding> embeddings,
+        CancellationToken cancellationToken = default)
+    {
+        if (embeddings is not { Count: > 0 })
+            return;
+
+        // The id to delete and the id on the new rows come from two places: they must be the same document, or
+        // the replacement would delete one document's index and add rows to another's.
+        if (embeddings.Exists(e => e.VectorDocumentId != vectorDocumentId))
+            throw new ArgumentException(
+                "Every embedding must belong to the vector document being replaced.", nameof(embeddings));
+
+        // A transaction already open on the context (a unit of work) is joined, not nested: a second BEGIN on
+        // the same connection throws, and the replacement has to follow the outcome of the outer one. It is a
+        // transaction of EF, so DbContext.Database.CurrentTransaction sees it; Npgsql runs a command on the
+        // connection inside whatever transaction the connection is in, which is what the two calls below rely on.
+        if (_context.Database.CurrentTransaction is not null)
+        {
+            await DeleteByVectorDocumentIdAsync(vectorDocumentId, cancellationToken).ConfigureAwait(false);
+            await IndexBatchAsync(embeddings, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        // #4660: DELETE and COPY in ONE transaction. A COPY that fails at its end (a duplicate key, a bad
+        // vector) used to find the old embeddings already gone, and the vector document of a re-indexed PDF
+        // stays "completed". This is a transaction of the connection, not of EF: the DbContext runs with a
+        // retrying execution strategy, which refuses a user-initiated EF transaction. Left uncommitted,
+        // disposing it rolls it back.
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
+
+        var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using (transaction.ConfigureAwait(false))
+        {
+            await DeleteByVectorDocumentIdAsync(vectorDocumentId, cancellationToken).ConfigureAwait(false);
+            await IndexBatchAsync(embeddings, cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     public async Task DeleteByVectorDocumentIdAsync(
         Guid vectorDocumentId,
         CancellationToken cancellationToken = default)
     {
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         var command = (NpgsqlCommand)connection.CreateCommand();
         await using (command.ConfigureAwait(false))
@@ -459,8 +563,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             return;
         }
 
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         var command = (NpgsqlCommand)connection.CreateCommand();
         await using (command.ConfigureAwait(false))
@@ -480,8 +585,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         Guid gameId,
         CancellationToken cancellationToken = default)
     {
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         var command = (NpgsqlCommand)connection.CreateCommand();
         await using (command.ConfigureAwait(false))
@@ -514,8 +620,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         int vectorDimension = 768,
         CancellationToken cancellationToken = default)
     {
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         // Enable pgvector extension
         var extCmd = (NpgsqlCommand)connection.CreateCommand();
@@ -665,13 +772,69 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             vectorDimension);
     }
 
-    private static async Task EnsureConnectionOpenAsync(
-        DbConnection connection,
+    /// <summary>
+    /// Presta la connessione del <c>DbContext</c> per la durata di UN'operazione dell'adattatore, e la restituisce
+    /// quando l'operazione finisce (#4662). Prima l'adattatore la apriva a mano e non la richiudeva: restava
+    /// occupata fino alla distruzione del contesto, cioè per tutta la richiesta, e una risposta aperta (che dura
+    /// quanto la generazione del modello) teneva una connessione del pool per tutto quel tempo.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Chiude solo ciò che ha aperto lui. Se la connessione è già aperta (una transazione del contesto, un
+    /// chiamante che l'ha aperta, un prestito esterno) non è sua: la lascia com'è, perché chiuderla sotto una
+    /// transazione la annullerebbe. Per questo i prestiti annidati (<c>Replace</c> che chiama <c>Delete</c> e
+    /// <c>IndexBatch</c>) funzionano: chiude solo il più esterno.
+    /// </para>
+    /// <para>
+    /// Apre la connessione grezza e non usa <c>Database.OpenConnectionAsync</c>: quello passa dalla strategia di
+    /// retry del contesto, che rifiuta una transazione aperta dall'utente (vedi <c>UnitOfWork</c>).
+    /// </para>
+    /// <para>
+    /// Presuppone l'uso in sequenza, che per un <c>DbContext</c> e' comunque l'unico lecito (#3786): con due
+    /// operazioni in parallelo sullo stesso contesto, la prima che ha aperto chiuderebbe la connessione sotto la
+    /// seconda.
+    /// </para>
+    /// </remarks>
+    private async Task<ConnectionLease> LeaseConnectionAsync(CancellationToken cancellationToken)
+    {
+        var connection = _context.Database.GetDbConnection();
+        if (connection.State == ConnectionState.Open)
+        {
+            return new ConnectionLease(connection, opened: false);
+        }
+
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return new ConnectionLease(connection, opened: true);
+    }
+
+    /// <summary>La connessione prestata da <see cref="LeaseConnectionAsync"/>; il <c>DisposeAsync</c> la chiude se l'ha aperta il prestito.</summary>
+    private sealed class ConnectionLease : IAsyncDisposable
+    {
+        private readonly bool _opened;
+
+        public ConnectionLease(DbConnection connection, bool opened)
+        {
+            Connection = connection;
+            _opened = opened;
+        }
+
+        public DbConnection Connection { get; }
+
+        public ValueTask DisposeAsync() => _opened ? new(Connection.CloseAsync()) : ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Reads the <c>lang</c> column, falling back to <c>"en"</c> when it is null (#3740).
+    /// The fallback keeps pre-AI-09 rows on the value they already resolved to, so projecting the
+    /// column changes what a multilingual corpus reports without changing a monolingual one.
+    /// </summary>
+    private static async Task<string> ReadLanguageAsync(
+        DbDataReader reader,
+        int ordinal,
         CancellationToken cancellationToken)
     {
-        if (connection.State != ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-        }
+        return await reader.IsDBNullAsync(ordinal, cancellationToken).ConfigureAwait(false)
+            ? "en"
+            : reader.GetString(ordinal);
     }
 }

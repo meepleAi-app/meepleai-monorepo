@@ -79,7 +79,10 @@ internal class TempSessionService : ITempSessionService
         using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable).ConfigureAwait(false);
         try
         {
+            // #3866: tracked on purpose — the single-use enforcement below (IsUsed/UsedAt) only
+            // reaches the DB on a tracked entity, and production defaults to NoTracking (PERF-06).
             var tempSession = await _dbContext.TempSessions
+                .AsTracking()
                 .FirstOrDefaultAsync(ts => ts.TokenHash == tokenHash && !ts.IsUsed && ts.ExpiresAt > now).ConfigureAwait(false);
 
             if (tempSession == null)
@@ -180,7 +183,10 @@ internal class TempSessionService : ITempSessionService
             return;
         }
 
+        // #3866: tracked on purpose — marking the session used below is the whole point of this
+        // method, and it does not reach the DB on an untracked entity (production is NoTracking).
         var session = await _dbContext.TempSessions
+            .AsTracking()
             .FirstOrDefaultAsync(ts => ts.TokenHash == tokenHash && !ts.IsUsed, cancellationToken)
             .ConfigureAwait(false);
 
@@ -313,7 +319,10 @@ internal class TempSessionService : ITempSessionService
     private async Task<bool> RecordFailedAttemptViaTrackingAsync(
         string tokenHash, DateTime now, CancellationToken cancellationToken)
     {
+        // #3866: this is the InMemory-only fallback (production takes the ExecuteUpdate path above),
+        // and "ViaTracking" is only true if the entity really is tracked.
         var session = await _dbContext.TempSessions
+            .AsTracking()
             .FirstOrDefaultAsync(ts => ts.TokenHash == tokenHash, cancellationToken)
             .ConfigureAwait(false);
 

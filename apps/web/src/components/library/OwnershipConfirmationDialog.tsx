@@ -3,18 +3,20 @@
  *
  * Post-ownership confirmation dialog showing RAG access status.
  * Two variants:
- * - KB available: shows KB card count + quick create / customize buttons
+ * - KB available: shows KB card count + a CTA to ask a question
  * - KB unavailable: informational message + close
+ *
+ * Issue #4138: the "quick create tutor" / "customize" pair is gone. Ownership
+ * grants KB access; it no longer creates a per-game agent.
  */
 
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 
-import { BookOpen, Loader2, Settings, Sparkles, Zap } from 'lucide-react';
+import { BookOpen, Sparkles, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { toast } from '@/components/layout/Toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,13 +27,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
-import { api } from '@/lib/api';
 import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
 
 export interface OwnershipConfirmationDialogProps {
   gameId: string;
   gameName: string;
-  sharedGameId?: string;
   ownershipResult: OwnershipResult;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -40,46 +40,37 @@ export interface OwnershipConfirmationDialogProps {
 export function OwnershipConfirmationDialog({
   gameId,
   gameName,
-  sharedGameId,
   ownershipResult,
   open,
   onOpenChange,
 }: OwnershipConfirmationDialogProps) {
   const router = useRouter();
-  const [isCreating, setIsCreating] = useState(false);
   const hasKb = ownershipResult.kbCardCount > 0;
 
-  const handleQuickCreate = async () => {
-    if (isCreating) return;
-
-    setIsCreating(true);
-    try {
-      const result = await api.agents.quickCreateTutor(gameId, sharedGameId);
-      onOpenChange(false);
-      // BUG B (#2727): the BE returns a placeholder chatThreadId (Guid.NewGuid,
-      // never persisted — chat-thread BC integration deferred), so navigating to
-      // /chat/{chatThreadId} lands on a non-existent thread. Send the user to the
-      // agent that was actually created instead.
-      router.push(`/agents/${result.agentId}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Impossibile creare il tutor. Riprova.');
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleCustomize = () => {
+  /**
+   * Issue #4138: declaring ownership no longer creates anything.
+   *
+   * It used to call `quickCreateTutor` and then navigate to `/agents/{id}`,
+   * because each user got their own per-game agent. With one system-wide agent
+   * there is nothing to create: declaring ownership is what grants access to
+   * the game's knowledge base (`CanAccessRagAsync` rule 3 keys off
+   * `OwnershipDeclaredAt`), so the useful next move is to ask a question.
+   *
+   * Destination is the canonical per-game chat — `/library/{gameId}?tab=aiChat`.
+   * It is not invented here: `/library/{gameId}/agent` already 307-redirects
+   * there, and `aiChat` is a member of `GameTabId`. Checking that mattered,
+   * because #4118 is a family of legacy redirects pointing at tab ids that do
+   * not exist, which silently open Info instead.
+   */
+  const handleAskQuestion = () => {
     onOpenChange(false);
-    router.push(`/chat/agents/create?gameId=${gameId}&step=2`);
+    router.push(`/library/${gameId}?tab=aiChat`);
   };
 
+  // The dialog no longer performs an in-flight mutation, so there is no reason
+  // to block dismissal: the `isCreating` guard went with `quickCreateTutor`.
   return (
-    <AlertDialog
-      open={open}
-      onOpenChange={v => {
-        if (!isCreating) onOpenChange(v);
-      }}
-    >
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="bg-card/70 backdrop-blur-md">
         <AlertDialogHeader>
           <AlertDialogTitle className="font-quicksand text-lg">
@@ -112,18 +103,22 @@ export function OwnershipConfirmationDialog({
                       </span>
                     )}
                   </div>
-                  <p>Puoi creare subito un tutor AI oppure personalizzare la configurazione.</p>
+                  <p>Puoi gi&agrave; fare domande sulle regole di questo gioco.</p>
                 </>
               ) : (
                 <>
                   <p>
-                    Il possesso di <strong className="text-foreground">{gameName}</strong> \u00e8
+                    {/* The literal `\u00e8` that stood here rendered as those six
+                        characters on screen, not as "\u00e8". Pre-existing, unrelated
+                        to #4138, fixed in passing because it is the same sentence. */}
+                    Il possesso di <strong className="text-foreground">{gameName}</strong> &egrave;
                     stato registrato.
                   </p>
                   <div className="rounded-md border border-muted bg-muted/50 p-3">
                     <p className="text-muted-foreground">
-                      Tutor non ancora disponibile &mdash; il materiale per questo gioco non \u00e8
-                      ancora stato indicizzato. Riceverai una notifica quando sar\u00e0 pronto.
+                      Non puoi ancora fare domande &mdash; il materiale per questo gioco non
+                      &egrave; ancora stato indicizzato. Riceverai una notifica quando sar&agrave;
+                      pronto.
                     </p>
                   </div>
                 </>
@@ -134,26 +129,14 @@ export function OwnershipConfirmationDialog({
         <AlertDialogFooter>
           {hasKb ? (
             <>
-              <AlertDialogCancel onClick={handleCustomize} disabled={isCreating}>
-                <Settings className="mr-2 h-4 w-4" />
-                Personalizza
-              </AlertDialogCancel>
+              <AlertDialogCancel>Pi&ugrave; tardi</AlertDialogCancel>
               <AlertDialogAction
-                onClick={handleQuickCreate}
-                disabled={isCreating}
+                onClick={handleAskQuestion}
                 className="bg-amber-600 text-white hover:bg-amber-700"
+                data-testid="ownership-ask-question"
               >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creazione...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="mr-2 h-4 w-4" />
-                    Crea Tutor veloce
-                  </>
-                )}
+                <Zap className="mr-2 h-4 w-4" />
+                Fai una domanda
               </AlertDialogAction>
             </>
           ) : (

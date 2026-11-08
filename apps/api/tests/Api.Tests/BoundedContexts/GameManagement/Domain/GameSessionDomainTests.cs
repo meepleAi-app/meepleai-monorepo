@@ -94,7 +94,7 @@ public class GameSessionDomainTests
     }
 
     [Fact]
-    public void GameSession_Start_WhenAlreadyStarted_ThrowsInvalidOperationException()
+    public void GameSession_Start_WhenAlreadyStarted_ThrowsConflictException()
     {
         // Arrange
         var session = CreateDefaultSession();
@@ -102,7 +102,7 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var act = () => session.Start();
-        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        var exception = act.Should().Throw<ConflictException>().Which;
         exception.Message.Should().ContainEquivalentOf("must be in Setup");
     }
 
@@ -142,14 +142,14 @@ public class GameSessionDomainTests
     }
 
     [Fact]
-    public void GameSession_Complete_WhenNotInProgress_ThrowsInvalidOperationException()
+    public void GameSession_Complete_WhenNotInProgress_ThrowsConflictException()
     {
         // Arrange
         var session = CreateDefaultSession(); // Status = Setup
 
         // Act & Assert
         var act = () => session.Complete();
-        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        var exception = act.Should().Throw<ConflictException>().Which;
         exception.Message.Should().ContainEquivalentOf("must be InProgress");
     }
 
@@ -200,7 +200,7 @@ public class GameSessionDomainTests
     }
 
     [Fact]
-    public void GameSession_Abandon_WhenAlreadyCompleted_ThrowsInvalidOperationException()
+    public void GameSession_Abandon_WhenAlreadyCompleted_ThrowsConflictException()
     {
         // Arrange
         var session = CreateDefaultSession();
@@ -209,7 +209,7 @@ public class GameSessionDomainTests
 
         // Act & Assert
         var act = () => session.Abandon();
-        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        var exception = act.Should().Throw<ConflictException>().Which;
         exception.Message.Should().ContainEquivalentOf("Cannot abandon finished session");
     }
 

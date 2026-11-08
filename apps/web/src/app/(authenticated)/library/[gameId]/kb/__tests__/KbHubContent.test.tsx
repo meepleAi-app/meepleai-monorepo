@@ -8,6 +8,7 @@
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { KbHubContent } from '../_content';
@@ -33,6 +34,38 @@ vi.mock('@/hooks/queries/useKbHub', () => ({
 const mockUseLibraryGameDetail = vi.fn();
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: (gameId: string) => mockUseLibraryGameDetail(gameId),
+}));
+
+// #4257: la CTA di upload apre PdfUploadModal, lo stesso delle card della libreria. Il doppio
+// espone cio' che la pagina gli passa e un pulsante per simulare un upload riuscito.
+vi.mock('@/components/library/PdfUploadModal', () => ({
+  PdfUploadModal: (props: {
+    isOpen: boolean;
+    onClose: () => void;
+    gameId: string;
+    gameTitle: string;
+    onUploadSuccess?: () => void;
+  }) =>
+    props.isOpen ? (
+      <div
+        data-testid="pdf-upload-modal"
+        data-game-id={props.gameId}
+        data-game-title={props.gameTitle}
+      >
+        <button type="button" onClick={props.onUploadSuccess}>
+          upload-done
+        </button>
+        <button type="button" onClick={props.onClose}>
+          upload-close
+        </button>
+      </div>
+    ) : null,
+}));
+
+// La pagina dice all'utente cosa e' successo al PDF (cancellato, scollegato, tenuto); il doppio permette
+// di asserire il messaggio senza montare un Toaster.
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
 }));
 
 // Mock useTranslation with a lightweight lookup in MESSAGES dict (defined below).
@@ -67,7 +100,7 @@ const MESSAGES: Record<string, string> = {
   'pages.library.gameDetail.kb.empty.title': 'Nessun PDF indicizzato',
   'pages.library.gameDetail.kb.empty.description': 'Carica il primo documento PDF per {gameTitle}.',
   'pages.library.gameDetail.kb.empty.ctaLabel': 'Carica primo documento',
-  'pages.library.gameDetail.kb.empty.supportedFormats': 'Formati: PDF, max 200 MB',
+  'pages.library.gameDetail.kb.empty.supportedFormats': 'Formati: PDF',
   'pages.library.gameDetail.kb.header.titleSuffix': 'Knowledge Base',
   'pages.library.gameDetail.kb.header.uploadCta': '+ Carica PDF',
   'pages.library.gameDetail.kb.header.reindexAllCta': 'Re-index all',
@@ -157,6 +190,9 @@ const MESSAGES: Record<string, string> = {
   'pages.library.gameDetail.kb.errors.reindexFailed': 'Reindex fallito',
   'pages.library.gameDetail.kb.errors.raptorFailed': 'Raptor fallito',
   'pages.library.gameDetail.kb.errors.deleteFailed': 'Delete fallito',
+  'pages.library.gameDetail.kb.deleteOutcome.unlinked':
+    'PDF scollegato da questo gioco, non cancellato',
+  'pages.library.gameDetail.kb.deleteOutcome.kept': 'PDF non cancellato: lo usano altri giochi',
 };
 
 function renderWithIntl(node: ReactNode): ReturnType<typeof render> {
@@ -434,6 +470,75 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
     });
   });
 
+  describe('#4257 — la CTA di upload apre il caricamento del PDF', () => {
+    const status = (documentCount: number) => ({
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+      data: {
+        gameId: GAME_ID,
+        isIndexed: documentCount > 0,
+        documentCount,
+        coverageScore: 0,
+        coverageLevel: 'None',
+        suggestedQuestions: [],
+      },
+    });
+
+    it('dallo stato vuoto: apre il modale per questo gioco, col suo titolo', () => {
+      mockUseUserKbStatus.mockReturnValue(status(0));
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [],
+        refetch: vi.fn(),
+      });
+      renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+      expect(screen.queryByTestId('pdf-upload-modal')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Carica primo documento' }));
+
+      const modal = screen.getByTestId('pdf-upload-modal');
+      expect(modal).toHaveAttribute('data-game-id', GAME_ID);
+      expect(modal).toHaveAttribute('data-game-title', 'Catan');
+    });
+
+    it('con dei PDF: «+ Carica PDF» apre il modale, e un upload riuscito rilegge elenco e stato', () => {
+      const statusQuery = status(1);
+      const pdfsQuery = {
+        isLoading: false,
+        isError: false,
+        data: [pdfFixture()],
+        refetch: vi.fn(),
+      };
+      mockUseUserKbStatus.mockReturnValue(statusQuery);
+      mockUseGamePdfs.mockReturnValue(pdfsQuery);
+      renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '+ Carica PDF' }));
+      fireEvent.click(screen.getByRole('button', { name: 'upload-done' }));
+
+      expect(pdfsQuery.refetch).toHaveBeenCalledTimes(1);
+      expect(statusQuery.refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('chiudere il modale lo toglie', () => {
+      mockUseUserKbStatus.mockReturnValue(status(0));
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [],
+        refetch: vi.fn(),
+      });
+      renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Carica primo documento' }));
+      fireEvent.click(screen.getByRole('button', { name: 'upload-close' }));
+
+      expect(screen.queryByTestId('pdf-upload-modal')).not.toBeInTheDocument();
+    });
+  });
+
   it('opens reindex modal when reindex-all CTA clicked', () => {
     mockUseUserKbStatus.mockReturnValue({
       isLoading: false,
@@ -459,7 +564,7 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
   });
 
   it('triggers delete mutation when DeleteDialog confirmed', async () => {
-    const deleteMutateAsync = vi.fn().mockResolvedValue(undefined);
+    const deleteMutateAsync = vi.fn().mockResolvedValue({ outcome: 'deleted' });
     mockUseDeletePdf.mockReturnValue({ mutateAsync: deleteMutateAsync });
     mockUseUserKbStatus.mockReturnValue({
       isLoading: false,
@@ -494,5 +599,79 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
     expect(confirmBtn).toBeInTheDocument();
     if (confirmBtn) fireEvent.click(confirmBtn);
     await waitFor(() => expect(deleteMutateAsync).toHaveBeenCalledWith('pdf-to-delete'));
+  });
+
+  describe('esito della cancellazione di un PDF usato anche da altri giochi', () => {
+    const CONFIRM = '[data-slot="kb-hub-delete-confirm"]';
+
+    /** Monta la pagina con un PDF e porta il flusso fino al click su "conferma cancellazione". */
+    const confirmDeleteWith = async (mutateAsync: ReturnType<typeof vi.fn>): Promise<void> => {
+      mockUseDeletePdf.mockReturnValue({ mutateAsync });
+      mockUseUserKbStatus.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: {
+          gameId: GAME_ID,
+          isIndexed: true,
+          documentCount: 1,
+          coverageScore: 50,
+          coverageLevel: 'Basic',
+          suggestedQuestions: [],
+        },
+      });
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [pdfFixture({ id: 'pdf-shared' })],
+      });
+      renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+      fireEvent.click(screen.getByRole('button', { name: /Apri Rulebook v2/i }));
+      const deleteAction = document.querySelector(
+        '[data-slot="kb-hub-actions-menu-delete"]'
+      ) as HTMLElement | null;
+      expect(deleteAction).toBeInTheDocument();
+      if (deleteAction) fireEvent.click(deleteAction);
+      const confirmBtn = document.querySelector(CONFIRM) as HTMLButtonElement | null;
+      expect(confirmBtn).toBeInTheDocument();
+      if (confirmBtn) fireEvent.click(confirmBtn);
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith('pdf-shared'));
+    };
+
+    it("dice che il PDF e' stato scollegato, non cancellato, quando l'esito e' unlinked", async () => {
+      await confirmDeleteWith(vi.fn().mockResolvedValue({ outcome: 'unlinked' }));
+
+      await waitFor(() =>
+        expect(toast.info).toHaveBeenCalledWith('PDF scollegato da questo gioco, non cancellato')
+      );
+      expect(toast.error).not.toHaveBeenCalled();
+      // L'operazione e' andata a buon fine: il dialog si chiude come dopo una cancellazione.
+      await waitFor(() => expect(document.querySelector(CONFIRM)).not.toBeInTheDocument());
+    });
+
+    it("dice che il PDF non e' stato cancellato perche' lo usano altri giochi, quando l'esito e' kept", async () => {
+      await confirmDeleteWith(vi.fn().mockResolvedValue({ outcome: 'kept' }));
+
+      await waitFor(() =>
+        expect(toast.info).toHaveBeenCalledWith('PDF non cancellato: lo usano altri giochi')
+      );
+      expect(toast.error).not.toHaveBeenCalled();
+      await waitFor(() => expect(document.querySelector(CONFIRM)).not.toBeInTheDocument());
+    });
+
+    it("non aggiunge messaggi quando il PDF e' stato davvero cancellato", async () => {
+      await confirmDeleteWith(vi.fn().mockResolvedValue({ outcome: 'deleted' }));
+
+      await waitFor(() => expect(document.querySelector(CONFIRM)).not.toBeInTheDocument());
+      expect(toast.info).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it("mostra l'errore e lascia il dialog aperto quando la chiamata fallisce", async () => {
+      await confirmDeleteWith(vi.fn().mockRejectedValue(new Error('boom')));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Delete fallito'));
+      expect(toast.info).not.toHaveBeenCalled();
+      expect(document.querySelector(CONFIRM)).toBeInTheDocument();
+    });
   });
 });

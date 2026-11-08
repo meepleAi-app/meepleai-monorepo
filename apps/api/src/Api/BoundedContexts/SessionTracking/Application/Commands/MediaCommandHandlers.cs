@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -16,12 +17,15 @@ public class UploadSessionMediaCommandHandler : IRequestHandler<UploadSessionMed
     private readonly ISessionRepository _sessionRepository;
     private readonly ISessionMediaRepository _mediaRepository;
     private readonly IMediator _mediator;
+    private readonly ISessionAccessGuard _accessGuard;
 
     public UploadSessionMediaCommandHandler(
+        ISessionAccessGuard accessGuard,
         ISessionRepository sessionRepository,
         ISessionMediaRepository mediaRepository,
         IMediator mediator)
     {
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _sessionRepository = sessionRepository;
         _mediaRepository = mediaRepository;
         _mediator = mediator;
@@ -29,6 +33,10 @@ public class UploadSessionMediaCommandHandler : IRequestHandler<UploadSessionMed
 
     public async Task<UploadSessionMediaResult> Handle(UploadSessionMediaCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#3756): prima di qualunque mutazione, scrittura o broadcast SSE.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 

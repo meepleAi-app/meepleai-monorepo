@@ -26,7 +26,7 @@ namespace Api.Extensions;
 /// - BggSearch:            20 req/hour — respects BoardGameGeek external API quota
 /// - ProposePrivateGame:    2 req/min  — prevents catalog proposal spam
 /// - BulkImportAdmin:       1 req/5min — heavy admin batch operation
-/// - AgentQuery:           30 req/min  — AI query (expensive, per user)
+/// - AnswerOpenRequests:    2 open     — answers in progress per user, on the four answer routes (Issue #4388)
 /// - AgentCreation:        10 req/min  — AI agent creation (per user)
 /// - ContactForm:           5 req/hour — anonymous contact form spam prevention (IP-based)
 /// - AccessRequest:         5 req/hour — access request spam prevention (IP-based)
@@ -35,122 +35,43 @@ namespace Api.Extensions;
 /// - AdminProviderRotateKey: 1 req/24h — provider key rotation per (provider,user) (Issue #1859)
 /// - GameNightTokenRead:   60 req/min  — public RSVP token lookup per IP (Issue #1169)
 /// - GameNightTokenRespond: 10 req/min — public RSVP submission per IP (Issue #1169)
+/// - GameNightGuestUnsubscribe: 10 req/min — public guest opt-out per IP (#4846)
 /// - UsersSearch:         600 req/min  — authenticated player autocomplete (~10 req/s avg via 1min sliding window, Issue #950 W1-PR2)
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
-    public static IServiceCollection AddRateLimitingServices(this IServiceCollection services, IConfiguration configuration)
+    /// <summary>
+    /// Answers a user can have open at once on the four answer routes (Issue #4388). The web views say
+    /// "two" (<c>QA_TOO_MANY_REQUESTS_MESSAGE</c>): change both together.
+    /// </summary>
+    internal const int MaxOpenAnswersPerUser = 2;
+
+    /// <summary>The name of the policy mounted on the answer routes (Issue #4388).</summary>
+    internal const string AnswerOpenRequestsPolicy = "AnswerOpenRequests";
+
+    public static IServiceCollection AddRateLimitingServices(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Issue #2705: Allow disabling rate limiting for integration tests
-        // Issue #3102: Also check DISABLE_RATE_LIMITING env var as fallback for WebApplicationFactory tests
-        // where configuration might not be applied yet during service registration
-        var rateLimitingEnabled = configuration.GetValue("RateLimiting:Enabled", true);
-        var disableRateLimitingEnvVar = Environment.GetEnvironmentVariable("DISABLE_RATE_LIMITING");
-        var disabledByEnvVar = string.Equals(disableRateLimitingEnvVar, "true", StringComparison.OrdinalIgnoreCase);
-
-        if (!rateLimitingEnabled || disabledByEnvVar)
-        {
-            // Register a permissive rate limiter that allows all requests (used in tests)
-            services.AddRateLimiter(options =>
-            {
-                options.AddPolicy("SharedGamesAdmin", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("SharedGamesPublic", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("FaqUpvote", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #3098: Share request rate limiting policies
-                options.AddPolicy("ShareRequestAdmin", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("ShareRequestCreation", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("ShareRequestQuery", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("ShareRequestUpdate", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #3098: User dashboard rate limiting policy
-                options.AddPolicy("UserDashboard", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #3120: BGG search rate limiting policy
-                options.AddPolicy("BggSearch", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #3665: Private game proposal rate limiting policy
-                options.AddPolicy("ProposePrivateGame", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #4354: Bulk import rate limiting policy
-                options.AddPolicy("BulkImportAdmin", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #4338: Agent query rate limiting policy
-                options.AddPolicy("AgentQuery", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #4683: Agent creation rate limiting policy
-                options.AddPolicy("AgentCreation", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // SEC-05: Auth rate limiting policies (disabled in tests)
-                options.AddPolicy("AuthLogin", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AuthRegister", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AuthVerify2FA", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AuthInvitation", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AuthPasswordReset", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("ContactForm", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AccessRequest", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #936: Admin provider probe policies (G3)
-                options.AddPolicy("AdminProviderProbe", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AdminProviderProbeGlobal", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #1859: Admin provider key rotation (1/24h per provider+user)
-                options.AddPolicy("AdminProviderRotateKey", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #1169: Public game-night RSVP token policies (disabled in tests)
-                options.AddPolicy("GameNightTokenRead", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("GameNightTokenRespond", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("LiveSessionCodeReadPublic", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #950 (W1-PR2): authenticated user-search autocomplete (disabled in tests)
-                options.AddPolicy("UsersSearch", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-            });
-
-            return services;
-        }
+        // Issue #2705 / #3102 / #3887: this method registers the REAL policies unconditionally.
+        // It deliberately reads no switch at all.
+        //
+        // Why: under WebApplicationFactory, service registration runs BEFORE the factory's own
+        // configuration sources are applied — they land at builder.Build(). Any switch read here
+        // therefore resolves against process-wide state (appsettings + environment variables), not
+        // against the per-host configuration a test declared. #3102 leaned on that on purpose, via
+        // a DISABLE_RATE_LIMITING env var; the cost was that one test flipping it changed the
+        // behaviour of every host built meanwhile by a parallel xUnit collection (#3887).
+        //
+        // Registering NoLimiter policies from a switch read here had a subtler failure too: the
+        // middleware gate below decides independently, so the two reads could disagree and produce
+        // a host with UseRateLimiter() wired over policies that throttle nothing — silently.
+        //
+        // The single decision point is now WebApplicationExtensions.ConfigureAuthMiddleware, which
+        // runs after Build() and reads the complete per-host configuration (environment-variables
+        // source included, so production behaviour is unchanged) to decide whether to add
+        // UseRateLimiter() at all. No middleware, no throttling — the policies below are inert.
+        // The IConfiguration parameter was dropped with the switch: there is nothing left to read.
 
         services.AddRateLimiter(options =>
         {
@@ -347,19 +268,41 @@ internal static class RateLimitingServiceExtensions
                     });
             });
 
-            // Policy 12: AgentQuery - 30 req/min for AI agent query operations (Issue #4338)
-            // AI queries are expensive (LLM token cost); per-user limit prevents runaway usage.
-            options.AddPolicy("AgentQuery", httpContext =>
+            // Policy 12: AnswerOpenRequests - at most 2 answers open at once per user (Issue #4388,
+            // decision c of #4168). The answer quota stays "check first, count when the answer is
+            // delivered" (no reservation): between the check and the count lies the whole generation,
+            // tens of seconds, so N parallel requests under the limit all pass, and one user can
+            // exhaust the global budget of the gateway for everyone (AI_BUDGET_EXCEEDED for all).
+            //
+            // A concurrency limiter, not a rate: it counts requests IN PROGRESS, and the lease is held
+            // until the response ends (for an SSE answer, the whole stream; a client that disconnects
+            // frees it). The third request is refused with 429 BEFORE the pipeline runs: the gateway
+            // is not called and the quota counter does not grow. QueueLimit 0: no waiting; the web
+            // views tell the user to wait for an answer to finish (qaStreamErrors.ts).
+            //
+            // The count lives in the memory of each API process, like every limiter here: with several
+            // replicas the limit is 2 per replica, not 2 per user.
+            //
+            // Same exemption as the quota: SuperAdmin, Admin and Editor (evaluations, the admin
+            // playground and the RAG gates run as one of them and open many answers on purpose).
+            //
+            // This replaces the AgentQuery policy (30 req/min), which was defined and mounted by no
+            // route. With two answers open at 10-30 s each a user cannot reach 30 a minute, so it
+            // could never fire: a dead knob, removed rather than mounted.
+            options.AddPolicy(AnswerOpenRequestsPolicy, httpContext =>
             {
+                if (IsExemptFromOpenAnswersLimit(httpContext))
+                {
+                    return RateLimitPartition.GetNoLimiter("answer-open-exempt");
+                }
+
                 var userId = GetUserId(httpContext);
 
-                return RateLimitPartition.GetSlidingWindowLimiter(
-                    partitionKey: $"agent-query-{userId}",
-                    factory: _ => new SlidingWindowRateLimiterOptions
+                return RateLimitPartition.GetConcurrencyLimiter(
+                    partitionKey: $"answer-open-{userId}",
+                    factory: _ => new ConcurrencyLimiterOptions
                     {
-                        Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 30,
-                        SegmentsPerWindow = 6,
+                        PermitLimit = MaxOpenAnswersPerUser,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });
@@ -644,6 +587,26 @@ internal static class RateLimitingServiceExtensions
                     });
             });
 
+            // Policy 22b: GameNightGuestUnsubscribe - 10 req/min per IP for the guest opt-out link (#4846)
+            // Public, unauthenticated POST. Its own bucket: it is a different action from an RSVP, and a guest who
+            // opens the unsubscribe link of an email from a shared address (an office, a mobile network) must not
+            // be competing with the RSVPs of everybody behind it.
+            options.AddPolicy("GameNightGuestUnsubscribe", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"game-night-guest-unsubscribe-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
             // Policy 23: UsersSearch - 600 req/min per authenticated user for player autocomplete (Issue #950 W1-PR2)
             // Authenticated GET on /api/v1/users/search?q=. Spec §7b.1 / §15 P3 — Nygard
             // panel flagged user-enumeration risk on an open autocomplete endpoint.
@@ -732,6 +695,17 @@ internal static class RateLimitingServiceExtensions
         {
             return fallback;
         }
+    }
+
+    /// <summary>
+    /// SuperAdmin, Admin and Editor are not subject to the open-answers limit, as they are not to the
+    /// answer quota (TierEnforcementService). The role claims are the ones SessionAuthenticationHandler sets.
+    /// </summary>
+    private static bool IsExemptFromOpenAnswersLimit(HttpContext? httpContext)
+    {
+        var user = httpContext?.User;
+        return user?.Identity?.IsAuthenticated == true
+            && (user.IsInRole("SuperAdmin") || user.IsInRole("Admin") || user.IsInRole("Editor"));
     }
 
     /// <summary>

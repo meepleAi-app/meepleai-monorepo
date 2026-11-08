@@ -3,6 +3,8 @@
  * Issue #950 W3 Components. Spec §5 (C5) + §12 Scenario 6 (decide-at-group).
  *
  * Pure component: receives the library game list and emits selection intent.
+ * With `onSearchChange` it also shows a search box; the search itself runs on the
+ * server, in the caller (#4187).
  */
 
 'use client';
@@ -18,6 +20,10 @@ export interface GameCandidatesPickerLabels {
   readonly libraryEmpty: string;
   readonly selectGame: (name: string) => string;
   readonly deselectGame: (name: string) => string;
+  /** Accessible name of the search box (#4187). */
+  readonly searchLabel?: string;
+  /** Shown when a search finds nothing, instead of "your library is empty" (#4187). */
+  readonly searchEmpty?: (query: string) => string;
 }
 
 export interface GameCandidateOption {
@@ -36,6 +42,10 @@ export interface GameCandidatesPickerProps {
   readonly onToggleGame: (gameId: string) => void;
   readonly onToggleDecideAtGroup: () => void;
   readonly labels: GameCandidatesPickerLabels;
+  /** Current search text. */
+  readonly search?: string;
+  /** When set, the picker shows a search box and forwards what the user types. */
+  readonly onSearchChange?: (value: string) => void;
 }
 
 export function GameCandidatesPicker({
@@ -45,9 +55,15 @@ export function GameCandidatesPicker({
   onToggleGame,
   onToggleDecideAtGroup,
   labels,
+  search = '',
+  onSearchChange,
 }: GameCandidatesPickerProps): ReactElement {
   const toggleId = useId();
+  const searchId = useId();
   const selectedSet = new Set(selected);
+  const trimmedSearch = search.trim();
+  const emptyMessage =
+    trimmedSearch && labels.searchEmpty ? labels.searchEmpty(trimmedSearch) : labels.libraryEmpty;
 
   return (
     <section
@@ -90,8 +106,22 @@ export function GameCandidatesPicker({
         <p className="text-sm font-medium text-foreground">{labels.libraryHeader}</p>
         <p className="text-xs text-muted-foreground">{labels.selectedCount(selected.length)}</p>
 
+        {onSearchChange && (
+          <input
+            id={searchId}
+            type="search"
+            value={search}
+            onChange={e => onSearchChange(e.target.value)}
+            aria-label={labels.searchLabel ?? labels.libraryHeader}
+            placeholder={labels.searchLabel}
+            autoComplete="off"
+            data-slot="game-night-create-step4-search"
+            className="mt-2 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
+          />
+        )}
+
         {games.length === 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">{labels.libraryEmpty}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{emptyMessage}</p>
         ) : (
           <ul
             role="list"

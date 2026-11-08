@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -15,13 +16,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponseDto>
 {
     private readonly SearchQueryHandler _searchQueryHandler;
+    private readonly ICitedPageTrust _pageTrust;
     private readonly ILogger<ExplainQueryHandler> _logger;
 
     public ExplainQueryHandler(
         SearchQueryHandler searchQueryHandler,
+        ICitedPageTrust pageTrust,
         ILogger<ExplainQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
+        _pageTrust = pageTrust ?? throw new ArgumentNullException(nameof(pageTrust));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -34,10 +38,13 @@ internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponse
             "Processing ExplainQuery: GameId={GameId}, Topic={Topic}",
             query.GameId, query.Topic);
 
-        // Step 1: Perform vector search for relevant chunks
+        // Step 1: Perform vector search for relevant chunks.
+        // #4294: the search passes the RAG gate for the caller before anything else happens —
+        // this handler has no cache and does no work ahead of it.
         var searchQuery = new SearchQuery(
             GameId: query.GameId,
             Query: query.Topic,
+            Access: SearchAccess.OfUser(query.UserId, query.UserRole),
             TopK: 10, // Get more results for comprehensive explanation
             MinScore: 0.50, // Lower threshold for broader coverage
             SearchMode: "hybrid",
@@ -57,16 +64,22 @@ internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponse
                 $"No relevant information found about '{query.Topic}' in the rulebook.");
         }
 
+        // #4819: a document that cannot tell its pages apart (#4782) is cited without one, in the script as well as
+        // in the citations. The PDF id is asked about, not the vector document id the citation carries.
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(searchResults.Select(DocumentKey), cancellationToken)
+            .ConfigureAwait(false);
+
         // Step 2: Build outline from search results
         var outline = BuildOutline(query.Topic, searchResults);
 
         // Step 3: Build script from chunks with proper structure
-        var script = BuildScript(query.Topic, searchResults);
+        var script = BuildScript(query.Topic, searchResults, withoutAPage);
 
         // Step 4: Create citations from search results
         var citations = searchResults.Select(sr => new CitationDto(
             DocumentId: sr.VectorDocumentId,
-            PageNumber: sr.PageNumber,
+            PageNumber: withoutAPage.Contains(DocumentKey(sr)) ? null : sr.PageNumber,
             Snippet: sr.TextContent.Length > 150
                 ? sr.TextContent.Substring(0, 150)
                 : sr.TextContent,
@@ -140,7 +153,9 @@ internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponse
     /// Builds a structured script from search results.
     /// Creates a markdown-formatted explanation with citations.
     /// </summary>
-    private string BuildScript(string topic, List<SearchResultDto> results)
+    private static string DocumentKey(SearchResultDto result) => result.PdfDocumentId ?? result.VectorDocumentId;
+
+    private string BuildScript(string topic, List<SearchResultDto> results, IReadOnlySet<string> withoutAPage)
     {
         var scriptParts = new List<string>
         {
@@ -154,7 +169,10 @@ internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponse
         for (int i = 0; i < results.Count; i++)
         {
             var result = results[i];
-            scriptParts.Add($"### Section {i + 1} (Page {result.PageNumber})");
+            // #4819: the heading names the page only when the document can vouch for it.
+            scriptParts.Add(withoutAPage.Contains(DocumentKey(result))
+                ? $"### Section {i + 1}"
+                : $"### Section {i + 1} (Page {result.PageNumber})");
             scriptParts.Add("");
             scriptParts.Add(result.TextContent.Trim());
             scriptParts.Add("");

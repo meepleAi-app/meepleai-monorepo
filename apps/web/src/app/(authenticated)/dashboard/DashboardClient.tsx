@@ -103,6 +103,15 @@ export function DashboardClient(): ReactElement {
   // even when the user owned 0 games, or hide when the user owned N games
   // but the catalog query was throttled.
   const libraryQuery = useLibrary({ page: 1, pageSize: 20 });
+  // #4227: the games with a ready KB come filtered from the server. Filtering `hasKb` on the
+  // page above (the 20 most recently added) missed every KB game added before them.
+  const kbLibraryQuery = useLibrary({
+    page: 1,
+    pageSize: 6,
+    hasKb: true,
+    sortBy: 'addedAt',
+    sortDescending: true,
+  });
   const statsQuery = useLibraryStats();
   const friendsActivityQuery = useFriendsActivity();
 
@@ -236,8 +245,8 @@ export function DashboardClient(): ReactElement {
   // suggested cards. The section is hidden when the list is empty so first-
   // login users with no KB-ready games still see a clean dashboard.
   const agentiProntiEntries = useMemo(
-    () => (libraryQuery.data?.items ?? []).filter(entry => entry.hasKb).slice(0, 6),
-    [libraryQuery.data]
+    () => kbLibraryQuery.data?.items ?? [],
+    [kbLibraryQuery.data]
   );
 
   // ── Slot #4: Friends Activity ────────────────────────────────────────────
@@ -315,9 +324,10 @@ export function DashboardClient(): ReactElement {
             already adopts the "filter → render-if-non-empty → MeepleCard grid"
             pattern (see SuggestedSection internals) and a dedicated section
             primitive here would add a `Section/Empty/Error/Loading` family
-            that's outside the scope of this follow-up — `hasKb` data piggy-
-            backs on `libraryQuery`, so loading/error states are already
-            covered upstream by SuggestedSection rendering. */}
+            that's outside the scope of this follow-up — the entries come
+            from `kbLibraryQuery` (#4227): while it loads or fails the
+            list is empty and the section stays hidden, as for a user with
+            no KB-ready games. */}
         {agentiProntiEntries.length > 0 ? (
           <section
             data-slot="dashboard-agenti-pronti"

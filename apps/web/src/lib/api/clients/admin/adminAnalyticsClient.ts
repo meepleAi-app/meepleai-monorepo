@@ -5,8 +5,6 @@
  * financial ledger, and data export.
  */
 
-import { z } from 'zod';
-
 import { getApiBase } from '../../core/httpClient';
 import {
   AdminStatsSchema,
@@ -16,10 +14,6 @@ import {
   AiMetricsTrendResponseSchema,
   DashboardStatsSchema,
   GetUserActivityResultSchema,
-  TokenBalanceSchema,
-  TokenConsumptionDataSchema,
-  TierUsageListSchema,
-  TopConsumersListSchema,
   AppUsageStatsSchema,
   RecentActivityDtoSchema,
   PdfAnalyticsDtoSchema,
@@ -33,12 +27,6 @@ import {
   type DashboardStats,
   type GetUserActivityResult,
   type RecentActivityDto,
-  type TokenBalance,
-  type TokenConsumptionData,
-  type TierUsageList,
-  type TopConsumersList,
-  type AddCreditsRequest,
-  type UpdateTierLimitsRequest,
   type AppUsageStats,
   type PdfAnalyticsDto,
   type ChatAnalyticsDto,
@@ -302,55 +290,13 @@ export function createAdminAnalyticsClient(http: HttpClient) {
         qs.set('successOnly', String(params.successOnly));
       const query = qs.toString();
       return http.get(
-        `/api/v1/admin/openrouter/usage/requests${query ? `?${query}` : ''}`,
+        // #3836 — il path corretto e' /admin/openrouter/requests, senza `usage/`.
+        // Il client seguiva lo schema dei due vicini (usage/timeline, usage/costs), che
+        // pero' e' proprio dove il backend non e' coerente: questo endpoint sta un livello
+        // piu' su. Risultato: 404, e la tabella delle richieste restava vuota.
+        `/api/v1/admin/openrouter/requests${query ? `?${query}` : ''}`,
         RecentLlmRequestsDtoSchema
       );
-    },
-
-    async getTopConsumers(limit: number = 10): Promise<TopConsumersList> {
-      const result = await http.get<TopConsumersList>(
-        `/api/v1/admin/resources/tokens/top-consumers?limit=${limit}`,
-        TopConsumersListSchema
-      );
-      if (!result) throw new Error('No consumer data returned');
-      return result;
-    },
-
-    // ========== Token Management (Issue #3692) ==========
-
-    async getTokenBalance(): Promise<TokenBalance> {
-      const result = await http.get<TokenBalance>(
-        '/api/v1/admin/resources/tokens',
-        TokenBalanceSchema
-      );
-      if (!result) throw new Error('No token balance data returned');
-      return result;
-    },
-
-    async getTokenConsumption(days: number = 30): Promise<TokenConsumptionData> {
-      const result = await http.get<TokenConsumptionData>(
-        `/api/v1/admin/resources/tokens/consumption?days=${days}`,
-        TokenConsumptionDataSchema
-      );
-      if (!result) throw new Error('No consumption data returned');
-      return result;
-    },
-
-    async getTokenTierUsage(): Promise<TierUsageList> {
-      const result = await http.get<TierUsageList>(
-        '/api/v1/admin/resources/tokens/tiers',
-        TierUsageListSchema
-      );
-      if (!result) throw new Error('No tier usage data returned');
-      return result;
-    },
-
-    async addTokenCredits(request: AddCreditsRequest): Promise<void> {
-      await http.post('/api/v1/admin/resources/tokens/add-credits', request, z.any());
-    },
-
-    async updateTierLimits(request: UpdateTierLimitsRequest): Promise<void> {
-      await http.put(`/api/v1/admin/resources/tokens/tiers/${request.tier}`, request, z.any());
     },
 
     // ========== Cost Calculator (Issue #3725) ==========

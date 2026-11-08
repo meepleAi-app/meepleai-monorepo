@@ -146,6 +146,27 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
         return ids;
     }
 
+    public async Task<IReadOnlyList<Guid>> GetDraftIdsCreatedBeforeAsync(
+        DateTime createdBeforeUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        // Id-only projection, oldest first so a backlog drains in order. The suppression filter is ignored:
+        // a suppressed Draft still holds its slot (the unique index does not exclude it, and
+        // FindByPromptVersionAsync ignores filters), so it is exactly as orphaned as any other.
+        var ids = await DbContext.MechanicAnalyses
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(a => a.Status == (int)MechanicAnalysisStatus.Draft && a.CreatedAt < createdBeforeUtc)
+            .OrderBy(a => a.CreatedAt)
+            .Select(a => a.Id)
+            .Take(maxCount)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return ids;
+    }
+
     public async Task<MechanicAnalysis?> FindByPromptVersionAsync(
         Guid sharedGameId,
         Guid pdfDocumentId,
@@ -322,7 +343,7 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             publishedCardId: entity.PublishedCardId);
     }
 
-    private static MechanicClaim MapClaimToDomain(MechanicClaimEntity entity)
+    internal static MechanicClaim MapClaimToDomain(MechanicClaimEntity entity)
     {
         var citations = entity.Citations.Select(MapCitationToDomain).ToList();
 
@@ -338,7 +359,11 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             rejectionNote: entity.RejectionNote,
             citations: citations,
             reviewNote: entity.ReviewNote,
-            validations: entity.Validations);
+            validations: entity.Validations,
+            kind: (MechanicClaimKind)entity.Kind,
+            priority: (MechanicRulePriority)entity.Priority,
+            overrides: entity.Overrides,
+            trigger: entity.Trigger);
     }
 
     private static MechanicCitation MapCitationToDomain(MechanicCitationEntity entity)
@@ -393,7 +418,7 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
         };
     }
 
-    private static MechanicClaimEntity MapClaimToEntity(MechanicClaim claim)
+    internal static MechanicClaimEntity MapClaimToEntity(MechanicClaim claim)
     {
         return new MechanicClaimEntity
         {
@@ -410,6 +435,10 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             Validations = claim.Validations.Count == 0
                 ? null
                 : claim.Validations.ToList(),
+            Kind = (int)claim.Kind,
+            Priority = (int)claim.Priority,
+            Overrides = claim.Overrides.Count == 0 ? null : claim.Overrides.ToList(),
+            Trigger = claim.Trigger,
             Citations = claim.Citations.Select(MapCitationToEntity).ToList()
         };
     }

@@ -127,7 +127,8 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
       id: agent.id,
       type: 'agent',
       title: agent.name,
-      subtitle: `${agent.type} Agent`, // Changed from 'kind' to match Agent interface
+      // Issue #4154: `type` non esiste piu` (ADR-094: un solo agente di sistema).
+      subtitle: 'Agent',
       timestamp: new Date(agent.createdAt),
       agent,
       gameId: undefined, // Issue #868: Agents are global, not tied to games

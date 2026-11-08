@@ -357,6 +357,7 @@ services:
       - ./prometheus/alerts/wikidata-enrichment.yml:/etc/prometheus/wikidata-enrichment.yml:ro
       # Issue #3082 — BGG ToS-compliance SLO=0 alert.
       - ./prometheus/alerts/bgg-tos-compliance.yml:/etc/prometheus/bgg-tos-compliance.yml:ro
+      - ./prometheus/alerts/rag-vector-arm.yml:/etc/prometheus/rag-vector-arm.yml:ro
       - ./prometheus/alerts/egress-guard.yml:/etc/prometheus/egress-guard.yml:ro
       - ./prometheus/alerts/api-single-instance.yml:/etc/prometheus/api-single-instance.yml:ro
       # Issue #3112 — OPS-02 Slack delivery observability alerts.
@@ -368,6 +369,15 @@ services:
       - ./prometheus/alerts/copyright-enforcement.yml:/etc/prometheus/copyright-enforcement.yml:ro
       # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (referenced from prometheus.staging.yml rule_files).
       - ./prometheus/alerts/agent-grounding.yml:/etc/prometheus/agent-grounding.yml:ro
+      # Issue #3798 — la lista dei mount e' ripetuta in docker-compose.yml, compose.staging.yml
+      # e compose.prod.yml, e la rule_files in altri tre file: sei posti da tenere allineati a
+      # mano. Questi due erano nel repo ma in nessuno di essi, quindi non venivano valutati.
+      - ./prometheus/alerts/infrastructure.yml:/etc/prometheus/infrastructure.yml:ro
+      - ./prometheus/alerts/provider-quota.yml:/etc/prometheus/provider-quota.yml:ro
+      # #3814: gli 8 alert PDF erano scritti ma non montati. Le metriche esistono (16 dichiarate
+      # in Observability/Metrics/MeepleAiMetrics.Pdf.cs); erano i NOMI nelle regole a non essere
+      # quelli esposti, piu' un fallback a zero che avrebbe acceso 5 alert al primo deploy.
+      - ./prometheus/alerts/pdf-processing.yml:/etc/prometheus/pdf-processing.yml:ro
       - prometheus-staging:/prometheus
 
   alertmanager:

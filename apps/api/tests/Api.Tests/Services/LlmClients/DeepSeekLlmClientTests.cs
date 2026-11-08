@@ -169,6 +169,121 @@ public class DeepSeekLlmClientTests
         healthy.Should().BeFalse();
     }
 
+    // ─── Ragionamento (#4381) ────────────────────────────────────────────────
+    // DeepSeek ha il thinking attivo per default: i token di ragionamento arrivano in
+    // reasoning_content, contano in max_tokens e la temperatura è ignorata. Le risposte della
+    // pipeline lo spengono; le altre chiamate restano sul default del modello.
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public async Task GenerateCompletionStreamWithoutReasoningAsync_AsksDeepSeekToSkipThinking()
+    {
+        // Arrange
+        var sent = new List<string>();
+        var client = CreateClientWithResponse(SseResponse(ContentOnlyStream), sent);
+
+        // Act
+        await DrainAsync(((ILlmReasoningSwitch)client).GenerateCompletionStreamWithoutReasoningAsync(
+            "deepseek-flash", "system", "How many cards?", 0.3, 1500, TestCancellationToken));
+
+        // Assert
+        ThinkingTypeOf(sent.Should().ContainSingle().Which).Should().Be("disabled");
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public async Task GenerateCompletionWithoutReasoningAsync_AsksDeepSeekToSkipThinking()
+    {
+        // Arrange
+        var sent = new List<string>();
+        var client = CreateClientWithResponse(JsonResponse(HttpStatusCode.OK, CompletionBody), sent);
+
+        // Act
+        var result = await ((ILlmReasoningSwitch)client).GenerateCompletionWithoutReasoningAsync(
+            "deepseek-flash", "system", "How many cards?", 0.3, 1500, TestCancellationToken);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        ThinkingTypeOf(sent.Should().ContainSingle().Which).Should().Be("disabled");
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public async Task GenerateCompletionStreamAsync_LeavesThinkingToTheModelDefault()
+    {
+        // Arrange: le chiamate che non sono risposte della pipeline non cambiano.
+        var sent = new List<string>();
+        var client = CreateClientWithResponse(SseResponse(ContentOnlyStream), sent);
+
+        // Act
+        await DrainAsync(client.GenerateCompletionStreamAsync(
+            "deepseek-flash", "system", "How many cards?", 0.3, 1500, TestCancellationToken));
+
+        // Assert
+        ThinkingTypeOf(sent.Should().ContainSingle().Which).Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public async Task GenerateCompletionStreamAsync_ReasoningOnlyStream_YieldsNoText_AndEndsWithLength()
+    {
+        // Arrange: la forma registrata il 2026-10-15 da una risposta vuota di deepseek-flash, con
+        // il thinking attivo — ogni token pagato è ragionamento, nessuno è testo.
+        var client = CreateClientWithResponse(SseResponse(ReasoningOnlyStream));
+
+        // Act
+        var chunks = await DrainAsync(client.GenerateCompletionStreamAsync(
+            "deepseek-flash", "system", "How many cards?", 0.3, 80, TestCancellationToken));
+
+        // Assert
+        chunks.Should().NotContain(c => !string.IsNullOrEmpty(c.Content));
+        var final = chunks.Should().ContainSingle(c => c.IsFinal).Which;
+        final.FinishReason.Should().Be("length");
+        final.Usage!.CompletionTokens.Should().Be(80);
+    }
+
+    private const string CompletionBody =
+        "{\"id\":\"x\",\"object\":\"chat.completion\",\"model\":\"deepseek-flash\"," +
+        "\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"Five cards.\"},\"finish_reason\":\"stop\"}]," +
+        "\"usage\":{\"prompt_tokens\":47,\"completion_tokens\":3,\"total_tokens\":50}}";
+
+    private const string ContentOnlyStream =
+        "data: {\"id\":\"x\",\"model\":\"deepseek-flash\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Five\"},\"finish_reason\":null}]}\n\n" +
+        "data: {\"id\":\"x\",\"model\":\"deepseek-flash\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" cards.\"},\"finish_reason\":\"stop\"}]," +
+        "\"usage\":{\"prompt_tokens\":47,\"completion_tokens\":3,\"total_tokens\":50}}\n\n" +
+        "data: [DONE]\n\n";
+
+    private const string ReasoningOnlyStream =
+        "data: {\"id\":\"x\",\"model\":\"deepseek-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":null,\"reasoning_content\":\"\"},\"finish_reason\":null}]}\n\n" +
+        "data: {\"id\":\"x\",\"model\":\"deepseek-flash\",\"choices\":[{\"index\":0,\"delta\":{\"content\":null,\"reasoning_content\":\"We need to\"},\"finish_reason\":null}]}\n\n" +
+        "data: {\"id\":\"x\",\"model\":\"deepseek-flash\",\"choices\":[{\"index\":0,\"delta\":{\"content\":null,\"reasoning_content\":\" count the cards.\"},\"finish_reason\":null}]}\n\n" +
+        "data: {\"id\":\"x\",\"model\":\"deepseek-flash\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\",\"reasoning_content\":null},\"finish_reason\":\"length\"}]," +
+        "\"usage\":{\"prompt_tokens\":72,\"completion_tokens\":80,\"total_tokens\":152,\"completion_tokens_details\":{\"reasoning_tokens\":80}}}\n\n" +
+        "data: [DONE]\n\n";
+
+    /// <summary>Il valore di <c>thinking.type</c> nel corpo inviato, o <c>null</c> se il campo manca.</summary>
+    private static string? ThinkingTypeOf(string requestBody)
+    {
+        using var document = System.Text.Json.JsonDocument.Parse(requestBody);
+        return document.RootElement.TryGetProperty("thinking", out var thinking)
+            ? thinking.GetProperty("type").GetString()
+            : null;
+    }
+
+    private static async Task<List<StreamChunk>> DrainAsync(IAsyncEnumerable<StreamChunk> stream)
+    {
+        var chunks = new List<StreamChunk>();
+        await foreach (var chunk in stream)
+        {
+            chunks.Add(chunk);
+        }
+
+        return chunks;
+    }
+
+    private static HttpResponseMessage SseResponse(string body) =>
+        new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "text/event-stream") };
+
     // ─── Factory helpers ─────────────────────────────────────────────────────
 
     /// <summary>
@@ -219,8 +334,10 @@ public class DeepSeekLlmClientTests
     /// Creates a configured DeepSeekLlmClient whose HTTP calls are all served by
     /// <paramref name="response"/>. The resolver returns a dummy key so CheckHealthAsync reaches
     /// the HTTP call (unlike <see cref="CreateUnconfiguredClient"/> which short-circuits).
+    /// #4381: <paramref name="sentBodies"/>, se c'è, riceve il corpo di ogni richiesta; il listino
+    /// prezza ogni chiamata, così anche lo stream arriva al chunk finale con il costo.
     /// </summary>
-    private static DeepSeekLlmClient CreateClientWithResponse(HttpResponseMessage response)
+    private static DeepSeekLlmClient CreateClientWithResponse(HttpResponseMessage response, List<string>? sentBodies = null)
     {
         var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
         handler.Protected()
@@ -228,7 +345,15 @@ public class DeepSeekLlmClientTests
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(response);
+            .Returns<HttpRequestMessage, CancellationToken>(async (request, ct) =>
+            {
+                if (sentBodies is not null && request.Content is not null)
+                {
+                    sentBodies.Add(await request.Content.ReadAsStringAsync(ct));
+                }
+
+                return response;
+            });
 
         var httpClient = new HttpClient(handler.Object);
         var mockFactory = new Mock<IHttpClientFactory>();
@@ -243,10 +368,23 @@ public class DeepSeekLlmClientTests
         services.AddSingleton(resolver.Object);
         var scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
 
+        var calculator = new Mock<ILlmCostCalculator>();
+        calculator
+            .Setup(c => c.CalculateCost(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns((string modelId, string provider, int prompt, int completion) => new LlmCostCalculation
+            {
+                ModelId = modelId,
+                Provider = provider,
+                PromptTokens = prompt,
+                CompletionTokens = completion,
+                InputCost = prompt * 0.0000003m,
+                OutputCost = completion * 0.0000012m,
+            });
+
         return new DeepSeekLlmClient(
             mockFactory.Object,
             scopeFactory,
-            Mock.Of<ILlmCostCalculator>(),
+            calculator.Object,
             Mock.Of<ILogger<DeepSeekLlmClient>>());
     }
 

@@ -34,6 +34,9 @@ internal sealed class MechanicClaimEntityConfiguration : IEntityTypeConfiguratio
             t.HasCheckConstraint(
                 "ck_mechanic_claims_rejection_note_when_rejected",
                 "status <> 2 OR rejection_note IS NOT NULL");
+
+            t.HasCheckConstraint("ck_mechanic_claims_kind_range", "kind BETWEEN 0 AND 3");
+            t.HasCheckConstraint("ck_mechanic_claims_priority_range", "priority BETWEEN 0 AND 3");
         });
 
         builder.HasKey(c => c.Id);
@@ -68,6 +71,29 @@ internal sealed class MechanicClaimEntityConfiguration : IEntityTypeConfiguratio
             .HasColumnName("validations")
             .HasColumnType("jsonb")
             .HasConversion(validationsConverter);
+
+        builder.Property(c => c.Kind).HasColumnName("kind").HasDefaultValue(0).IsRequired();
+        builder.Property(c => c.Priority).HasColumnName("priority").HasDefaultValue(0).IsRequired();
+
+        // No value comparer for the jsonb columns below: the repository rewrites the whole
+        // entity in Update (same reasoning as Validations).
+        var overridesConverter = new ValueConverter<List<Guid>?, string?>(
+            v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => v == null ? null : JsonSerializer.Deserialize<List<Guid>>(v, (JsonSerializerOptions?)null));
+        builder.Property(c => c.Overrides)
+            .HasColumnName("overrides")
+            .HasColumnType("jsonb")
+            .HasConversion(overridesConverter);
+
+        var triggerConverter = new ValueConverter<MechanicTrigger?, string?>(
+            v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => v == null ? null : JsonSerializer.Deserialize<MechanicTrigger>(v, (JsonSerializerOptions?)null));
+        builder.Property(c => c.Trigger)
+            .HasColumnName("trigger")
+            .HasColumnType("jsonb")
+            .HasConversion(triggerConverter);
+
+        builder.HasIndex(c => new { c.AnalysisId, c.Kind }).HasDatabaseName("ix_mechanic_claims_analysis_kind");
 
         builder.HasIndex(c => c.AnalysisId).HasDatabaseName("ix_mechanic_claims_analysis_id");
         builder.HasIndex(c => new { c.AnalysisId, c.Section, c.DisplayOrder })

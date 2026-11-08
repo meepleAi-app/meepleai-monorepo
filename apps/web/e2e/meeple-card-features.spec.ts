@@ -143,7 +143,7 @@ test.describe('MeepleCard — Hover Preview', () => {
 
     // Hover sulla prima card
     const firstCard = page
-      .locator('[data-testid="meeple-card"], [data-testid="game-card"]')
+      .locator('[data-testid="meeple-card"], [data-testid="meeple-card"][data-entity="game"]')
       .first();
     if ((await firstCard.count()) > 0) {
       await firstCard.hover();
@@ -179,7 +179,7 @@ test.describe('MeepleCard — Quick Actions', () => {
     await page.goto('/library', { waitUntil: 'domcontentloaded' });
 
     const firstCard = page
-      .locator('[data-testid="meeple-card"], [data-testid="game-card"]')
+      .locator('[data-testid="meeple-card"], [data-testid="meeple-card"][data-entity="game"]')
       .first();
     if ((await firstCard.count()) > 0) {
       await firstCard.hover();
@@ -270,7 +270,9 @@ test.describe('MeepleCard — Bulk Select', () => {
       await page.waitForTimeout(300);
 
       // Seleziona prime 2-3 card
-      const cards = page.locator('[data-testid="meeple-card"], [data-testid="game-card"]');
+      const cards = page.locator(
+        '[data-testid="meeple-card"], [data-testid="meeple-card"][data-entity="game"]'
+      );
       const count = await cards.count();
 
       if (count >= 2) {

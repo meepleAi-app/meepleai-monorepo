@@ -24,7 +24,6 @@ import { matchesRoutePrefix } from './route-matching';
  */
 export const PROTECTED_ROUTES = [
   '/admin',
-  '/agents',
   '/chat',
   '/dashboard',
   '/discover',
@@ -43,10 +42,8 @@ export const PROTECTED_ROUTES = [
   '/profile',
   '/sessions',
   '/settings',
-  '/setup',
   '/toolkit',
   '/toolkits',
-  '/upload',
   '/versions',
 ] as const;
 

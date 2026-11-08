@@ -53,37 +53,44 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
         ? 'Completata'
         : 'Setup';
 
-  const footerActions: DrawerAction[] = [
-    ...(isInProgress || isPaused
-      ? [
+  // #4156 (D4): `entityId` is a GameSession id, but the session pages live under the id of the
+  // correlated LiveGameSession. Without one the session has no page, so no action navigates.
+  const liveSessionId = data.liveSessionId;
+  const footerActions: DrawerAction[] =
+    liveSessionId == null
+      ? []
+      : [
+          ...(isInProgress || isPaused
+            ? [
+                {
+                  icon: Play,
+                  label: 'Riprendi',
+                  onClick: () => router.push(`/sessions/${liveSessionId}/live`),
+                  variant: 'primary' as const,
+                  enabled: true,
+                },
+              ]
+            : []),
+          ...(isCompleted
+            ? [
+                {
+                  icon: BarChart2,
+                  label: 'Risultati',
+                  // #4156: /results does not exist; the results of a session are its scoreboard.
+                  onClick: () => router.push(`/sessions/${liveSessionId}/scoreboard`),
+                  variant: 'secondary' as const,
+                  enabled: true,
+                },
+              ]
+            : []),
           {
-            icon: Play,
-            label: 'Riprendi',
-            onClick: () => router.push(`/sessions/${entityId}/live`),
+            icon: ExternalLink,
+            label: 'Apri',
+            onClick: () => router.push(`/sessions/${liveSessionId}`),
             variant: 'primary' as const,
             enabled: true,
           },
-        ]
-      : []),
-    ...(isCompleted
-      ? [
-          {
-            icon: BarChart2,
-            label: 'Risultati',
-            onClick: () => router.push(`/sessions/${entityId}/results`),
-            variant: 'secondary' as const,
-            enabled: true,
-          },
-        ]
-      : []),
-    {
-      icon: ExternalLink,
-      label: 'Apri',
-      onClick: () => router.push(`/sessions/${entityId}`),
-      variant: 'primary' as const,
-      enabled: true,
-    },
-  ];
+        ];
 
   // Bind to a local so TypeScript narrows inside `{toolkit && ...}` blocks
   // and we avoid `data.toolkit!` non-null assertions in the JSX below.

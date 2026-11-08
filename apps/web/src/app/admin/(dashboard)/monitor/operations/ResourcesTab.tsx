@@ -14,13 +14,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { type ColumnDef } from '@tanstack/react-table';
 import { Database, HardDrive, Layers, Loader2, TrendingDown, TrendingUp } from 'lucide-react';
 
 import {
   AdminConfirmationDialog,
   AdminConfirmationLevel,
 } from '@/components/ui/admin/admin-confirmation-dialog';
+import { type ColumnDef } from '@/components/ui/data-display/data-table';
 import { DataTable, SortableHeader } from '@/components/ui/data-display/data-table';
 import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/useToast';

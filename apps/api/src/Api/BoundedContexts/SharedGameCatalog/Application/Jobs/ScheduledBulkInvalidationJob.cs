@@ -45,6 +45,14 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 internal sealed class ScheduledBulkInvalidationJob : IJob
 {
     internal const int DefaultTopN = 50;
+
+    /// <summary>
+    /// Passi di fila che si arrendono prima che il job smetta di provare. Ogni passo costa i suoi tentativi della
+    /// retry policy: con la cache che non risponde, tutti i passi della lista farebbero durare il job più del
+    /// suo intervallo. Tre di fila dicono che non è un singolo tag a non andare.
+    /// </summary>
+    internal const int MaxConsecutiveFailures = 3;
+
     internal static readonly TimeSpan LookbackWindow = TimeSpan.FromHours(1);
     private const string SearchGamesTag = "search-games";
     private const string ListOperationName = "shared-games.list.bulk";
@@ -80,10 +88,25 @@ internal sealed class ScheduledBulkInvalidationJob : IJob
         {
             // 1) Single global list invalidation. Cheap and covers any catalog
             //    list query that could have stale aggregates from the last 15min.
-            await _retryPolicy.ExecuteAsync(
+            //
+            // #4659: each eviction step is best effort (TryExecuteAsync): this is a safety net for the steps that
+            // already gave up elsewhere, so one that gives up here is logged and counted and the rest of the
+            // list still runs. After MaxConsecutiveFailures in a row the rest is skipped (SkippedInvalidations):
+            // each step costs its retries, and the cache not answering would make the job outlast its interval.
+            // Cancellation (Quartz stopping) is not a failure and still propagates.
+            var failedInvalidations = 0;
+            var consecutiveFailures = 0;
+            var listInvalidated = await _retryPolicy.TryExecuteAsync(
                 token => _cache.RemoveByTagAsync(SearchGamesTag, token),
                 ListOperationName,
+                SearchGamesTag,
+                _logger,
                 ct).ConfigureAwait(false);
+            if (!listInvalidated)
+            {
+                failedInvalidations++;
+                consecutiveFailures++;
+            }
 
             // 2) Top-N most-trafficked SharedGames in the last LookbackWindow.
             //    GameAnalyticsEventEntity.GameId is the SharedGameEntity.Id
@@ -100,27 +123,55 @@ internal sealed class ScheduledBulkInvalidationJob : IJob
                 .ToListAsync(ct).ConfigureAwait(false);
 
             var invalidatedCount = 0;
+            var skippedCount = 0;
             foreach (var sharedGameId in topGameIds)
             {
                 ct.ThrowIfCancellationRequested();
 
-                await _retryPolicy.ExecuteAsync(
+                if (consecutiveFailures >= MaxConsecutiveFailures)
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                var detailInvalidated = await _retryPolicy.TryExecuteAsync(
                     token => _cache.RemoveByTagAsync($"shared-game:{sharedGameId}", token),
                     DetailOperationName,
+                    $"shared-game:{sharedGameId}",
+                    _logger,
                     ct).ConfigureAwait(false);
 
-                invalidatedCount++;
+                if (detailInvalidated)
+                {
+                    invalidatedCount++;
+                    consecutiveFailures = 0;
+                }
+                else
+                {
+                    failedInvalidations++;
+                    consecutiveFailures++;
+                }
             }
 
             _logger.LogInformation(
-                "ScheduledBulkInvalidationJob completed: list_invalidated=1 detail_invalidated={DetailCount}",
-                invalidatedCount);
+                "ScheduledBulkInvalidationJob completed: list_invalidated={ListCount} detail_invalidated={DetailCount} failed={FailedCount} skipped={SkippedCount}",
+                listInvalidated ? 1 : 0,
+                invalidatedCount,
+                failedInvalidations,
+                skippedCount);
+
+            if (failedInvalidations > 0)
+            {
+                MeepleAiMetrics.RecordCacheInvalidationOutcome("shared-games.bulk.job", "failure");
+            }
 
             context.Result = new
             {
-                Success = true,
-                ListInvalidations = 1,
-                DetailInvalidations = invalidatedCount
+                Success = failedInvalidations == 0,
+                ListInvalidations = listInvalidated ? 1 : 0,
+                DetailInvalidations = invalidatedCount,
+                FailedInvalidations = failedInvalidations,
+                SkippedInvalidations = skippedCount
             };
         }
         catch (OperationCanceledException ex) when (ct.IsCancellationRequested)

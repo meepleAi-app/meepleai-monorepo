@@ -16,6 +16,19 @@ using Xunit;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// La fixture di <see cref="LiveSessionStreamEndpointTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class LiveSessionStreamEndpointTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "live_stream");
+
+/// <summary>
 /// Integration tests for the native SSE stream endpoint
 /// <c>GET /api/v1/live-sessions/{sessionId}/stream</c> (Issue #2561 SP2 T4).
 ///
@@ -29,36 +42,25 @@ namespace Api.Tests.Integration.GameManagement;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
-public sealed class LiveSessionStreamEndpointTests : IAsyncLifetime
+public sealed class LiveSessionStreamEndpointTests
+    : IClassFixture<LiveSessionStreamEndpointTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _databaseName = $"live_stream_{Guid.NewGuid():N}";
+    private readonly LiveSessionStreamEndpointTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
 
-    public LiveSessionStreamEndpointTests(SharedTestcontainersFixture fixture)
+    public LiveSessionStreamEndpointTests(LiveSessionStreamEndpointTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-            await _factory.DisposeAsync();
-
-        await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ──────────────────────────────────────────────────────────────────────────
     // AC-1: Authorized user, session WITH companion → 200 + text/event-stream

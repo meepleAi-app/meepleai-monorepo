@@ -293,3 +293,44 @@ describe('parseCitationMarkers (D-1703-D)', () => {
     expect(onClick).toHaveBeenCalledWith({ docId: 'doc-B', page: 3 });
   });
 });
+
+describe('parseCitationMarkers — citazione senza pagina (#4819)', () => {
+  const noPage = (docId: string): KbCitation => ({
+    docId,
+    source: docId,
+    page: null,
+    snippet: 'snippet',
+    score: 0.9,
+  });
+
+  it('names the pill "Fonte" and never "p.null" or "p.0"', () => {
+    const nodes = parseCitationMarkers('Vedi [1]', [noPage('d1')], {
+      formatAriaLabel: (c, n) => `Citazione ${n}, documento ${c.docId}`,
+    });
+    const container = renderNodes(nodes);
+
+    const pill = container.querySelector('[data-slot="kb-globale-citation-pill"]');
+    expect(pill?.textContent).toContain('Fonte');
+    expect(pill?.textContent).not.toContain('p.');
+  });
+
+  it('still names the pill after the page when there is one', () => {
+    const nodes = parseCitationMarkers('Vedi [1]', [cite('d1', 14)], { formatAriaLabel });
+    const container = renderNodes(nodes);
+
+    expect(
+      container.querySelector('[data-slot="kb-globale-citation-pill"]')?.textContent
+    ).toContain('p.14');
+  });
+});
+
+describe('parseCitationMarkers — una pagina 0 non è una pagina (#4819)', () => {
+  it('names the pill "Fonte" for a citation whose page is 0', () => {
+    const nodes = parseCitationMarkers('Vedi [1]', [cite('d1', 0)], { formatAriaLabel });
+    const container = renderNodes(nodes);
+
+    const pill = container.querySelector('[data-slot="kb-globale-citation-pill"]');
+    expect(pill?.textContent).toContain('Fonte');
+    expect(pill?.textContent).not.toContain('p.');
+  });
+});

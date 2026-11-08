@@ -30,7 +30,7 @@ public sealed class TesseractOcrServiceTests
             !File.Exists(Path.Combine(tessdataDir, "eng.traineddata")))
         {
             Assert.Skip(
-                "GAMEBOOK_TESSDATA_DIR is unset or eng.traineddata is missing — see " +
+                "PREVISTO: GAMEBOOK_TESSDATA_DIR non impostata o or eng.traineddata is missing — see " +
                 "docs/for-developers/testing/backend/tesseract-ocr-setup.md to enable this test.");
             return;
         }

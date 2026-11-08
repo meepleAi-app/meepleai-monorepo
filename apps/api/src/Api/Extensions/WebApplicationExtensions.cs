@@ -78,9 +78,26 @@ internal static class WebApplicationExtensions
             await next().ConfigureAwait(false);
         });
 
-        // API-01: API exception handler middleware (must be early in pipeline)
-        app.UseApiExceptionHandler();
-
+        // #4108 — Serilog va registrato PRIMA del gestore delle eccezioni, non dopo.
+        //
+        // L'ordine precedente (gestore, poi Serilog) rendeva il gestore il middleware
+        // ESTERNO: un'eccezione risaliva attraverso Serilog, che registrava la richiesta come
+        // `500`, e solo DOPO il gestore la mappava sul suo status reale. Il log diceva
+        // `responded 500` per risposte che al client arrivavano `404` o `400`, con la riga
+        // `Handled 404 client error` subito sotto a contraddirlo.
+        //
+        // Non era cosmesi: ogni `NotFoundException` — cioe' ogni 404 di dominio, che e'
+        // traffico normale — compariva come errore server, inquinando qualunque allarme
+        // costruito sui log. E ha dirottato tre diagnosi nella stessa sessione (#4106): si
+        // leggeva «responded 500» e si cercava un guasto del server dove il client riceveva
+        // un 4xx corretto.
+        //
+        // Invertito, Serilog e' esterno e registra lo status che il gestore ha deciso. Il
+        // gestore resta comunque «early»: e' il primo middleware dopo il logging, quindi
+        // avvolge auth, endpoint e tutto il resto. Le METRICHE non avevano il problema
+        // (`MeepleAiMetrics.RecordApiError` usa lo status mappato), quindi questa modifica
+        // allinea i log alle metriche invece di cambiare entrambi.
+        //
         // Request logging with correlation ID
         app.UseSerilogRequestLogging(options =>
         {
@@ -101,6 +118,10 @@ internal static class WebApplicationExtensions
                 }
             };
         });
+
+        // API-01: API exception handler middleware (must be early in pipeline — subito dopo
+        // il logging, cosi' avvolge auth ed endpoint; vedi la nota #4108 sopra).
+        app.UseApiExceptionHandler();
 
         // Add correlation ID to response headers
         app.Use(async (context, next) =>
@@ -133,6 +154,39 @@ internal static class WebApplicationExtensions
         });
     }
 
+    /// <summary>
+    /// Reads a boolean switch, treating an empty or whitespace-only value as absent.
+    /// <para>
+    /// ISSUE #3998 — the defect this exists for: <c>IConfiguration.GetValue&lt;bool&gt;(key, default)</c>
+    /// falls back to the default only when the key is MISSING. When the key is present and holds the
+    /// empty string it converts it, and <c>BooleanConverter</c> → <c>bool.Parse("")</c> throws
+    /// <c>InvalidOperationException</c>. Docker Compose makes that case the norm rather than the
+    /// exception: <c>infra/compose.dev.yml</c> passes
+    /// <c>DISABLE_RATE_LIMITING: ${DISABLE_RATE_LIMITING:-}</c>, and <c>${VAR:-}</c> expands to the
+    /// empty string whenever VAR is not in the host environment. So an unset optional switch reaches
+    /// the container as a present-but-empty key.
+    /// </para>
+    /// <para>
+    /// The throw happened during <c>ConfigureMiddlewarePipeline</c>, before Kestrel started
+    /// listening, so the process died with no HTTP surface and nothing in the logs — the snapshot
+    /// bake was red for five weeks because of it. Measured breadth at the time of the fix: of the
+    /// variables the compose files pass as <c>${X:-}</c>, this is the only one read through a typed
+    /// conversion; the others are strings, where empty is harmless. To re-measure:
+    /// <c>grep -hoE '\$\{[A-Za-z_][A-Za-z0-9_]*:-\}' infra/compose*.yml | sed -E 's/^\$\{//; s/:-\}$//' | sort -u</c>
+    /// </para>
+    /// Non-empty values keep going through <c>GetValue&lt;bool&gt;</c> unchanged, so a misspelt value
+    /// still throws instead of silently becoming the default.
+    /// </summary>
+    /// <remarks>
+    /// <c>internal</c> and not <c>private</c> so the regression test can exercise it directly:
+    /// reproducing the defect through the middleware pipeline would need a full host, while the
+    /// behaviour that matters is a three-way decision on one string.
+    /// </remarks>
+    internal static bool ReadFlag(IConfiguration configuration, string key, bool defaultValue) =>
+        string.IsNullOrWhiteSpace(configuration[key])
+            ? defaultValue
+            : configuration.GetValue<bool>(key);
+
     private static void ConfigureAuthMiddleware(WebApplication app)
     {
         // AUTH-03: Session cookie authentication (must be before API key and authorization)
@@ -154,7 +208,35 @@ internal static class WebApplicationExtensions
         app.UseAntiforgery();
 
         // ISSUE #2424: Rate limiting middleware (must be after authorization)
-        app.UseRateLimiter();
+        //
+        // ISSUE #3887: the on/off decision lives here, and ONLY here. AddRateLimitingServices
+        // registers the real policies unconditionally and reads no switch at all. Service
+        // registration runs before a WebApplicationFactory applies its configuration sources, so a
+        // test host could only be told "no rate limiting" through a process environment variable —
+        // global state that leaked into every host built concurrently by another xUnit collection
+        // and made unrelated tests fail with 429. app.Configuration is the post-Build, per-host
+        // configuration and still includes the environment-variables source, so a
+        // DISABLE_RATE_LIMITING env var keeps working exactly as before in production.
+        // This matters now that it is the ONLY place either flag is honoured: a misspelt value used
+        // to degrade gracefully because registration produced permissive policies as well.
+        //
+        // ISSUE #3998: both switches go through ReadFlag, because a variable set to the EMPTY
+        // STRING is not the same thing as an absent one — and `GetValue<bool>` treats it as a
+        // value, not as "use the default". That is what kept the snapshot bake red for five weeks.
+        //
+        // Correction to an earlier note here, which claimed that `"1"/"True"/"yes" behave alike`:
+        // they do not. `GetValue<bool>` goes through `BooleanConverter` → `bool.Parse`, which
+        // accepts only `true`/`false` (case-insensitive). `"1"` and `"yes"` throw, exactly like
+        // `""` did. ReadFlag deliberately keeps that strictness for non-empty values: a typo must
+        // stay loud, per the paragraph above.
+        var rateLimitingEnabled =
+            ReadFlag(app.Configuration, "RateLimiting:Enabled", defaultValue: true)
+            && !ReadFlag(app.Configuration, "DISABLE_RATE_LIMITING", defaultValue: false);
+
+        if (rateLimitingEnabled)
+        {
+            app.UseRateLimiter();
+        }
 
         // ISSUE #4275: BGG API tier-based rate limiting (must be after rate limiter)
         app.UseBggRateLimit();
@@ -206,6 +288,18 @@ internal static class WebApplicationExtensions
         });
     }
 
+    /// <summary>
+    /// ⚠️ NON REGISTRATA — questo metodo non e' chiamato da nessuno.
+    /// <c>grep -rn "AddCorsServices" --include=*.cs .</c> trova solo questa definizione, e la
+    /// policy <c>"web"</c> che <c>app.UseCors("web")</c> applica e' quella dichiarata in
+    /// <c>Program.cs</c>. Le due copie sono anche DIVERGENTI: questa ha <c>X-API-Key</c> e
+    /// quella viva no, quella viva ha <c>X-Requested-With</c> (#4059) e questa no.
+    ///
+    /// Scritto esplicitamente perche' la copia morta e' una trappola: correggere CORS qui non ha
+    /// alcun effetto osservabile, ed e' il giro che #4059 ha fatto prima di accorgersene. Se
+    /// questo metodo serve, va collegato e Program.cs va svuotato; fino a quel momento la
+    /// sorgente di verita' e' Program.cs.
+    /// </summary>
     public static IServiceCollection AddCorsServices(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -246,7 +340,8 @@ internal static class WebApplicationExtensions
                         "X-Correlation-ID",
                         "X-API-Key",
                         "traceparent",  // W3C Trace Context propagation
-                        "tracestate"    // W3C Trace Context state
+                        "tracestate",   // W3C Trace Context state
+                        "X-Requested-With" // #4059: SignalR negotiate (hub cross-origin)
                     )
                     .AllowAnyMethod()
                     .AllowCredentials()

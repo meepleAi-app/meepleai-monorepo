@@ -80,6 +80,7 @@ internal static class ObservabilityServiceExtensions
             .AddSource(MeepleAiActivitySources.ApiSourceName)
             .AddSource(MeepleAiActivitySources.RagSourceName)
             .AddSource(MeepleAiActivitySources.VectorSearchSourceName)
+            .AddSource(Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant.AssistantChatClientFactory.TelemetrySourceName)
             .AddSource(MeepleAiActivitySources.PdfProcessingSourceName)
             .AddSource(MeepleAiActivitySources.CacheSourceName)
             // Issue #1563: Sensitive data processor (P1-SEC3)
@@ -216,6 +217,10 @@ internal static class ObservabilityServiceExtensions
         // API-01: Native .NET 9 OpenAPI configuration with XML comments
         services.AddOpenApi(options =>
         {
+            // #4519: the UTC date converters hide the shape of DateTime/DateTimeOffset from the schema
+            // generator; this restores it, so the document stays what it was without them.
+            Api.Infrastructure.Serialization.UtcDateTimeJson.ConfigureOpenApi(options);
+
             // Living Documentation: Include XML comments in OpenAPI spec
             var xmlFilename = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);

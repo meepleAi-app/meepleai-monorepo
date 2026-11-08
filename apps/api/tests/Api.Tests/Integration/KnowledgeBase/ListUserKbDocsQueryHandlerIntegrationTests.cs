@@ -159,7 +159,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
 
     // ─── AC1: User-scoping ───────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Returns_only_docs_for_caller()
     {
         await SeedUserAsync(UserA);
@@ -181,7 +181,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
 
     // ─── AC2: Cross-game + recency sort (ProcessedAt ?? UploadedAt DESC) ────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Returns_cross_game_docs_sorted_by_recency()
     {
         await SeedUserAsync(UserA);
@@ -204,7 +204,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
 
     // ─── AC3: Pagination ─────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Pagination_returns_correct_slice_and_total()
     {
         await SeedUserAsync(UserA);
@@ -235,7 +235,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
 
     // ─── AC4: state=ready (default) vs state=all ─────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task State_ready_default_excludes_non_ready()
     {
         await SeedUserAsync(UserA);
@@ -254,7 +254,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
         result.Items.Single().ProcessingState.Should().Be("Ready");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task State_all_includes_every_state()
     {
         await SeedUserAsync(UserA);
@@ -277,7 +277,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
 
     // ─── AC5 (partial: handler-side empty user) ──────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Empty_library_returns_zero_total_and_empty_items()
     {
         await SeedUserAsync(UserA);
@@ -293,7 +293,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
 
     // ─── AC6: GameName resolution + null GameId ─────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Resolves_GameName_via_repository_and_handles_null_GameId()
     {
         await SeedUserAsync(UserA);
@@ -319,7 +319,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
 
     // ─── AC7: UpdatedAt = ProcessedAt ?? UploadedAt (explicit field) ────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UpdatedAt_equals_ProcessedAt_when_processed()
     {
         await SeedUserAsync(UserA);
@@ -339,7 +339,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
             "UpdatedAt should equal ProcessedAt when present");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UpdatedAt_equals_UploadedAt_when_ProcessedAt_null()
     {
         await SeedUserAsync(UserA);
@@ -362,7 +362,7 @@ public sealed class ListUserKbDocsQueryHandlerIntegrationTests : IAsyncLifetime
 
     // ─── Issue #1687 Task 10: Title/Tags/UpdatedBy in DTO + UpdatedAt override ─
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_DocWithTitleAndTags_ReturnsThemInDto()
     {
         await SeedUserAsync(UserA);

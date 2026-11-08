@@ -31,10 +31,11 @@ if [ -z "$STORAGE_SECRET" ] || ! grep -qE "^SEED_(BLOB|BUCKET)_" "$STORAGE_SECRE
     log "Procedo comunque (il bake può essere legittimo per testare il flusso su 0 PDF)"
 fi
 
-# 5. Se postgres gira già, controlla che processing_jobs sia vuota o solo terminali
+# 5. Se postgres gira già, controlla che processing_jobs sia vuota o solo terminali. Gli stati vivi
+#    sono Queued e Processing (DocumentProcessing JobStatus): «Running» e «Retrying» non esistono (#4363).
 if docker ps --format '{{.Names}}' | grep -q '^meepleai-postgres$'; then
     pending=$(docker exec meepleai-postgres psql -U postgres -d meepleai -At -c \
-        "SELECT COUNT(*) FROM processing_jobs WHERE status IN ('Queued','Running','Retrying');" 2>/dev/null || echo "0")
+        "SELECT COUNT(*) FROM processing_jobs WHERE status IN ('Queued','Processing');" 2>/dev/null || echo "0")
     if [ "$pending" -gt 0 ]; then
         fail "processing_jobs contiene $pending job non terminali — ferma il run precedente o svuota la tabella"
     fi

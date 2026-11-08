@@ -41,6 +41,10 @@ public class DashboardStreamService : IDashboardStreamService
     /// Each subscription creates a new channel that receives all published events.
     /// Channel is automatically cleaned up when enumeration is cancelled.
     /// </summary>
+    /// <inheritdoc />
+    public int GetSubscriberCount(Guid userId) =>
+        _userSubscribers.TryGetValue(userId, out var bag) ? bag.Count : 0;
+
     public async IAsyncEnumerable<INotification> SubscribeToDashboardEvents(
         Guid userId,
         [EnumeratorCancellation] CancellationToken ct)

@@ -99,6 +99,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: 'AI Tooling & Data Quality',
     icon: Bot,
     items: [
+      // #4169 (ADR-095 D8): il profilo dell'agente di sistema che risponde agli utenti.
+      { label: 'Agent Profile', href: '/admin/agents/profile', icon: Bot },
       { label: 'Agent Definitions', href: '/admin/agents/definitions', icon: Database },
       { label: 'RAG Inspector', href: '/admin/agents/inspector', icon: FileSearch },
       { label: 'RAG Quality', href: '/admin/rag-quality', icon: BarChart2 },

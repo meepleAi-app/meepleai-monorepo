@@ -154,7 +154,6 @@ export function UsageWidget({ tier = 'free', variant = 'full', className }: Usag
     { label: 'Giochi privati', current: usage.privateGames, max: usage.privateGamesMax },
     { label: 'PDF questo mese', current: usage.pdfThisMonth, max: usage.pdfThisMonthMax },
     { label: 'Query oggi', current: usage.agentQueriesToday, max: usage.agentQueriesTodayMax },
-    { label: 'Agent', current: usage.agents, max: usage.agentsMax },
     { label: 'Query sessione', current: usage.sessionQueries, max: usage.sessionQueriesMax },
   ];
 

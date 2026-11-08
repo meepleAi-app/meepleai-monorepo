@@ -52,10 +52,10 @@ public class DrawSessionCardCommandHandler : IRequestHandler<DrawSessionCardComm
         await _deckRepository.UpdateAsync(deck, cancellationToken).ConfigureAwait(false);
         await _deckRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        await _syncService.PublishEventAsync(deck.SessionId, new CardsDrawnEvent
+        await _syncService.PublishEventAsync(request.SessionId, new CardsDrawnEvent
         {
             DeckId = deck.Id,
-            SessionId = deck.SessionId,
+            SessionId = request.SessionId,
             ParticipantId = request.ParticipantId,
             ParticipantName = participant.DisplayName,
             CardCount = drawnCards.Count,

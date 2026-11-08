@@ -124,6 +124,36 @@ internal sealed class GameSession : Entity<Guid>
     }
 
     /// <summary>
+    /// Ricostituisce una partita letta dal database, con le sue date (#4505).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. <see cref="Create"/> data la partita a "adesso" e ne valida l'input,
+    /// ed è giusto per una partita nuova; usata per ricostruire una riga spostava la data di
+    /// creazione a ogni lettura, e perdeva quella di modifica.
+    /// </remarks>
+    internal static GameSession Reconstitute(
+        Guid id,
+        Guid userLibraryEntryId,
+        DateTime playedAt,
+        int durationMinutes,
+        bool? didWin,
+        string? players,
+        string? notes,
+        DateTime createdAt,
+        DateTime? updatedAt) => new GameSession
+        {
+            Id = id,
+            UserLibraryEntryId = userLibraryEntryId,
+            PlayedAt = playedAt,
+            DurationMinutes = durationMinutes,
+            DidWin = didWin,
+            Players = players,
+            Notes = notes,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+        };
+
+    /// <summary>
     /// Updates the session notes.
     /// </summary>
     /// <param name="notes">New notes content</param>

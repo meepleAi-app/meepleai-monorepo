@@ -37,21 +37,27 @@ internal static class IntegrationWebApplicationFactory
     /// <param name="connectionString">PostgreSQL connection string for the isolated test database.</param>
     /// <param name="redisConnectionString">Optional Redis connection string. If null, Redis is mocked.</param>
     /// <param name="extraConfig">Optional extra configuration keys to add beyond the defaults.</param>
+    /// <param name="mutableConnectionString">
+    /// #4050 — sorgente di configurazione aggiunta <b>per ultima</b>, che permette di cambiare la
+    /// stringa di connessione su un host già costruito. La passano le fixture che pagano l'host una
+    /// volta e danno a ogni test un database suo; chi costruisce un host per test la lascia
+    /// <c>null</c> e <paramref name="connectionString"/> resta l'unica.
+    /// </param>
     /// <returns>A configured WebApplicationFactory ready for creating HttpClient instances.</returns>
     public static WebApplicationFactory<Program> Create(
         string connectionString,
         string? redisConnectionString = null,
         Dictionary<string, string?>? extraConfig = null,
-        bool enableRateLimiting = false)
+        bool enableRateLimiting = false,
+        MutableConnectionStringSource? mutableConnectionString = null)
     {
-        // Must be set before factory creation — middleware checks these env vars directly.
-        // Tests that need rate limiting (e.g., AdminProviderProbe rate-limit verification)
-        // pass enableRateLimiting:true to opt out of the global disable.
-        if (!enableRateLimiting)
-        {
-            Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
-            Environment.SetEnvironmentVariable("RateLimiting__Enabled", "false");
-        }
+        // Issue #3887: rate limiting is switched off per-host through the in-memory configuration
+        // below, NOT by mutating the process environment. The previous implementation called
+        // Environment.SetEnvironmentVariable here, which is process-global: a test that flipped the
+        // switch to exercise a 429 opened a window in which every host built concurrently by another
+        // xUnit collection inherited rate limiting, and a test that built a host inside that window
+        // got a 429 instead of its own result. Tests that need rate limiting (e.g. the
+        // AdminProviderProbe 429 verification) pass enableRateLimiting:true.
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
 
         return new WebApplicationFactory<Program>()
@@ -101,8 +107,12 @@ internal static class IntegrationWebApplicationFactory
                         // Observability
                         ["Observability:Enabled"] = "false",
                         ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "",
-                        // Rate limiting
-                        ["RateLimiting:Enabled"] = "false"
+                        // Rate limiting (#3887) — read after Build() by WebApplicationExtensions,
+                        // which decides whether to add UseRateLimiter() at all. One key: the two
+                        // switches are the same bit, and DISABLE_RATE_LIMITING is the production env
+                        // alias, not a second per-host knob. extraConfig is merged after this
+                        // dictionary, so a caller can still override.
+                        ["RateLimiting:Enabled"] = enableRateLimiting ? "true" : "false"
                     };
 
                     // Merge extra config if provided
@@ -115,6 +125,15 @@ internal static class IntegrationWebApplicationFactory
                     }
 
                     configBuilder.AddInMemoryCollection(config);
+
+                    // #4050 — sorgente aggiunta PER ULTIMA, così la sua stringa di connessione
+                    // vince su quella del dizionario qui sopra. Serve alle fixture che costruiscono
+                    // l'host una volta e danno a ogni test un database suo: vedi
+                    // MutableConnectionStringSource per il perché il DbContext la rilegge.
+                    if (mutableConnectionString != null)
+                    {
+                        configBuilder.Add(mutableConnectionString);
+                    }
                 });
 
                 // ConfigureServices (NOT ConfigureTestServices) — runs before IStartupFilter
@@ -193,6 +212,23 @@ internal static class IntegrationWebApplicationFactory
                             .ReturnsAsync(success);
                         mock
                             .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(success);
+                        // #3737: gli overload con purpose. Un overload non configurato fa restituire
+                        // null a Moq, e il null esplode DENTRO l'handler come NullReferenceException:
+                        // il test riporta un bug di produzione dove c'e' un mock incompleto. Questa
+                        // factory serve ogni test HTTP, quindi la copertura va tenuta esaustiva.
+                        mock
+                            .Setup(s => s.GenerateEmbeddingAsync(
+                                It.IsAny<string>(),
+                                It.IsAny<Api.Services.EmbeddingPurpose>(),
+                                It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(success);
+                        mock
+                            .Setup(s => s.GenerateEmbeddingAsync(
+                                It.IsAny<string>(),
+                                It.IsAny<string>(),
+                                It.IsAny<Api.Services.EmbeddingPurpose>(),
+                                It.IsAny<CancellationToken>()))
                             .ReturnsAsync(success);
                         return mock.Object;
                     });

@@ -15,7 +15,10 @@ public interface IRagAccessService
     /// 1. Admin/SuperAdmin role → true
     /// 2. SharedGame.IsRagPublic == true → true
     /// 3. UserLibraryEntry.OwnershipDeclaredAt != null → true
-    /// 4. Otherwise → false
+    /// 4. the caller owns the PrivateGame with this id → true (#4137)
+    /// 5. Otherwise → false. Handlers answering a question enforce this through
+    ///    <see cref="RagAccessGuard.EnsureRagAccessAsync"/>, which turns false into
+    ///    <see cref="Api.Middleware.Exceptions.RagOwnershipRequiredException"/> (#4155).
     /// </summary>
     Task<bool> CanAccessRagAsync(Guid userId, Guid gameId, UserRole role, CancellationToken cancellationToken = default);
 

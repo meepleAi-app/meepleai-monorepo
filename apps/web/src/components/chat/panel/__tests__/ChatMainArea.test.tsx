@@ -65,4 +65,58 @@ describe('ChatMainArea', () => {
     await user.click(screen.getByRole('button', { name: 'Come si vince?' }));
     expect(onSend).toHaveBeenCalledWith('Come si vince?');
   });
+
+  // ─── #4168 (5g-b): la quota del piano ───────────────────────
+
+  const QUOTA_SENTENCE =
+    'Hai usato tutte le domande di oggi previste dal tuo piano (3 su 3). Il conteggio riparte alle 02:00 (mezzanotte UTC).';
+
+  /**
+   * Una domanda fermata dalla quota non è un guasto: niente riquadro rosso, ma l'avviso con i
+   * numeri del piano e il link ai piani, come nelle altre viste della chat.
+   */
+  it('shows the plan quota as a notice with the way to the plans, not as an error', () => {
+    render(
+      <ChatMainArea
+        messages={[]}
+        suggestedQuestions={[]}
+        onSend={() => {}}
+        error={QUOTA_SENTENCE}
+        tierLimit={{ current: 3, max: 3, upgradeUrl: '/pricing' }}
+      />
+    );
+
+    expect(screen.getByTestId('tier-limit-exceeded')).toHaveTextContent(
+      'Hai usato tutte le domande di oggi previste dal tuo piano (3 su 3)'
+    );
+    expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
+    // Il riquadro d'errore ripeterebbe la stessa frase in rosso: non c'è.
+    expect(screen.queryByTestId('chat-stream-error')).not.toBeInTheDocument();
+  });
+
+  /** Il posto dell'avviso è nella pagina da prima, vuoto. */
+  it('keeps the place for the quota notice in the page, empty', () => {
+    render(<ChatMainArea messages={[]} suggestedQuestions={[]} onSend={() => {}} />);
+
+    const region = screen.getByTestId('tier-limit-region');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+  });
+
+  /** Un guasto vero resta un errore, nel suo riquadro. */
+  it('still shows another error as an error', () => {
+    render(
+      <ChatMainArea
+        messages={[]}
+        suggestedQuestions={[]}
+        onSend={() => {}}
+        error="Il servizio AI è temporaneamente non disponibile."
+      />
+    );
+
+    expect(screen.getByTestId('chat-stream-error')).toHaveTextContent(
+      'Il servizio AI è temporaneamente non disponibile.'
+    );
+    expect(screen.queryByTestId('tier-limit-exceeded')).not.toBeInTheDocument();
+  });
 });

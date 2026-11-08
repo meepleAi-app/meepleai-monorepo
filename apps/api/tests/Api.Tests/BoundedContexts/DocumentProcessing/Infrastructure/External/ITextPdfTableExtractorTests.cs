@@ -326,8 +326,7 @@ public class ITextPdfTableExtractorTests
             DiagramType = "sequence",
             Width = 100,
             Height = 200,
-            Description = "Test diagram",
-            ImageData = new byte[] { 1, 2, 3 }
+            Description = "Test diagram"
         };
 
         // Assert
@@ -336,7 +335,6 @@ public class ITextPdfTableExtractorTests
         diagram.Width.Should().Be(100);
         diagram.Height.Should().Be(200);
         diagram.Description.Should().Be("Test diagram");
-        diagram.ImageData!.Length.Should().Be(3);
     }
     /// <summary>
     /// Creates a minimal valid PDF file for testing

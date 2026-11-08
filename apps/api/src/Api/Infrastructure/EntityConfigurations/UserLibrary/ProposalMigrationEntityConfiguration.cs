@@ -39,10 +39,13 @@ public class ProposalMigrationEntityConfiguration : IEntityTypeConfiguration<Pro
         builder.Property(e => e.ChoiceAt)
             .IsRequired(false);
 
-        builder.Property(e => e.RowVersion)
-            .IsRowVersion()
-            .IsConcurrencyToken()
-            .ValueGeneratedOnAddOrUpdate();
+        // #3651 lotto 7 — pattern xmin di ADR-060. `IsRowVersion()` su un `byte[]` non mappa alla
+        // colonna di sistema su Npgsql: serve la configurazione esplicita.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // Issue #1938 / CF-2: source domain event id (nullable, UNIQUE partial).
         builder.Property(e => e.SourceEventId)

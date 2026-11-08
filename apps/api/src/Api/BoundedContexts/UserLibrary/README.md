@@ -15,7 +15,6 @@ Gestisce la libreria personale di giochi da tavolo di ogni utente: collezioni, w
 - **Condivisione Libreria**: Link di condivisione sicuri con token crittografico, livello di privacy, scadenza e conteggio visite
 - **Suggerimenti Giochi**: Raccomandazioni da altri utenti (flusso inviti admin), accettabili o rifiutabili
 - **Checklist di Setup**: Passi di preparazione per ogni gioco, ordinabili e resettabili prima di ogni sessione
-- **Configurazione Agente AI**: Configurazione personalizzata dell'agente AI per gioco, con possibilita di override o reset al default
 - **Gestione PDF**: Upload PDF regolamento personalizzato per gioco, con associazione documenti privati
 - **Dichiarazione Proprieta**: Dichiarazione esplicita di possesso per accesso RAG alla knowledge base del gioco
 - **Quote Libreria**: Limiti configurabili sul numero di giochi in libreria per utente
@@ -40,7 +39,6 @@ Logica di business pura e modelli di dominio:
 - **ValueObjects/**: Oggetti valore immutabili
   - `GameState`: Stato del gioco (Nuovo, Owned, InPrestito, Wishlist) con transizioni valide
   - `GameStats`: Statistiche di gioco (partite, durata media, percentuale vittorie)
-  - `AgentConfiguration`: Configurazione custom dell'agente AI
   - `CustomPdfMetadata`: Metadati del PDF regolamento personalizzato
   - `LibraryNotes`: Note personali dell'utente
   - `LibrarySharePrivacyLevel`: Livello privacy del link condiviso
@@ -56,7 +54,6 @@ Logica di business pura e modelli di dominio:
   - `GameSessionRecordedEvent`, `GameStateChangedEvent`
   - `OwnershipDeclaredEvent`
   - `PrivatePdfAssociatedEvent`, `PrivatePdfRemovedEvent`
-  - `AgentLinkedToPrivateGameEvent`, `AgentUnlinkedFromPrivateGameEvent`
   - `ItemAddedToCollectionEvent`, `ItemRemovedFromCollectionEvent`
   - `WishlistItemAddedEvent`, `WishlistItemUpdatedEvent`, `WishlistItemRemovedEvent`
   - `GameSuggestionAcceptedEvent`
@@ -73,19 +70,17 @@ Orchestrazione e casi d'uso (CQRS pattern con MediatR):
 - **Commands/**: Operazioni di scrittura
   - *Libreria Core*: AddGameToLibrary, RemoveGameFromLibrary, UpdateLibraryEntry, UpdateGameState, DeclareOwnership
   - *Sessioni*: RecordGameSession
-  - *Agente AI*: ConfigureGameAgent, ResetGameAgent, SaveAgentConfig
   - *PDF*: UploadCustomGamePdf, ResetGamePdf, RemovePrivatePdf
   - *Condivisione*: CreateLibraryShareLink, UpdateLibraryShareLink, RevokeLibraryShareLink
   - *Prestito*: SendLoanReminder
   - *Labels*: AddLabelToGame, RemoveLabelFromGame, CreateCustomLabel, DeleteCustomLabel
   - *Collezioni*: AddToCollection, RemoveFromCollection, BulkAddToCollection, BulkRemoveFromCollection
   - *Wishlist*: AddToWishlist, RemoveFromWishlist, UpdateWishlistItem
-  - *Giochi Privati*: AddPrivateGame, UpdatePrivateGame, DeletePrivateGame, ProposePrivateGame, LinkAgentToPrivateGame, UnlinkAgentFromPrivateGame
+  - *Giochi Privati*: AddPrivateGame, UpdatePrivateGame, DeletePrivateGame, ProposePrivateGame
   - *Migrazioni*: HandleMigrationChoice
 - **Queries/**: Operazioni di lettura
   - *Libreria*: GetUserLibrary, GetLibraryStats, GetLibraryQuota, GetGameInLibraryStatus, BatchCheckGamesInLibrary, GetGameDetail
   - *Giochi Utente*: GetUserGames
-  - *Agente*: GetGameAgentConfig
   - *PDF*: GetGamePdfs
   - *Condivisione*: GetLibraryShareLink, GetSharedLibrary
   - *Labels*: GetLabels, GetGameLabels
@@ -144,14 +139,13 @@ POST   /library/games/{gameId}/remind-loan           -> SendLoanReminderCommand
 POST   /library/{gameId}/declare-ownership           -> DeclareOwnershipCommand
 ```
 
-### Agente AI (`/api/v1/library/games/{gameId}`)
-```
-GET    /library/games/{gameId}/agent-config          -> GetGameAgentConfigQuery
-PUT    /library/games/{gameId}/agent                 -> ConfigureGameAgentCommand
-DELETE /library/games/{gameId}/agent                 -> ResetGameAgentCommand
-POST   /library/games/{gameId}/agent-config          -> SaveAgentConfigCommand
-POST   /library/games/{gameId}/agent                 -> ConfigureGameAgentCommand
-```
+### Agente AI — ritirato (#4138)
+
+La configurazione dell'agente per gioco (`/library/games/{gameId}/agent-config` e
+`/library/games/{gameId}/agent`) non arrivava a nessuna risposta ed e' ritirata: c'e' un solo agente
+di sistema ([ADR-094](../../../../../../docs/for-claude/architecture/adr/adr-094-single-system-agent.md)).
+La colonna `CustomAgentConfigJson` resta mappata come shadow property finche' una consegna successiva
+non la elimina.
 
 ### Toolkit (`/api/v1/library/games/{gameId}`)
 ```
@@ -222,14 +216,10 @@ GET    /private-games/{id}                           -> GetPrivateGameQuery
 PUT    /private-games/{id}                           -> UpdatePrivateGameCommand
 DELETE /private-games/{id}                           -> DeletePrivateGameCommand
 POST   /private-games/{id}/propose-to-catalog        -> ProposePrivateGameCommand
-POST   /private-games/{id}/link-agent/{agentId}      -> LinkAgentToPrivateGameCommand
-DELETE /private-games/{id}/unlink-agent              -> UnlinkAgentFromPrivateGameCommand
 ```
 
 ### Admin Config
 ```
-GET    /admin/config/game-library-limits             -> GetGameLibraryLimitsQuery
-PUT    /admin/config/game-library-limits             -> UpdateGameLibraryLimitsCommand
 ```
 
 ## Database Entities
@@ -251,7 +241,7 @@ Vedi `Infrastructure/Persistence/`:
 
 ### UserLibraryEntry Aggregate
 - **Identita**: Id (GUID)
-- **Proprieta**: UserId, GameId, AddedAt, Notes, IsFavorite, CurrentState, Stats, CustomAgentConfig, CustomPdfMetadata, PrivatePdfId, OwnershipDeclaredAt
+- **Proprieta**: UserId, GameId, AddedAt, Notes, IsFavorite, CurrentState, Stats, CustomPdfMetadata, PrivatePdfId, OwnershipDeclaredAt
 - **Figli**: Sessions (GameSession[]), Checklist (GameChecklist[]), Labels (UserGameLabel[])
 - **Invarianti**:
   - UserId e GameId non vuoti
@@ -261,7 +251,7 @@ Vedi `Infrastructure/Persistence/`:
 
 ### PrivateGame Aggregate
 - **Identita**: Id (GUID)
-- **Proprieta**: OwnerId, BggId, Title, YearPublished, Description, MinPlayers, MaxPlayers, PlayingTimeMinutes, MinAge, ComplexityRating, ImageUrl, ThumbnailUrl, Source, AgentDefinitionId
+- **Proprieta**: OwnerId, BggId, Title, YearPublished, Description, MinPlayers, MaxPlayers, PlayingTimeMinutes, MinAge, ComplexityRating, ImageUrl, ThumbnailUrl, Source
 - **Invarianti**:
   - MinPlayers >= 1 e <= 100
   - MinPlayers <= MaxPlayers

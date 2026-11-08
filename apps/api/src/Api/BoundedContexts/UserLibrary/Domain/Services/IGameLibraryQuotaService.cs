@@ -18,7 +18,7 @@ namespace Api.BoundedContexts.UserLibrary.Domain.Services;
 /// <item><description>Premium: 50 games max</description></item>
 /// </list>
 ///
-/// <para>Limits are configurable via SystemConfiguration with keys: LibraryLimits:{tier}:MaxGames</para>
+/// <para>The limit is the plan's <c>MaxLibraryGames</c>, edited at /admin/config/tiers (issue #4212).</para>
 /// </summary>
 internal interface IGameLibraryQuotaService
 {

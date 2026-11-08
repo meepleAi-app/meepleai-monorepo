@@ -19,6 +19,91 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 
 /// <summary>
+/// La fixture di <see cref="WizardSuperAdminApprovalTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. L'host serve personalizzato —
+/// BGG e il downloader delle copertine doppiati, uno schema di autenticazione di test, policy
+/// permissive — e ci arriva attraverso <see cref="ConfigureHost"/>.
+/// </para>
+/// <para>
+/// I doppi vivono quanto la classe, e qui va bene: nessun test li interroga, sono registrati
+/// perche' <c>SharedGame.Create()</c> pretende descrizione e immagini non vuote e perche' il
+/// downloader non deve fare HTTP vero. Il ruolo, che e' la variabile di QUESTI test, non passa
+/// dall'host: arriva per richiesta nell'header di <see cref="TestAuthenticationHandler"/>.
+/// </para>
+/// </remarks>
+public sealed class WizardSuperAdminApprovalHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "wizard_superadm_approval")
+{
+    protected override Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> ConfigureHost(
+        Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> factory) =>
+        factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                // Mock BGG API so SharedGame.Create() receives non-empty
+                // description/imageUrl/thumbnailUrl (domain validation requires them).
+                services.RemoveAll(typeof(Api.Services.IBggApiService));
+                var mockBggApi = new Mock<Api.Services.IBggApiService>();
+                mockBggApi
+                    .Setup(x => x.SearchGamesAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                    .Returns(Task.FromResult(new List<BggSearchResultDto>()));
+                mockBggApi
+                    .Setup(x => x.GetGameDetailsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                    .Returns(Task.FromResult<BggGameDetailsDto?>(new BggGameDetailsDto(
+                        174430,
+                        "Test Game BGG",
+                        "A test board game description for the SuperAdmin approval integration test.",
+                        2020,
+                        2,
+                        4,
+                        60,
+                        30,
+                        120,
+                        10,
+                        7.5,
+                        7.0,
+                        10000,
+                        2.5,
+                        "https://example.com/thumbnail.jpg",
+                        "https://example.com/image.jpg",
+                        new List<string> { "Strategy" },
+                        new List<string> { "Worker Placement" },
+                        new List<string> { "Test Designer" },
+                        new List<string> { "Test Publisher" })));
+                services.AddScoped(_ => mockBggApi.Object);
+
+                // Mock IBggCoverDownloader → null (tolerated fallback, no real HTTP/R2 call).
+                services.RemoveAll(typeof(IBggCoverDownloader));
+                var mockCoverDownloader = new Mock<IBggCoverDownloader>();
+                mockCoverDownloader
+                    .Setup(x => x.DownloadAndUploadAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .Returns(Task.FromResult<string?>(null));
+                services.AddScoped(_ => mockCoverDownloader.Object);
+
+                // Real auth is bypassed with a test scheme; the role is supplied per-request
+                // via the role header so each test can act as a different role.
+                services.AddAuthentication(TestAuthenticationHandler.SchemeName)
+                    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                        TestAuthenticationHandler.SchemeName, _ => { });
+
+                var allowAllPolicy = new AuthorizationPolicyBuilder()
+                    .AddAuthenticationSchemes(TestAuthenticationHandler.SchemeName)
+                    .RequireAssertion(_ => true)
+                    .Build();
+                services.AddAuthorization(options =>
+                {
+                    options.DefaultPolicy = allowAllPolicy;
+                    options.AddPolicy("AdminOrEditorPolicy", allowAllPolicy);
+                    options.AddPolicy("AdminOnlyPolicy", allowAllPolicy);
+                });
+            });
+        });
+}
+
+/// <summary>
 /// Issue #3367: a SuperAdmin creating a game via the PDF wizard must auto-publish
 /// (ApprovalStatus == "Published"), exactly like an Admin — not fall through to the
 /// Editor "requires approval" branch.
@@ -38,105 +123,39 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class WizardSuperAdminApprovalTests : IAsyncLifetime
+public sealed class WizardSuperAdminApprovalTests
+    : IClassFixture<WizardSuperAdminApprovalHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly WizardSuperAdminApprovalHostFixture _hostFixture;
     private Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
     private readonly Guid _testUserId;
 
-    public WizardSuperAdminApprovalTests(SharedTestcontainersFixture fixture)
+    public WizardSuperAdminApprovalTests(WizardSuperAdminApprovalHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"wizard_superadmin_approval_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
         _testUserId = Guid.NewGuid();
     }
 
+    // #4050. Host e doppi vengono dalla fixture, pagati una volta per classe; qui restano un
+    // database clonato dal template (gia' migrato) e un client nuovo per l'header dell'utente.
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
 
-        _factory = IntegrationWebApplicationFactory.Create(connectionString)
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureTestServices(services =>
-                {
-                    // Mock BGG API so SharedGame.Create() receives non-empty
-                    // description/imageUrl/thumbnailUrl (domain validation requires them).
-                    services.RemoveAll(typeof(Api.Services.IBggApiService));
-                    var mockBggApi = new Mock<Api.Services.IBggApiService>();
-                    mockBggApi
-                        .Setup(x => x.SearchGamesAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-                        .Returns(Task.FromResult(new List<BggSearchResultDto>()));
-                    mockBggApi
-                        .Setup(x => x.GetGameDetailsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                        .Returns(Task.FromResult<BggGameDetailsDto?>(new BggGameDetailsDto(
-                            174430,
-                            "Test Game BGG",
-                            "A test board game description for the SuperAdmin approval integration test.",
-                            2020,
-                            2,
-                            4,
-                            60,
-                            30,
-                            120,
-                            10,
-                            7.5,
-                            7.0,
-                            10000,
-                            2.5,
-                            "https://example.com/thumbnail.jpg",
-                            "https://example.com/image.jpg",
-                            new List<string> { "Strategy" },
-                            new List<string> { "Worker Placement" },
-                            new List<string> { "Test Designer" },
-                            new List<string> { "Test Publisher" })));
-                    services.AddScoped(_ => mockBggApi.Object);
-
-                    // Mock IBggCoverDownloader → null (tolerated fallback, no real HTTP/R2 call).
-                    services.RemoveAll(typeof(IBggCoverDownloader));
-                    var mockCoverDownloader = new Mock<IBggCoverDownloader>();
-                    mockCoverDownloader
-                        .Setup(x => x.DownloadAndUploadAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                        .Returns(Task.FromResult<string?>(null));
-                    services.AddScoped(_ => mockCoverDownloader.Object);
-
-                    // Real auth is bypassed with a test scheme; the role is supplied per-request
-                    // via the role header so each test can act as a different role.
-                    services.AddAuthentication(TestAuthenticationHandler.SchemeName)
-                        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthenticationHandler>(
-                            TestAuthenticationHandler.SchemeName, _ => { });
-
-                    var allowAllPolicy = new AuthorizationPolicyBuilder()
-                        .AddAuthenticationSchemes(TestAuthenticationHandler.SchemeName)
-                        .RequireAssertion(_ => true)
-                        .Build();
-                    services.AddAuthorization(options =>
-                    {
-                        options.DefaultPolicy = allowAllPolicy;
-                        options.AddPolicy("AdminOrEditorPolicy", allowAllPolicy);
-                        options.AddPolicy("AdminOnlyPolicy", allowAllPolicy);
-                    });
-                });
-            });
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
+        // Client per test, non quello condiviso: DefaultRequestHeaders.Add aggiunge e non
+        // sostituisce, quindi su un client per classe l'id utente si accumulerebbe.
         _client = _factory.CreateClient();
         // Only the user id is a client-wide default; the role is set per request.
         _client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeader, _testUserId.ToString());
     }
 
-    public async ValueTask DisposeAsync()
+    // Host e database appartengono alla fixture; il client e' di questa istanza.
+    public ValueTask DisposeAsync()
     {
         _client?.Dispose();
-        await _factory.DisposeAsync();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     private bool _userSeeded;

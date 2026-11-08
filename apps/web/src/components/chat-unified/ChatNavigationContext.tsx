@@ -48,9 +48,12 @@ export function ChatNavigationContext({ threadId }: ChatNavigationContextProps) 
         const thread = await api.chat.getThreadById(threadId);
         if (cancelled || !thread) return;
 
+        // #4244: `thread.gameId` is the game of the thread, catalog or private. The two have
+        // different pages, so exactly one of the two ids is passed on.
         const navLinks = getNavigationLinks('chat', {
           id: thread.id,
-          gameId: thread.gameId ?? undefined,
+          gameId: thread.privateGameId ? undefined : (thread.gameId ?? undefined),
+          privateGameId: thread.privateGameId ?? undefined,
         });
         setLinks(navLinks);
       } catch {

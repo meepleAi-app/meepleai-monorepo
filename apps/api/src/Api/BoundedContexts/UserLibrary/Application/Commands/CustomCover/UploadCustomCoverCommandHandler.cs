@@ -1,18 +1,20 @@
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
+using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands.CustomCover;
 
 /// <summary>
 /// Handler for uploading a user-custom cover image (L3).
-/// Issue #1824. Flow: validate gameId∈library → delete old R2 if exists →
-/// upload new → update DB → return presigned URL.
+/// Issue #1824. Flow: validate gameId∈library → upload new → update DB → evict the cached
+/// game detail → delete the old object only if it lives under another key → return presigned URL.
 /// </summary>
 internal sealed class UploadCustomCoverCommandHandler : ICommandHandler<UploadCustomCoverCommand, CustomCoverUploadResult>
 {
@@ -23,17 +25,20 @@ internal sealed class UploadCustomCoverCommandHandler : ICommandHandler<UploadCu
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly IBlobStorageService _blobStorage;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly HybridCache _cache;
     private readonly ILogger<UploadCustomCoverCommandHandler> _logger;
 
     public UploadCustomCoverCommandHandler(
         IUserLibraryRepository libraryRepository,
         IBlobStorageService blobStorage,
         IUnitOfWork unitOfWork,
+        HybridCache cache,
         ILogger<UploadCustomCoverCommandHandler> logger)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -52,26 +57,13 @@ internal sealed class UploadCustomCoverCommandHandler : ICommandHandler<UploadCu
         // never drift.
         var coverKey = CoverKeyBuilder.ForUser(command.UserId, command.GameId);
 
-        // Best-effort delete old cover so stale R2 objects don't accumulate. Uses the
-        // RAW-KEY delete (mirrors CoverUrlResolver's raw-key reads): the categorized
-        // DeleteAsync runs PathSecurity.ValidateIdentifier which rejects the '/' in the
-        // deterministic key.
-        if (entry.HasCustomCover)
-        {
-            try
-            {
-                await _blobStorage.DeleteRawKeyAsync(
-                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.User, entry.CustomCoverR2Key!),
-                    cancellationToken
-                ).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogWarning(ex,
-                    "Failed to delete old custom cover R2 key {Key} during replace flow",
-                    entry.CustomCoverR2Key);
-            }
-        }
+        // #4499: the key is deterministic per user and game, so a replaced cover is normally the
+        // SAME object the write below overwrites. Deleting it first lost the previous cover
+        // whenever the write then failed, while the DB still pointed at it. Only an object under
+        // another key (an older layout) is removed, and only once the DB points at the new one.
+        var previousPhysicalKey = entry.HasCustomCover
+            ? CoverKeyBuilder.PhysicalKeyFor(CoverKind.User, entry.CustomCoverR2Key!)
+            : null;
 
         // #3384: write to the EXACT deterministic physical key via the RAW-KEY path.
         // The categorized StoreAsync rejects the slash-containing key via
@@ -96,6 +88,29 @@ internal sealed class UploadCustomCoverCommandHandler : ICommandHandler<UploadCu
         entry.SetCustomCoverR2Key(coverKey.DbKey);
         await _libraryRepository.UpdateAsync(entry, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4499: GET /library/games/{gameId} caches its DTO for 5 minutes; without this the detail
+        // the user uploaded from keeps answering with the key it had before (no «Rimuovi»).
+        await _cache.RemoveAsync(GetGameDetailQueryHandler.BuildCacheKey(command.UserId, command.GameId), cancellationToken)
+            .ConfigureAwait(false);
+
+        if (previousPhysicalKey is not null
+            && !string.Equals(previousPhysicalKey, coverKey.PhysicalKey, StringComparison.Ordinal))
+        {
+            // Best-effort, as before: a failure leaves an orphan object, never a missing cover.
+            // Uses the RAW-KEY delete (mirrors CoverUrlResolver's raw-key reads): the categorized
+            // DeleteAsync runs PathSecurity.ValidateIdentifier which rejects the '/' in the key.
+            try
+            {
+                await _blobStorage.DeleteRawKeyAsync(previousPhysicalKey, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to delete previous custom cover object {Key} after replacing it",
+                    previousPhysicalKey);
+            }
+        }
 
         _logger.LogInformation(
             "Custom cover uploaded for game {GameId}, user {UserId}, key {Key}",

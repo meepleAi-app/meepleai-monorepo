@@ -410,7 +410,11 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         persisted.DisplayName.Should().Be(user.DisplayName);
         persisted.PasswordHash.Should().Be(user.PasswordHash.Value);
         persisted.Role.Should().Be(user.Role.Value);
-        persisted.CreatedAt.Should().Be(user.CreatedAt);
+        // Issue #3866: the read now comes from Postgres instead of the change tracker, so the value
+        // has been through a `timestamp` column — microsecond precision, against the 100ns ticks of
+        // the in-memory DateTime. An exact Be() was comparing the object with itself, which is
+        // precisely what a "domain → persistence" mapping test must NOT do.
+        persisted.CreatedAt.Should().BeCloseTo(user.CreatedAt, TimeSpan.FromMicroseconds(1));
     }
 
     [Fact]

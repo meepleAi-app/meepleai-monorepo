@@ -3,9 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getStats: vi.fn().mockResolvedValue({ agents: [] }),
-  getAgentTypologies: vi.fn().mockResolvedValue([]),
   getPrompts: vi.fn().mockResolvedValue([]),
-  getAiModels: vi.fn().mockResolvedValue({ items: [] }),
+  getAiModels: vi.fn().mockResolvedValue({ models: [], totalCount: 0, page: 1, pageSize: 20 }),
   getAiRequests: vi.fn().mockResolvedValue({ requests: [], totalCount: 0 }),
   getModelPerformance: vi.fn().mockResolvedValue({
     totalRequests: 0,
@@ -22,9 +21,6 @@ const mocks = vi.hoisted(() => ({
     bucketSize: '1h',
     datapoints: [],
   }),
-  deletePrompt: vi.fn().mockResolvedValue(undefined),
-  approveAgentTypology: vi.fn().mockResolvedValue(undefined),
-  deleteAgentTypology: vi.fn().mockResolvedValue(undefined),
   setPrimaryModel: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -62,7 +58,6 @@ import { ModelsTab } from '../ModelsTab';
 import { PromptsTab } from '../PromptsTab';
 import { RagTab } from '../RagTab';
 import { RequestsTab } from '../RequestsTab';
-import { TypologiesTab } from '../TypologiesTab';
 
 describe('AgentsTab', () => {
   it('renders heading', () => {
@@ -78,18 +73,6 @@ describe('AgentsTab', () => {
   it('renders link to full catalog', () => {
     render(<AgentsTab />);
     expect(screen.getByText('Full Catalog')).toBeInTheDocument();
-  });
-});
-
-describe('TypologiesTab', () => {
-  it('renders heading', () => {
-    render(<TypologiesTab />);
-    expect(screen.getByText('Agent Typologies')).toBeInTheDocument();
-  });
-
-  it('shows empty state when no typologies', async () => {
-    render(<TypologiesTab />);
-    expect(await screen.findByText('No typologies found')).toBeInTheDocument();
   });
 });
 
@@ -132,17 +115,119 @@ describe('PromptsTab', () => {
     render(<PromptsTab />);
     expect(await screen.findByText('No prompt templates found')).toBeInTheDocument();
   });
+
+  /**
+   * #4169 (6c): «Delete» chiamava DELETE /admin/prompts/{id}, una rotta che non esiste, e «Edit» non
+   * faceva nulla. Il prompt delle risposte sta nella versione pubblicata del profilo, che non si
+   * cancella: la scheda lo dice e rimanda lì.
+   */
+  it('has no delete or edit buttons, and points to the agent profile', async () => {
+    mocks.getPrompts.mockResolvedValueOnce([
+      {
+        id: 'p1',
+        name: 'Rules prompt',
+        description: null,
+        category: 'qa',
+        isActive: true,
+      },
+    ]);
+    render(<PromptsTab />);
+
+    expect(await screen.findByText('Rules prompt')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /delete prompt/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /edit prompt/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /agent profile/i })).toHaveAttribute(
+      'href',
+      '/admin/agents/profile'
+    );
+  });
 });
 
 describe('ModelsTab', () => {
   it('renders heading', () => {
     render(<ModelsTab />);
-    expect(screen.getByText('AI Models')).toBeInTheDocument();
+    expect(screen.getByText('Models & prices')).toBeInTheDocument();
   });
 
   it('shows empty state when no models', async () => {
     render(<ModelsTab />);
     expect(await screen.findByText('No AI models configured')).toBeInTheDocument();
+  });
+
+  // 🔴 #4059 — un errore di caricamento deve essere DISTINGUIBILE da «non ci sono modelli».
+  //
+  // Il difetto: `.catch(() => {})` cancellava l'errore e il tab mostrava lo stesso schermo
+  // dello stato vuoto. Il backend mandava `models`/`totalCount` dove lo schema del client
+  // attende `items`/`total`, quindi la validazione falliva — mentre la rotta rispondeva 200
+  // con 6 modelli. Misurato in Chromium su quattro pagine admin: errore di schema in console
+  // su tutte e quattro, nessun errore a schermo su nessuna.
+  //
+  // L'asserzione che conta e' la SECONDA: senza di essa il test passerebbe anche se il ramo
+  // d'errore venisse reso oltre lo stato vuoto, cioe' senza distinguere i due casi.
+  it('mostra un errore a schermo quando il caricamento fallisce, e NON lo stato vuoto', async () => {
+    mocks.getAiModels.mockRejectedValueOnce(
+      new Error('Schema validation failed: Response validation failed for /api/v1/admin/ai-models')
+    );
+
+    render(<ModelsTab />);
+
+    const alert = await screen.findByTestId('models-tab-error');
+    expect(alert).toHaveTextContent(/Could not load the AI models/);
+    expect(alert).toHaveTextContent(/Schema validation failed/);
+    expect(screen.queryByText('No AI models configured')).not.toBeInTheDocument();
+  });
+
+  it('legge `models`, cioe` la forma che il backend manda davvero', async () => {
+    // Il controllo al rovescio del test sopra: con una risposta VALIDA il tab deve mostrare i
+    // modelli, non l'errore. Senza questo, un componente che rendesse sempre il ramo d'errore
+    // passerebbe il test precedente.
+    //
+    // #4093 ha sciolto la decisione che #4059 voce 4 aveva lasciata aperta: il contratto si
+    // allinea al BACKEND, che e` quello in esecuzione — `models`/`totalCount` e i campi
+    // `modelId`/`isActive`/`settings`/`usage`. Il fixture qui sotto e` copiato dalla risposta
+    // reale di `GET /api/v1/admin/ai-models?status=active`, non derivato dallo schema che
+    // dovrebbe verificare.
+    mocks.getAiModels.mockResolvedValueOnce({
+      models: [
+        {
+          id: '4bb618e8-1287-4306-a540-b19176d64ff8',
+          modelId: 'meta-llama/llama-3.3-70b-instruct:free',
+          displayName: 'gpt-test',
+          provider: 'OpenRouter',
+          priority: 1,
+          isActive: true,
+          isPrimary: false,
+          createdAt: '2026-07-13T06:48:23.540528Z',
+          updatedAt: null,
+          settings: {
+            maxTokens: 4096,
+            temperature: 0.7,
+            pricing: { inputPricePerMillion: 0, outputPricePerMillion: 0, currency: 'USD' },
+          },
+          usage: {
+            totalRequests: 0,
+            totalInputTokens: 0,
+            totalOutputTokens: 0,
+            totalTokensUsed: 0,
+            totalCostUsd: 0,
+            lastUsedAt: null,
+          },
+        },
+      ],
+      totalCount: 1,
+      page: 1,
+      pageSize: 20,
+    });
+
+    render(<ModelsTab />);
+
+    // #4169: la riga mostra l'identificatore del modello, e sotto provider e nome visualizzato.
+    // Se il componente tornasse a leggere `modelIdentifier` (inesistente) comparirebbe "undefined".
+    expect(await screen.findByText('meta-llama/llama-3.3-70b-instruct:free')).toBeInTheDocument();
+    expect(screen.getByText(/OpenRouter · gpt-test/)).toBeInTheDocument();
+    expect(screen.queryByText(/undefined/)).not.toBeInTheDocument();
+    expect(screen.queryByText('No AI models configured')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('models-tab-error')).not.toBeInTheDocument();
   });
 });
 

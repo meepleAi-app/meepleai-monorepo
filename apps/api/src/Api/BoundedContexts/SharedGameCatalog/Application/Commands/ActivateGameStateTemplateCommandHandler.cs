@@ -45,16 +45,22 @@ internal sealed class ActivateGameStateTemplateCommandHandler
         var template = await _templateRepository.GetByIdAsync(command.TemplateId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (template is null)
+        // #4543: un template di un altro gioco non esiste sotto la rotta di questo.
+        if (template is null || template.SharedGameId != command.SharedGameId)
         {
             throw new NotFoundException("GameStateTemplate", command.TemplateId.ToString());
         }
 
-        // Use domain service to ensure only one active version per game
-        await _versioningService.SetActiveVersionAsync(template, cancellationToken)
-            .ConfigureAwait(false);
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // #4543: SetActiveVersionAsync disattiva gli altri template con un ExecuteUpdate, che va
+        // subito al database; l'attivazione di questo, invece, è sull'oggetto letto AsNoTracking, e
+        // arriva al database solo con Update + SaveChanges. Senza Update il gioco restava senza
+        // template attivo (204, poi GET 404). La transazione tiene insieme le due scritture: se il
+        // salvataggio fallisce, gli altri template tornano come erano.
+        await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            await _versioningService.SetActiveVersionAsync(template, ct).ConfigureAwait(false);
+            _templateRepository.Update(template);
+        }, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Game state template activated: {TemplateId} for game {SharedGameId}",

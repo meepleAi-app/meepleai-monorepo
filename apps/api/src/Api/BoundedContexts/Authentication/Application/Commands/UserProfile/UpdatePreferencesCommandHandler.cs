@@ -34,18 +34,18 @@ internal class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferenc
             throw new DomainException("User not found");
         }
 
-        // Update preferences via domain method (includes validation)
+        // #4157: a field the request leaves out keeps its saved value. The domain methods still
+        // validate the whole set, as before.
         user.UpdatePreferences(
-            command.Language,
-            command.Theme,
-            command.EmailNotifications,
-            command.DataRetentionDays);
+            command.Language ?? user.Language,
+            command.Theme ?? user.Theme,
+            command.EmailNotifications ?? user.EmailNotifications,
+            command.DataRetentionDays ?? user.DataRetentionDays);
 
-        // Update privacy settings
         user.UpdatePrivacySettings(
-            command.ShowProfile,
-            command.ShowActivity,
-            command.ShowLibrary);
+            command.ShowProfile ?? user.ShowProfile,
+            command.ShowActivity ?? user.ShowActivity,
+            command.ShowLibrary ?? user.ShowLibrary);
 
         // Persist updates
         await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);

@@ -35,7 +35,8 @@ internal sealed class CreateAiModelCommandHandler : ICommandHandler<CreateAiMode
             displayName: command.DisplayName,
             provider: command.Provider,
             priority: command.Priority,
-            settings: command.Settings,
+            // #4275: la capacità di tool calling la dichiara il seed, per i modelli misurati; non una richiesta.
+            settings: command.Settings with { SupportsToolCalling = false },
             isActive: command.IsActive,
             isPrimary: command.IsPrimary
         );

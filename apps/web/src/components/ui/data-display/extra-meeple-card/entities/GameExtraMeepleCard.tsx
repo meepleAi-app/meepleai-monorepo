@@ -4,30 +4,20 @@
 /**
  * GameExtraMeepleCard — expanded card for Game entities
  * Issue #5029 - GameExtraMeepleCard: KB + Agent tabs (Epic #5023)
+ * Issue #4138 - the Agent tab is gone: it read a per-game agent config that no answer
+ * used, and its empty state offered to create an agent, which users no longer do.
  */
 
 import React, { useState } from 'react';
 
-import {
-  Bot,
-  BookOpen,
-  Clock,
-  FileText,
-  Gamepad2,
-  HelpCircle,
-  MessageCircle,
-  Settings,
-  Star,
-  Trophy,
-  Users,
-} from 'lucide-react';
+import { BookOpen, Clock, FileText, Gamepad2, HelpCircle, Star, Trophy, Users } from 'lucide-react';
 
 import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
 import { EntityLinkBadge } from '@/components/ui/data-display/entity-link-badge';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
-import { AgentStatusBadge, KbStatusBadge } from '../badge-stubs';
+import { KbStatusBadge } from '../badge-stubs';
 import {
   ENTITY_COLORS,
   EntityHeader,
@@ -37,7 +27,7 @@ import {
   EntityErrorState,
 } from '../shared';
 
-import type { GameDetailData, GameAgentPreview } from '../types';
+import type { GameDetailData } from '../types';
 
 // ============================================================================
 // Types & Constants
@@ -51,7 +41,7 @@ export interface GameExtraMeepleCardProps {
   'data-testid'?: string;
 }
 
-type GameTab = 'details' | 'rules' | 'stats' | 'kb' | 'agent';
+type GameTab = 'details' | 'rules' | 'stats' | 'kb';
 
 /** Sort order for KB document status (Issue #5029) */
 const KB_STATUS_ORDER: Record<'indexed' | 'processing' | 'failed' | 'none', number> = {
@@ -101,7 +91,6 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
   });
   const kbDocCount = sortedPdfDocs.length || sortedKbDocs.length;
   const indexedCount = (data.kbDocuments ?? []).filter(d => d.status === 'indexed').length;
-  const agentStatus = data.agent?.isActive ? 'active' : undefined;
 
   return (
     <div
@@ -158,13 +147,6 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
             label="KB"
             activeAccent={colors.activeAccent}
             badge={indexedCount > 0 ? indexedCount : undefined}
-          />
-          <EntityTabTrigger
-            value="agent"
-            icon={Bot}
-            label="Agent"
-            activeAccent={colors.activeAccent}
-            badge={agentStatus === 'active' ? 'Attivo' : undefined}
           />
         </TabsList>
 
@@ -318,81 +300,8 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
               </div>
             )}
           </TabsContent>
-
-          {/* ── Agent Tab ─────────────────────────────────────────── */}
-          <TabsContent value="agent" className="mt-0">
-            {data.agent ? (
-              <GameAgentCard agent={data.agent} gameId={data.id} />
-            ) : (
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <Bot className="h-8 w-8 text-slate-300" aria-hidden="true" />
-                <div>
-                  <p className="font-nunito text-sm font-medium text-muted-foreground">
-                    Nessun agente configurato
-                  </p>
-                  <p className="font-nunito text-xs text-muted-foreground mt-0.5">
-                    Crea un agente AI per rispondere alle domande su questo gioco
-                  </p>
-                </div>
-                <a
-                  href={`/library/${data.id}/agent`}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 font-nunito text-xs font-semibold text-white hover:bg-orange-600 transition-colors"
-                  data-testid="game-agent-create-cta"
-                >
-                  <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-                  Crea Agente
-                </a>
-              </div>
-            )}
-          </TabsContent>
         </div>
       </Tabs>
     </div>
   );
 });
-
-// ── Game sub-components ────────────────────────────────────────────────────
-
-/** Compact agent card rendered inside GameExtraMeepleCard Agent tab (Issue #5029) */
-function GameAgentCard({ agent, gameId }: { agent: GameAgentPreview; gameId: string }) {
-  const status = agent.isActive ? ('active' as const) : ('idle' as const);
-  return (
-    <div className="space-y-3" data-testid="game-agent-card">
-      {/* Status + info row */}
-      <div className="flex items-center justify-between gap-2 rounded-lg bg-orange-50/50 border border-orange-200/40 p-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Bot className="h-4 w-4 shrink-0 text-orange-500" aria-hidden="true" />
-          <div className="min-w-0">
-            <p className="font-quicksand text-sm font-bold text-orange-700 truncate">
-              {agent.name}
-            </p>
-            {agent.model && (
-              <p className="font-nunito text-[10px] text-orange-500">{agent.model}</p>
-            )}
-          </div>
-        </div>
-        <AgentStatusBadge status={status} />
-      </div>
-
-      {/* CTAs */}
-      <div className="flex gap-2">
-        <a
-          href={agent.id ? `/chat/new?agentId=${agent.id}` : `/library/${gameId}/agent`}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 font-nunito text-xs font-semibold text-white hover:bg-orange-600 transition-colors"
-          data-testid="game-agent-start-chat"
-        >
-          <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-          Avvia Chat
-        </a>
-        <a
-          href={`/library/${gameId}/agent`}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50/60 px-3 py-2 font-nunito text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors"
-          data-testid="game-agent-configure"
-        >
-          <Settings className="h-3.5 w-3.5" aria-hidden="true" />
-          Configura Agente
-        </a>
-      </div>
-    </div>
-  );
-}

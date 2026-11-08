@@ -57,6 +57,7 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 | [050](adr-050-pgvector-migration.md) | Migrazione Qdrant → pgvector | 2026-03-29 | Implemented |
 | [054](adr-054-devops-multi-branch-strategy.md) | DevOps Multi-Branch Strategy | 2026-05-08 | Accepted |
 | [058](adr-058-canonical-log-sanitizers.md) | Canonical Log Sanitizers (PII masking + log-forging) | 2026-05-15 | Proposed |
+| [099](adr-099-secrets-sops-age-in-repo.md) | I `.secret` cifrati nel repository con SOPS + age: la sorgente di verità non è più il server staging (numerato fuori fascia: 050–059 è piena) | 2026-10-16 | Accepted |
 
 ### Knowledge Base & RAG (080–090)
 
@@ -66,6 +67,20 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 |-----|-------|------|--------|
 | [088](adr-088-mechanic-cards-as-rag-retrieval-source.md) | Mechanic Cards as RAG Retrieval Source | 2026-07-30 | Proposed |
 | [090](adr-090-in-session-grounded-answer-ownership.md) | In-Session Grounded Answer Ownership (KnowledgeBase owner, SessionTracking consumer) | 2026-08-02 | Accepted |
+| [092](adr-092-arbiter-ownership-python-validator.md) | Un solo Arbitro: Python validatore puro, C# proprietario della risposta (numerazione sequenziale, tema KB/AI) | 2026-10-08 | Accepted |
+| [093](adr-093-external-parser-ip-boundary.md) | Confine IP per i parser esterni: file intero solo verso fornitori allowlistati | 2026-10-08 | Accepted |
+| [095](adr-095-single-answer-pipeline-and-versioned-agent-profile.md) | Una sola pipeline di risposta, profilo dell'agente con versioni, gateway LLM con tetto unico (numerato fuori fascia: 080–090 è piena) | 2026-10-10 | Accepted |
+| [097](adr-097-meai-facade-over-the-llm-gateway.md) | Microsoft.Extensions.AI come facciata del gateway per il tool calling (numerato fuori fascia: 080–090 è piena) | 2026-10-12 | Accepted |
+| [098](adr-098-arbiter-is-a-task-not-an-agent.md) | L'arbitro è un compito dell'agente unico, non un agente: disputa solo in partita, validatore come suo strumento, selettore della chat a intenti (emenda ADR-092; numerato fuori fascia: 080–090 è piena) | 2026-10-15 | Accepted |
+| [100](adr-100-processing-queue-owns-admin-uploads.md) | La coda è l'unica proprietaria dell'elaborazione degli upload admin: presa in carico atomica per ogni percorso, priorità reale, coda piena = 429 (numerato fuori fascia: 080–099 è piena) | 2026-10-18 | Accepted |
+
+### Frontend Routing & Information Architecture (091–099)
+
+> Nuovo range: i precedenti si fermavano a 090 e nessuno copriva le decisioni di routing/IA del frontend. Vale la stessa nota di drift della sezione sopra — questa elenca solo l'ADR aggiunto dal suo PR.
+
+| ADR | Title | Date | Status |
+|-----|-------|------|--------|
+| [091](adr-091-canonical-game-detail-tree.md) | Albero canonico del dettaglio gioco (`/games/[id]`) | 2026-09-07 | Accepted |
 
 ## ADR Lifecycle
 

@@ -330,7 +330,7 @@ test.describe('Admin Share Requests - Review Workflow', () => {
     // Verify action buttons are disabled or not visible
     const approveButton = page.getByRole('button', { name: /approve/i });
     const isDisabled = await approveButton.isDisabled().catch(() => true);
-    const isHidden = !(await approveButton.isVisible().catch(() => false));
+    const isHidden = !(await approveButton.isVisible());
 
     expect(isDisabled || isHidden).toBe(true);
   });

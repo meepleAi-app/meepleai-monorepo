@@ -12,8 +12,8 @@ internal record GameStartedInNightEvent(
     string GameTitle,
     int PlayOrder) : IDomainEvent
 {
-    public Guid EventId { get; } = Guid.NewGuid();
-    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
 }
 
 /// <summary>
@@ -26,8 +26,8 @@ internal record GameCompletedInNightEvent(
     string GameTitle,
     Guid? WinnerId) : IDomainEvent
 {
-    public Guid EventId { get; } = Guid.NewGuid();
-    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
 }
 
 /// <summary>
@@ -38,8 +38,8 @@ internal record NightStartedEvent(
     Guid OrganizerId,
     string Title) : IDomainEvent
 {
-    public Guid EventId { get; } = Guid.NewGuid();
-    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
 }
 
 /// <summary>
@@ -51,8 +51,8 @@ internal record NightFinalizedEvent(
     string Title,
     int TotalGamesPlayed) : IDomainEvent
 {
-    public Guid EventId { get; } = Guid.NewGuid();
-    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
 }
 
 /// <summary>
@@ -65,6 +65,6 @@ internal record GameNightResourceUpdateEvent(
     string ResourceType,
     string Payload) : IDomainEvent
 {
-    public Guid EventId { get; } = Guid.NewGuid();
-    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
 }

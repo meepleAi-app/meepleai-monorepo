@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Exceptions;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -181,7 +182,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
 
             // Step 3: Find or create user and link OAuth account
             var (user, isNewUser) = await FindOrCreateUserAsync(
-                command.Provider, oauthUserInfo, tokenResponse!, cancellationToken).ConfigureAwait(false);
+                command.Provider, oauthUserInfo, tokenResponse!, command.AcceptLanguage, cancellationToken)
+                .ConfigureAwait(false);
 
             // Step 4: Create session for authenticated user
             string sessionToken;
@@ -352,8 +354,16 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             return; // nothing was persisted yet
         }
 
+        // Issue #3866: `.AsTracking()` on both reads below. The DbContext default is NoTracking
+        // (PERF-06), so each of them returned a SECOND instance of a row this very scope had just
+        // created and is still tracking; Remove() then threw "cannot be tracked because another
+        // instance with the same key value is already being tracked". The exception escaped this
+        // compensation helper into the generic catch of the caller, which reported an unrelated
+        // error message AND left the compensation undone. With tracking, identity resolution hands
+        // back the instance already in the tracker and Remove() operates on it.
         var providerLower = provider.ToLowerInvariant();
         var oauthAccountToRemove = await _db.OAuthAccounts
+            .AsTracking()
             .FirstOrDefaultAsync(
                 o => o.UserId == userIdToClean.Value && o.Provider == providerLower,
                 cancellationToken)
@@ -367,6 +377,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         if (isNewUserToClean)
         {
             var userToRemove = await _db.Users
+                .AsTracking()
                 .FirstOrDefaultAsync(u => u.Id == userIdToClean.Value, cancellationToken)
                 .ConfigureAwait(false);
             if (userToRemove != null)
@@ -465,6 +476,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         string provider,
         OAuthUserInfo? userInfo,
         OAuthTokenResponse tokenResponse,
+        string? acceptLanguage,
         CancellationToken cancellationToken)
     {
         // Find existing OAuth account
@@ -472,6 +484,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         var providerLower = provider.ToLowerInvariant();
         var oauthAccount = await _db.OAuthAccounts
             .Include(oa => oa.User)
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(oa =>
                 oa.Provider == providerLower &&
                 oa.ProviderUserId == userInfo!.Id, cancellationToken).ConfigureAwait(false);
@@ -522,7 +536,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 // send a display name, fall back to a random Player-{ShortGuid}
                 // — never to the email local-part. The user can change it
                 // later via /users/profile.
-                var fallbackDisplayName = $"Player-{Guid.NewGuid():N}"[..14];
+                var fallbackDisplayName = GeneratedDisplayName.Create();
 
                 var domainUser = User.CreateForOAuth(
                     id: Guid.NewGuid(),
@@ -533,7 +547,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                     role: Role.User,
                     tier: null,
                     oauthProvider: providerLower,
-                    timeProvider: _timeProvider);
+                    timeProvider: _timeProvider,
+                    language: UserLanguage.Resolve(null, acceptLanguage));
 
                 await _userRepository.AddAsync(domainUser, cancellationToken).ConfigureAwait(false);
                 await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

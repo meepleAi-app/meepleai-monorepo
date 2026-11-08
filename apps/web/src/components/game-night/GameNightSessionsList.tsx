@@ -1,8 +1,12 @@
 /**
  * GameNightSessionsList — Displays sessions played within a game night
  *
- * Shows each session as a card with game title, status badge, play order,
- * and a link to the live session page.
+ * Shows each session as a card with game title, status badge, play order, and a link.
+ *
+ * #4752 (the night → live game bridge): a game started from a night is a LiveGameSession, played at
+ * /sessions/{liveSessionId}/live — that is where a card links while the night runs. A sitting with no live
+ * game (one that predates the bridge, or a draft not yet taken live) and every card of a COMPLETED night keep
+ * the old link: the night live page while the night runs, the summary once it is completed (#4156 D7).
  *
  * Plan 2 Task 5 — Session Flow v2.1
  */
@@ -14,6 +18,7 @@ import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { liveGameHref } from '@/lib/game-nights/liveGameHref';
 import type { GameNightActiveSession } from '@/stores/game-night/types';
 
 import type { LucideIcon } from 'lucide-react';
@@ -26,33 +31,41 @@ interface StatusMeta {
   badgeClass: string;
 }
 
+// The coloured statuses have a darker tint for the dark theme. Until #4539 a `dark:` pair also had to
+// beat the Badge variant's `dark:bg-primary/90`; the variant no longer has one, so the neutral
+// states use the theme tokens alone.
+const NEUTRAL_BADGE = 'bg-muted text-foreground border-transparent';
+
 const STATUS_MAP: Record<string, StatusMeta> = {
   in_progress: {
     icon: Play,
     label: 'In corso',
-    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    badgeClass:
+      'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
   },
   pending: {
     icon: Clock,
     label: 'In attesa',
-    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+    badgeClass: NEUTRAL_BADGE,
   },
   completed: {
     icon: CheckCircle2,
     label: 'Completata',
-    badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
+    badgeClass:
+      'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
   },
   skipped: {
     icon: Pause,
     label: 'Saltata',
-    badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+    badgeClass:
+      'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
   },
 };
 
 const FALLBACK_STATUS: StatusMeta = {
   icon: Gamepad2,
   label: 'Sconosciuto',
-  badgeClass: 'bg-gray-100 text-gray-600 border-gray-200',
+  badgeClass: NEUTRAL_BADGE,
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -60,12 +73,16 @@ const FALLBACK_STATUS: StatusMeta = {
 export interface GameNightSessionsListProps {
   sessions: GameNightActiveSession[];
   gameNightId: string;
+  /** The night is completed: its sessions link to the summary instead of the live page. */
+  isCompleted?: boolean;
 }
 
 export function GameNightSessionsList({
   sessions,
-  gameNightId: _gameNightId,
+  gameNightId,
+  isCompleted = false,
 }: GameNightSessionsListProps) {
+  const nightHref = `/game-nights/${gameNightId}/${isCompleted ? 'summary' : 'live'}`;
   if (sessions.length === 0) {
     return (
       <Card>
@@ -74,6 +91,18 @@ export function GameNightSessionsList({
             <Gamepad2 className="h-8 w-8 mx-auto mb-2 opacity-40" />
             Nessuna partita ancora — aggiungi un gioco per iniziare!
           </div>
+          {/* #4752: the night page is where the first game is started, so it must be reachable before
+              any session exists (it used to be linked only from a session's card). */}
+          {!isCompleted && (
+            <div className="text-center pb-2">
+              <Link
+                href={nightHref}
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Apri la serata live
+              </Link>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -91,11 +120,13 @@ export function GameNightSessionsList({
         {sessions.map(session => {
           const meta = STATUS_MAP[session.status] ?? FALLBACK_STATUS;
           const Icon = meta.icon;
+          const href =
+            !isCompleted && session.liveSessionId ? liveGameHref(session.liveSessionId) : nightHref;
 
           return (
             <Link
               key={session.id}
-              href={`/sessions/${session.id}`}
+              href={href}
               className="flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
             >
               <div className="flex items-center gap-3 min-w-0">

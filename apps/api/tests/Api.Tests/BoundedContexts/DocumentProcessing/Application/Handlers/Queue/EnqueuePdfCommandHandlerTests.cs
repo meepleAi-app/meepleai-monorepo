@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -98,7 +99,8 @@ public sealed class EnqueuePdfCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_QueueFull_ThrowsConflictException()
+    [Trait("Issue", "4443")]
+    public async Task Handle_QueueFull_ThrowsQueueFull()
     {
         // Arrange
         var command = new EnqueuePdfCommand(Guid.NewGuid(), Guid.NewGuid());
@@ -116,9 +118,37 @@ public sealed class EnqueuePdfCommandHandlerTests
             .Setup(r => r.CountByStatusAsync(JobStatus.Processing, It.IsAny<CancellationToken>()))
             .ReturnsAsync(10);
 
-        // Act & Assert — a full-queue state is a conflict (HTTP 409), not a 500 (#2568).
+        // Act & Assert — not a 500 (#2568), and #4443 R8: not the ConflictException of «already has an
+        // active job» (the test above), which some callers treat as success.
         await FluentActions.Invoking(() => _handler.Handle(command, CancellationToken.None))
-            .Should().ThrowAsync<ConflictException>()
-            .WithMessage("*Queue is full*");
+            .Should().ThrowAsync<ProcessingQueueFullException>();
+    }
+
+    [Fact]
+    public async Task Handle_QueueFull_WithTheCapBypassed_CreatesTheJob()
+    {
+        // Arrange — #4442: the chunked upload completion enqueues with BypassQueueCap.
+        var command = new EnqueuePdfCommand(Guid.NewGuid(), Guid.NewGuid(), Priority: 10, BypassQueueCap: true);
+
+        _pdfRepositoryMock
+            .Setup(r => r.ExistsAsync(command.PdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _jobRepositoryMock
+            .Setup(r => r.ExistsByPdfDocumentIdAsync(command.PdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _jobRepositoryMock
+            .Setup(r => r.CountByStatusAsync(JobStatus.Queued, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(127);
+        _jobRepositoryMock
+            .Setup(r => r.CountByStatusAsync(JobStatus.Processing, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        // Act
+        var jobId = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        jobId.Should().NotBeEmpty();
+        _jobRepositoryMock.Verify(r => r.AddAsync(It.Is<ProcessingJob>(j => j.PdfDocumentId == command.PdfDocumentId && j.Priority == 10),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }

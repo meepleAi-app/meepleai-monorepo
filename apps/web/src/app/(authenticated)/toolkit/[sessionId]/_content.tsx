@@ -37,6 +37,7 @@ import {
 import type { CounterToolConfig, Participant, ScoreboardData } from '@/components/session/types';
 import { CardDeckTool } from '@/components/toolkit';
 import { DiceRoller as ToolkitDiceRoller } from '@/components/toolkit/DiceRoller';
+import { SyncUnavailableBanner } from '@/components/toolkit/SyncUnavailableBanner';
 import { Timer as ToolkitTimer } from '@/components/toolkit/Timer';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useCounterTool } from '@/lib/domain-hooks/useCounterTool';
@@ -46,6 +47,7 @@ import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionToolLog } from '@/lib/domain-hooks/useSessionToolLog';
 import { useTurnOrder } from '@/lib/domain-hooks/useTurnOrder';
 import { useWhiteboardTool } from '@/lib/domain-hooks/useWhiteboardTool';
+import { liveSessionToUiSession } from '@/lib/sessions/live-session-to-ui';
 import { useSessionStore } from '@/lib/stores/session-store';
 import type { ToolId } from '@/lib/stores/session-store';
 import type { CounterToolDto } from '@/lib/types/gameToolkit';
@@ -256,7 +258,6 @@ export function ActiveSessionPageContent() {
     onPaused: () => toast.info('Session paused'),
     onResumed: () => toast.info('Session resumed'),
     onFinalized: () => toast.success('Session finalized'),
-    onError: err => toast.error(`Connection error: ${err.message}`),
   });
 
   const handlePause = async () => {
@@ -296,12 +297,14 @@ export function ActiveSessionPageContent() {
   }
 
   // Error state
-  if (error || sseError) {
+  // #4114: only a failure to load the session replaces the page. A sync failure is shown next
+  // to the content (SyncUnavailableBanner): the session's data answers either way.
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
           <p className="font-semibold text-red-800 dark:text-red-200">Error</p>
-          <p className="text-sm text-red-700 dark:text-red-300">{error ?? sseError?.message}</p>
+          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
         </div>
       </div>
     );
@@ -331,8 +334,11 @@ export function ActiveSessionPageContent() {
 
   const header = (
     <>
+      {sseError && <SyncUnavailableBanner />}
       <SessionHeader
-        session={activeSession as unknown as import('@/components/session/types').Session}
+        // #4114: the same adapter #4113 introduced on the library toolkit page. The double cast
+        // that was here hid four missing fields, and SessionHeader threw for any session.
+        session={liveSessionToUiSession(activeSession)}
         onPause={activeSession.status === 'InProgress' ? handlePause : undefined}
         onFinalize={handleFinalize}
       />

@@ -20,6 +20,24 @@ public sealed class UserTier : ValueObject
         "free", "normal", "premium", "pro", "enterprise"
     };
 
+    /// <summary>
+    /// I tier che il dominio riconosce, per chi deve validare senza costruire il valore.
+    /// </summary>
+    /// <remarks>
+    /// #3842 — questo elenco era privato, e ogni validatore se lo riscriveva a mano. Ne sono nate
+    /// tre versioni diverse e incompatibili: una con "Basic" (che il dominio non conosce), una
+    /// senza "normal" (che invece riconosce), e nessuna delle due con lo stesso confronto. Il
+    /// risultato era che l'endpoint del tier rifiutava OGNI valore, compresi i tre che il suo
+    /// stesso messaggio d'errore dichiarava validi.
+    ///
+    /// Meglio esporre l'elenco che vederlo duplicare male.
+    /// </remarks>
+    public static IReadOnlyCollection<string> All => ValidTiers;
+
+    /// <summary>Vero se il dominio riconosce il tier, senza distinzione di maiuscole.</summary>
+    public static bool IsValid(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && ValidTiers.Contains(value);
+
     public string Value { get; }
 
     private UserTier(string value)
@@ -63,21 +81,6 @@ public sealed class UserTier : ValueObject
     }
 
     /// <summary>
-    /// Gets collection limits for this tier (Epic #4068)
-    /// </summary>
-    public CollectionLimits GetLimits()
-    {
-        return Value switch
-        {
-            "free" => new CollectionLimits(MaxGames: 50, StorageQuotaMB: 100),
-            "normal" => new CollectionLimits(MaxGames: 100, StorageQuotaMB: 500),
-            "premium" or "pro" => new CollectionLimits(MaxGames: 500, StorageQuotaMB: 5000),
-            "enterprise" => new CollectionLimits(MaxGames: int.MaxValue, StorageQuotaMB: int.MaxValue),
-            _ => new CollectionLimits(MaxGames: 50, StorageQuotaMB: 100) // Default to free
-        };
-    }
-
-    /// <summary>
     /// Checks if this tier has at least the level of the specified tier.
     /// </summary>
     public bool HasLevel(UserTier requiredTier)
@@ -99,8 +102,3 @@ public sealed class UserTier : ValueObject
         return tier.Value;
     }
 }
-
-/// <summary>
-/// Collection limits per tier (Epic #4068 - Issue #4177)
-/// </summary>
-public record CollectionLimits(int MaxGames, int StorageQuotaMB);

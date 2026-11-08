@@ -17,6 +17,22 @@ using Xunit;
 namespace Api.Tests.Integration.Phase4a;
 
 /// <summary>
+/// La fixture di <see cref="RecommendedToolkitsEndpointIntegrationTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Le raccomandazioni sono calcolate sull'insieme dei toolkit presenti: un toolkit seminato da un
+/// test comparirebbe fra i risultati di un altro, quindi serve un database per test.
+/// </para>
+/// <para>
+/// #4050. Il verdetto di isolamento e' stato stabilito leggendo gli ENDPOINT, non i nomi dei
+/// test, e confermato da una refutazione ostile che cercava il falso negativo.
+/// </para>
+/// </remarks>
+public sealed class RecommendedToolkitsEndpointIntegrationTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "recommended_toolkits");
+
+/// <summary>
 /// Integration tests for <c>GET /api/v1/toolkits/recommended</c>
 /// (Wave 3 Phase 4a, PR #732 §4.3.4 / Issue #805).
 ///
@@ -40,36 +56,35 @@ namespace Api.Tests.Integration.Phase4a;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameToolkit")]
 [Trait("Wave", "3-Phase-4a")]
-public sealed class RecommendedToolkitsEndpointIntegrationTests : IAsyncLifetime
+public sealed class RecommendedToolkitsEndpointIntegrationTests
+    : IClassFixture<RecommendedToolkitsEndpointIntegrationTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly RecommendedToolkitsEndpointIntegrationTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
 
-    public RecommendedToolkitsEndpointIntegrationTests(SharedTestcontainersFixture fixture)
+    public RecommendedToolkitsEndpointIntegrationTests(RecommendedToolkitsEndpointIntegrationTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"recommended_toolkits_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
+    // #4050. L'host viene dalla fixture (una volta per classe); qui resta solo un database
+    // clonato dal template, ~0,11s.
+    //
+    // 🔴 BeginTestAsync DEVE girare prima che _factory venga usato. I test aprono uno scope
+    // come prima istruzione, e invertendo l'ordine il seed finirebbe nel database di avvio
+    // mentre la richiesta HTTP legge quello per test: conteggi a zero, cioe' un fallimento
+    // che somiglia a un bug dell'endpoint invece che a un errore di cablaggio.
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-        _client = _factory.CreateClient();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
+        _client = _hostFixture.Client;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
-    }
+    // Host, client e database appartengono alla fixture: disporli qui li toglierebbe
+    // ai test successivi.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
     public async Task RecommendedToolkits_WithoutAuth_ReturnsUnauthorized()

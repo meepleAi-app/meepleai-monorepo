@@ -366,7 +366,7 @@ public sealed class BggEndpointsIntegrationTests : IAsyncLifetime
     //  Rate limit contract (documented; live 429 covered separately)
     // ──────────────────────────────────────────────────────────────────────
 
-    [Fact(Skip = "Rate limiting is disabled by IntegrationWebApplicationFactory to keep the suite fast. " +
+    [Fact(Skip = "LIMITE: il rate limiting e disabilitato da IntegrationWebApplicationFactory to keep the suite fast. " +
                  "The 'BggSearch' policy contract (60 req/hour/user, 429 on exceed) is asserted in " +
                  "BggRateLimitIntegrationTests once auth-token infrastructure is wired (see docstring).")]
     public Task Search_WhenRateLimitExceeded_Returns429()

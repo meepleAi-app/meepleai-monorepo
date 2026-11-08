@@ -1,6 +1,8 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -16,8 +18,10 @@ using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -307,6 +311,123 @@ public class IndexPdfCommandHandlerTests
         textChunkRoleTags.Should().Equal(expectedRoles);
     }
 
+    // #4384: la reindicizzazione passa di qui (KbReindexProcessorService, wizard admin, endpoint di
+    // indicizzazione). Ogni riga di pgvector_embeddings deve puntare al text_chunks con lo stesso
+    // ChunkIndex: il braccio vettoriale ne legge heading, regioni e offset con una LEFT JOIN su
+    // source_chunk_id. Prima il ruolo arrivava (test qui sopra) ma il collegamento restava nullo.
+    [Fact]
+    public async Task Handle_LinksEveryPgvectorRowToTheTextChunkAtTheSameIndex()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, Guid.NewGuid(), "completed", GenerateExtractedText(120));
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenerateFlatHierarchicalChunks(4));
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+                new EmbeddingResult { Success = true, Embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList() });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var classifierMock = new Mock<IRoleClassifierService>();
+        classifierMock
+            .Setup(x => x.ClassifyAsync(It.IsAny<IReadOnlyList<ChunkInput>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([GameBookRole.Setup, GameBookRole.RulesReference, GameBookRole.Lore, GameBookRole.Setup]);
+
+        var handler = new IndexPdfCommandHandler(
+            context,
+            advancedChunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            loggerMock.Object,
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
+            timeProvider: null,
+            roleClassifier: classifierMock.Object);
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var chunksByIndex = await context.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .ToDictionaryAsync(tc => tc.ChunkIndex);
+        var rows = await context.PgVectorEmbeddings.ToListAsync();
+
+        rows.Should().HaveCount(4);
+        chunksByIndex.Should().HaveCount(4);
+        foreach (var row in rows)
+        {
+            var chunk = chunksByIndex[row.ChunkIndex];
+            row.SourceChunkId.Should().Be(chunk.Id, "la riga {0} deve puntare al passaggio con lo stesso indice", row.ChunkIndex);
+            row.RoleTags.Should().Be((int)chunk.RoleTags);
+        }
+    }
+
+    // #4384, dalla revisione: le righe di pgvector_embeddings si salvano a lotti prima della fine del
+    // gestore. Se un passo successivo fallisce, nessuna riga deve puntare a un passaggio mai salvato:
+    // nella fusione l'id del braccio vettoriale vince su quello, valido, del braccio lessicale.
+    [Fact]
+    public async Task Handle_WhenAStepAfterThePgvectorSaveFails_NoRowPointsAtAMissingChunk()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, Guid.NewGuid(), "completed", GenerateExtractedText(120));
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenerateFlatHierarchicalChunks(4));
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+                new EmbeddingResult { Success = true, Embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList() });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        // Il passo dopo il salvataggio dei vettori fallisce.
+        var pipelineMock = new Mock<IPdfIndexingPipeline>();
+        pipelineMock
+            .Setup(p => p.IndexAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(), It.IsAny<int>(),
+                It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("indexing pipeline down"));
+
+        var handler = new IndexPdfCommandHandler(
+            context,
+            advancedChunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            loggerMock.Object,
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            pipelineMock.Object,
+            timeProvider: null,
+            roleClassifier: null);
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        var savedChunkIds = await context.TextChunks.Select(tc => tc.Id).ToListAsync();
+        var rows = await context.PgVectorEmbeddings.ToListAsync();
+        rows.Should().NotBeEmpty("i vettori sono salvati prima del passo che fallisce");
+        rows.Should().OnlyContain(row => row.SourceChunkId == null || savedChunkIds.Contains(row.SourceChunkId.Value),
+            "una riga non deve puntare a un passaggio che non esiste");
+    }
+
     // Slice D (Issue #730), task 5: handler-driven test that heading-aware hierarchy (parent +
     // children built by IAdvancedChunkingService via HeadingAwareChunker) survives the re-index
     // path into BOTH persisted sinks. Also covers the Task-1 binding that a supplied
@@ -394,6 +515,61 @@ public class IndexPdfCommandHandlerTests
         // Both parent and child levels are embedded and persisted to pgvector.
         var vectorCount = await context.PgVectorEmbeddings.CountAsync();
         vectorCount.Should().Be(savedChunks.Count);
+    }
+
+    // #4782: a re-index rebuilds the chunks from ExtractedText alone. The page map stored next to it is the only
+    // thing that tells the chunker where each page begins; a document without structured elements would otherwise
+    // go back to every chunk on page 1.
+    [Theory]
+    [InlineData("[[1,0],[3,11]]", true)] // "alpha one" (0..9), the blank line, "beta two" from 11
+    [InlineData("[[1, 0], [3, 11]]", true)] // as Postgres jsonb returns it
+    [InlineData(null, false)]
+    [InlineData("[[1,0],[3,9]]", false)] // 9 is not behind a blank line: ignored, not trusted
+    public async Task Handle_FlatDocument_GivesTheChunkerTheStoredPageMap_OnlyWhenItFitsTheText(string? pageSpansJson, bool expectMap)
+    {
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, Guid.NewGuid(), "completed", "alpha one\n\nbeta two");
+        pdf.PageSpansJson = pageSpansJson;
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        ExtractedDocument? chunked = null;
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .Callback<ExtractedDocument, ChunkingConfiguration?, CancellationToken>((doc, _, _) => chunked = doc)
+            .ReturnsAsync([HierarchicalChunk.CreateParent("alpha one", new ChunkMetadata { Page = 1, ElementType = "text" })]);
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+                new EmbeddingResult { Success = true, Embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList() });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var handler = new IndexPdfCommandHandler(
+            context,
+            advancedChunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            loggerMock.Object,
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
+
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        chunked.Should().NotBeNull();
+        if (expectMap)
+        {
+            chunked!.PageSpans.Should().Equal(new PageSpan(1, 0), new PageSpan(3, 11));
+            chunked.PageCount.Should().Be(3);
+        }
+        else
+        {
+            chunked!.PageSpans.Should().BeNull();
+        }
     }
 
     // Slice D robustness guard: HeadingAwareChunker can emit a Level-0 parent chunk whose Text is
@@ -814,7 +990,90 @@ public class IndexPdfCommandHandlerTests
         var updatedPdf = await context.PdfDocuments.FindAsync(pdfId);
         updatedPdf!.ProcessingState.Should().Be("Failed");
         updatedPdf.ProcessingState.Should().Be("Failed");
-        updatedPdf.ProcessingError.Should().Contain("Unexpected chunking crash");
+        // #4660: fixed text, the exception message stays in the log (this column is served to users by pdf-status).
+        updatedPdf.ProcessingError.Should().Be(PdfFailureText.For(ErrorCategory.Unknown));
+        updatedPdf.ProcessingError.Should().NotContain("Unexpected chunking crash");
+    }
+
+    /// <summary>
+    /// Seguito di #4609: l'handler crea da sé il documento vettoriale in `processing`; se un'eccezione imprevista
+    /// manda il PDF in `Failed`, anche quel documento va chiuso (altrimenti il polling dello stato di
+    /// indicizzazione resta su «processing» con il PDF già fallito).
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenUnexpectedExceptionOccurs_AlsoClosesTheVectorDocumentAsFailed()
+    {
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, Guid.NewGuid(), "completed", GenerateExtractedText(10));
+        pdf.ProcessingState = "Extracting";
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Unexpected chunking crash"));
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+        var pipelineMock = new Mock<IPdfIndexingPipeline>();
+        var handler = new IndexPdfCommandHandler(
+            context, advancedChunkingServiceMock.Object, embeddingServiceMock.Object,
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            pipelineMock.Object);
+
+        await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        pipelineMock.Verify(
+            p => p.MarkIndexingFailedAsync(
+                pdfId,
+                It.Is<string>(m => m == "Unexpected error"),
+                CancellationToken.None),
+            Times.Once,
+            "the vector document gets a fixed text, not the exception message: pdf-status serves that column to users");
+    }
+
+    /// <summary>
+    /// Seguito di #4609, dalla revisione di #4657: se il guasto lascia nel tracker il documento vettoriale già
+    /// `completed` in memoria (l'ha scritto `IndexAsync` prima del salvataggio che è fallito), il salvataggio del
+    /// PDF `Failed` lo rimanderebbe al database. Un PDF fallito non può lasciare un documento vettoriale
+    /// `completed`.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheFailureLeavesTheVectorDocumentCompletedInTheTracker_TheDatabaseEndsFailed()
+    {
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, Guid.NewGuid(), "completed", GenerateExtractedText(10));
+        pdf.ProcessingState = "Extracting";
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                var tracked = context.VectorDocuments.Local.Single();
+                tracked.IndexingStatus = "completed";
+                tracked.IndexedAt = DateTime.UtcNow;
+            })
+            .ThrowsAsync(new InvalidOperationException("Unexpected chunking crash"));
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+        var pipeline = new PdfIndexingPipeline(
+            context, Mock.Of<IMediator>(), TimeProvider.System, Mock.Of<ISemanticResponseCache>(), NullLogger<PdfIndexingPipeline>.Instance);
+        var handler = new IndexPdfCommandHandler(
+            context, advancedChunkingServiceMock.Object, embeddingServiceMock.Object,
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            pipeline);
+
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        result.Success.Should().BeFalse("a run that did not fail would make the check below vacuous");
+        var row = await context.VectorDocuments.AsNoTracking().SingleAsync(v => v.PdfDocumentId == pdfId);
+        row.IndexingStatus.Should().Be("failed", "the completion never reached the database before the failure");
+        row.IndexingError.Should().Be("Unexpected error");
     }
 
     // Helper methods

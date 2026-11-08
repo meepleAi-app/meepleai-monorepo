@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-06-14T18:00:32.293Z",
+  "generatedAt": "2026-10-03T16:12:55.034Z",
   "scopes": {
     "mockups": "admin-mockups/design_files/**/*.{html,jsx}",
     "feSource": "apps/web/src/**/*.{ts,tsx,js,jsx}"
   },
   "pattern": "\\bBGG\\b|\\bBoardGameGeek\\b|\\bboardgamegeek\\b",
-  "totalViolations": 325,
+  "totalViolations": 313,
   "mockup": {
-    "fileCount": 219,
-    "violations": 52,
-    "filesAffected": 17,
+    "fileCount": 122,
+    "violations": 31,
+    "filesAffected": 9,
     "skipped": {
       "admin_scope": 0,
       "well_known_legitimate": 0,
@@ -17,45 +17,39 @@
     }
   },
   "feSource": {
-    "fileCount": 3456,
-    "violations": 273,
-    "filesAffected": 67,
+    "fileCount": 3574,
+    "violations": 282,
+    "filesAffected": 74,
     "skipped": {
-      "admin_scope": 627,
+      "admin_scope": 616,
       "well_known_legitimate": 6,
       "design_intent_obsolete": 0
     }
   },
-  "baselineMaxViolations": 0,
+  "baselineMaxViolations": 313,
   "byFile": {
     "admin-mockups/design_files/00-hub.html": 7,
     "admin-mockups/design_files/02-desktop-patterns.html": 1,
     "admin-mockups/design_files/librogame-game-night-storyboard.html": 1,
-    "admin-mockups/design_files/librogame-runthrough-game-detail.html": 2,
-    "admin-mockups/design_files/settings.jsx": 6,
-    "admin-mockups/design_files/sp3-how-it-works.jsx": 1,
-    "admin-mockups/design_files/sp3-shared-game-detail.jsx": 1,
     "admin-mockups/design_files/sp4-add-game-drawer.html": 2,
     "admin-mockups/design_files/sp4-add-game-drawer.jsx": 4,
     "admin-mockups/design_files/sp4-citation-pdf-viewer.html": 1,
     "admin-mockups/design_files/sp4-game-chat-tab.html": 6,
     "admin-mockups/design_files/sp4-library-wishlist-ui.jsx": 5,
     "admin-mockups/design_files/sp4-library-wishlist.jsx": 4,
-    "admin-mockups/design_files/sp4-upload-wizard-extended.html": 2,
-    "admin-mockups/design_files/sp4-upload-wizard-extended.jsx": 7,
-    "admin-mockups/design_files/sp5-profile-settings.html": 1,
-    "admin-mockups/design_files/sp5-profile-settings.jsx": 1,
+    "apps/web/src/app/(authenticated)/admin/wizard/steps/GameCreationStep.tsx": 2,
     "apps/web/src/app/(authenticated)/dashboard/_components/sections/GamesCarousel.tsx": 1,
     "apps/web/src/app/(authenticated)/dashboard/_components/sections/RecentiSection.tsx": 1,
     "apps/web/src/app/(authenticated)/dashboard/_components/sections/SuggestedSection.tsx": 3,
     "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx": 21,
     "apps/web/src/app/(authenticated)/library/AddGameDrawer.tsx": 1,
-    "apps/web/src/app/(authenticated)/library/_components/LibraryHub.tsx": 4,
+    "apps/web/src/app/(authenticated)/library/_components/LibraryHub.tsx": 2,
     "apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx": 2,
     "apps/web/src/app/(public)/shared-games/[id]/page-client.tsx": 1,
     "apps/web/src/app/(public)/shared-games/page-client.tsx": 1,
     "apps/web/src/components/catalog/GamesFilterPanel.tsx": 1,
     "apps/web/src/components/collection/CollectionGameGrid.tsx": 1,
+    "apps/web/src/components/features/cover-editor/AdminCoverSourceDialog.tsx": 3,
     "apps/web/src/components/features/gamebook/ActionCard.tsx": 1,
     "apps/web/src/components/features/gamebook/GameSearchBar.tsx": 7,
     "apps/web/src/components/features/gamebook/GameSearchCard.tsx": 13,
@@ -82,6 +76,8 @@
     "apps/web/src/components/ui/data-display/meeple-card/variants/HeroCard.tsx": 1,
     "apps/web/src/components/ui/data-display/meeple-info-card.tsx": 1,
     "apps/web/src/components/ui/data-display/rating-stars.tsx": 7,
+    "apps/web/src/components/wishlist/AddToWishlistDialog.tsx": 2,
+    "apps/web/src/components/wishlist/MeepleWishlistCard.tsx": 1,
     "apps/web/src/config/component-registry.ts": 2,
     "apps/web/src/hooks/admin/useGoldenForGame.ts": 1,
     "apps/web/src/hooks/admin/useImportBggTags.ts": 4,
@@ -101,10 +97,13 @@
     "apps/web/src/lib/api/core/httpClient.ts": 1,
     "apps/web/src/lib/api/index.ts": 8,
     "apps/web/src/lib/api/schemas/admin-mechanic-extractor-validation.schemas.ts": 5,
+    "apps/web/src/lib/api/schemas/admin/admin-cover.schemas.ts": 1,
     "apps/web/src/lib/api/schemas/games.schemas.ts": 3,
     "apps/web/src/lib/api/schemas/private-games.schemas.ts": 1,
     "apps/web/src/lib/api/schemas/shared-games.schemas.ts": 9,
     "apps/web/src/lib/domain-hooks/useBggRateLimit.ts": 7,
+    "apps/web/src/lib/game-nights/mapDiary.ts": 1,
+    "apps/web/src/lib/game-nights/mapNightLive.ts": 1,
     "apps/web/src/lib/gamebook-upload/fsm.ts": 18,
     "apps/web/src/lib/gamebook-upload/schemas.ts": 12,
     "apps/web/src/lib/gamebook-upload/visual-test-fixture.ts": 10,
@@ -167,66 +166,6 @@
       "line": 323,
       "column": 66,
       "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/librogame-runthrough-game-detail.html",
-      "line": 383,
-      "column": 75,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/librogame-runthrough-game-detail.html",
-      "line": 471,
-      "column": 77,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/settings.jsx",
-      "line": 244,
-      "column": 76,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/settings.jsx",
-      "line": 740,
-      "column": 72,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/settings.jsx",
-      "line": 747,
-      "column": 8,
-      "match": "bgg"
-    },
-    {
-      "file": "admin-mockups/design_files/settings.jsx",
-      "line": 747,
-      "column": 24,
-      "match": "BoardGameGeek"
-    },
-    {
-      "file": "admin-mockups/design_files/settings.jsx",
-      "line": 747,
-      "column": 76,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/settings.jsx",
-      "line": 829,
-      "column": 87,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/sp3-how-it-works.jsx",
-      "line": 275,
-      "column": 81,
-      "match": "bgg"
-    },
-    {
-      "file": "admin-mockups/design_files/sp3-shared-game-detail.jsx",
-      "line": 64,
-      "column": 43,
-      "match": "bgg"
     },
     {
       "file": "admin-mockups/design_files/sp4-add-game-drawer.html",
@@ -361,69 +300,15 @@
       "match": "bgg"
     },
     {
-      "file": "admin-mockups/design_files/sp4-upload-wizard-extended.html",
-      "line": 3,
-      "column": 35,
+      "file": "apps/web/src/app/(authenticated)/admin/wizard/steps/GameCreationStep.tsx",
+      "line": 130,
+      "column": 13,
       "match": "BGG"
     },
     {
-      "file": "admin-mockups/design_files/sp4-upload-wizard-extended.html",
-      "line": 7,
-      "column": 31,
-      "match": "bgg"
-    },
-    {
-      "file": "admin-mockups/design_files/sp4-upload-wizard-extended.jsx",
-      "line": 4,
-      "column": 43,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/sp4-upload-wizard-extended.jsx",
-      "line": 14,
-      "column": 29,
-      "match": "bgg"
-    },
-    {
-      "file": "admin-mockups/design_files/sp4-upload-wizard-extended.jsx",
-      "line": 830,
-      "column": 48,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/sp4-upload-wizard-extended.jsx",
-      "line": 840,
-      "column": 15,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/sp4-upload-wizard-extended.jsx",
-      "line": 840,
-      "column": 53,
-      "match": "bgg"
-    },
-    {
-      "file": "admin-mockups/design_files/sp4-upload-wizard-extended.jsx",
-      "line": 929,
+      "file": "apps/web/src/app/(authenticated)/admin/wizard/steps/GameCreationStep.tsx",
+      "line": 324,
       "column": 50,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/sp4-upload-wizard-extended.jsx",
-      "line": 943,
-      "column": 77,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/sp5-profile-settings.html",
-      "line": 1681,
-      "column": 32,
-      "match": "BGG"
-    },
-    {
-      "file": "admin-mockups/design_files/sp5-profile-settings.jsx",
-      "line": 88,
-      "column": 61,
       "match": "BGG"
     },
     {
@@ -482,103 +367,103 @@
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 127,
+      "line": 128,
       "column": 19,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 127,
+      "line": 128,
       "column": 27,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 165,
-      "column": 17,
-      "match": "BGG"
-    },
-    {
-      "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
       "line": 166,
-      "column": 6,
+      "column": 17,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
       "line": 167,
-      "column": 45,
-      "match": "bgg"
-    },
-    {
-      "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 208,
       "column": 6,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 209,
+      "line": 168,
       "column": 45,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 212,
+      "line": 209,
+      "column": 6,
+      "match": "BGG"
+    },
+    {
+      "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
+      "line": 210,
+      "column": 45,
+      "match": "bgg"
+    },
+    {
+      "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
+      "line": 213,
       "column": 46,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 212,
+      "line": 213,
       "column": 71,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 215,
+      "line": 216,
       "column": 68,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 221,
+      "line": 222,
       "column": 46,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 690,
+      "line": 691,
       "column": 53,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 955,
+      "line": 956,
       "column": 42,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 984,
+      "line": 985,
       "column": 17,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 992,
+      "line": 993,
       "column": 26,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 1232,
+      "line": 1233,
       "column": 33,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/gamebook/upload/_components/GamebookUploadView.tsx",
-      "line": 1270,
+      "line": 1271,
       "column": 14,
       "match": "bgg"
     },
@@ -590,27 +475,15 @@
     },
     {
       "file": "apps/web/src/app/(authenticated)/library/_components/LibraryHub.tsx",
-      "line": 116,
-      "column": 18,
+      "line": 217,
+      "column": 10,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/app/(authenticated)/library/_components/LibraryHub.tsx",
-      "line": 116,
-      "column": 44,
+      "line": 217,
+      "column": 48,
       "match": "BGG"
-    },
-    {
-      "file": "apps/web/src/app/(authenticated)/library/_components/LibraryHub.tsx",
-      "line": 296,
-      "column": 40,
-      "match": "BGG"
-    },
-    {
-      "file": "apps/web/src/app/(authenticated)/library/_components/LibraryHub.tsx",
-      "line": 405,
-      "column": 81,
-      "match": "bgg"
     },
     {
       "file": "apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx",
@@ -626,13 +499,13 @@
     },
     {
       "file": "apps/web/src/app/(public)/shared-games/[id]/page-client.tsx",
-      "line": 340,
+      "line": 358,
       "column": 59,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/app/(public)/shared-games/page-client.tsx",
-      "line": 231,
+      "line": 238,
       "column": 55,
       "match": "BGG"
     },
@@ -646,6 +519,24 @@
       "file": "apps/web/src/components/collection/CollectionGameGrid.tsx",
       "line": 196,
       "column": 37,
+      "match": "BGG"
+    },
+    {
+      "file": "apps/web/src/components/features/cover-editor/AdminCoverSourceDialog.tsx",
+      "line": 8,
+      "column": 13,
+      "match": "BGG"
+    },
+    {
+      "file": "apps/web/src/components/features/cover-editor/AdminCoverSourceDialog.tsx",
+      "line": 50,
+      "column": 3,
+      "match": "Bgg"
+    },
+    {
+      "file": "apps/web/src/components/features/cover-editor/AdminCoverSourceDialog.tsx",
+      "line": 50,
+      "column": 9,
       "match": "BGG"
     },
     {
@@ -776,13 +667,13 @@
     },
     {
       "file": "apps/web/src/components/features/gamebook/LibroGameDetailView.tsx",
-      "line": 94,
+      "line": 109,
       "column": 48,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/components/features/gamebook/LibroGameDetailView.tsx",
-      "line": 113,
+      "line": 128,
       "column": 45,
       "match": "BGG"
     },
@@ -824,7 +715,7 @@
     },
     {
       "file": "apps/web/src/components/features/hub/HubGameCard.tsx",
-      "line": 29,
+      "line": 31,
       "column": 54,
       "match": "BGG"
     },
@@ -866,7 +757,7 @@
     },
     {
       "file": "apps/web/src/components/game-detail/GameDetailDesktop.tsx",
-      "line": 109,
+      "line": 128,
       "column": 8,
       "match": "BGG"
     },
@@ -890,7 +781,7 @@
     },
     {
       "file": "apps/web/src/components/library/AddPrivateGameForm.tsx",
-      "line": 53,
+      "line": 52,
       "column": 68,
       "match": "BGG"
     },
@@ -962,7 +853,7 @@
     },
     {
       "file": "apps/web/src/components/ui/data-display/meeple-card/parts/Cover.tsx",
-      "line": 43,
+      "line": 47,
       "column": 30,
       "match": "BGG"
     },
@@ -974,7 +865,7 @@
     },
     {
       "file": "apps/web/src/components/ui/data-display/meeple-card/types.ts",
-      "line": 165,
+      "line": 196,
       "column": 63,
       "match": "BGG"
     },
@@ -1033,14 +924,32 @@
       "match": "BGG"
     },
     {
+      "file": "apps/web/src/components/wishlist/AddToWishlistDialog.tsx",
+      "line": 17,
+      "column": 21,
+      "match": "BGG"
+    },
+    {
+      "file": "apps/web/src/components/wishlist/AddToWishlistDialog.tsx",
+      "line": 17,
+      "column": 59,
+      "match": "BGG"
+    },
+    {
+      "file": "apps/web/src/components/wishlist/MeepleWishlistCard.tsx",
+      "line": 21,
+      "column": 31,
+      "match": "BGG"
+    },
+    {
       "file": "apps/web/src/config/component-registry.ts",
-      "line": 2923,
+      "line": 2321,
       "column": 10,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/config/component-registry.ts",
-      "line": 2930,
+      "line": 2328,
       "column": 13,
       "match": "bgg"
     },
@@ -1226,7 +1135,7 @@
     },
     {
       "file": "apps/web/src/lib/api/clients/admin/adminContentClient.ts",
-      "line": 343,
+      "line": 346,
       "column": 44,
       "match": "bgg"
     },
@@ -1328,259 +1237,259 @@
     },
     {
       "file": "apps/web/src/lib/api/clients/libraryClient.ts",
-      "line": 746,
+      "line": 754,
       "column": 47,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 723,
+      "line": 733,
       "column": 19,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 723,
+      "line": 733,
       "column": 51,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 726,
+      "line": 736,
       "column": 15,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 728,
+      "line": 738,
       "column": 46,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 732,
+      "line": 742,
       "column": 25,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 740,
+      "line": 750,
       "column": 37,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 747,
+      "line": 757,
       "column": 35,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 749,
+      "line": 759,
       "column": 50,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 752,
+      "line": 762,
       "column": 23,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 753,
+      "line": 763,
       "column": 58,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 757,
+      "line": 767,
       "column": 37,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 766,
+      "line": 776,
       "column": 31,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 768,
+      "line": 778,
       "column": 64,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 770,
+      "line": 780,
       "column": 23,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 775,
+      "line": 785,
       "column": 44,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 783,
+      "line": 793,
       "column": 34,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 785,
+      "line": 795,
       "column": 54,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 789,
+      "line": 799,
       "column": 25,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 794,
+      "line": 804,
       "column": 59,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 880,
+      "line": 890,
       "column": 40,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 883,
+      "line": 893,
       "column": 52,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 886,
+      "line": 896,
       "column": 66,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 925,
+      "line": 935,
       "column": 15,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 926,
+      "line": 936,
       "column": 46,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 928,
+      "line": 938,
       "column": 26,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 943,
+      "line": 953,
       "column": 44,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 949,
+      "line": 959,
       "column": 12,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 950,
+      "line": 960,
       "column": 46,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 952,
+      "line": 962,
       "column": 56,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 978,
+      "line": 988,
       "column": 64,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 987,
+      "line": 997,
       "column": 75,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1217,
+      "line": 1294,
       "column": 41,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1236,
+      "line": 1313,
       "column": 12,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1237,
+      "line": 1314,
       "column": 26,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1240,
+      "line": 1317,
       "column": 58,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1245,
+      "line": 1322,
       "column": 27,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1246,
+      "line": 1323,
       "column": 27,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1248,
+      "line": 1325,
       "column": 33,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1251,
+      "line": 1328,
       "column": 44,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1255,
+      "line": 1332,
       "column": 26,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1256,
+      "line": 1333,
       "column": 27,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/clients/sharedGamesClient.ts",
-      "line": 1260,
+      "line": 1337,
       "column": 44,
       "match": "bgg"
     },
@@ -1592,81 +1501,87 @@
     },
     {
       "file": "apps/web/src/lib/api/index.ts",
-      "line": 222,
+      "line": 224,
       "column": 20,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/index.ts",
-      "line": 237,
+      "line": 239,
       "column": 7,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/index.ts",
-      "line": 238,
+      "line": 240,
       "column": 3,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/index.ts",
-      "line": 324,
+      "line": 326,
       "column": 18,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/index.ts",
-      "line": 417,
+      "line": 422,
       "column": 7,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/index.ts",
-      "line": 418,
+      "line": 423,
       "column": 30,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/index.ts",
-      "line": 419,
+      "line": 424,
       "column": 30,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/index.ts",
-      "line": 437,
+      "line": 442,
       "column": 5,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/schemas/admin-mechanic-extractor-validation.schemas.ts",
-      "line": 66,
+      "line": 68,
       "column": 4,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/admin-mechanic-extractor-validation.schemas.ts",
-      "line": 116,
+      "line": 118,
       "column": 11,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/admin-mechanic-extractor-validation.schemas.ts",
-      "line": 126,
+      "line": 128,
       "column": 58,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/schemas/admin-mechanic-extractor-validation.schemas.ts",
-      "line": 126,
+      "line": 128,
       "column": 82,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/admin-mechanic-extractor-validation.schemas.ts",
-      "line": 145,
+      "line": 147,
       "column": 46,
       "match": "bgg"
+    },
+    {
+      "file": "apps/web/src/lib/api/schemas/admin/admin-cover.schemas.ts",
+      "line": 18,
+      "column": 60,
+      "match": "Bgg"
     },
     {
       "file": "apps/web/src/lib/api/schemas/games.schemas.ts",
@@ -1676,73 +1591,73 @@
     },
     {
       "file": "apps/web/src/lib/api/schemas/games.schemas.ts",
-      "line": 21,
+      "line": 23,
       "column": 41,
       "match": "bgg"
     },
     {
       "file": "apps/web/src/lib/api/schemas/games.schemas.ts",
-      "line": 143,
+      "line": 166,
       "column": 15,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/schemas/private-games.schemas.ts",
-      "line": 11,
+      "line": 13,
       "column": 59,
       "match": "BoardGameGeek"
     },
     {
       "file": "apps/web/src/lib/api/schemas/shared-games.schemas.ts",
-      "line": 10,
+      "line": 11,
       "column": 25,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/shared-games.schemas.ts",
-      "line": 168,
+      "line": 200,
       "column": 57,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/shared-games.schemas.ts",
-      "line": 265,
+      "line": 312,
       "column": 57,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/shared-games.schemas.ts",
-      "line": 610,
+      "line": 682,
       "column": 15,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/shared-games.schemas.ts",
-      "line": 610,
+      "line": 682,
       "column": 54,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/shared-games.schemas.ts",
-      "line": 616,
+      "line": 688,
       "column": 4,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/shared-games.schemas.ts",
-      "line": 617,
+      "line": 689,
       "column": 46,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/shared-games.schemas.ts",
-      "line": 629,
+      "line": 701,
       "column": 16,
       "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/api/schemas/shared-games.schemas.ts",
-      "line": 637,
+      "line": 709,
       "column": 31,
       "match": "BGG"
     },
@@ -1787,6 +1702,18 @@
       "line": 94,
       "column": 42,
       "match": "bgg"
+    },
+    {
+      "file": "apps/web/src/lib/game-nights/mapDiary.ts",
+      "line": 81,
+      "column": 49,
+      "match": "BGG"
+    },
+    {
+      "file": "apps/web/src/lib/game-nights/mapNightLive.ts",
+      "line": 121,
+      "column": 65,
+      "match": "BGG"
     },
     {
       "file": "apps/web/src/lib/gamebook-upload/fsm.ts",

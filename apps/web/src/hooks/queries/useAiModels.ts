@@ -66,7 +66,10 @@ export function useAiModels(
     staleTime: 2 * 60 * 1000,
     retry: (failureCount, error) => {
       // Don't retry on auth errors
-      if (error instanceof Error && (error.message.includes('401') || error.message.includes('403'))) {
+      if (
+        error instanceof Error &&
+        (error.message.includes('401') || error.message.includes('403'))
+      ) {
         return false;
       }
       return failureCount < 3;
@@ -106,9 +109,7 @@ export function useAiModel(
  * @param enabled - Whether to run the query (default: true)
  * @returns UseQueryResult with cost tracking data
  */
-export function useCostTracking(
-  enabled: boolean = true
-): UseQueryResult<CostTrackingDto, Error> {
+export function useCostTracking(enabled: boolean = true): UseQueryResult<CostTrackingDto, Error> {
   return useQuery({
     queryKey: aiModelsKeys.costTracking(),
     queryFn: async () => {
@@ -152,7 +153,7 @@ export function useUpdateModelConfig(): UseMutationResult<
 
       const previousModel = queryClient.getQueryData<AiModelDto>(aiModelsKeys.detail(modelId));
 
-      queryClient.setQueryData<AiModelDto>(aiModelsKeys.detail(modelId), (old) => {
+      queryClient.setQueryData<AiModelDto>(aiModelsKeys.detail(modelId), old => {
         if (!old) return old;
         return {
           ...old,
@@ -196,12 +197,12 @@ export function useSetPrimaryModel(): UseMutationResult<
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (request) => {
+    mutationFn: async request => {
       return api.admin.setPrimaryModel(request);
     },
 
     // Optimistic update: unset previous primary, set new primary
-    onMutate: async (request) => {
+    onMutate: async request => {
       await queryClient.cancelQueries({ queryKey: aiModelsKeys.lists() });
 
       // Store ALL list queries for rollback
@@ -210,19 +211,19 @@ export function useSetPrimaryModel(): UseMutationResult<
       });
 
       // Update ALL cached list queries
-      queryClient.setQueriesData<PagedAiModels>(
-        { queryKey: aiModelsKeys.lists() },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            items: old.items.map((model) => ({
-              ...model,
-              isPrimary: model.id === request.modelId,
-            })),
-          };
-        }
-      );
+      queryClient.setQueriesData<PagedAiModels>({ queryKey: aiModelsKeys.lists() }, old => {
+        if (!old) return old;
+        // #4169: il predefinito è per provider, come fa il server: gli altri provider non cambiano.
+        const provider = old.models.find(model => model.id === request.modelId)?.provider;
+        return {
+          ...old,
+          models: old.models.map(model =>
+            model.provider === provider
+              ? { ...model, isPrimary: model.id === request.modelId }
+              : model
+          ),
+        };
+      });
 
       return { allListQueries };
     },

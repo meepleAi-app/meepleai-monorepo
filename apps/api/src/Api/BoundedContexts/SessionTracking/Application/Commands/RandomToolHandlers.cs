@@ -89,12 +89,15 @@ public sealed class StartTimerCommandHandler : IRequestHandler<StartTimerCommand
     private readonly TimerStateManager _timerManager;
     private readonly ISessionBroadcastService _broadcast;
     private readonly ILogger<StartTimerCommandHandler> _logger;
+    private readonly ISessionAccessGuard _accessGuard;
 
     public StartTimerCommandHandler(
+        ISessionAccessGuard accessGuard,
         TimerStateManager timerManager,
         ISessionBroadcastService broadcast,
         ILogger<StartTimerCommandHandler> logger)
     {
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _timerManager = timerManager;
         _broadcast = broadcast;
         _logger = logger;
@@ -102,6 +105,10 @@ public sealed class StartTimerCommandHandler : IRequestHandler<StartTimerCommand
 
     public async Task<StartTimerResponse> Handle(StartTimerCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#3756): prima di qualunque mutazione, scrittura o broadcast SSE.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         var timer = _timerManager.CreateTimer(
             request.SessionId,
             request.DurationSeconds,
@@ -139,12 +146,15 @@ public sealed class PauseTimerCommandHandler : IRequestHandler<PauseTimerCommand
     private readonly TimerStateManager _timerManager;
     private readonly ISessionBroadcastService _broadcast;
     private readonly ILogger<PauseTimerCommandHandler> _logger;
+    private readonly ISessionAccessGuard _accessGuard;
 
     public PauseTimerCommandHandler(
+        ISessionAccessGuard accessGuard,
         TimerStateManager timerManager,
         ISessionBroadcastService broadcast,
         ILogger<PauseTimerCommandHandler> logger)
     {
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _timerManager = timerManager;
         _broadcast = broadcast;
         _logger = logger;
@@ -152,6 +162,10 @@ public sealed class PauseTimerCommandHandler : IRequestHandler<PauseTimerCommand
 
     public async Task<TimerStatusResponse> Handle(PauseTimerCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#3756): prima di qualunque mutazione, scrittura o broadcast SSE.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         var timer = _timerManager.GetTimer(request.SessionId);
         if (timer == null || !string.Equals(timer.Status, "running", StringComparison.Ordinal))
         {
@@ -192,12 +206,15 @@ public sealed class ResumeTimerCommandHandler : IRequestHandler<ResumeTimerComma
     private readonly TimerStateManager _timerManager;
     private readonly ISessionBroadcastService _broadcast;
     private readonly ILogger<ResumeTimerCommandHandler> _logger;
+    private readonly ISessionAccessGuard _accessGuard;
 
     public ResumeTimerCommandHandler(
+        ISessionAccessGuard accessGuard,
         TimerStateManager timerManager,
         ISessionBroadcastService broadcast,
         ILogger<ResumeTimerCommandHandler> logger)
     {
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _timerManager = timerManager;
         _broadcast = broadcast;
         _logger = logger;
@@ -205,6 +222,10 @@ public sealed class ResumeTimerCommandHandler : IRequestHandler<ResumeTimerComma
 
     public async Task<TimerStatusResponse> Handle(ResumeTimerCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#3756): prima di qualunque mutazione, scrittura o broadcast SSE.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         var timer = _timerManager.GetTimer(request.SessionId);
         if (timer == null || !string.Equals(timer.Status, "paused", StringComparison.Ordinal))
         {
@@ -244,12 +265,15 @@ public sealed class ResetTimerCommandHandler : IRequestHandler<ResetTimerCommand
     private readonly TimerStateManager _timerManager;
     private readonly ISessionBroadcastService _broadcast;
     private readonly ILogger<ResetTimerCommandHandler> _logger;
+    private readonly ISessionAccessGuard _accessGuard;
 
     public ResetTimerCommandHandler(
+        ISessionAccessGuard accessGuard,
         TimerStateManager timerManager,
         ISessionBroadcastService broadcast,
         ILogger<ResetTimerCommandHandler> logger)
     {
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _timerManager = timerManager;
         _broadcast = broadcast;
         _logger = logger;
@@ -257,6 +281,10 @@ public sealed class ResetTimerCommandHandler : IRequestHandler<ResetTimerCommand
 
     public async Task<TimerResetResponse> Handle(ResetTimerCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#3756): prima di qualunque mutazione, scrittura o broadcast SSE.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         var timer = _timerManager.GetTimer(request.SessionId);
         _timerManager.RemoveTimer(request.SessionId);
 

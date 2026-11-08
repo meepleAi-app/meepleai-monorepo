@@ -22,6 +22,7 @@ internal static class AdminGameImportWizardEndpoints
         // Step 1: Upload PDF for temporary storage (no quota checks, no processing)
         group.MapPost("/upload-pdf", HandleUploadPdf)
             .DisableAntiforgery() // Required for multipart/form-data file uploads
+            .WithPdfUploadBodyLimit(group)
             .WithName("WizardUploadPdf")
             .WithSummary("Step 1: Upload PDF for metadata extraction (Admin only)")
             .WithDescription("Uploads PDF to temporary storage without quota checks or background processing. File auto-deletes after 24 hours.")

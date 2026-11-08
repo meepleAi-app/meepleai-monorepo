@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import {
   RichTextEditor,
   ViewModeToggle,
@@ -33,7 +34,6 @@ import {
   PresenceIndicator,
 } from '@/components/editor';
 import { HubPageContainer } from '@/components/layout/PageContainer';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { useDebounce } from '@/hooks/useDebounce';
 import { api } from '@/lib/api';
 import type { RuleSpec } from '@/lib/api/schemas';

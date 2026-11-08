@@ -29,11 +29,6 @@ export interface NavigationLinks {
   discoverAdd: string;
   discoverProposals: string;
 
-  // ── Agents ────────────────────────────────────────────────────────────────
-  agents: string;
-  agentSlots: string;
-  agentDetail: (agentId: string) => string;
-
   // ── Chat ──────────────────────────────────────────────────────────────────
   chat: string;
   chatNew: string;
@@ -55,23 +50,16 @@ export interface NavigationLinks {
   profile: string;
   profileAchievements: string;
   profileBadges: string;
-  profileSettings: string;
-  profileNotifications: string;
-  profileSecurity: string;
+  settings: string;
+  settingsNotifications: string;
+  settingsSecurity: string;
 
   // ── Notifications ─────────────────────────────────────────────────────────
   notifications: string;
 }
 
 export type LibraryGameTab =
-  | 'overview'
-  | 'agent'
-  | 'toolkit'
-  | 'faq'
-  | 'reviews'
-  | 'rules'
-  | 'sessions'
-  | 'strategies';
+  'overview' | 'agent' | 'toolkit' | 'faq' | 'reviews' | 'rules' | 'sessions' | 'strategies';
 
 // ─── Implementation ───────────────────────────────────────────────────────────
 
@@ -109,11 +97,6 @@ export function getNavigationLinks(): NavigationLinks {
     discoverAdd: '/discover/add',
     discoverProposals: '/discover?tab=proposals',
 
-    // ── Agents ──────────────────────────────────────────────────────────────
-    agents: '/agents',
-    agentSlots: '/agents?tab=slots',
-    agentDetail: (agentId: string) => `/agents/${agentId}`,
-
     // ── Chat ────────────────────────────────────────────────────────────────
     chat: '/chat',
     chatNew: '/chat/new',
@@ -135,9 +118,12 @@ export function getNavigationLinks(): NavigationLinks {
     profile: '/profile',
     profileAchievements: '/profile?tab=achievements',
     profileBadges: '/profile?tab=badges',
-    profileSettings: '/profile?tab=settings',
-    profileNotifications: '/profile?tab=settings&section=notifications',
-    profileSecurity: '/profile?tab=settings&section=security',
+    // #3938: the settings hub is addressed by sub-route (ADR-091), not by a tab
+    // query on /profile. Renamed rather than repointed: a `profile*` prefix on a
+    // /settings address is the kind of stale name that outlives its move.
+    settings: '/settings',
+    settingsNotifications: '/settings/notifications',
+    settingsSecurity: '/settings/security',
 
     // ── Notifications ───────────────────────────────────────────────────────
     notifications: '/notifications',

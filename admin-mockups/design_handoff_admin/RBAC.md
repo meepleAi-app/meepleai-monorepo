@@ -38,7 +38,7 @@
 | `/admin/monitor` | — | — | — | ✓ | ✓ |
 | `/admin/notifications` (template) | — | — | — | ✓ | ✓ |
 | `/admin/notifications` · broadcast | — | — | — | — | ✓ + typed-confirm |
-| `/editor`, `/upload`, `/versions`, `/play-records` | — | — | — | ✓ | ✓ |
+| `/editor`, `/versions`, `/play-records` | — | — | — | ✓ | ✓ |
 | `/pipeline-builder` | — | — | — | ✓ | ✓ |
 | `/pipeline-builder` · publish to prod | — | — | — | — | ✓ |
 | `/n8n` | — | — | — | ✓ read | ✓ |

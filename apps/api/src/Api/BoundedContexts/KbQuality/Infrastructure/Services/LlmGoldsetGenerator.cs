@@ -95,7 +95,7 @@ internal sealed class LlmGoldsetGenerator : IGoldsetGenerator
             parsed = await _llm.GenerateJsonAsync<GoldsetResponseDto>(
                 SystemPrompt,
                 userPrompt,
-                RequestSource.AdminOperation,
+                RequestSource.Evaluation, // #4166: quota delle valutazioni
                 ct).ConfigureAwait(false);
         }
         catch (JsonException ex)

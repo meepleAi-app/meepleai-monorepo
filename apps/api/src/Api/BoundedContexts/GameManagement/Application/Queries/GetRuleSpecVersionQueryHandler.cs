@@ -34,9 +34,7 @@ internal class GetRuleSpecVersionQueryHandler : IQueryHandler<GetRuleSpecVersion
         }
 
         // Issue #2055: Include ETag for optimistic concurrency
-        var etag = specEntity.RowVersion != null
-            ? Convert.ToBase64String(specEntity.RowVersion)
-            : null;
+        var etag = specEntity.Xmin.ToString(CultureInfo.InvariantCulture);
 
         return new RuleSpecDto(
             Id: specEntity.Id,

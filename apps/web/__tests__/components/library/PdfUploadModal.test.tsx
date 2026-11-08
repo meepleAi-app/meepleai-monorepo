@@ -10,8 +10,15 @@
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { resetPdfUploadLimit } from '@/__tests__/utils/pdf-upload-limits-mock';
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { PdfUploadModal } from '@/components/library/PdfUploadModal';
+
+// #4449: the size limit is the backend's, read through usePdfUploadLimits (100 MB here).
+vi.mock(
+  '@/hooks/queries/usePdfUploadLimits',
+  () => import('@/__tests__/utils/pdf-upload-limits-mock')
+);
 
 // Mock pdfjs for page count validation
 const mockGetDocument = vi.fn();
@@ -32,9 +39,7 @@ vi.mock('react-pdf', () => ({
 // Mock PdfPreview component
 vi.mock('@/components/pdf/PdfPreview', () => ({
   PdfPreview: ({ file }: { file: File }) => (
-    <div data-testid="pdf-preview-mock">
-      Preview of: {file.name}
-    </div>
+    <div data-testid="pdf-preview-mock">Preview of: {file.name}</div>
   ),
 }));
 
@@ -56,6 +61,7 @@ describe('PdfUploadModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetPdfUploadLimit();
     // Default mock: valid PDF with 10 pages
     mockGetDocument.mockReturnValue({
       promise: Promise.resolve({ numPages: 10 }),
@@ -82,7 +88,7 @@ describe('PdfUploadModal', () => {
 
     it('should show validation constraints', () => {
       renderWithQuery(<PdfUploadModal {...mockProps} />);
-      expect(screen.getByText(/50MB/)).toBeInTheDocument();
+      expect(screen.getByText(/Dimensione massima: 100 MB/)).toBeInTheDocument();
       // Page limit validation happens during upload, not shown in UI
     });
 
@@ -107,20 +113,20 @@ describe('PdfUploadModal', () => {
       expect(screen.getByText(/formato PDF/)).toBeInTheDocument();
     });
 
-    it('should show error for file exceeding 50MB', async () => {
+    it('should show error for file exceeding the backend limit', async () => {
       renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
 
       // Create file with mocked size
       const file = new File(['x'], 'large.pdf', { type: 'application/pdf' });
-      Object.defineProperty(file, 'size', { value: 60 * 1024 * 1024 }); // 60MB
+      Object.defineProperty(file, 'size', { value: 150 * 1024 * 1024 }); // 150MB
 
       fireEvent.change(input, { target: { files: [file] } });
 
       await waitFor(() => {
         expect(screen.getByTestId('validation-errors')).toBeInTheDocument();
       });
-      expect(screen.getByText(/troppo grande/)).toBeInTheDocument();
+      expect(screen.getByText(/troppo grande \(max 100 MB\)/)).toBeInTheDocument();
     });
 
     it('should show error for empty file', async () => {

@@ -5,8 +5,9 @@
  *
  * Features:
  * - Native file input (project standard, no react-dropzone)
- * - Client-side validation: PDF format (magic bytes), max 150 MB
- * - Chunked upload via wizardChunkedUpload (10 MB chunks, no gameId → orphaned)
+ * - Client-side validation: PDF format (magic bytes), size within the backend's limit (#4449)
+ * - The game comes first (#4401): the title creates a draft game, and the PDF is uploaded for it
+ *   (wizardChunkedUpload, 10 MB chunks). A retry reuses the draft already created.
  * - Real upload progress tracking
  * - Error handling with clear messages
  */
@@ -22,14 +23,15 @@ import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import { api } from '@/lib/api';
-import type { UploadedPdf } from '@/stores/useGameImportWizardStore';
+import { formatSizeLimit } from '@/lib/format/file-size';
+import { type UploadedPdf, useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 
 export interface Step1UploadPdfProps {
   onUploadComplete?: (pdf: UploadedPdf) => void;
 }
 
-const MAX_PDF_SIZE_BYTES = 150 * 1024 * 1024; // 150 MB
 const ALLOWED_MIME_TYPES = ['application/pdf'];
 const PDF_MAGIC_BYTES = '%PDF-';
 
@@ -38,8 +40,12 @@ interface ValidationResult {
   errors: Record<string, string>;
 }
 
-// Client-side PDF validation helper
-async function validatePdfFile(file: File): Promise<ValidationResult> {
+// Client-side PDF validation helper. #4449: the size limit is the backend's (it was 150 MB here,
+// above the 100 the backend accepts); while it is not known the backend's 400 is the check.
+async function validatePdfFile(
+  file: File,
+  maxSizeBytes: number | undefined
+): Promise<ValidationResult> {
   const errors: Record<string, string> = {};
 
   // MIME type check
@@ -48,10 +54,9 @@ async function validatePdfFile(file: File): Promise<ValidationResult> {
   }
 
   // Size check
-  if (file.size > MAX_PDF_SIZE_BYTES) {
+  if (maxSizeBytes !== undefined && file.size > maxSizeBytes) {
     const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-    const maxMB = (MAX_PDF_SIZE_BYTES / 1024 / 1024).toFixed(0);
-    errors.size = `File size (${sizeMB} MB) exceeds maximum allowed (${maxMB} MB)`;
+    errors.size = `File size (${sizeMB} MB) exceeds maximum allowed (${formatSizeLimit(maxSizeBytes)})`;
   }
 
   if (file.size === 0) {
@@ -93,45 +98,63 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const importTitle = useGameImportWizardStore(s => s.importTitle);
+  const importGameId = useGameImportWizardStore(s => s.importGameId);
+  const setImportTitle = useGameImportWizardStore(s => s.setImportTitle);
+  const setImportGameId = useGameImportWizardStore(s => s.setImportGameId);
+  const { data: uploadLimits } = usePdfUploadLimits();
+  const maxSizeBytes = uploadLimits?.maxFileSizeBytes;
+
   // Handle file selection
-  const handleFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) {
-      setFile(null);
+  const handleFileChange = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = e.target.files?.[0];
+      if (!selectedFile) {
+        setFile(null);
+        setValidationErrors({});
+        setUploadSuccess(false);
+        setUploadError(null);
+        return;
+      }
+
+      setValidating(true);
       setValidationErrors({});
       setUploadSuccess(false);
       setUploadError(null);
-      return;
-    }
 
-    setValidating(true);
-    setValidationErrors({});
-    setUploadSuccess(false);
-    setUploadError(null);
+      const validation = await validatePdfFile(selectedFile, maxSizeBytes);
 
-    const validation = await validatePdfFile(selectedFile);
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+        setFile(null);
+        setValidating(false);
+        return;
+      }
 
-    if (!validation.isValid) {
-      setValidationErrors(validation.errors);
-      setFile(null);
+      setFile(selectedFile);
       setValidating(false);
-      return;
-    }
+    },
+    [maxSizeBytes]
+  );
 
-    setFile(selectedFile);
-    setValidating(false);
-  }, []);
-
-  // Handle upload — always use chunked upload (supports up to 150 MB)
+  // Handle upload — always use chunked upload
   const handleUpload = useCallback(async () => {
-    if (!file) return;
+    const title = importTitle.trim();
+    if (!file || !title) return;
 
     setIsUploading(true);
     setProgress(0);
     setUploadError(null);
 
     try {
-      const result = await api.sharedGames.wizardChunkedUpload(file, pct => setProgress(pct));
+      let gameId = importGameId;
+      if (!gameId) {
+        gameId = (await api.sharedGames.startGameImport(title)).gameId;
+        setImportGameId(gameId);
+      }
+      const result = await api.sharedGames.wizardChunkedUpload(file, gameId, pct =>
+        setProgress(pct)
+      );
       setUploadSuccess(true);
       onUploadComplete?.({
         pdfDocumentId: result.pdfDocumentId,
@@ -143,24 +166,44 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
     } finally {
       setIsUploading(false);
     }
-  }, [file, onUploadComplete]);
+  }, [file, importTitle, importGameId, setImportGameId, onUploadComplete]);
 
   const hasValidationErrors = Object.keys(validationErrors).length > 0;
-  const canUpload = file && !hasValidationErrors && !isUploading && !uploadSuccess;
+  const canUpload =
+    file && importTitle.trim() && !hasValidationErrors && !isUploading && !uploadSuccess;
 
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold">Carica regolamento PDF</h3>
         <p className="text-sm text-muted-foreground">
-          Seleziona il PDF del regolamento per estrarre i metadati del gioco. Dimensione massima:
-          150 MB.
+          Scrivi il titolo del gioco e seleziona il PDF del regolamento: il gioco viene creato come
+          bozza e il PDF caricato per quel gioco. I metadati estratti dal PDF li rivedi allo step 2.
+          {maxSizeBytes !== undefined && ` Dimensione massima: ${formatSizeLimit(maxSizeBytes)}.`}
         </p>
       </div>
 
       {/* File Input */}
       <Card className="p-6">
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="game-title">Titolo del gioco</Label>
+            <Input
+              id="game-title"
+              value={importTitle}
+              onChange={e => setImportTitle(e.target.value)}
+              maxLength={300}
+              disabled={isUploading || uploadSuccess || importGameId !== null}
+              placeholder="Es. Catan"
+            />
+            {importGameId !== null && !uploadSuccess && (
+              <p className="text-xs text-muted-foreground">
+                La bozza del gioco è già stata creata: il nuovo tentativo carica il PDF per lei. Il
+                titolo si corregge allo step 2.
+              </p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="pdf-file">Select PDF File</Label>
             <Input
@@ -172,7 +215,8 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
               className="cursor-pointer file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
             />
             <p className="text-xs text-muted-foreground">
-              Formato supportato: PDF | Dimensione max: 150 MB
+              Formato supportato: PDF
+              {maxSizeBytes !== undefined && ` | Dimensione max: ${formatSizeLimit(maxSizeBytes)}`}
             </p>
           </div>
 

@@ -158,7 +158,7 @@ public sealed class GameSessionTests
     }
 
     [Fact]
-    public void Start_WhenInProgress_ThrowsInvalidOperationException()
+    public void Start_WhenInProgress_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -168,12 +168,12 @@ public sealed class GameSessionTests
         var action = () => session.Start();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot start session in InProgress status*");
     }
 
     [Fact]
-    public void Start_WhenPaused_ThrowsInvalidOperationException()
+    public void Start_WhenPaused_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -184,12 +184,12 @@ public sealed class GameSessionTests
         var action = () => session.Start();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot start session in Paused status*");
     }
 
     [Fact]
-    public void Start_WhenCompleted_ThrowsInvalidOperationException()
+    public void Start_WhenCompleted_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -200,7 +200,7 @@ public sealed class GameSessionTests
         var action = () => session.Start();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot start session in Completed status*");
     }
 
@@ -237,7 +237,7 @@ public sealed class GameSessionTests
     }
 
     [Fact]
-    public void Pause_WhenSetup_ThrowsInvalidOperationException()
+    public void Pause_WhenSetup_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -246,12 +246,12 @@ public sealed class GameSessionTests
         var action = () => session.Pause();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot pause session in Setup status*");
     }
 
     [Fact]
-    public void Pause_WhenPaused_ThrowsInvalidOperationException()
+    public void Pause_WhenPaused_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -262,7 +262,7 @@ public sealed class GameSessionTests
         var action = () => session.Pause();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot pause session in Paused status*");
     }
 
@@ -301,7 +301,7 @@ public sealed class GameSessionTests
     }
 
     [Fact]
-    public void Resume_WhenSetup_ThrowsInvalidOperationException()
+    public void Resume_WhenSetup_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -310,12 +310,12 @@ public sealed class GameSessionTests
         var action = () => session.Resume();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot resume session in Setup status*");
     }
 
     [Fact]
-    public void Resume_WhenInProgress_ThrowsInvalidOperationException()
+    public void Resume_WhenInProgress_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -325,7 +325,7 @@ public sealed class GameSessionTests
         var action = () => session.Resume();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot resume session in InProgress status*");
     }
 
@@ -440,7 +440,7 @@ public sealed class GameSessionTests
     }
 
     [Fact]
-    public void Complete_WhenSetup_ThrowsInvalidOperationException()
+    public void Complete_WhenSetup_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -449,12 +449,12 @@ public sealed class GameSessionTests
         var action = () => session.Complete();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot complete session in Setup status*");
     }
 
     [Fact]
-    public void Complete_WhenAlreadyCompleted_ThrowsInvalidOperationException()
+    public void Complete_WhenAlreadyCompleted_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -465,7 +465,7 @@ public sealed class GameSessionTests
         var action = () => session.Complete();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot complete session in Completed status*");
     }
 
@@ -563,7 +563,7 @@ public sealed class GameSessionTests
     }
 
     [Fact]
-    public void Abandon_WhenCompleted_ThrowsInvalidOperationException()
+    public void Abandon_WhenCompleted_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -574,12 +574,12 @@ public sealed class GameSessionTests
         var action = () => session.Abandon();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot abandon finished session*");
     }
 
     [Fact]
-    public void Abandon_WhenAlreadyAbandoned_ThrowsInvalidOperationException()
+    public void Abandon_WhenAlreadyAbandoned_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -589,7 +589,7 @@ public sealed class GameSessionTests
         var action = () => session.Abandon();
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot abandon finished session*");
     }
 

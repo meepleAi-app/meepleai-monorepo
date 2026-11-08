@@ -9,6 +9,9 @@ internal sealed class DeleteGameFaqCommandValidator : AbstractValidator<DeleteGa
 {
     public DeleteGameFaqCommandValidator()
     {
+        RuleFor(x => x.SharedGameId)
+            .NotEqual(Guid.Empty).WithMessage("SharedGameId is required");
+
         RuleFor(x => x.FaqId)
             .NotEqual(Guid.Empty).WithMessage("FaqId is required");
     }

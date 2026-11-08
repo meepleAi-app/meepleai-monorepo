@@ -67,25 +67,10 @@ export function BasicInfoStep({ agent, onChange }: BasicInfoStepProps) {
         </p>
       </div>
 
-      {/* Type */}
-      <div className="space-y-2">
-        <Label htmlFor="agent-type">
-          Agent Type <span className="text-destructive">*</span>
-        </Label>
-        <Select value={agent.type} onValueChange={value => handleChange('type', value)}>
-          <SelectTrigger id="agent-type">
-            <SelectValue placeholder="Select agent type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="RAG">RAG - Retrieval Augmented Generation</SelectItem>
-            <SelectItem value="Citation">Citation - Source attribution</SelectItem>
-            <SelectItem value="Confidence">Confidence - Confidence scoring</SelectItem>
-            <SelectItem value="RulesInterpreter">Rules Interpreter - Game rules</SelectItem>
-            <SelectItem value="Conversation">Conversation - Chat-based</SelectItem>
-            <SelectItem value="Custom">Custom - Generic agent</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Issue #4138: an "Agent Type" Select stood here, offering six values. The field
+          is retired on AgentDefinition, and the two backend validators that demanded it
+          are gone - their message was itself wrong, listing five of nine accepted values
+          while promising a custom one the API could not accept (#4102). */}
 
       {/* Model */}
       <div className="space-y-2">

@@ -130,7 +130,7 @@ internal class GoldenDatasetLoader : IGoldenDatasetLoader
         {
             var commonPaths = new[]
             {
-                Path.Combine(searchDir, "..", "..", "..", "..", "..", "..", "..", "tests", "data", "golden_dataset.json"), // 7 levels from bin/Debug/net9.0
+                Path.Combine(searchDir, "..", "..", "..", "..", "..", "..", "..", "tests", "data", "golden_dataset.json"), // 7 levels from bin/Debug/net10.0
                 Path.Combine(searchDir, "..", "..", "..", "..", "..", "..", "tests", "data", "golden_dataset.json"), // 6 levels
                 Path.Combine(searchDir, "..", "..", "..", "..", "..", "tests", "data", "golden_dataset.json"),
                 Path.Combine(searchDir, "..", "..", "..", "..", "tests", "data", "golden_dataset.json"),

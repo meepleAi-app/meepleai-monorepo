@@ -8,6 +8,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// Command to update an existing shared game in the catalog.
 /// Supports core fields, taxonomy collections (categories, mechanics, designers, publishers),
 /// and BggId. Null collections mean "do not change"; empty list means "clear".
+/// <para>
+/// #4088: the same "null = do not change" rule applies to <see cref="ComplexityRating"/>,
+/// <see cref="AverageRating"/> and <see cref="Rules"/>. There is deliberately no way to clear
+/// them through this command: callers that omit a field keep its stored value.
+/// </para>
 /// </summary>
 internal record UpdateSharedGameCommand(
     Guid GameId,

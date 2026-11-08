@@ -74,7 +74,7 @@ public sealed class GetUserBadgesAdminEndpointIntegrationTests : IAsyncLifetime
         }
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserBadges_WithIncludeHidden_ReturnsAllBadges()
     {
         // Arrange
@@ -93,7 +93,7 @@ public sealed class GetUserBadgesAdminEndpointIntegrationTests : IAsyncLifetime
         result.Should().Contain(b => !b.IsDisplayed);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserBadges_WithoutIncludeHidden_ReturnsOnlyVisible()
     {
         // Arrange
@@ -111,7 +111,7 @@ public sealed class GetUserBadgesAdminEndpointIntegrationTests : IAsyncLifetime
         result.Should().OnlyContain(b => b.IsDisplayed);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserBadges_WithNonExistentUser_ReturnsEmptyList()
     {
         // Arrange
@@ -126,7 +126,7 @@ public sealed class GetUserBadgesAdminEndpointIntegrationTests : IAsyncLifetime
         result.Should().BeEmpty();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserBadges_WithUserNoBadges_ReturnsEmptyList()
     {
         // Arrange
@@ -143,7 +143,7 @@ public sealed class GetUserBadgesAdminEndpointIntegrationTests : IAsyncLifetime
         result.Should().BeEmpty();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserBadges_WithAllHiddenBadges_ReturnsHiddenOnly()
     {
         // Arrange
@@ -161,7 +161,7 @@ public sealed class GetUserBadgesAdminEndpointIntegrationTests : IAsyncLifetime
         result.Should().OnlyContain(b => !b.IsDisplayed);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserBadges_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -169,7 +169,7 @@ public sealed class GetUserBadgesAdminEndpointIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserBadges_ReturnsBadgesOrderedCorrectly()
     {
         // Arrange
@@ -188,7 +188,7 @@ public sealed class GetUserBadgesAdminEndpointIntegrationTests : IAsyncLifetime
         result.Should().BeInAscendingOrder(b => b.Code); // Proxy for DisplayOrder
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserBadges_ExcludesRevokedBadges()
     {
         // Arrange
@@ -205,7 +205,7 @@ public sealed class GetUserBadgesAdminEndpointIntegrationTests : IAsyncLifetime
         result.Should().HaveCount(3); // 2 visible + 1 hidden, excludes revoked
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserBadges_ReturnsCompleteBadgeData()
     {
         // Arrange

@@ -26,7 +26,7 @@ public sealed class BggCoverDownloaderTests
             .Setup(p => p.UploadAsync(13, It.IsAny<byte[]>(), ".jpg", It.IsAny<CancellationToken>()))
             .ReturnsAsync("bgg-covers/13/cover.jpg");
 
-        var sut = new BggCoverDownloader(httpClient, _pipelineMock.Object, _loggerMock.Object);
+        var sut = new BggCoverDownloader(httpClient, _loggerMock.Object, _pipelineMock.Object);
 
         var result = await sut.DownloadAndUploadAsync(13, PublicHttpsUrl, CancellationToken.None);
 
@@ -42,7 +42,7 @@ public sealed class BggCoverDownloaderTests
             .Setup(p => p.UploadAsync(99, It.IsAny<byte[]>(), ".png", It.IsAny<CancellationToken>()))
             .ReturnsAsync("bgg-covers/99/cover.png");
 
-        var sut = new BggCoverDownloader(httpClient, _pipelineMock.Object, _loggerMock.Object);
+        var sut = new BggCoverDownloader(httpClient, _loggerMock.Object, _pipelineMock.Object);
 
         var result = await sut.DownloadAndUploadAsync(99, "https://8.8.8.8/image.PNG", CancellationToken.None);
 
@@ -54,7 +54,7 @@ public sealed class BggCoverDownloaderTests
     public async Task DownloadAndUploadAsync_OnHttpError_ReturnsNull()
     {
         var httpClient = BuildHttpClient(HttpStatusCode.NotFound);
-        var sut = new BggCoverDownloader(httpClient, _pipelineMock.Object, _loggerMock.Object);
+        var sut = new BggCoverDownloader(httpClient, _loggerMock.Object, _pipelineMock.Object);
 
         var result = await sut.DownloadAndUploadAsync(13, PublicHttpsUrl, CancellationToken.None);
 
@@ -71,7 +71,7 @@ public sealed class BggCoverDownloaderTests
             .Setup(p => p.UploadAsync(It.IsAny<int>(), It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Amazon.S3.AmazonS3Exception("S3 unavailable"));
 
-        var sut = new BggCoverDownloader(httpClient, _pipelineMock.Object, _loggerMock.Object);
+        var sut = new BggCoverDownloader(httpClient, _loggerMock.Object, _pipelineMock.Object);
 
         var result = await sut.DownloadAndUploadAsync(13, PublicHttpsUrl, CancellationToken.None);
 
@@ -86,7 +86,7 @@ public sealed class BggCoverDownloaderTests
     public async Task DownloadAndUploadAsync_NonHttpsUrl_BlockedWithoutFetching(string url)
     {
         var handler = TrackingHandler(HttpStatusCode.OK, new byte[] { 0x01 });
-        var sut = new BggCoverDownloader(new HttpClient(handler.Object), _pipelineMock.Object, _loggerMock.Object);
+        var sut = new BggCoverDownloader(new HttpClient(handler.Object), _loggerMock.Object, _pipelineMock.Object);
 
         var result = await sut.DownloadAndUploadAsync(13, url, CancellationToken.None);
 
@@ -108,7 +108,7 @@ public sealed class BggCoverDownloaderTests
         // the chunked/absent-Content-Length case.
         var oversized = new byte[(11 * 1024 * 1024)];
         var httpClient = BuildHttpClient(HttpStatusCode.OK, oversized);
-        var sut = new BggCoverDownloader(httpClient, _pipelineMock.Object, _loggerMock.Object);
+        var sut = new BggCoverDownloader(httpClient, _loggerMock.Object, _pipelineMock.Object);
 
         var result = await sut.DownloadAndUploadAsync(7, PublicHttpsUrl, CancellationToken.None);
 
@@ -143,4 +143,29 @@ public sealed class BggCoverDownloaderTests
             Times.Never(),
             ItExpr.IsAny<HttpRequestMessage>(),
             ItExpr.IsAny<CancellationToken>());
+
+    /// <summary>
+    /// #3886 — la pipeline BGG non e' piu' registrata quando <c>STORAGE_PROVIDER</c> non e'
+    /// <c>s3</c> (stessa scelta di #3363), quindi qui arriva <c>null</c>. Senza questo test il ramo
+    /// di degradazione resterebbe non esercitato.
+    ///
+    /// <para>Due invarianti: non lancia, e <b>non spende una richiesta HTTP</b> verso BGG per
+    /// un'immagine che non avrebbe dove andare — il caricamento e' arricchimento best-effort, e
+    /// senza destinazione il lavoro va saltato prima, non dopo.</para>
+    /// </summary>
+    [Fact]
+    public async Task DownloadAndUpload_WithoutPipeline_ReturnsNull_AndDoesNotCallBgg()
+    {
+        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+
+        var sut = new BggCoverDownloader(
+            new HttpClient(handler.Object),
+            _loggerMock.Object,
+            uploadPipeline: null);
+
+        var result = await sut.DownloadAndUploadAsync(13, PublicHttpsUrl, CancellationToken.None);
+
+        result.Should().BeNull("senza destinazione R2 non c'e' nulla da caricare");
+        handler.VerifyAll(); // MockBehavior.Strict: qualunque invio HTTP avrebbe gia' fatto fallire il test
+    }
 }

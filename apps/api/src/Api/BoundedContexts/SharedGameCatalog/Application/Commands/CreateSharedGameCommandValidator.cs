@@ -43,6 +43,9 @@ internal sealed class CreateSharedGameCommandValidator : AbstractValidator<Creat
             .When(x => x.AverageRating.HasValue)
             .WithMessage("Average rating must be between 1.0 and 10.0");
 
+        // #4090: deliberately left strict, unlike the update validator. Whether a NEW catalog game
+        // must carry an image URL is a product question, and Validate_WithInvalidImageUrl_FailsValidation
+        // asserts it does — unlike the update path, nothing here fabricates a value to get past it.
         RuleFor(x => x.ImageUrl)
             .NotEmpty().WithMessage("Image URL is required")
             .Must(BeValidUrl).WithMessage("Image URL must be a valid absolute URL");

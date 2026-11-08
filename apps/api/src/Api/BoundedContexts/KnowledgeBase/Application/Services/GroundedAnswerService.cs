@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.Models;
 using Api.Observability;
-using Api.SharedKernel.Domain.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using CitationDto = Api.Models.CitationDto;
@@ -20,28 +20,32 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 ///   - grounding derived from the citation count (#3388 invariant);
 ///   - confidence.
 ///
-/// Before this service the block was duplicated across <c>ChatWithSessionAgentCommandHandler</c> (SSE text)
-/// and <c>AskGroundedSessionQueryHandler</c> (one-shot image) — the Slice-2 review found a copyright
-/// fail-open/fail-closed defect that had to be fixed in one copy only. Consolidating removes that drift
-/// (ADR-090). The two handlers keep their own GENERATION shape (stream vs one-shot) and orchestration
-/// (thread/broadcast/persistence); they call <see cref="FinalizeAsync"/> for the shared computation.
+/// Before this service the block was duplicated across the legacy session-agent chat (SSE text) and
+/// <c>AskGroundedSessionQueryHandler</c> (one-shot image) — the Slice-2 review found a copyright
+/// fail-open/fail-closed defect that had to be fixed in one copy only. Consolidating removed that drift
+/// (ADR-090). The legacy chat was retired by #4448 (A7); the callers today are
+/// <c>AskGroundedSessionQueryHandler</c> and the in-game assistant's turn (<c>AssistantTurnRunner</c>),
+/// each with its own generation shape and orchestration.
 /// </summary>
 internal sealed class GroundedAnswerService : IGroundedAnswerService
 {
     private readonly ICopyrightLeakGuard _copyrightLeakGuard;
     private readonly ICopyrightFallbackMessageProvider _fallbackMessageProvider;
     private readonly IOptions<CopyrightLeakGuardOptions> _copyrightOptions;
+    private readonly ICitedPageTrust _pageTrust;
     private readonly ILogger<GroundedAnswerService> _logger;
 
     public GroundedAnswerService(
         ICopyrightLeakGuard copyrightLeakGuard,
         ICopyrightFallbackMessageProvider fallbackMessageProvider,
         IOptions<CopyrightLeakGuardOptions> copyrightOptions,
+        ICitedPageTrust pageTrust,
         ILogger<GroundedAnswerService> logger)
     {
         _copyrightLeakGuard = copyrightLeakGuard ?? throw new ArgumentNullException(nameof(copyrightLeakGuard));
         _fallbackMessageProvider = fallbackMessageProvider ?? throw new ArgumentNullException(nameof(fallbackMessageProvider));
         _copyrightOptions = copyrightOptions ?? throw new ArgumentNullException(nameof(copyrightOptions));
+        _pageTrust = pageTrust ?? throw new ArgumentNullException(nameof(pageTrust));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -122,9 +126,15 @@ internal sealed class GroundedAnswerService : IGroundedAnswerService
         }).ToList();
 
         // 3. Map to the wire CitationDto with Full-gated tier-nulling (identical to both former handlers).
+        //    #4819: a document that cannot tell its pages apart is cited without one (#4782). It is decided here, on
+        //    the way out, and not earlier: the paraphrase above matches the [ref:document:page] markers the model
+        //    wrote from the page it was shown in the prompt, so that step must still see the page.
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(finalCitations.Select(c => c.DocumentId), ct)
+            .ConfigureAwait(false);
         var citationDtos = finalCitations.Select(c => new CitationDto(
             c.DocumentId,
-            c.PageNumber,
+            withoutAPage.Contains(c.DocumentId) ? null : c.PageNumber,
             c.RelevanceScore,
             c.CopyrightTier == CopyrightTier.Full ? c.SnippetPreview : null,
             c.CopyrightTier.ToString().ToLowerInvariant(),
@@ -134,10 +144,12 @@ internal sealed class GroundedAnswerService : IGroundedAnswerService
             CharStart: c.CopyrightTier == CopyrightTier.Full ? c.CharStart : null,
             CharEnd: c.CopyrightTier == CopyrightTier.Full ? c.CharEnd : null)).ToList();
 
-        // 4. Grounding from citation count (#3388) + confidence.
-        var grounding = citationDtos.Count > 0 ? GroundingStatus.Grounded : GroundingStatus.Ungrounded;
+        // 4. Grounding from citation count (#3388), never on a refusal (#4481) + confidence.
+        var grounding = AnswerGrounding.Of(finalText, citationDtos.Count);
         var confidence = RagPromptAssemblyService.ComputeConfidence(resolvedCitations.ToList(), finalText);
 
-        return new GroundedAnswer(finalText, finalCitations, citationDtos, grounding, confidence, leakMatchCount);
+        return new GroundedAnswer(
+            finalText, finalCitations, citationDtos, grounding, confidence, leakMatchCount,
+            Sanitized: leakResult?.HasLeak == true);
     }
 }

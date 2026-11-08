@@ -245,7 +245,14 @@ public sealed class BackfillPdfCoversJob : IJob
             var (catchStatus, catchAttempts) = PdfCoverRetryPolicy.NextAfterTransientFailure(pdf.CoverGenerationAttempts);
             pdf.CoverGenerationStatus = catchStatus.ToString();
             pdf.CoverGenerationAttempts = catchAttempts;
-            var detail = ex.GetType().Name + ": orphan-check-key=" + orphanPhysicalKey;
+            // #4085: this used to discard ex.Message entirely — `{Type}: orphan-check-key=…`
+            // — so every unexpected failure (regardless of real cause) read identically and
+            // pointed at a recovery scenario (upload-ok-but-SaveChanges-failed) that usually
+            // wasn't what happened. Measured: 116 of 124 Failed rows carried that string while
+            // the actual exception (DisablePayloadSigning rejected over HTTP, #4085/#4016 causa
+            // A) never reached the database — only this job's log line, which rotates. Keep
+            // BOTH: the real message for diagnosis, the orphan-key hint for the genuine case.
+            var detail = $"{ex.GetType().Name}: {ex.Message} (orphan-check-key={orphanPhysicalKey})";
             pdf.CoverGenerationError = detail.Length > 500 ? detail[..500] : detail;
             // #3373 D1/D5-C: tag terminal vs still-retrying so the failed-ratio alert stays diagnostic.
             MeepleAiMetrics.RecordPdfCoverGeneration(catchAttempts >= PdfCoverRetryPolicy.MaxAttempts

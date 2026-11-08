@@ -75,4 +75,26 @@ public class GameNightInvitationEntity
     /// </summary>
     [Column("rsvp_confirmation_sent_at")]
     public DateTimeOffset? RsvpConfirmationSentAt { get; set; }
+
+    /// <summary>
+    /// #4853: timestamp of the «the night is cancelled» email sent to this invitation.
+    /// Non-null = the handler MUST NOT write again when the event is delivered a second time.
+    /// </summary>
+    [Column("cancellation_notice_sent_at")]
+    public DateTimeOffset? CancellationNoticeSentAt { get; set; }
+
+    /// <summary>
+    /// #4846: the credential for «stop writing to this address». Not the RSVP <see cref="Token"/>: the organizer holds
+    /// that one. Written in the emails to the address and nowhere else. Null only on a row older than the column.
+    /// </summary>
+    [Column("unsubscribe_key")]
+    [MaxLength(32)]
+    public string? UnsubscribeKey { get; set; }
+
+    /// <summary>
+    /// #4846: timestamp of the 24 hour reminder sent to this invitation.
+    /// Non-null = the handler MUST NOT write again when the event is delivered a second time.
+    /// </summary>
+    [Column("reminder_24h_sent_at")]
+    public DateTimeOffset? Reminder24hSentAt { get; set; }
 }

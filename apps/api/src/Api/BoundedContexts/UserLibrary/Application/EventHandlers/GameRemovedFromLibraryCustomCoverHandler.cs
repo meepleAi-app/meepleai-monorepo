@@ -1,4 +1,5 @@
 using Api.BoundedContexts.UserLibrary.Domain.Events;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Services.Pdf;
 using Api.SharedKernel.Domain.Covers;
 using MediatR;
@@ -15,13 +16,16 @@ namespace Api.BoundedContexts.UserLibrary.Application.EventHandlers;
 internal sealed class GameRemovedFromLibraryCustomCoverHandler : INotificationHandler<GameRemovedFromLibraryEvent>
 {
     private readonly IBlobStorageService _blobStorage;
+    private readonly IUserLibraryRepository _libraryRepository;
     private readonly ILogger<GameRemovedFromLibraryCustomCoverHandler> _logger;
 
     public GameRemovedFromLibraryCustomCoverHandler(
         IBlobStorageService blobStorage,
+        IUserLibraryRepository libraryRepository,
         ILogger<GameRemovedFromLibraryCustomCoverHandler> logger)
     {
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
+        _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -38,6 +42,20 @@ internal sealed class GameRemovedFromLibraryCustomCoverHandler : INotificationHa
 
         try
         {
+            // #4499: the event is delivered later (outbox in staging and production). The key is
+            // deterministic per user and game, so if the game was added again and got a new cover
+            // in the meantime, the object under this key is that new cover: leave it. A failed
+            // check falls to the catch below and leaves the object too — an orphan, never a loss.
+            if (await _libraryRepository.IsCustomCoverKeyInUseAsync(resourceKey, cancellationToken).ConfigureAwait(false))
+            {
+                _logger.LogInformation(
+                    "Custom cover key {Key} is used again by a library entry; skipping cleanup for removed game {GameId}, user {UserId}",
+                    resourceKey,
+                    notification.GameId,
+                    notification.UserId);
+                return;
+            }
+
             // #3384: raw-key delete (the categorized DeleteAsync rejects the '/' in the
             // deterministic key). Mirrors CoverUrlResolver's raw-key reads.
             await _blobStorage.DeleteRawKeyAsync(

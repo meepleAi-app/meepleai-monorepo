@@ -6,9 +6,9 @@
 # Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.WikidataEnrichment.cs).
 # ObservableGauges; Prometheus names = the C# dotted names with dots -> underscores, NO unit
 # suffix:
-#   - meepleai_wikidata_dead_letter_count  (cumulative dead-letter enrichment rows; can drop
+#   - meepleai_wikidata_dead_letter_count_attempts  (cumulative dead-letter enrichment rows; can drop
 #                                            when the retention job prunes)
-#   - meepleai_wikidata_queue_depth        (#SharedGames due for enrichment in the last batch)
+#   - meepleai_wikidata_queue_depth_games        (#SharedGames due for enrichment in the last batch)
 # Both are populated in prod (WikidataCoverEnrichmentRunner / RetentionJob / EnrichmentJob) but
 # had NO alert rule — dead-letter accumulation and a non-draining queue stayed invisible.
 #
@@ -23,32 +23,32 @@ groups:
       # un solo alert. Senza aggregazione, a piu' di un'istanza lo stesso backlog notificherebbe N
       # volte. delta() vuole un range vector, e max(...) e' un instant vector: serve la subquery [5m:].
       - alert: WikidataDeadLetterHigh
-        expr: max(meepleai_wikidata_dead_letter_count) > 100
+        expr: max(meepleai_wikidata_dead_letter_count_attempts) > 100
         for: 1h
         labels:
           severity: warning
           subsystem: wikidata-enrichment
         annotations:
           summary: "Wikidata dead-letter backlog above 100 (sustained 1h)"
-          description: "meepleai_wikidata_dead_letter_count has stayed above 100 for 1h: an operator triage backlog is building. Investigate via the M13 admin dead-letter page — likely a license-whitelist drift or SPARQL schema drift in the enrichment pipeline."
+          description: "meepleai_wikidata_dead_letter_count_attempts has stayed above 100 for 1h: an operator triage backlog is building. Investigate via the M13 admin dead-letter page — likely a license-whitelist drift or SPARQL schema drift in the enrichment pipeline."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"
       - alert: WikidataDeadLetterSpike
-        expr: delta(max(meepleai_wikidata_dead_letter_count)[5m:]) > 50
+        expr: delta(max(meepleai_wikidata_dead_letter_count_attempts)[5m:]) > 50
         for: 0m
         labels:
           severity: warning
           subsystem: wikidata-enrichment
         annotations:
           summary: "Wikidata dead-letter count jumped by more than 50 in 5m"
-          description: "meepleai_wikidata_dead_letter_count rose by more than 50 within 5 minutes: a systemic upstream failure or a license-whitelist drift. Cross-check WikidataSparqlLatency p95 and the Wikidata/Commons endpoint health."
+          description: "meepleai_wikidata_dead_letter_count_attempts rose by more than 50 within 5 minutes: a systemic upstream failure or a license-whitelist drift. Cross-check WikidataSparqlLatency p95 and the Wikidata/Commons endpoint health."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"
       - alert: WikidataQueueBacklogHigh
-        expr: meepleai_wikidata_queue_depth > 5000
+        expr: meepleai_wikidata_queue_depth_games > 5000
         for: 1h
         labels:
           severity: warning
           subsystem: wikidata-enrichment
         annotations:
           summary: "Wikidata enrichment queue depth above 5000 (sustained 1h)"
-          description: "meepleai_wikidata_queue_depth has stayed above 5000 for 1h: the enrichment backlog is building and the scheduler is under-provisioned relative to the enrichment rate. Consider tuning the batch size or the DEC-3e rate-limiter."
+          description: "meepleai_wikidata_queue_depth_games has stayed above 5000 for 1h: the enrichment backlog is building and the scheduler is under-provisioned relative to the enrichment rate. Consider tuning the batch size or the DEC-3e rate-limiter."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"

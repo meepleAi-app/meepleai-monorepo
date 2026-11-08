@@ -205,23 +205,82 @@ public abstract class E2ETestBase : IAsyncLifetime
     /// is skipped with a descriptive message instead of silently passing.
     /// Uses xUnit v3's Assert.Skip() for dynamic test skipping.
     /// </summary>
-    protected static async Task AssertSuccessOrSkipIfServiceUnavailable(
+    /// <summary>
+    /// Restituisce status + corpo della risposta in una riga, per infilarla nel messaggio di
+    /// un'asserzione fallita. Issue #3662.
+    ///
+    /// <para>
+    /// 🔴 Perche' serve: quattro test E2E fallivano in CI con <c>403 Forbidden</c> su
+    /// <c>POST /api/v1/ingest/pdf</c> — e in locale passavano, anche eseguendo l'intera selezione
+    /// in blocco. La diagnosi si e' fermata li' perche' l'asserzione riportava <b>solo lo status
+    /// code</b>: nessuna traccia del motivo. Un 403 senza corpo non dice se a rifiutare e' una
+    /// policy, un middleware, un limite di configurazione o un feature flag.
+    /// </para>
+    /// <para>
+    /// Il corpo e' troncato a 500 caratteri: basta per un ProblemDetails, non abbastanza per
+    /// seppellire il log.
+    /// </para>
+    /// </summary>
+    protected static async Task<string> DescribeResponseAsync(HttpResponseMessage response)
+    {
+        string body;
+        try
+        {
+            body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            body = $"<corpo non leggibile: {ex.GetType().Name}>";
+        }
+
+        if (body.Length > 500)
+        {
+            body = body[..500] + "…";
+        }
+
+        return $"la risposta e' {(int)response.StatusCode} {response.StatusCode} con corpo: {body}";
+    }
+
+    /// <summary>
+    /// Asserisce che la risposta sia un 2xx. Un errore è un <b>fallimento</b>, qualunque sia lo
+    /// status.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// #4023 / spec R1.6 — questo metodo si chiamava
+    /// <c>AssertSuccessOrSkipIfServiceUnavailable</c> e su un <c>500</c> faceva
+    /// <c>Assert.Skip("… returned 500 (external service likely unavailable)")</c>.
+    /// </para>
+    /// <para>
+    /// 🔴 Perché era sbagliato: un <c>500</c> è anche — e soprattutto — ciò che produce un <b>bug del
+    /// prodotto</b>. Quel ramo nascondeva quindi esattamente i difetti che un test E2E esiste per
+    /// trovare: una regressione che fa esplodere l'endpoint rendeva la suite <b>gialla invece che
+    /// rossa</b>. L'assenza di un servizio non si deduce da una risposta ricevuta: si accerta prima,
+    /// con <see cref="E2EServiceProbe.SkipUnlessHealthyAsync"/>, che interroga <c>/health</c> dell'app
+    /// sotto test con lo stesso client.
+    /// </para>
+    /// <para>
+    /// Il messaggio usa <see cref="DescribeResponseAsync"/>, che esiste dal #3662 proprio perché «un
+    /// 403 senza corpo non dice se a rifiutare è una policy, un middleware, un limite di
+    /// configurazione o un feature flag»: la stessa ragione vale per un 500.
+    /// </para>
+    /// </remarks>
+    protected static async Task AssertSuccessAsync(
         HttpResponseMessage response,
         string context = "")
     {
         if (response.IsSuccessStatusCode)
-            return;
-
-        if (response.StatusCode == System.Net.HttpStatusCode.InternalServerError)
         {
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.Skip(
-                $"Skipped: {context} returned 500 (external service likely unavailable). " +
-                $"Body: {body[..Math.Min(body.Length, 200)]}");
+            return;
         }
 
-        // For non-500 failures, fail the test properly
-        response.EnsureSuccessStatusCode();
+        var described = await DescribeResponseAsync(response).ConfigureAwait(false);
+        Assert.Fail(
+            $"{(string.IsNullOrEmpty(context) ? "la chiamata" : context)} non è riuscita: {described}" +
+            $"{Environment.NewLine}Se il motivo è che un servizio non è disponibile in questo " +
+            "ambiente, la via corretta NON è saltare qui: sonda il prerequisito in testa al test con " +
+            "E2EServiceProbe.SkipUnlessHealthyAsync(Client, <check>, \"<come abilitarlo>\"). " +
+            "Un errore del codice sotto test deve restare un fallimento.");
     }
 
     /// <summary>
@@ -300,9 +359,11 @@ internal static class E2ESharedInfrastructure
                 return;
             }
 
-            // Disable custom rate limiting middleware for E2E tests
-            // The middleware checks these env vars directly (not from configuration)
-            // Setting both DISABLE_RATE_LIMITING and ASPNETCORE_ENVIRONMENT for defense in depth
+            // Disable rate limiting for E2E tests.
+            // #3887: the authoritative switch is ["RateLimiting:Enabled"] = "false" in the in-memory
+            // configuration below — WebApplicationExtensions reads it after Build() and skips
+            // UseRateLimiter(). These process variables are kept only as defence in depth; they are
+            // set once and never restored, so they open no window for a parallel collection.
             Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "CI");
 
@@ -345,12 +406,24 @@ internal static class E2ESharedInfrastructure
             using var dbContext = CreateDbContext();
             await dbContext.Database.MigrateAsync();
 
-            // Seed SystemConfiguration row required by RequirePublicRegistrationFilter.
-            // The filter fails closed (returns 403) when Registration:PublicEnabled is
-            // not present or false, which breaks every E2E test that calls
-            // RegisterUserAsync. ConfigurationService reads from the DB via CQRS, so
-            // setting IConfiguration alone is not enough — we must seed the row itself.
-            await SeedRegistrationEnabledConfigAsync(dbContext);
+            // Seed SystemConfiguration rows required dagli endpoint sotto test. ConfigurationService
+            // legge dal DB via CQRS, quindi impostare IConfiguration non basta: la riga deve esistere.
+            //
+            // Registration:PublicEnabled — RequirePublicRegistrationFilter fallisce chiuso (403) se
+            // manca, e questo romperebbe ogni test che chiama RegisterUserAsync.
+            //
+            // Features.PdfUpload (#3662) — FeatureFlagService.IsEnabledAsync fa fail-safe a FALSE
+            // quando la chiave non esiste, e HandleStandardUpload controlla il flag PRIMA
+            // dell'autenticazione. In CI il database e' nuovo, quindi la riga non c'era e quattro
+            // test ricevevano 403 con corpo `{"error":"feature_disabled"}` — sia da admin sia da
+            // anonimo, il che spiega anche perche' il test del 401 ne riceveva 403. In locale
+            // passavano perche' il DB di sviluppo la riga ce l'ha. Saltare quei test avrebbe
+            // significato non verificare mai l'upload PDF in CI: e' il difetto che #3662 combatte,
+            // non la sua cura.
+            await SeedBoolConfigAsync(dbContext, "Registration:PublicEnabled", "Registration",
+                "E2E test seed: enable public registration so RegisterUserAsync succeeds.");
+            await SeedBoolConfigAsync(dbContext, "Features.PdfUpload", "Features",
+                "E2E test seed (#3662): enable PDF upload so the ingest endpoint is reachable.");
 
             _initialized = true;
         }
@@ -360,10 +433,17 @@ internal static class E2ESharedInfrastructure
         }
     }
 
-    private static async Task SeedRegistrationEnabledConfigAsync(MeepleAiDbContext dbContext)
+    /// <summary>
+    /// Semina in modo idempotente una riga booleana di <c>SystemConfiguration</c>. Generalizzato in
+    /// #3662: serviva la stessa cosa per un secondo flag, e due copie della stessa procedura — con
+    /// la nota sul FK Restrict su <c>CreatedByUserId</c> — sarebbero invecchiate separatamente.
+    /// </summary>
+    private static async Task SeedBoolConfigAsync(
+        MeepleAiDbContext dbContext,
+        string key,
+        string category,
+        string description)
     {
-        const string key = "Registration:PublicEnabled";
-
         var exists = await dbContext
             .Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AnyAsync(c => c.Key == key);
@@ -388,8 +468,8 @@ internal static class E2ESharedInfrastructure
                 Key = key,
                 Value = "true",
                 ValueType = "bool",
-                Description = "E2E test seed: enable public registration so RegisterUserAsync succeeds.",
-                Category = "Registration",
+                Description = description,
+                Category = category,
                 IsActive = true,
                 RequiresRestart = false,
                 Environment = "All",
@@ -567,10 +647,9 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
                 services.Remove(descriptor);
             }
 
-            // Rate limiting is disabled via environment variable RateLimiting__Enabled=false
-            // which is set in EnsureInitializedAsync() BEFORE the factory is created.
-            // The AddRateLimitingServices method in Program.cs reads this and uses NoLimiter policies.
-            // Additionally, the custom RateLimitingMiddleware checks DISABLE_RATE_LIMITING env var.
+            // #3887: rate limiting is disabled by ["RateLimiting:Enabled"] = "false" in this
+            // factory's in-memory configuration, which WebApplicationExtensions reads after Build()
+            // to decide whether to add UseRateLimiter() at all.
 
             // Remove any existing DbContext registrations first
             services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();

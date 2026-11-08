@@ -9,6 +9,9 @@
  * - Email notification delivery
  *
  * Refactored to use Page Object Model and fixtures
+ *
+ * Navigation goes through `gotoSettings` below: since #3938 the `/settings/*`
+ * addresses resolve on their own, so each test asserts it landed where it asked.
  */
 
 import { test, expect } from '../fixtures';
@@ -198,14 +201,44 @@ async function setupLoginNotificationsMocks(
   return { mockNotifications, mockDevice };
 }
 
+/**
+ * Navigate to a settings hub address and assert the browser stayed there.
+ *
+ * These tests used to carry a comment claiming `/settings/security` redirects to
+ * `/profile?tab=settings&section=security` (#1608). That stopped being true: #3938
+ * removed the `/settings*` redirects from `next.config.js`, because Next resolves
+ * config redirects before filesystem routing and they left the real
+ * `settings/[section]` route unreachable. So the check worth having is the opposite
+ * of the old comment — the URL must stay where the test asked for it, and a redirect
+ * coming back is a regression. Mirrors `gotoChecked` in `e2e/accessibility.spec.ts`
+ * (#3917).
+ */
+async function gotoSettings(page: Page, path: string): Promise<void> {
+  const response = await page.goto(path);
+
+  expect(response, `navigation to ${path} produced no response`).not.toBeNull();
+  expect(
+    response!.status(),
+    `${path} returned HTTP ${response!.status()} — the settings hub route is missing, ` +
+      `so the assertions below would run against an error page`
+  ).toBeLessThan(400);
+
+  const landed = new URL(page.url()).pathname;
+  expect(
+    landed,
+    `${path} redirected to ${landed} — #3938 made it a real address; a redirect back ` +
+      `to /profile?tab=settings would hide the section under test`
+  ).toBe(path);
+
+  await page.waitForLoadState('networkidle');
+}
+
 test.describe('AUTH-11: Login Notifications', () => {
   test.describe('New Device Login', () => {
     test('should show notification for new device login', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasNewDeviceLogin: true });
 
-      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
-      await page.goto('/settings/security');
-      await page.waitForLoadState('networkidle');
+      await gotoSettings(page, '/settings/security');
 
       // Should show new device notification
       await expect(
@@ -218,9 +251,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should display device details in notification', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasNewDeviceLogin: true });
 
-      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
-      await page.goto('/settings/security');
-      await page.waitForLoadState('networkidle');
+      await gotoSettings(page, '/settings/security');
 
       // Should show device browser/OS info
       await expect(page.getByText(/firefox|chrome|safari/i)).toBeVisible();
@@ -229,9 +260,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should allow acknowledging new device notification', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasNewDeviceLogin: true });
 
-      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
-      await page.goto('/settings/security');
-      await page.waitForLoadState('networkidle');
+      await gotoSettings(page, '/settings/security');
 
       // Find and click acknowledge button
       const acknowledgeButton = page.getByRole('button', {
@@ -248,9 +277,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should show warning for suspicious location login', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasSuspiciousLogin: true });
 
-      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
-      await page.goto('/settings/security');
-      await page.waitForLoadState('networkidle');
+      await gotoSettings(page, '/settings/security');
 
       // Should show suspicious activity warning
       await expect(
@@ -263,9 +290,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should show location details for suspicious login', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasSuspiciousLogin: true });
 
-      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
-      await page.goto('/settings/security');
-      await page.waitForLoadState('networkidle');
+      await gotoSettings(page, '/settings/security');
 
       // Should show location (country/city)
       await expect(page.getByText(/japan|tokyo/i)).toBeVisible();
@@ -274,9 +299,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should offer security actions for suspicious login', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { hasSuspiciousLogin: true });
 
-      // /settings/security redirects → /profile?tab=settings&section=security (#1608)
-      await page.goto('/settings/security');
-      await page.waitForLoadState('networkidle');
+      await gotoSettings(page, '/settings/security');
 
       // Should offer security options
       await expect(
@@ -291,8 +314,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should display login notification settings', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { notificationsEnabled: true });
 
-      await page.goto('/settings/notifications');
-      await page.waitForLoadState('networkidle');
+      await gotoSettings(page, '/settings/notifications');
 
       // Should show notification toggles
       await expect(page.getByText(/login.*notification|new.*device.*alert/i)).toBeVisible();
@@ -301,8 +323,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should allow toggling login notifications', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { notificationsEnabled: true });
 
-      await page.goto('/settings/notifications');
-      await page.waitForLoadState('networkidle');
+      await gotoSettings(page, '/settings/notifications');
 
       // Find toggle for login notifications
       const toggle = page
@@ -318,8 +339,7 @@ test.describe('AUTH-11: Login Notifications', () => {
     test('should show email notification option', async ({ page }) => {
       await setupLoginNotificationsMocks(page, { notificationsEnabled: true });
 
-      await page.goto('/settings/notifications');
-      await page.waitForLoadState('networkidle');
+      await gotoSettings(page, '/settings/notifications');
 
       // Should show email notification option
       await expect(page.getByText(/email.*notification|send.*email/i)).toBeVisible();

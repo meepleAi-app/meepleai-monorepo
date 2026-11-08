@@ -32,6 +32,11 @@ public interface ILlmSystemConfigProvider
     Task<decimal> GetMonthlyBudgetUsdAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// #4166: tetti, soglia di degrado e quote, letti insieme (valori del database o predefiniti).
+    /// </summary>
+    Task<LlmBudgetPolicy> GetBudgetPolicyAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Get a synchronous snapshot of the current thresholds (from cache or defaults).
     /// Safe to call from non-async contexts (e.g., Singleton initialization).
     /// </summary>
@@ -42,3 +47,14 @@ public interface ILlmSystemConfigProvider
     /// </summary>
     void InvalidateCache();
 }
+
+/// <summary>
+/// #4166 (ADR-095 D6): la politica di budget del gateway LLM. I tetti sono in USD, come il registro
+/// costi; le percentuali sono del tetto.
+/// </summary>
+public sealed record LlmBudgetPolicy(
+    decimal DailyCapUsd,
+    decimal MonthlyCapUsd,
+    int DegradeThresholdPercent,
+    int BackgroundQuotaPercent,
+    int EvaluationQuotaPercent);

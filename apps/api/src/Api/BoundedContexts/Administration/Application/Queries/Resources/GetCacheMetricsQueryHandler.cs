@@ -1,3 +1,4 @@
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using StackExchange.Redis;
@@ -24,7 +25,23 @@ internal class GetCacheMetricsQueryHandler : IQueryHandler<GetCacheMetricsQuery,
 
         var endpoints = _redis.GetEndPoints();
         var server = _redis.GetServer(endpoints[0]);
-        var info = await server.InfoAsync("all").ConfigureAwait(false);
+
+        IGrouping<string, KeyValuePair<string, string>>[] info;
+        try
+        {
+            info = await server.InfoAsync("all").ConfigureAwait(false);
+        }
+        catch (RedisCommandException ex)
+        {
+            // INFO is an admin command, and the client-side guard is off by default
+            // (see InfrastructureServiceExtensions). Reporting zeros here would be worse than
+            // failing: a cache that looks empty and idle is indistinguishable from a healthy one.
+            throw new ExternalServiceException(
+                "Le metriche della cache richiedono il comando Redis INFO, disabilitato dalla " +
+                "configurazione. Imposta REDIS_ALLOW_ADMIN=true per abilitarlo.",
+                "redis_admin_disabled",
+                ex);
+        }
 
         // Parse memory stats - InfoAsync returns IGrouping<string, KeyValuePair<string, string>>[]
         var usedMemory = ParseInfoValue(info, "Memory", "used_memory", 0L);

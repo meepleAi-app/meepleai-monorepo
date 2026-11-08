@@ -561,6 +561,53 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     }
 
     /// <summary>
+    /// #4437: a scan on the upload path. Docnet reads the text layer and does not OCR, so every page comes back empty.
+    /// This path used to carry on with zero chunks — the embedding loop never ran, the count check compared 0 with 0 —
+    /// and end <c>Ready</c> with an empty index. It must end <c>Failed</c> with the cause in the column, in a category
+    /// <c>RetryFailedPdfsJob</c> skips, and write nothing.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4437")]
+    public async Task ProcessPdfAsync_WhenNoPageHasText_FailsNamingTheCause_AndIndexesNothing()
+    {
+        _extractorMock!
+            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedTextExtractionResult.CreateSuccess(
+                pageChunks: [new PageTextChunk(1, "", 0, 0), new PageTextChunk(2, "   ", 0, 0)],
+                totalPages: 2,
+                totalCharacters: 0,
+                ocrTriggered: false));
+
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        var result = await handler.Handle(
+            new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+                GameId: testGame.Id.ToString(),
+                Metadata: null,
+                PrivateGameId: null,
+                UserId: testUser.Id,
+                File: CreateMockFormFile("scanned-rules.pdf", CreateValidPdfBytes(1024))),
+            TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        result.Success.Should().BeTrue("the accept stage still succeeds; the pipeline is what fails");
+        var pdfDocId = result.Document!.Id;
+        var persisted = await _dbContext.PdfDocuments.AsNoTracking().FirstAsync(p => p.Id == pdfDocId, TestCancellationToken);
+
+        persisted.ProcessingState.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed),
+            "a PDF in which no page has text must not reach Ready with an empty index");
+        persisted.ProcessingError.Should().Be(
+            Api.BoundedContexts.DocumentProcessing.Application.Services.PdfFailureText.NoExtractableText);
+        persisted.ErrorCategory.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Parsing),
+            "a scan does not grow text on a retry: RetryFailedPdfsJob must skip it");
+        (await _dbContext.TextChunks.CountAsync(tc => tc.PdfDocumentId == pdfDocId, TestCancellationToken))
+            .Should().Be(0, "nothing is indexed for a document without text");
+    }
+
+    /// <summary>
     /// #4443 R1: an upload's background task and another owner (the queue worker, the admin
     /// process-pending, recovery at startup — all start with <see cref="IPdfClaimService"/>) must not
     /// both work on the same document. The task used to check «Pending» and then write

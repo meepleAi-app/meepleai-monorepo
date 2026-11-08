@@ -110,7 +110,7 @@ internal static class SessionQueryEndpoints
         })
         .RequireAuthenticatedUser()
         // #4912: the code is the credential (#4883); 30 lookups/min per user bounds a brute-force attempt.
-        .RequireRateLimiting("SessionCodeRead")
+        .RequireRateLimiting(RateLimitingServiceExtensions.SessionCodeReadPolicy)
         .WithName("GetSessionByCode")
         .WithTags("SessionTracking")
         .WithSummary("Find session by code")

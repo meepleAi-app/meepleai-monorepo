@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -703,19 +704,7 @@ internal static class RateLimitingServiceExtensions
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
 
-                // #4912: a rejection names its policy and its partition in the log. Without it an account
-                // trying session codes in bulk and a player tapping twice look the same: a 429 in the
-                // access log. The partition is what the policy keyed on (user id, or IP as fallback).
-                var policyName = context.HttpContext.GetEndpoint()?.Metadata
-                    .GetMetadata<EnableRateLimitingAttribute>()?.PolicyName ?? "(unnamed)";
-                context.HttpContext.RequestServices.GetService<ILoggerFactory>()?
-                    .CreateLogger("Api.RateLimiting")
-                    .LogWarning(
-                        "Rate limit {Policy} rejected {Method} {Path} for partition {Partition}",
-                        policyName,
-                        context.HttpContext.Request.Method,
-                        context.HttpContext.Request.Path.Value,
-                        GetUserId(context.HttpContext));
+                LogRejection(context.HttpContext);
 
                 double? retryAfterSeconds = null;
                 if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue))
@@ -736,6 +725,82 @@ internal static class RateLimitingServiceExtensions
         });
 
         return services;
+    }
+
+    /// <summary>A rejected bucket is logged at most once per this interval.</summary>
+    internal static readonly TimeSpan RejectionLogInterval = TimeSpan.FromMinutes(1);
+
+    private const int RejectionLogStampsCap = 10_000;
+
+    private static readonly ConcurrentDictionary<string, long> RejectionLogStamps = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// #4912: a rejection names its policy and its bucket in the log, so that an account trying session
+    /// codes in bulk and a player tapping twice stop looking like the same 429 in the access log.
+    /// Three things the first draft got wrong, and this one does not: the ROUTE PATTERN is logged, not
+    /// the path — on the code routes the path carries the credential (#4883), and a warning log is not
+    /// where it belongs; the bucket is named by both user and IP, because half the policies key on one
+    /// and half on the other; and a bucket is logged at most once per <see cref="RejectionLogInterval"/>,
+    /// because the rejection path is not itself limited and a flood against a 60/min route would
+    /// otherwise become a flood of warnings.
+    /// </summary>
+    private static void LogRejection(HttpContext httpContext)
+    {
+        var endpoint = httpContext.GetEndpoint();
+        var policyName = endpoint?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName ?? "(unnamed)";
+        var route = (endpoint as RouteEndpoint)?.RoutePattern.RawText ?? endpoint?.DisplayName ?? "(unknown)";
+        var ip = GetClientIpAddress(httpContext);
+        var user = httpContext.User?.Identity?.IsAuthenticated == true ? GetUserId(httpContext) : "anonymous";
+
+        if (!ShouldLogRejection($"{policyName}|{user}|{ip}", Environment.TickCount64))
+        {
+            return;
+        }
+
+        httpContext.RequestServices.GetService<ILoggerFactory>()?
+            .CreateLogger("Api.RateLimiting")
+            .LogWarning(
+                "Rate limit {Policy} rejected {Method} {Route} for user {User} from {Ip}; this bucket is not logged again for {Interval}",
+                policyName,
+                httpContext.Request.Method,
+                route,
+                user,
+                ip,
+                RejectionLogInterval);
+    }
+
+    /// <summary>
+    /// True when <paramref name="bucket"/> has not been logged within <see cref="RejectionLogInterval"/>
+    /// before <paramref name="nowMilliseconds"/>, and records it. Bounded: past the cap the memory is
+    /// dropped, which at worst logs a bucket twice. Internal for the unit test.
+    /// </summary>
+    internal static bool ShouldLogRejection(string bucket, long nowMilliseconds)
+    {
+        if (RejectionLogStamps.Count > RejectionLogStampsCap)
+        {
+            RejectionLogStamps.Clear();
+        }
+
+        var interval = (long)RejectionLogInterval.TotalMilliseconds;
+        var logged = false;
+        RejectionLogStamps.AddOrUpdate(
+            bucket,
+            _ =>
+            {
+                logged = true;
+                return nowMilliseconds;
+            },
+            (_, last) =>
+            {
+                if (nowMilliseconds - last < interval)
+                {
+                    return last;
+                }
+
+                logged = true;
+                return nowMilliseconds;
+            });
+        return logged;
     }
 
     /// <summary>

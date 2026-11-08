@@ -317,7 +317,7 @@ internal static class SessionPlayerActionsEndpoints
         })
         .RequireAuthenticatedUser()
         // #4912: the code is the credential (#4883); 10 joins/min per user bounds a brute-force attempt.
-        .RequireRateLimiting("SessionCodeJoin")
+        .RequireRateLimiting(RateLimitingServiceExtensions.SessionCodeJoinPolicy)
         .WithName("JoinSessionByCode")
         .WithTags("SessionTracking", "SessionJoin")
         .WithSummary("Join a session using session code")

@@ -316,6 +316,8 @@ internal static class SessionPlayerActionsEndpoints
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
+        // #4912: the code is the credential (#4883); 10 joins/min per user bounds a brute-force attempt.
+        .RequireRateLimiting(RateLimitingServiceExtensions.SessionCodeJoinPolicy)
         .WithName("JoinSessionByCode")
         .WithTags("SessionTracking", "SessionJoin")
         .WithSummary("Join a session using session code")
@@ -324,7 +326,8 @@ internal static class SessionPlayerActionsEndpoints
         .Produces(400)
         .Produces(401)
         .Produces(404)
-        .Produces(409);
+        .Produces(409)
+        .Produces(429);
     }
 
     private static void MapAssignParticipantRoleEndpoint(RouteGroupBuilder group)

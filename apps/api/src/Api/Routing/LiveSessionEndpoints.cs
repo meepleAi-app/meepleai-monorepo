@@ -363,8 +363,11 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/code/{code}", HandleGetSessionByCode)
             .RequireAuthenticatedUser()
+            // #4912: same bucket as GET /game-sessions/code/{code} — a guessed code is a guessed code.
+            .RequireRateLimiting(RateLimitingServiceExtensions.SessionCodeReadPolicy)
             .Produces<LiveSessionDto>(200)
             .Produces(404)
+            .Produces(429)
             .WithTags("LiveSessions")
             .WithSummary("Get live session by join code");
 

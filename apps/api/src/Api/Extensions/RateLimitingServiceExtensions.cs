@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Threading.RateLimiting;
+using Api.Helpers;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace Api.Extensions;
@@ -37,6 +39,8 @@ namespace Api.Extensions;
 /// - GameNightTokenRespond: 10 req/min — public RSVP submission per IP (Issue #1169)
 /// - GameNightGuestUnsubscribe: 10 req/min — public guest opt-out per IP (#4846)
 /// - UsersSearch:         600 req/min  — authenticated player autocomplete (~10 req/s avg via 1min sliding window, Issue #950 W1-PR2)
+/// - SessionCodeRead:      30 req/min  — look a session up by its join code, per user (#4912)
+/// - SessionCodeJoin:      10 req/min  — join a session by its code, per user (#4912)
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
@@ -48,6 +52,29 @@ internal static class RateLimitingServiceExtensions
 
     /// <summary>The name of the policy mounted on the answer routes (Issue #4388).</summary>
     internal const string AnswerOpenRequestsPolicy = "AnswerOpenRequests";
+
+    /// <summary>
+    /// #4912: the policies on the routes that take a session's join code. Since #4883 the code IS the
+    /// credential — whoever knows it gets in — and a 6-character code over 32 symbols
+    /// (<c>Session.GenerateSessionCode</c>) has 32^6, about 1.07 billion, values: unlimited, one account
+    /// could try them in bulk, and every live session in that space is a target. A real player types the
+    /// code once, maybe twice after a typo. Keyed by USER (IP only as fallback for a request without
+    /// one): the attacker here is an account, and the Next.js proxy would fold every player into one IP.
+    /// </summary>
+    internal const string SessionCodeReadPolicy = "SessionCodeRead";
+
+    /// <summary>See <see cref="SessionCodeReadPolicy"/>. Tighter: a join writes a participant row.</summary>
+    internal const string SessionCodeJoinPolicy = "SessionCodeJoin";
+
+    /// <summary>
+    /// Lookups by code a user may do per minute. With N live sessions an account that tries codes at
+    /// this rate expects to hit one after 32^6 / N attempts: with a hundred live sessions, about ten
+    /// million, i.e. months of continuous trying for a single account. The tests assert the number.
+    /// </summary>
+    internal const int SessionCodeReadPermitLimit = 30;
+
+    /// <summary>Joins by code a user may attempt per minute.</summary>
+    internal const int SessionCodeJoinPermitLimit = 10;
 
     public static IServiceCollection AddRateLimitingServices(this IServiceCollection services)
     {
@@ -635,10 +662,50 @@ internal static class RateLimitingServiceExtensions
                     });
             });
 
+            // Policy 24 (#4912): SessionCodeRead - 30 req/min per user on the lookups by join code
+            // (GET /game-sessions/code/{code} and GET /live-sessions/code/{code}: one bucket, it is the
+            // same guess either way). Why per user and why 30: see SessionCodeReadPolicy.
+            options.AddPolicy(SessionCodeReadPolicy, httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"session-code-read-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = SessionCodeReadPermitLimit,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 25 (#4912): SessionCodeJoin - 10 req/min per user on POST /game-sessions/code/{code}/join.
+            // Its own bucket, tighter than the read: a join writes a participant row and fires events, and
+            // a player needs one attempt, two after a typo.
+            options.AddPolicy(SessionCodeJoinPolicy, httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"session-code-join-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = SessionCodeJoinPermitLimit,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
             // Rejection behavior: Return 429 Too Many Requests with retry-after info
             options.OnRejected = async (context, cancellationToken) =>
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+                LogRejection(context.HttpContext);
 
                 double? retryAfterSeconds = null;
                 if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue))
@@ -659,6 +726,84 @@ internal static class RateLimitingServiceExtensions
         });
 
         return services;
+    }
+
+    /// <summary>A rejected bucket is logged at most once per this interval.</summary>
+    internal static readonly TimeSpan RejectionLogInterval = TimeSpan.FromMinutes(1);
+
+    private const int RejectionLogStampsCap = 10_000;
+
+    private static readonly ConcurrentDictionary<string, long> RejectionLogStamps = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// #4912: a rejection names its policy and its bucket in the log, so that an account trying session
+    /// codes in bulk and a player tapping twice stop looking like the same 429 in the access log.
+    /// Three things the first draft got wrong, and this one does not: the ROUTE PATTERN is logged, not
+    /// the path — on the code routes the path carries the credential (#4883), and a warning log is not
+    /// where it belongs; the bucket is named by both user and IP, because half the policies key on one
+    /// and half on the other; and a bucket is logged at most once per <see cref="RejectionLogInterval"/>,
+    /// because the rejection path is not itself limited and a flood against a 60/min route would
+    /// otherwise become a flood of warnings.
+    /// </summary>
+    private static void LogRejection(HttpContext httpContext)
+    {
+        var endpoint = httpContext.GetEndpoint();
+        var policyName = endpoint?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName ?? "(unnamed)";
+        var route = (endpoint as RouteEndpoint)?.RoutePattern.RawText ?? endpoint?.DisplayName ?? "(unknown)";
+        var ip = GetClientIpAddress(httpContext);
+        var user = httpContext.User?.Identity?.IsAuthenticated == true ? GetUserId(httpContext) : "anonymous";
+
+        if (!ShouldLogRejection($"{policyName}|{user}|{ip}", Environment.TickCount64))
+        {
+            return;
+        }
+
+        // ADR-058: what comes from the request (the method, the claims, the address) is sanitized before
+        // it reaches a log line — CodeQL's cs/log-forging gate (threshold 0) flagged the method.
+        httpContext.RequestServices.GetService<ILoggerFactory>()?
+            .CreateLogger("Api.RateLimiting")
+            .LogWarning(
+                "Rate limit {Policy} rejected {Method} {Route} for user {User} from {Ip}; this bucket is not logged again for {Interval}",
+                policyName,
+                LogSanitizer.Sanitize(httpContext.Request.Method),
+                route,
+                LogSanitizer.Sanitize(user),
+                LogSanitizer.Sanitize(ip),
+                RejectionLogInterval);
+    }
+
+    /// <summary>
+    /// True when <paramref name="bucket"/> has not been logged within <see cref="RejectionLogInterval"/>
+    /// before <paramref name="nowMilliseconds"/>, and records it. Bounded: past the cap the memory is
+    /// dropped, which at worst logs a bucket twice. Internal for the unit test.
+    /// </summary>
+    internal static bool ShouldLogRejection(string bucket, long nowMilliseconds)
+    {
+        if (RejectionLogStamps.Count > RejectionLogStampsCap)
+        {
+            RejectionLogStamps.Clear();
+        }
+
+        var interval = (long)RejectionLogInterval.TotalMilliseconds;
+        var logged = false;
+        RejectionLogStamps.AddOrUpdate(
+            bucket,
+            _ =>
+            {
+                logged = true;
+                return nowMilliseconds;
+            },
+            (_, last) =>
+            {
+                if (nowMilliseconds - last < interval)
+                {
+                    return last;
+                }
+
+                logged = true;
+                return nowMilliseconds;
+            });
+        return logged;
     }
 
     /// <summary>

@@ -281,6 +281,48 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// #4921: the answer the ACCOUNT that answered this invitation gives again, from the app. The token
+    /// path refuses a switch (D2 b) because a public link replayed must not flip an answer; an account
+    /// that is the responder is not a replay, and changing one's mind is what the member RSVPs allow,
+    /// so for them the switch is admitted — the seat check is the caller's. Same answer → <c>false</c>;
+    /// another account, or a cancelled or expired invitation → <see cref="InvalidOperationException"/>.
+    /// </summary>
+    public bool ChangeAnswer(GameNightInvitationStatus desired, Guid userId, DateTimeOffset utcNow)
+    {
+        if (desired is not (GameNightInvitationStatus.Accepted or GameNightInvitationStatus.Declined))
+        {
+            throw new ArgumentOutOfRangeException(nameof(desired), desired, "An answer is Accepted or Declined.");
+        }
+
+        if (userId == Guid.Empty || RespondedByUserId != userId)
+        {
+            throw new InvalidOperationException("Only the account that answered this invitation can change the answer.");
+        }
+
+        if (Status == GameNightInvitationStatus.Cancelled || Status == GameNightInvitationStatus.Expired)
+        {
+            throw new InvalidOperationException($"Cannot respond to invitation in status {Status}.");
+        }
+
+        if (Status == desired)
+        {
+            return false;
+        }
+
+        Status = desired;
+        RespondedAt = utcNow;
+
+        AddDomainEvent(new GameNightInvitationRespondedEvent(
+            gameNightInvitationId: Id,
+            gameNightId: GameNightId,
+            token: Token,
+            status: desired,
+            respondedByUserId: userId));
+
+        return true;
+    }
+
+    /// <summary>
     /// Cancels a pending or accepted invitation (organizer revokes, or parent GameNight
     /// is cancelled). Idempotent: cancelling an already-cancelled invitation is a no-op.
     /// </summary>

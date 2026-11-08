@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
@@ -35,12 +36,19 @@ internal sealed class GetUpcomingGameNightsQueryHandler : IQueryHandler<GetUpcom
         var organizerNames = await GetUserDisplayNamesAsync(organizerIds, cancellationToken).ConfigureAwait(false);
 
         // #4706: guests invited by email are not in the RSVP rows; add them to the counts.
-        var guests = await GuestInvitationCounts.LoadAsync(
-            _context, events.Select(e => e.Id).ToList(), cancellationToken).ConfigureAwait(false);
+        var nightIds = events.Select(e => e.Id).ToList();
+        var guests = await GuestInvitationCounts.LoadAsync(_context, nightIds, cancellationToken).ConfigureAwait(false);
+
+        // #4921: the nights the viewer sits at as an email guest are in this list (the repository admits
+        // them) but have no RSVP row for them; their state comes from the invitation, asked once for all.
+        var guestStatuses = await _repository
+            .GetEmailGuestRsvpStatusesAsync(nightIds, query.UserId, cancellationToken)
+            .ConfigureAwait(false);
 
         return events.Select(e => GameNightMapperHelper.MapToDto(
             e, organizerNames.GetValueOrDefault(e.OrganizerId, "Unknown"), query.UserId,
-            guests.GetValueOrDefault(e.Id))).ToList();
+            guests.GetValueOrDefault(e.Id),
+            GameNightParticipation.ViewerRsvpStatus(e, query.UserId, guestStatuses))).ToList();
     }
 
     private async Task<Dictionary<Guid, string>> GetUserDisplayNamesAsync(List<Guid> userIds, CancellationToken cancellationToken)

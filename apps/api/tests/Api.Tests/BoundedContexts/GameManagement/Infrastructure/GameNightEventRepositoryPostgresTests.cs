@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.SharedKernel.Application.Services;
@@ -119,5 +120,24 @@ public class GameNightEventRepositoryPostgresTests : SharedDatabaseTestBase
         (await repository.HasAcceptedEmailInvitationAsync(declinedNight.Id, viewer, ct)).Should().BeFalse();
         (await repository.HasAcceptedEmailInvitationAsync(strangersNight.Id, viewer, ct)).Should().BeFalse();
         (await repository.HasAcceptedEmailInvitationAsync(forwardedNight.Id, viewer, ct)).Should().BeFalse("a forwarded link");
+
+        // #4921: the state the guest reads as, per night, with the same binding. The decline is theirs
+        // too (they can read it, and change it from the app); the stranger's and the forwarded one are not.
+        var statuses = await repository.GetEmailGuestRsvpStatusesAsync(
+            [upcoming.Id, completed.Id, declinedNight.Id, strangersNight.Id, forwardedNight.Id], viewer, ct);
+        statuses.Should().BeEquivalentTo(new Dictionary<Guid, RsvpStatus>
+        {
+            [upcoming.Id] = RsvpStatus.Accepted,
+            [completed.Id] = RsvpStatus.Accepted,
+            [declinedNight.Id] = RsvpStatus.Declined,
+        });
+
+        // And the row the guest answers from the app (#4921), from the invitation repository.
+        var invitations = new GameNightInvitationRepository(
+            DbContext, new Mock<IDomainEventCollector>().Object, NullLogger<GameNightInvitationRepository>.Instance);
+        (await invitations.GetAnsweredByUserAsync(declinedNight.Id, viewer, ct))!.Status
+            .Should().Be(GameNightInvitationStatus.Declined);
+        (await invitations.GetAnsweredByUserAsync(strangersNight.Id, viewer, ct)).Should().BeNull();
+        (await invitations.GetAnsweredByUserAsync(forwardedNight.Id, viewer, ct)).Should().BeNull("a forwarded link");
     }
 }

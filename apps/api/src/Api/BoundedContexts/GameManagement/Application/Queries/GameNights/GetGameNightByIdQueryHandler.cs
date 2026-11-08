@@ -48,8 +48,15 @@ internal sealed class GetGameNightByIdQueryHandler : IQueryHandler<GetGameNightB
         // #4706: guests invited by email are not in the RSVP rows; add them to the counts.
         var guests = await GuestInvitationCounts.LoadAsync(_context, [gameNight.Id], cancellationToken).ConfigureAwait(false);
 
+        // #4921: the viewer's own state, derived for the email guest too (no RSVP row on that path): without
+        // it the client showed «not invited / no answer» to someone who had accepted.
+        var viewerRsvpStatus = await GameNightParticipation
+            .ViewerRsvpStatusAsync(gameNight, query.CallerUserId, _repository, cancellationToken)
+            .ConfigureAwait(false);
+
         return GameNightMapperHelper.MapToDto(
-            gameNight, organizerName, guests: guests.GetValueOrDefault(gameNight.Id));
+            gameNight, organizerName, query.CallerUserId,
+            guests.GetValueOrDefault(gameNight.Id), viewerRsvpStatus);
     }
 
     private async Task<string> GetUserDisplayNameAsync(Guid userId, CancellationToken cancellationToken)

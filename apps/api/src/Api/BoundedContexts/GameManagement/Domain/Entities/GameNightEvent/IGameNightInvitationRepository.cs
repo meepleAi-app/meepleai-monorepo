@@ -21,6 +21,14 @@ internal interface IGameNightInvitationRepository : IRepository<GameNightInvitat
     Task<GameNightInvitation?> GetByTokenAsync(string token, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #4921: the invitation to <paramref name="gameNightId"/> that <paramref name="userId"/> answered while
+    /// logged in (accepted or declined), if it is addressed to that account's email: the row an email
+    /// guest changes from the app, where they have no RSVP row. <c>null</c> when they never answered one
+    /// from this account, or answered a link sent to somebody else.
+    /// </summary>
+    Task<GameNightInvitation?> GetAnsweredByUserAsync(Guid gameNightId, Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Looks up an invitation by its unsubscribe key (#4846), whatever the invitation's state: the key sits in an
     /// email that may outlive the invitation. Returns <c>null</c> for a key nobody holds, and for the RSVP token.
     /// </summary>

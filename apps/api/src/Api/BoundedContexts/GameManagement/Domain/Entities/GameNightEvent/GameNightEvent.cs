@@ -429,9 +429,22 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     public int AcceptedCount => _rsvps.Count(r => r.Status == RsvpStatus.Accepted);
 
     /// <summary>
-    /// Returns true if the game night has reached its maximum player count.
+    /// Returns true if the game night has reached its maximum player count, counting the RSVP rows only.
+    /// The guests invited by email are another aggregate and are not in here: a decision about seats
+    /// goes through <see cref="IsFullWith"/> with their accepted count (#4921).
     /// </summary>
-    public bool IsFull => MaxPlayers.HasValue && AcceptedCount >= MaxPlayers.Value;
+    public bool IsFull => IsFullWith(0);
+
+    /// <summary>
+    /// #4921: whether the table is full once <paramref name="acceptedGuests"/> — the guests invited by
+    /// email who accepted, counted by the caller from the invitations — sit alongside the accepted
+    /// RSVPs. A night with four seats, four accepted members and three accepted guests was «not full».
+    /// </summary>
+    public bool IsFullWith(int acceptedGuests)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(acceptedGuests);
+        return MaxPlayers.HasValue && AcceptedCount + acceptedGuests >= MaxPlayers.Value;
+    }
 
     // ── Candidate voting (approval model) — Issue #2700 ──────────────────────
 

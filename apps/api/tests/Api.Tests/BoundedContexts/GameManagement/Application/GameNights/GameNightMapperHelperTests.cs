@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
@@ -57,6 +58,31 @@ public class GameNightMapperHelperTests
         dto.AcceptedCount.Should().Be(3);
         dto.PendingCount.Should().Be(1);
         dto.TotalInvited.Should().Be(5);
+    }
+
+    [Fact]
+    public void MapToDto_ADerivedViewerStatus_OutranksTheRsvpRowLookup()
+    {
+        // #4921: the email guest has no row; the caller derives their state from the invitation and passes it.
+        var evt = CreatePublishedEvent();
+        var guest = Guid.NewGuid();
+
+        var dto = GameNightMapperHelper.MapToDto(
+            evt, "Organizer", guest, viewerRsvpStatus: RsvpStatus.Accepted);
+
+        dto.ViewerRsvpStatus.Should().Be(RsvpStatus.Accepted);
+    }
+
+    [Fact]
+    public void MapToDto_WithoutADerivedStatus_TheRsvpRowStillDecides()
+    {
+        var evt = CreatePublishedEvent();
+        var member = evt.Rsvps[0].UserId;
+
+        GameNightMapperHelper.MapToDto(evt, "Organizer", member).ViewerRsvpStatus
+            .Should().Be(RsvpStatus.Pending);
+        GameNightMapperHelper.MapToDto(evt, "Organizer", Guid.NewGuid()).ViewerRsvpStatus
+            .Should().BeNull();
     }
 
     [Fact]

@@ -143,6 +143,21 @@ public sealed class LiveGameSessionConflictCodesTests
         Refusal(() => session.Save(_time)).ErrorCode.Should().Be(expectedCode);
     }
 
+    /// <summary>
+    /// Every member of the enum has a cause. A new status (say, Abandoned) added without a line in the
+    /// switch would turn every 409 on it into a 500 (the `_` arm throws): this test turns that into a
+    /// red here instead.
+    /// </summary>
+    [Fact]
+    public void ForRejectedStatus_CoversEveryDefinedStatus()
+    {
+        foreach (var status in Enum.GetValues<LiveSessionStatus>())
+        {
+            var act = () => LiveSessionConflictCodes.ForRejectedStatus(status, LiveSessionConflictCodes.SessionAlreadyStarted);
+            act.Should().NotThrow($"{status} must map to a code");
+        }
+    }
+
     [Fact]
     public void ForRejectedStatus_InProgress_IsTheOnlyActionDependentCell()
     {

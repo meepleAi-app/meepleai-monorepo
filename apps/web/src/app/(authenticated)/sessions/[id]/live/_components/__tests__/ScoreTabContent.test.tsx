@@ -39,6 +39,8 @@ const MESSAGES: Record<string, string> = {
   // #4844
   'pages.sessionLive.conflicts.notStarted': 'La partita non è ancora avviata',
   'pages.sessionLive.conflicts.completed': 'La partita è già conclusa.',
+  'pages.sessionLive.conflicts.concurrentEdit':
+    'Qualcun altro ha appena modificato la partita: riprova.',
   'pages.sessionLive.conflicts.generic': 'Operazione non consentita',
 };
 
@@ -285,11 +287,13 @@ describe('ScoreTabContent — #4156 fetta 2', () => {
       );
     });
 
-    // #4844: a 409 says why, and «riprova» would be a lie there — trying again cannot succeed.
+    // #4844: a 409 says why, and «riprova» would be a lie there — trying again cannot succeed. The
+    // one exception is the xmin concurrent edit (ADR-060), where trying again is exactly the advice.
     it.each([
       ['session_completed', 'La partita è già conclusa.'],
       ['session_not_started', 'La partita non è ancora avviata'],
       ['session_frozen', 'Operazione non consentita'],
+      ['concurrent_edit', 'Qualcun altro ha appena modificato la partita: riprova.'],
     ])(
       'a 409 with code %s reads by code, not as «riprova» nor as the server text',
       async (code, expected) => {

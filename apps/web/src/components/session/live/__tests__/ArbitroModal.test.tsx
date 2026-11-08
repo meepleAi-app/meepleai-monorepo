@@ -18,7 +18,8 @@ import { ArbitroModal } from '../ArbitroModal';
 const MESSAGES: Record<string, string> = {
   'pages.sessionLive.conflicts.notStarted':
     'La partita non è ancora avviata: avviala prima di continuare.',
-  'pages.sessionLive.conflicts.paused': 'La partita è in pausa: riprendila prima di continuare.',
+  'pages.sessionLive.conflicts.paused':
+    'La partita è in pausa: questa azione vale solo a partita in corso.',
   'pages.sessionLive.conflicts.completed': 'La partita è già conclusa.',
   'pages.sessionLive.conflicts.alreadyStarted': 'La partita è già avviata.',
   'pages.sessionLive.conflicts.notPaused': 'La partita non è in pausa.',
@@ -226,7 +227,7 @@ describe('ArbitroModal', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(
-        'La partita è in pausa: riprendila prima di continuare.'
+        'La partita è in pausa: questa azione vale solo a partita in corso.'
       );
     });
     expect(screen.getByRole('alert')).not.toHaveTextContent(/Cannot submit/);

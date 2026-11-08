@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { ApiError, ConflictError, NotFoundError } from '@/lib/api/core/errors';
 
 import {
+  CONCURRENT_EDIT_CODE,
+  LIVE_SESSION_CONCURRENT_EDIT_KEY,
   LIVE_SESSION_CONFLICT_CODES,
   LIVE_SESSION_CONFLICT_GENERIC_KEY,
   isLiveSessionConflict,
@@ -27,6 +29,17 @@ describe('liveSessionConflictKey', () => {
   it('a code the client does not know reads as the generic sentence, never as the server text', () => {
     const error = new ConflictError({ message: 'Some new refusal', code: 'session_frozen' });
     expect(liveSessionConflictKey(error)).toBe(LIVE_SESSION_CONFLICT_GENERIC_KEY);
+    expect(liveSessionConflictCode(error)).toBeNull();
+  });
+
+  // ADR-060: the xmin 409 is the one conflict worth retrying — it must not read as «not allowed in
+  // the game's current state», which would tell the player the game forbids scoring while it runs.
+  it('the concurrent-edit 409 reads as «try again», not as a state refusal', () => {
+    const error = new ConflictError({
+      message: 'The record was modified',
+      code: CONCURRENT_EDIT_CODE,
+    });
+    expect(liveSessionConflictKey(error)).toBe(LIVE_SESSION_CONCURRENT_EDIT_KEY);
     expect(liveSessionConflictCode(error)).toBeNull();
   });
 

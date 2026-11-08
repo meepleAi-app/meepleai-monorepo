@@ -4033,10 +4033,11 @@
       },
       "conflicts": {
         "notStarted": "La partita non è ancora avviata: avviala prima di continuare.",
-        "paused": "La partita è in pausa: riprendila prima di continuare.",
+        "paused": "La partita è in pausa: questa azione vale solo a partita in corso.",
         "completed": "La partita è già conclusa.",
         "alreadyStarted": "La partita è già avviata.",
         "notPaused": "La partita non è in pausa.",
+        "concurrentEdit": "Qualcun altro ha appena modificato la partita: riprova.",
         "generic": "Operazione non consentita nello stato attuale della partita."
       },
       "endgameDialog": {

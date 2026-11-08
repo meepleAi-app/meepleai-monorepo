@@ -42,7 +42,15 @@ internal sealed class ProposeScoreCommandHandler : IRequestHandler<ProposeScoreC
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
         // The EF entity keeps the status as a number: name it, or the message reads «in status 4» (#4844).
+        // A value outside the enum (a corrupt row) is still a 409, with the generic code: ForRejectedStatus
+        // would throw on it and turn the refusal into a 500.
         var status = (LiveSessionStatus)session.Status;
+        if (!Enum.IsDefined(status))
+        {
+            throw new ConflictException(
+                $"Cannot propose scores for session in status {session.Status}. Must be InProgress or Paused.");
+        }
+
         if (status is not (LiveSessionStatus.InProgress or LiveSessionStatus.Paused))
         {
             throw new ConflictException(

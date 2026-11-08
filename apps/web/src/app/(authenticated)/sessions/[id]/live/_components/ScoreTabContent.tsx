@@ -118,10 +118,12 @@ export function ScoreTabContent({
           });
         } catch (err) {
           if (isMountedRef.current) {
-            // #4844: a 409 says why (the game is not started, or over), and there «riprova» would be
-            // a lie: trying again cannot succeed. Anything else is a failed write to retry.
-            const key = liveSessionConflictKey(err) ?? 'pages.sessionLive.scoring.rounds.saveError';
-            toast.error(t(key), { id: 'round-score-save' });
+            // #4844: a 409 says why — the game is not started or over (there «riprova» would be a lie:
+            // trying again cannot succeed), or someone else wrote first (there it is the advice).
+            // Anything else is a failed write to retry.
+            const messageKey =
+              liveSessionConflictKey(err) ?? 'pages.sessionLive.scoring.rounds.saveError';
+            toast.error(t(messageKey), { id: 'round-score-save' });
           }
         } finally {
           dropDraft(key);

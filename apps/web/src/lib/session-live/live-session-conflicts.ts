@@ -38,6 +38,15 @@ const KEY_BY_CODE: Readonly<Record<LiveSessionConflictCode, string>> = {
 export const LIVE_SESSION_CONFLICT_GENERIC_KEY = 'pages.sessionLive.conflicts.generic';
 
 /**
+ * The one 409 that is NOT about the game's state and IS worth retrying: two writers hit the same
+ * `xmin` window (ADR-060) and the middleware answers `error: "concurrent_edit"`. Not a live-session
+ * code, so it lives outside `LIVE_SESSION_CONFLICT_CODES` (which mirrors the API's constants), but it
+ * must not read as «not allowed in the game's current state».
+ */
+export const CONCURRENT_EDIT_CODE = 'concurrent_edit';
+export const LIVE_SESSION_CONCURRENT_EDIT_KEY = 'pages.sessionLive.conflicts.concurrentEdit';
+
+/**
  * True for a 409, whichever class carries it: `ConflictError` from the http client, or anything with
  * `statusCode: 409` (the live page already discriminated that way before the codes existed).
  */
@@ -60,11 +69,16 @@ export function liveSessionConflictCode(error: unknown): LiveSessionConflictCode
 }
 
 /**
- * The i18n key a live-session 409 reads as, or `null` when `error` is not a 409 at all — the caller
- * keeps its own message for those. An unknown code gives the generic key: never the server's text.
+ * The i18n key a 409 on a live session reads as, or `null` when `error` is not a 409 at all — the
+ * caller keeps its own message for those. A state code gives its sentence; `concurrent_edit` gives
+ * the retry sentence; an unknown or missing code gives the generic key. Never the server's text.
  */
 export function liveSessionConflictKey(error: unknown): string | null {
   if (!isLiveSessionConflict(error)) return null;
   const code = liveSessionConflictCode(error);
-  return code == null ? LIVE_SESSION_CONFLICT_GENERIC_KEY : KEY_BY_CODE[code];
+  if (code != null) return KEY_BY_CODE[code];
+  if (error instanceof ConflictError && error.code === CONCURRENT_EDIT_CODE) {
+    return LIVE_SESSION_CONCURRENT_EDIT_KEY;
+  }
+  return LIVE_SESSION_CONFLICT_GENERIC_KEY;
 }

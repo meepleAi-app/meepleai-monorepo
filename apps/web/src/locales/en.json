@@ -3969,10 +3969,11 @@
       },
       "conflicts": {
         "notStarted": "The game has not started yet: start it before continuing.",
-        "paused": "The game is paused: resume it before continuing.",
+        "paused": "The game is paused: this action only applies while it is in progress.",
         "completed": "The game is already over.",
         "alreadyStarted": "The game has already started.",
         "notPaused": "The game is not paused.",
+        "concurrentEdit": "Someone else just changed the game: try again.",
         "generic": "This action is not allowed in the game's current state."
       },
       "endgameDialog": {

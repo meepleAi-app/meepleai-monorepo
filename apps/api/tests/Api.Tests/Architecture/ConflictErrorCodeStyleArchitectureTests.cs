@@ -113,6 +113,43 @@ public sealed partial class ConflictErrorCodeStyleArchitectureTests
             .And.Contain("AdvanceLiveSessionTurnCommand.TurnChangedCode");
     }
 
+    /// <summary>
+    /// Il client tiene una copia dei codici (<c>LIVE_SESSION_CONFLICT_CODES</c>) e li confronta come
+    /// stringhe: un rinominio da una parte sola passa tutti i test unit di entrambi i lati e degrada
+    /// ogni 409 alla frase generica in produzione. Lo stesso modello di
+    /// <see cref="FrontendModelRoutingMirrorTests"/>: il test dell'API legge il file del client.
+    /// </summary>
+    [Fact]
+    public void FrontendMirror_HasExactlyTheSameLiveSessionCodes()
+    {
+        var path = Path.Combine(LocateRepoRoot(), "apps", "web", "src", "lib", "session-live", "live-session-conflicts.ts");
+        File.Exists(path).Should().BeTrue($"the client mirror must exist at {path}");
+
+        var text = File.ReadAllText(path);
+        var block = FrontendCodesBlock().Match(text);
+        block.Success.Should().BeTrue("live-session-conflicts.ts must declare LIVE_SESSION_CONFLICT_CODES = { … } as const");
+
+        var frontend = FrontendCodeLiteral().Matches(block.Groups["body"].Value)
+            .Select(m => m.Groups["code"].Value)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var backend = typeof(LiveSessionConflictCodes)
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(f => f.IsLiteral && f.FieldType == typeof(string))
+            .Select(f => (string)f.GetRawConstantValue()!)
+            .ToHashSet(StringComparer.Ordinal);
+
+        frontend.Should().BeEquivalentTo(backend,
+            "LiveSessionConflictCodes (API) and LIVE_SESSION_CONFLICT_CODES (web) are the same set: a code " +
+            "known to one side only is a 409 the user reads as the generic sentence");
+    }
+
+    [GeneratedRegex(@"LIVE_SESSION_CONFLICT_CODES\s*=\s*\{(?<body>[^}]*)\}\s*as\s+const", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex FrontendCodesBlock();
+
+    [GeneratedRegex(@"'(?<code>[a-z][a-z0-9_]*)'", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex FrontendCodeLiteral();
+
     [Fact]
     public void EveryExemptionStillAppliesToSomething()
     {
@@ -265,6 +302,13 @@ public sealed partial class ConflictErrorCodeStyleArchitectureTests
 
     private static string LocateApiSourceRoot()
     {
+        var root = Path.Combine(LocateRepoRoot(), "apps", "api", "src", "Api");
+        Directory.Exists(root).Should().BeTrue($"API sources must exist at {root}");
+        return root;
+    }
+
+    private static string LocateRepoRoot()
+    {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
 
         // In a git worktree `.git` is a file, not a directory: accepting both stops the climb at the right root.
@@ -280,8 +324,6 @@ public sealed partial class ConflictErrorCodeStyleArchitectureTests
         }
 
         dir.Should().NotBeNull("the test binary must live inside the meepleai-monorepo repo");
-        var root = Path.Combine(dir!.FullName, "apps", "api", "src", "Api");
-        Directory.Exists(root).Should().BeTrue($"API sources must exist at {root}");
-        return root;
+        return dir!.FullName;
     }
 }

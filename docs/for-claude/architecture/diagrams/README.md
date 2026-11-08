@@ -111,11 +111,11 @@ Contenuto:
 - 3-Stage extraction pipeline con quality-based fallback
   - **Stage 1**: Unstructured (80% success, 1.3s avg, threshold: 0.80)
   - **Stage 2**: SmolDocling VLM (15% fallback, 3-5s avg, threshold: 0.70)
-  - **Stage 3**: Docnet + OCR (5% fallback, 2-3s avg, best effort)
+  - **Stage 3**: Docnet, text layer only, no OCR (5% fallback, 2-3s avg, best effort)
 - Stage Decision Tree
 - Quality Scoring Formula (4 metrics: text coverage 40%, structure 20%, tables 20%, pages 20%)
 - Text Processing Domain Service (normalization + quality assessment)
-- OCR Decision Logic
+- Pages without text (Stage 3)
 - Concurrency Control (Semaphore: max 4 concurrent Docnet operations)
 - Error Handling Strategy
 - Performance metrics per stage
@@ -126,7 +126,7 @@ Contenuto:
 - Stage Decision Tree
 - Quality Scoring Formula
 - Text Processing Domain Service
-- OCR Decision Logic
+- Pages without text (Stage 3)
 - Concurrency Control (Semaphore sequence)
 - Pipeline Performance Metrics
 - Error Handling Strategy

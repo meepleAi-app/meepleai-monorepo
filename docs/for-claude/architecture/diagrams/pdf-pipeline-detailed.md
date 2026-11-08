@@ -467,9 +467,7 @@ flowchart TD
         "CircuitBreakerTimeoutSeconds": 30
       },
       "DocnetExtractor": {
-        "MaxConcurrentOperations": 4,
-        "EnableOcrFallback": true,
-        "OcrThresholdCharsPerPage": 100
+        "MaxConcurrentOperations": 4
       }
     },
     "Quality": {

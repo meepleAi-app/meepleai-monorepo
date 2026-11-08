@@ -138,11 +138,16 @@ export function InvitesTokenPageClient({
   const handleAccept = useCallback(async (): Promise<void> => {
     setLastSubmittedAction('Accepted');
     const result = await respond.submit('Accepted');
-    if (result?.kind === 'conflict-state-switch' || result?.kind === 'gone') {
+    if (
+      result?.kind === 'conflict-state-switch' ||
+      result?.kind === 'gone' ||
+      result?.kind === 'full'
+    ) {
       // Refetch to surface fresh `alreadyRespondedAs` so the banner copy
       // matches the server state (not just our optimistic view). After a 410 it is how the page learns WHY the
       // link is gone: the 410 carries no reason, and a cancelled night is told apart from an expired invitation by
-      // the fresh `nightCancelled` (#4856).
+      // the fresh `nightCancelled` (#4856). After a full table (#4947) it brings the seat count the guest just
+      // found out about.
       await refetch();
     }
   }, [refetch, respond]);
@@ -279,7 +284,10 @@ export function InvitesTokenPageClient({
                 : t('pages.invites.states.alreadyAccepted.subTextDeclined'),
           }),
         }
-      : null;
+      : respond.state === 'full'
+        ? // #4947: a 409 too, but the seats went, not the answer. Read as a state switch it said «you already answered».
+          { tone: 'warning' as const, children: t('pages.invites.banners.full') }
+        : null;
 
   const errorBanner =
     respond.state === 'error'

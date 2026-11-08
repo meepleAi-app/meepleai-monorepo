@@ -92,6 +92,34 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// The first key of the two-int advisory lock of <see cref="LockSeatsAsync"/>: the «game night seats» class.
+    /// The second is the night, hashed. Two nights that hash alike only wait for each other.
+    /// </summary>
+    internal const int SeatLockClass = 0x47_4E_53_54; // "GNST"
+
+    public async Task LockSeatsAsync(Guid gameNightId, CancellationToken cancellationToken = default)
+    {
+        if (!DbContext.Database.IsNpgsql())
+        {
+            return;
+        }
+
+        // pg_advisory_xact_lock lives as long as the transaction. Taken with none open, it is released at the end of
+        // this very statement and the caller decides on seats as if it had never been taken: refused, not silent.
+        if (DbContext.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "LockSeatsAsync needs an open transaction (IUnitOfWork.ExecuteInTransactionAsync): " +
+                "a transaction-scoped advisory lock taken outside one is released immediately.");
+        }
+
+        var nightKey = gameNightId.ToString();
+        await DbContext.Database
+            .ExecuteSqlAsync($"SELECT pg_advisory_xact_lock({SeatLockClass}, hashtext({nightKey}))", cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyDictionary<Guid, RsvpStatus>> GetEmailGuestRsvpStatusesAsync(
         IReadOnlyCollection<Guid> gameNightIds, Guid userId, CancellationToken cancellationToken = default)
     {

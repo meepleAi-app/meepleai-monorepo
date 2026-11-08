@@ -7,6 +7,7 @@
  *
  *     idle ─submit→ submitting ─{200 success}→     success            (action accepted/declined)
  *                                ─{409}→            conflict           (state switch attempted)
+ *                                ─{409 game_night_full}→ full          (#4947 — no seat left)
  *                                ─{410}→            gone               (terminal: expired/cancelled)
  *                                ─{429}→            rate-limited       (#1169 — backend 10/min/IP cap)
  *                                ─{400 displayName}→ invalid-display-name (#1169 — defensive)
@@ -44,6 +45,7 @@ export type RespondState =
   | 'submitting'
   | 'success'
   | 'conflict'
+  | 'full'
   | 'gone'
   | 'rate-limited'
   | 'invalid-display-name'
@@ -79,6 +81,7 @@ function deriveState(
   if (status === 'success' && result) {
     if (result.kind === 'success') return 'success';
     if (result.kind === 'conflict-state-switch') return 'conflict';
+    if (result.kind === 'full') return 'full';
     if (result.kind === 'gone') return 'gone';
     if (result.kind === 'rate-limited') return 'rate-limited';
     if (result.kind === 'invalid-display-name') return 'invalid-display-name';

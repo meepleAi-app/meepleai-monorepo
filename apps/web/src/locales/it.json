@@ -1518,6 +1518,7 @@
       "banners": {
         "errorGeneric": "Risposta non inviata. Controlla la connessione e riprova.",
         "stateSwitchConflict": "Hai già risposto: {currentResponse}. Per cambiare, usa il pulsante dedicato.",
+        "full": "Il tavolo è al completo: gli ultimi posti sono stati presi mentre guardavi. Puoi comunque declinare, così l'organizzatore lo sa.",
         "goneExpired": "L'invito è scaduto mentre stavi rispondendo.",
         "goneCancelled": "L'organizzatore ha annullato la serata."
       },
@@ -1593,6 +1594,7 @@
         },
         "requestNewInviteCta": "Richiedi un nuovo invito",
         "homeCta": "Vai alla home",
+        "full": "Il tavolo è al completo: gli ultimi posti sono stati presi mentre guardavi. Puoi comunque declinare, così l'organizzatore lo sa.",
         "rateLimited": {
           "heading": "Troppe richieste",
           "body": "Hai inviato troppe risposte in poco tempo. Attendi qualche secondo prima di riprovare.",

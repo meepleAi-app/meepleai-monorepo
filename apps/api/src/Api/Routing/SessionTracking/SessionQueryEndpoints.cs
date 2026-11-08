@@ -109,12 +109,15 @@ internal static class SessionQueryEndpoints
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
+        // #4912: the code is the credential (#4883); 30 lookups/min per user bounds a brute-force attempt.
+        .RequireRateLimiting("SessionCodeRead")
         .WithName("GetSessionByCode")
         .WithTags("SessionTracking")
         .WithSummary("Find session by code")
         .Produces(200)
         .Produces(401)
-        .Produces(404);
+        .Produces(404)
+        .Produces(429);
     }
 
     private static void MapGetScoreboardEndpoint(RouteGroupBuilder group)

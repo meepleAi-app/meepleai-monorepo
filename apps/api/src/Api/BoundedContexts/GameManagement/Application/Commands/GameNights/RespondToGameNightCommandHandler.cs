@@ -64,9 +64,10 @@ internal sealed class RespondToGameNightCommandHandler : ICommandHandler<Respond
         if (rsvp is null)
         {
             // #4744: the invitation carries its row version; an answer that overlaps another write is read and
-            // decided again, as the token path does.
+            // decided again, as the token path does. The night is re-read inside the attempt: a seat decision
+            // made on the copy the first attempt already found outdated would be the same wrong decision.
             await InvitationWriteRetry
-                .RunAsync(ct => AnswerAsEmailGuestAsync(gameNight, command, ct), _events, cancellationToken)
+                .RunAsync(ct => AnswerAsEmailGuestAsync(command, ct), _events, cancellationToken)
                 .ConfigureAwait(false);
             return;
         }
@@ -95,13 +96,22 @@ internal sealed class RespondToGameNightCommandHandler : ICommandHandler<Respond
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task AnswerAsEmailGuestAsync(
-        GameNightEvent gameNight, RespondToGameNightCommand command, CancellationToken cancellationToken)
+    private async Task AnswerAsEmailGuestAsync(RespondToGameNightCommand command, CancellationToken cancellationToken)
     {
+        var gameNight = await _repository.GetByIdAsync(command.GameNightId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
+
         var invitation = await _invitations
             .GetAnsweredByUserAsync(gameNight.Id, command.UserId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException("GameNightRsvp", $"EventId={gameNight.Id}, UserId={command.UserId}");
+
+        // The same contract as the email link (#4856): a withdrawn or expired invitation, or a cancelled night,
+        // is 410 Gone from either door, not a 409 with an internal message.
+        if (invitation.Status is GameNightInvitationStatus.Cancelled or GameNightInvitationStatus.Expired)
+            throw new GoneException($"This invitation is no longer available (status: {invitation.Status}).");
+        if (gameNight.Status == GameNightStatus.Cancelled)
+            throw new GoneException("This game night was cancelled: the invitation can no longer be answered.");
 
         var utcNow = _timeProvider.GetUtcNow();
         bool transitioned;

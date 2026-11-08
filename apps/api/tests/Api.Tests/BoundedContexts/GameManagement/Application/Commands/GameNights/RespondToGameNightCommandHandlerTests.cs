@@ -145,6 +145,33 @@ public sealed class RespondToGameNightCommandHandlerTests
             .Which.ErrorCode.Should().Be(RespondToGameNightCommandHandler.MaybeNotAvailableCode);
     }
 
+    [Theory]
+    [InlineData(GameNightInvitationStatus.Cancelled)]
+    [InlineData(GameNightInvitationStatus.Expired)]
+    public async Task EmailGuest_WithdrawnOrExpiredInvitation_Is410_AsFromTheEmailLink(GameNightInvitationStatus terminal)
+    {
+        var guest = Guid.NewGuid();
+        var night = NightWith(maxPlayers: null);
+        GuestInvitationOf(night, guest, terminal);
+
+        var act = () => Respond(night, guest, RsvpStatus.Declined);
+
+        await act.Should().ThrowAsync<GoneException>();
+    }
+
+    [Fact]
+    public async Task EmailGuest_OnACancelledNight_Is410_AsFromTheEmailLink()
+    {
+        var guest = Guid.NewGuid();
+        var night = NightWith(maxPlayers: null);
+        night.Cancel();
+        GuestInvitationOf(night, guest, GameNightInvitationStatus.Accepted);
+
+        var act = () => Respond(night, guest, RsvpStatus.Declined);
+
+        await act.Should().ThrowAsync<GoneException>();
+    }
+
     [Fact]
     public async Task Stranger_StillGetsA404()
     {

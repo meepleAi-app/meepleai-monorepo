@@ -76,6 +76,25 @@ internal static class GameNightParticipation
         var derived = await repository
             .GetEmailGuestRsvpStatusesAsync([night.Id], viewerId, cancellationToken)
             .ConfigureAwait(false);
-        return derived.TryGetValue(night.Id, out var status) ? status : null;
+        return ViewerRsvpStatus(night, viewerId, derived);
+    }
+
+    /// <summary>
+    /// The same answer for a LIST, from the guest statuses already fetched for all its nights
+    /// (<see cref="IGameNightEventRepository.GetEmailGuestRsvpStatusesAsync"/>). The precedence is
+    /// written here once: the RSVP row, when there is one, outranks an old email answer — a user
+    /// invited both ways reads their live row.
+    /// </summary>
+    public static RsvpStatus? ViewerRsvpStatus(
+        GameNightEvent night, Guid viewerId, IReadOnlyDictionary<Guid, RsvpStatus> emailGuestStatuses)
+    {
+        ArgumentNullException.ThrowIfNull(night);
+        ArgumentNullException.ThrowIfNull(emailGuestStatuses);
+
+        if (viewerId == Guid.Empty || night.OrganizerId == viewerId)
+            return null;
+
+        return night.GetRsvp(viewerId)?.Status
+            ?? (emailGuestStatuses.TryGetValue(night.Id, out var status) ? status : null);
     }
 }

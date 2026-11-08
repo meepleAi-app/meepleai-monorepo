@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
@@ -47,7 +48,7 @@ internal sealed class GetUpcomingGameNightsQueryHandler : IQueryHandler<GetUpcom
         return events.Select(e => GameNightMapperHelper.MapToDto(
             e, organizerNames.GetValueOrDefault(e.OrganizerId, "Unknown"), query.UserId,
             guests.GetValueOrDefault(e.Id),
-            e.GetRsvp(query.UserId)?.Status ?? (guestStatuses.TryGetValue(e.Id, out var s) ? s : null))).ToList();
+            GameNightParticipation.ViewerRsvpStatus(e, query.UserId, guestStatuses))).ToList();
     }
 
     private async Task<Dictionary<Guid, string>> GetUserDisplayNamesAsync(List<Guid> userIds, CancellationToken cancellationToken)

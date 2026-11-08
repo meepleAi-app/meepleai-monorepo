@@ -96,11 +96,16 @@ internal class GameNightInvitationRepository : RepositoryBase, IGameNightInvitat
         if (email is null)
             return null;
 
+        // Two answered invitations for one address and night can exist (a re-invite is only refused while the
+        // first is Pending). The row read and the row written must be the same one, so the choice mirrors
+        // GetEmailGuestRsvpStatusesAsync: an acceptance outranks a decline, then the most recent answer.
+        var accepted = nameof(GameNightInvitationStatus.Accepted);
         var entity = await DbContext.GameNightInvitations
             .AsNoTracking()
             .Where(GameNightInvitationQueries.AnsweredBy(userId, email))
             .Where(i => i.GameNightId == gameNightId)
-            .OrderByDescending(i => i.RespondedAt)
+            .OrderByDescending(i => i.Status == accepted)
+            .ThenByDescending(i => i.RespondedAt)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 

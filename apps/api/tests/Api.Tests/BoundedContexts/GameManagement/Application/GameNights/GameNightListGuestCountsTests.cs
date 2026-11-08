@@ -74,11 +74,18 @@ public sealed class GameNightListGuestCountsTests : IDisposable
         _db.SaveChanges();
     }
 
+    // #4921: every list also asks which nights the viewer sits at as an email guest; none here.
+    private void NoEmailGuestStatuses() =>
+        _repo.Setup(r => r.GetEmailGuestRsvpStatusesAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), _organizerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, RsvpStatus>());
+
     [Fact]
     public async Task GetMyGameNights_CountsTheGuestsOfEachNight()
     {
         _repo.Setup(r => r.GetByUserAsync(_organizerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([_first, _second]);
+        NoEmailGuestStatuses();
         var handler = new GetMyGameNightsQueryHandler(_repo.Object, _db);
 
         var result = await handler.Handle(
@@ -92,10 +99,7 @@ public sealed class GameNightListGuestCountsTests : IDisposable
     {
         _repo.Setup(r => r.GetUpcomingAsync(_organizerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([_first, _second]);
-        // #4921: the list also asks which nights the viewer sits at as an email guest; none here.
-        _repo.Setup(r => r.GetEmailGuestRsvpStatusesAsync(
-                It.IsAny<IReadOnlyCollection<Guid>>(), _organizerId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<Guid, RsvpStatus>());
+        NoEmailGuestStatuses();
         var handler = new GetUpcomingGameNightsQueryHandler(_repo.Object, _db);
 
         var result = await handler.Handle(
@@ -109,6 +113,7 @@ public sealed class GameNightListGuestCountsTests : IDisposable
     {
         _repo.Setup(r => r.GetCompletedAsync(_organizerId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([_first, _second]);
+        NoEmailGuestStatuses();
         var handler = new GetCompletedGameNightsQueryHandler(_repo.Object, _db);
 
         var result = await handler.Handle(

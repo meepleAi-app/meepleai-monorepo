@@ -45,12 +45,10 @@ internal static class PdfTextProcessingDomainService
         text = Regex.Replace(text, "(\\p{L})[­￾](\\p{L})", "$1$2", RegexOptions.None, TimeSpan.FromSeconds(1));
 #pragma warning restore MA0023
 
-        // Step 3: Fix broken paragraphs (lines that end mid-word)
-        // If a line ends with a letter (mid-word) and next line starts with a letter, merge them
-        // Note: ExplicitCapture intentionally NOT used here - we need capture groups for replacement
-#pragma warning disable MA0023 // Add RegexOptions.ExplicitCapture - disabled because we need $1 and $2 substitution
-        text = Regex.Replace(text, @"([a-z])\n([a-z])", "$1$2", RegexOptions.None, TimeSpan.FromSeconds(1));
-#pragma warning restore MA0023
+        // Step 3 (removed, #4932): it used to glue every line break between two lowercase ASCII letters ("the\nplayer"
+        // became "theplayer"), on the idea that the line had been cut in the middle of a word. A cut word is told by its
+        // hyphen, which step 2.5 already handles; without one, a break between two lowercase lines is a word boundary,
+        // and that is what every wrapped line of a paragraph looks like. The break stays a '\n' (step 5 trims the lines).
 
         // Step 4: Normalize multiple newlines to paragraph breaks (max 2 newlines)
         text = Regex.Replace(text, @"\n{3,}", "\n\n", RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));

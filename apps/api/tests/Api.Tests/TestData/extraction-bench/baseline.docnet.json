@@ -8,7 +8,7 @@
       "scanWordRecall": null,
       "tableCellF1": null,
       "tableCellRecall": 0,
-      "wordRecall": 0.9473684210526315
+      "wordRecall": 1
     },
     "inline-icons-en": {
       "headingRecall": null,
@@ -17,7 +17,7 @@
       "scanWordRecall": null,
       "tableCellF1": null,
       "tableCellRecall": null,
-      "wordRecall": 0.90625
+      "wordRecall": 1
     },
     "scanned-page-en": {
       "headingRecall": null,
@@ -26,7 +26,7 @@
       "scanWordRecall": 0,
       "tableCellF1": null,
       "tableCellRecall": null,
-      "wordRecall": 0.8666666666666667
+      "wordRecall": 1
     },
     "text-table-it": {
       "headingRecall": null,
@@ -35,7 +35,7 @@
       "scanWordRecall": null,
       "tableCellF1": null,
       "tableCellRecall": 1,
-      "wordRecall": 0.9444444444444444
+      "wordRecall": 1
     },
     "two-columns-en": {
       "headingRecall": null,
@@ -44,7 +44,7 @@
       "scanWordRecall": null,
       "tableCellF1": null,
       "tableCellRecall": null,
-      "wordRecall": 0.782051282051282
+      "wordRecall": 1
     }
   }
 }

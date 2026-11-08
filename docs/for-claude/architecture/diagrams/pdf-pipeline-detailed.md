@@ -202,7 +202,7 @@ flowchart TD
     subgraph "Normalization Steps"
         Normalize --> Step1[1. Normalize line endings<br/>\r\n → \n]
         Step1 --> Step2[2. Remove excessive whitespace<br/>Multiple spaces → single space]
-        Step2 --> Step3[3. Fix broken words<br/>Rejoin mid-word breaks]
+        Step2 --> Step3[3. De-hyphenate<br/>Rejoin words cut by a hyphen or U+FFFE at a line break<br/>A plain line break stays]
         Step3 --> Step4[4. Normalize newlines<br/>Max 2 consecutive]
         Step4 --> Step5[5. Unicode normalization<br/>Form C canonical]
         Step5 --> Step6[6. Remove zero-width chars<br/>Cleanup invisible chars]

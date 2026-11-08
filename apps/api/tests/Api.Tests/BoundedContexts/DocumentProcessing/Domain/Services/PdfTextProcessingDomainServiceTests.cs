@@ -49,17 +49,50 @@ public class PdfTextProcessingDomainServiceTests
         result.Should().Be("Word1 Word2 Word3");
     }
 
-    [Fact]
-    public void NormalizeText_FixesBrokenParagraphs()
+    // #4932: this used to be NormalizeText_FixesBrokenParagraphs, asserting that "sentenc\ne" becomes "sentence".
+    // That is the defect, not a feature: a line break between two lowercase ASCII letters is far more often a word
+    // boundary ("the\nplayer") than a word cut in two without any hyphen. The assertion encoded the gluing, and
+    // pdfium puts every wrapped line of a paragraph in this shape.
+    [Theory]
+    [InlineData("the\nplayer", "the\nplayer")]
+    [InlineData("centre of\nthe table", "centre of\nthe table")]
+    [InlineData("die\nfolgende Karte", "die\nfolgende Karte")]
+    [InlineData("Straße\nund Platz", "Straße\nund Platz")]
+    [InlineData("This is a sentenc\ne that was split", "This is a sentenc\ne that was split")]
+    public void NormalizeText_KeepsTheLineBreakBetweenTwoLowercaseLines_NeverGluesThem(string rawText, string expected)
     {
-        // Arrange: Line ends mid-sentence
-        var rawText = "This is a sentenc\ne that was split";
-
-        // Act
         var result = PdfTextProcessingDomainService.NormalizeText(rawText);
 
-        // Assert
-        result.Should().Contain("sentence that was split");
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("città\nvecchia")]
+    [InlineData("alle\nüber")]
+    [InlineData("été\nétait")]
+    public void NormalizeText_KeepsTheLineBreakWhenALetterIsNotAsciiLowercase(string rawText)
+    {
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
+
+        result.Should().Be(rawText);
+    }
+
+    [Fact]
+    public void NormalizeText_KeepsAParagraphBreakBetweenTwoLowercaseLines()
+    {
+        var result = PdfTextProcessingDomainService.NormalizeText("end of\n\nthe turn");
+
+        result.Should().Be("end of\n\nthe turn");
+    }
+
+    [Fact]
+    public void NormalizeText_DeHyphenatesLowercaseAsciiWordsAcrossALineBreak()
+    {
+        // The hyphen is the evidence of a cut word (step 2.5), and it is the only one: removing the glue of step 3
+        // must not take this away.
+        var result = PdfTextProcessingDomainService.NormalizeText("the univer-\nsity of the table");
+
+        result.Should().Be("the university of the table");
     }
 
     [Fact]

@@ -19,6 +19,10 @@ public sealed class NearlyEmptyPagesTests
 
     private static string Chars(int count) => new('a', count);
 
+    private static PagedTextExtractionResult Extraction(bool textLayerOnly, params PageTextChunk[] pages) =>
+        PagedTextExtractionResult.CreateSuccess(pages, pages.Length, pages.Sum(p => p.CharCount), ocrTriggered: false)
+        with { TextLayerOnly = textLayerOnly };
+
     [Fact]
     public void Count_CountsThePagesBelowTheThreshold_AndOnlyThose()
     {
@@ -54,6 +58,27 @@ public sealed class NearlyEmptyPagesTests
     public void Count_NoPages_IsZero()
     {
         NearlyEmptyPages.Count([]).Should().Be(0);
+    }
+
+    [Fact]
+    public void CountIn_CountsOnlyWhenTheExtractorReadsTheTextLayerAlone()
+    {
+        PageTextChunk[] pages = [Page(1, Chars(400)), Page(2, ""), Page(3, "short")];
+
+        NearlyEmptyPages.CountIn(Extraction(textLayerOnly: true, pages)).Should().Be(2);
+        NearlyEmptyPages.CountIn(Extraction(textLayerOnly: false, pages)).Should().Be(
+            0, "an extractor that reads pixels, or does not know its pages, says nothing about a scan");
+    }
+
+    [Fact]
+    public void NoTextAnywhere_NeedsTheTextLayerMark_NotJustEmptyPages()
+    {
+        PageTextChunk[] pages = [Page(1, ""), Page(2, "  ")];
+
+        NearlyEmptyPages.NoTextAnywhere(Extraction(textLayerOnly: true, pages)).Should().BeTrue();
+        NearlyEmptyPages.NoTextAnywhere(Extraction(textLayerOnly: false, pages)).Should().BeFalse(
+            "a VLM or an OCR extractor that returns nothing is not proof of a scan, and «no OCR» would be false for it");
+        NearlyEmptyPages.NoTextAnywhere(Extraction(textLayerOnly: true, [Page(1, "x")])).Should().BeFalse();
     }
 
     [Fact]

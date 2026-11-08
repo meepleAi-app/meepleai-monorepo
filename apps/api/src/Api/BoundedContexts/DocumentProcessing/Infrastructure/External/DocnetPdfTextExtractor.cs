@@ -143,7 +143,7 @@ internal class DocnetPdfTextExtractor : IPdfTextExtractor
                     pageChunks,
                     totalPages,
                     totalChars,
-                    ocrTriggered: false);
+                    ocrTriggered: false) with { TextLayerOnly = true };
             }
             finally
             {

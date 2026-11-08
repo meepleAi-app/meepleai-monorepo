@@ -10,9 +10,10 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 internal static class NearlyEmptyPages
 {
     /// <summary>
-    /// A page with fewer non-blank characters than this counts as nearly empty. It is the threshold
-    /// <c>ShouldTriggerOcr</c> used to decide that a page «looks like a scan» (the OCR fallback it served is gone), so the
-    /// words mean what they meant.
+    /// A page with fewer characters than this, once the whitespace at both ends is trimmed (spaces inside the text do
+    /// count), is nearly empty. 100 is also the default of the key the removed <c>ShouldTriggerOcr</c> compared against
+    /// (<c>PdfExtraction:Ocr:ThresholdCharsPerPage</c>), but that rule compared the AVERAGE over the whole document; here it
+    /// is applied to each page, so a single cover or blank page counts.
     /// </summary>
     public const int MaxCharacters = 100;
 
@@ -35,8 +36,29 @@ internal static class NearlyEmptyPages
     }
 
     /// <summary>
-    /// True when the extraction found pages and not one of them has text: the document is, as far as this extractor can
-    /// tell, a scan.
+    /// How many pages of this extraction are nearly empty, or zero when the extractor is not text-layer-only
+    /// (<see cref="PagedTextExtractionResult.TextLayerOnly"/>): for an extractor that reads pixels, or one that does not
+    /// know its pages, a short page says nothing about a scan.
+    /// </summary>
+    public static int CountIn(PagedTextExtractionResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result.TextLayerOnly ? Count(result.PageChunks) : 0;
+    }
+
+    /// <summary>
+    /// True when the extractor reads the text layer alone and found pages, none with text: a scan, as far as it can tell.
+    /// False for every other extractor, so the old, generic failure stays as it was for them.
+    /// </summary>
+    public static bool NoTextAnywhere(PagedTextExtractionResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result.TextLayerOnly && NoPageHasText(result.PageChunks);
+    }
+
+    /// <summary>
+    /// True when the extraction found pages and not one of them has text. It does not look at who extracted:
+    /// <see cref="NoTextAnywhere"/> does.
     /// </summary>
     public static bool NoPageHasText(IEnumerable<PageTextChunk> pages)
     {

@@ -93,7 +93,11 @@ internal record PagedTextExtractionResult(
     string? ErrorMessage = null,
     IReadOnlyList<ExtractedElement>? StructuredElements = null,
     // #3589: see TextExtractionResult.IsPermanentFailure.
-    bool IsPermanentFailure = false)
+    bool IsPermanentFailure = false,
+    // #4437: true when the pages are the PDF's own text layer and nothing else (Docnet). Only then is an empty page
+    // evidence of a scan. A VLM or an OCR extractor (SmolDocling, Unstructured hi_res) reads pixels, and one that cuts the
+    // whole text into estimated parts has no pages to count. Default false: unknown never says «scan».
+    bool TextLayerOnly = false)
 {
     public static PagedTextExtractionResult CreateSuccess(
         IList<PageTextChunk> pageChunks,

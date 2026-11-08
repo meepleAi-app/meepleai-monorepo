@@ -98,6 +98,22 @@ public sealed class DocnetPdfTextExtractorTests : IDisposable
         result.OcrTriggered.Should().BeFalse("Docnet never performs OCR");
     }
 
+    /// <summary>
+    /// #4437: the pipelines read an empty page as a scan only when the extractor says it read the text layer alone. Docnet
+    /// says so on its paged result; a failure does not claim anything.
+    /// </summary>
+    [Fact]
+    public async Task ExtractPagedTextAsync_MarksTheResultAsTextLayerOnly()
+    {
+        var pdfStream = CreateSimpleTestPdfStream();
+
+        var result = await _sut.ExtractPagedTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        result.TextLayerOnly.Should().BeTrue("Docnet reads the PDF's own text layer and never OCRs");
+        PagedTextExtractionResult.CreateFailure("x").TextLayerOnly.Should().BeFalse();
+    }
+
     [Fact]
     public async Task ExtractTextAsync_CorruptPdf_ReturnsFailure()
     {

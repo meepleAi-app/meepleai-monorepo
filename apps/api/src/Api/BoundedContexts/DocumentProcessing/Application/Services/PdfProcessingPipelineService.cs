@@ -221,7 +221,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 // #4437: «no chunks» has two very different causes. A scan has pages and not one of them has text:
                 // the row says so, and is not retried (a scan does not grow text on the next attempt). Text that the
                 // chunker turned into nothing is a different failure and keeps the generic text and no category.
-                if (NearlyEmptyPages.NoPageHasText(extractResult.PageChunks))
+                if (NearlyEmptyPages.NoTextAnywhere(extractResult))
                 {
                     _logger.LogWarning(
                         "[PdfPipeline] PDF {PdfId} has no extractable text on any of its {Pages} pages (extractor {Extractor}): probably a scanned PDF, marking as failed",
@@ -643,7 +643,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
             // #4437: Docnet reads the text layer and does not OCR. A scanned page comes back empty and the document can
             // still reach Ready with holes in it; this line is the only trace of them.
-            var nearlyEmptyPages = NearlyEmptyPages.Count(extractResult.PageChunks);
+            var nearlyEmptyPages = NearlyEmptyPages.CountIn(extractResult);
             if (nearlyEmptyPages > 0)
             {
                 _logger.LogWarning(

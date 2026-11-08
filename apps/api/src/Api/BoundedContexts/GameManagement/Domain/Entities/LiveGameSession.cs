@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameManagement.Domain.Models;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
@@ -293,7 +294,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         string? avatarUrl = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot add players to a completed session");
+            throw StatusConflict("Cannot add players to a completed session");
 
         if (_players.Count(p => p.IsActive) >= MaxPlayers)
             throw new DomainException($"Cannot add more than {MaxPlayers} players to a session");
@@ -337,7 +338,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void RemovePlayer(Guid playerId, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot remove players from a completed session");
+            throw StatusConflict("Cannot remove players from a completed session");
 
         var player = _players.FirstOrDefault(p => p.Id == playerId && p.IsActive)
             ?? throw new DomainException($"Active player {playerId} not found in this session");
@@ -360,7 +361,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void SetTurnOrder(List<Guid> playerIds, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot change turn order in a completed session");
+            throw StatusConflict("Cannot change turn order in a completed session");
 
         ArgumentNullException.ThrowIfNull(playerIds);
 
@@ -391,7 +392,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public LiveSessionTeam CreateTeam(string name, string color, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot create teams in a completed session");
+            throw StatusConflict("Cannot create teams in a completed session");
 
         if (_teams.Count >= MaxTeams)
             throw new DomainException($"Cannot create more than {MaxTeams} teams in a session");
@@ -418,7 +419,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void AssignPlayerToTeam(Guid playerId, Guid teamId, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot assign players to teams in a completed session");
+            throw StatusConflict("Cannot assign players to teams in a completed session");
 
         var player = _players.FirstOrDefault(p => p.Id == playerId && p.IsActive)
             ?? throw new DomainException($"Active player {playerId} not found in this session");
@@ -445,12 +446,23 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     // === Lifecycle Management ===
 
     /// <summary>
+    /// The 409 for an action the current <see cref="Status"/> does not admit (#4844): a stable code in the
+    /// body for the client to translate, the English sentence for the logs. The caller has already
+    /// decided that the status is wrong; this only names why. <paramref name="codeWhenInProgress"/>
+    /// matters only to the actions that reject a running game (start, resume).
+    /// </summary>
+    private ConflictException StatusConflict(
+        string message,
+        string codeWhenInProgress = LiveSessionConflictCodes.SessionAlreadyStarted)
+        => new(LiveSessionConflictCodes.ForRejectedStatus(Status, codeWhenInProgress), message);
+
+    /// <summary>
     /// Transitions the session to Setup status.
     /// </summary>
     public void MoveToSetup(TimeProvider? timeProvider = null)
     {
         if (Status != LiveSessionStatus.Created)
-            throw new ConflictException($"Cannot move to Setup from {Status} status. Must be Created.");
+            throw StatusConflict($"Cannot move to Setup from {Status} status. Must be Created.");
 
         Status = LiveSessionStatus.Setup;
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
@@ -463,7 +475,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void Start(TimeProvider? timeProvider = null)
     {
         if (Status != LiveSessionStatus.Setup && Status != LiveSessionStatus.Created)
-            throw new ConflictException($"Cannot start session from {Status} status. Must be Created or Setup.");
+            throw StatusConflict($"Cannot start session from {Status} status. Must be Created or Setup.");
 
         if (!HasPlayers)
             throw new ConflictException("Cannot start session without any active players");
@@ -483,7 +495,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void Pause(TimeProvider? timeProvider = null)
     {
         if (Status != LiveSessionStatus.InProgress)
-            throw new ConflictException($"Cannot pause session from {Status} status. Must be InProgress.");
+            throw StatusConflict($"Cannot pause session from {Status} status. Must be InProgress.");
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         Status = LiveSessionStatus.Paused;
@@ -499,7 +511,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void Resume(TimeProvider? timeProvider = null)
     {
         if (Status != LiveSessionStatus.Paused)
-            throw new ConflictException($"Cannot resume session from {Status} status. Must be Paused.");
+            throw StatusConflict(
+                $"Cannot resume session from {Status} status. Must be Paused.",
+                LiveSessionConflictCodes.SessionNotPaused);
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         Status = LiveSessionStatus.InProgress;
@@ -515,7 +529,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void Complete(TimeProvider? timeProvider = null)
     {
         if (Status != LiveSessionStatus.InProgress && Status != LiveSessionStatus.Paused)
-            throw new ConflictException($"Cannot complete session from {Status} status. Must be InProgress or Paused.");
+            throw StatusConflict($"Cannot complete session from {Status} status. Must be InProgress or Paused.");
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         Status = LiveSessionStatus.Completed;
@@ -544,7 +558,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void Save(TimeProvider? timeProvider = null)
     {
         if (!IsActive)
-            throw new ConflictException($"Cannot save session in {Status} status. Must be Setup, InProgress, or Paused.");
+            throw StatusConflict($"Cannot save session in {Status} status. Must be Setup, InProgress, or Paused.");
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         LastSavedAt = now;
@@ -567,7 +581,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         string? unit = null)
     {
         if (Status != LiveSessionStatus.InProgress && Status != LiveSessionStatus.Paused)
-            throw new ConflictException($"Cannot record scores in {Status} status. Must be InProgress or Paused.");
+            throw StatusConflict($"Cannot record scores in {Status} status. Must be InProgress or Paused.");
 
         _ = _players.FirstOrDefault(p => p.Id == playerId && p.IsActive)
             ?? throw new DomainException($"Active player {playerId} not found in this session");
@@ -599,7 +613,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void AdvanceTurn(TimeProvider? timeProvider = null)
     {
         if (Status != LiveSessionStatus.InProgress)
-            throw new ConflictException($"Cannot advance turn in {Status} status. Must be InProgress.");
+            throw StatusConflict($"Cannot advance turn in {Status} status. Must be InProgress.");
 
         if (CurrentTurnIndex >= MaxTurns)
             throw new DomainException($"Cannot exceed {MaxTurns} turns");
@@ -642,7 +656,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void AdvancePhase(TimeProvider? timeProvider = null)
     {
         if (Status != LiveSessionStatus.InProgress)
-            throw new ConflictException($"Cannot advance phase in {Status} status. Must be InProgress.");
+            throw StatusConflict($"Cannot advance phase in {Status} status. Must be InProgress.");
 
         if (PhaseNames.Length == 0)
             throw new DomainException("No phases configured for this session. Link a toolkit with turn phases first.");
@@ -688,7 +702,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void SetTurnAdvancePolicy(TurnAdvancePolicy policy, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot change turn advance policy on a completed session");
+            throw StatusConflict("Cannot change turn advance policy on a completed session");
 
         TurnAdvancePolicy = policy;
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
@@ -701,7 +715,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void ConfigurePhases(string[] phaseNames, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot configure phases on a completed session");
+            throw StatusConflict("Cannot configure phases on a completed session");
 
         ArgumentNullException.ThrowIfNull(phaseNames);
 
@@ -718,7 +732,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void SetSnapshotTriggerConfig(SnapshotTriggerConfig config, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot change snapshot config on a completed session");
+            throw StatusConflict("Cannot change snapshot config on a completed session");
 
         ArgumentNullException.ThrowIfNull(config);
 
@@ -781,7 +795,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void AddDiaryEntry(Guid authorId, string text, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot add diary entries to a completed session");
+            throw StatusConflict("Cannot add diary entries to a completed session");
 
         if (authorId == Guid.Empty)
             throw new ValidationException("Author ID cannot be empty");
@@ -805,7 +819,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void UpdateNotes(string? notes, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot update notes on a completed session");
+            throw StatusConflict("Cannot update notes on a completed session");
 
         if (notes != null)
         {
@@ -828,7 +842,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void UpdateGameState(JsonDocument? gameState, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot update game state on a completed session");
+            throw StatusConflict("Cannot update game state on a completed session");
 
         // Dispose the prior JsonDocument before reassigning. JsonDocument owns pooled buffers
         // and only releases them on Dispose — repeated assignments without disposal cause
@@ -848,7 +862,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public void LinkToolkit(Guid toolkitId, TimeProvider? timeProvider = null)
     {
         if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot link toolkit to a completed session");
+            throw StatusConflict("Cannot link toolkit to a completed session");
 
         if (toolkitId == Guid.Empty)
             throw new ValidationException("Toolkit ID cannot be empty");

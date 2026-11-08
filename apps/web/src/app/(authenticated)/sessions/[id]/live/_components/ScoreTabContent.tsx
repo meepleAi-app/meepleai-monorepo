@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useRecordRoundScore } from '@/hooks/queries/useRecordRoundScore';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
+import { liveSessionConflictKey } from '@/lib/session-live/live-session-conflicts';
 import {
   canRecordScores,
   cellValue,
@@ -115,11 +116,14 @@ export function ScoreTabContent({
             },
             correction: cell.current !== undefined,
           });
-        } catch {
+        } catch (err) {
           if (isMountedRef.current) {
-            toast.error(t('pages.sessionLive.scoring.rounds.saveError'), {
-              id: 'round-score-save',
-            });
+            // #4844: a 409 says why — the game is not started or over (there «riprova» would be a lie:
+            // trying again cannot succeed), or someone else wrote first (there it is the advice).
+            // Anything else is a failed write to retry.
+            const messageKey =
+              liveSessionConflictKey(err) ?? 'pages.sessionLive.scoring.rounds.saveError';
+            toast.error(t(messageKey), { id: 'round-score-save' });
           }
         } finally {
           dropDraft(key);

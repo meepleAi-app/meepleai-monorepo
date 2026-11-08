@@ -3967,6 +3967,15 @@
         "closeCta": "Close",
         "closeAriaLabel": "Close pause overlay"
       },
+      "conflicts": {
+        "notStarted": "The game has not started yet: start it before continuing.",
+        "paused": "The game is paused: this action only applies while it is in progress.",
+        "completed": "The game is already over.",
+        "alreadyStarted": "The game has already started.",
+        "notPaused": "The game is not paused.",
+        "concurrentEdit": "Someone else just changed the game: try again.",
+        "generic": "This action is not allowed in the game's current state."
+      },
       "endgameDialog": {
         "title": "Session ended",
         "winnerLabel": "Winner",
@@ -3974,7 +3983,6 @@
         "viewSummaryCta": "View summary",
         "saveGameCta": "Save game",
         "savingLabel": "Saving…",
-        "alreadyCompletedToast": "Game already finished",
         "photoUpload": {
           "sectionTitle": "Game photos",
           "addPhotosCta": "Select photos",

@@ -18,6 +18,38 @@ internal static class NearlyEmptyPages
     public const int MaxCharacters = 100;
 
     /// <summary>
+    /// A document is flagged (<see cref="Assessment.Flagged"/>) when at least this fraction of its pages is nearly empty.
+    /// Measured on the local corpus <c>data/rulebook</c> (2026-11-08, command in <c>NearlyEmptyPagesCorpusMeasurement</c>):
+    /// of 123 readable PDFs, 58 had at least one page under <see cref="MaxCharacters"/>, but in 37 of those it was a single
+    /// first or last page (a cover) and no document sat between 25% and 90% of nearly-empty pages; the six above 90% were
+    /// scans. Any value in (25%, 90%] picks the same documents there, so the corpus fixes the interval and not the point:
+    /// half the document missing from the index is where this is set, with nothing in the corpus to test that middle.
+    /// </summary>
+    public const double FlagFractionOfPages = 0.5;
+
+    /// <summary>
+    /// ...and at least this many nearly-empty pages, so a cover alone never flags a short document (one of two pages is
+    /// already 50%).
+    /// </summary>
+    public const int FlagMinPages = 2;
+
+    /// <summary>What an extraction says about its nearly-empty pages, and whether that is worth a warning.</summary>
+    public sealed record Assessment(int NearlyEmpty, int TotalPages)
+    {
+        /// <summary>True when enough of the document is missing from the index to be worth telling someone.</summary>
+        public bool Flagged => NearlyEmpty >= FlagMinPages && NearlyEmpty >= TotalPages * FlagFractionOfPages;
+
+        public double Fraction => TotalPages == 0 ? 0d : (double)NearlyEmpty / TotalPages;
+    }
+
+    /// <summary>The count of <see cref="CountIn"/> and the verdict of the rule above.</summary>
+    public static Assessment Assess(PagedTextExtractionResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return new Assessment(CountIn(result), result.PageChunks.Count);
+    }
+
+    /// <summary>
     /// How many of the pages are nearly empty. Zero when the pages are not the pages of the PDF
     /// (<see cref="PageTextChunk.PageIsEstimated"/>, the Unstructured extractor cuts the whole text into equal parts):
     /// counting short slices of a text says nothing about the document.

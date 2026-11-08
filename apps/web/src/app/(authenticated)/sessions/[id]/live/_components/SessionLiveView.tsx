@@ -128,6 +128,7 @@ import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
 import { formatElapsedTime } from '@/lib/session-live/format-elapsed-time';
 import { formatSessionStartedAt } from '@/lib/session-live/format-session-started-at';
+import { liveSessionConflictKey } from '@/lib/session-live/live-session-conflicts';
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
 import { mergeHydratedDiary } from '@/lib/session-live/merge-hydrated-diary';
@@ -635,12 +636,13 @@ export function SessionLiveView(): ReactElement {
         if (gameId) startResolvePlayRecord(gameId, previousRecordId);
       },
       onError: (err: Error) => {
-        // AC-MEDIA-4: if the session was already Completed (409 Conflict), show a toast
-        // and do NOT open the endgame dialog or start polling.
-        if (err instanceof ConflictError || (err as { statusCode?: number }).statusCode === 409) {
-          toast.error(t('pages.sessionLive.endgameDialog.alreadyCompletedToast'), {
-            id: 'endgame-already-completed',
-          });
+        // AC-MEDIA-4 + #4844: a 409 means the game cannot be ended from its state — most often because
+        // it is already over, but also because it never started. Until #4844 every 409 here said
+        // «Partita già conclusa», to a game nobody had started. The code says which; the endgame
+        // dialog stays closed and no polling starts.
+        const conflictKey = liveSessionConflictKey(err);
+        if (conflictKey != null) {
+          toast.error(t(conflictKey), { id: 'endgame-already-completed' });
         }
         // Other errors: no additional handling (mutation error state is available to callers).
       },

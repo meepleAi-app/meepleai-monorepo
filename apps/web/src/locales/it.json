@@ -4031,6 +4031,14 @@
         "closeCta": "Chiudi",
         "closeAriaLabel": "Chiudi overlay pausa"
       },
+      "conflicts": {
+        "notStarted": "La partita non è ancora avviata: avviala prima di continuare.",
+        "paused": "La partita è in pausa: riprendila prima di continuare.",
+        "completed": "La partita è già conclusa.",
+        "alreadyStarted": "La partita è già avviata.",
+        "notPaused": "La partita non è in pausa.",
+        "generic": "Operazione non consentita nello stato attuale della partita."
+      },
       "endgameDialog": {
         "title": "Fine sessione",
         "winnerLabel": "Vincitore",
@@ -4038,7 +4046,6 @@
         "viewSummaryCta": "Vedi riepilogo",
         "saveGameCta": "Salva partita",
         "savingLabel": "Salvataggio…",
-        "alreadyCompletedToast": "Partita già conclusa",
         "photoUpload": {
           "sectionTitle": "Foto della partita",
           "addPhotosCta": "Seleziona foto",

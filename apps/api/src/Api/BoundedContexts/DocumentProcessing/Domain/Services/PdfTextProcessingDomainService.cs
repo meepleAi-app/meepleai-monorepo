@@ -6,39 +6,12 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 
 /// <summary>
 /// Domain service for PDF text processing business rules
-/// Encapsulates business logic for OCR decisions, text normalization, and quality assessment
+/// Encapsulates business logic for text normalization and quality assessment. It used to decide when to fall back to OCR
+/// too (<c>ShouldTriggerOcr</c>, with the <c>PdfExtraction:Ocr:ThresholdCharsPerPage</c> key nobody set): that fallback
+/// never ran and is gone (#4437), and with it the only thing this class needed configuration and an instance for.
 /// </summary>
-internal class PdfTextProcessingDomainService
+internal static class PdfTextProcessingDomainService
 {
-    private readonly IConfiguration _configuration;
-
-    // Business rule: OCR threshold for low-quality extraction detection
-    private const int DefaultOcrThresholdCharsPerPage = 100;
-
-    public PdfTextProcessingDomainService(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
-
-    /// <summary>
-    /// Business rule: Determines if OCR fallback should be triggered based on extraction quality
-    /// </summary>
-    /// <param name="extractedText">Text extracted by standard method</param>
-    /// <param name="pageCount">Number of pages in document</param>
-    /// <returns>True if OCR should be triggered, false otherwise</returns>
-    public bool ShouldTriggerOcr(string extractedText, int pageCount)
-    {
-        if (pageCount <= 0) return false;
-        if (string.IsNullOrWhiteSpace(extractedText)) return true;
-
-        var threshold = _configuration.GetValue<int>(
-            "PdfExtraction:Ocr:ThresholdCharsPerPage",
-            DefaultOcrThresholdCharsPerPage);
-
-        var avgCharsPerPage = extractedText.Length / pageCount;
-        return avgCharsPerPage < threshold;
-    }
-
     /// <summary>
     /// Business rule: Normalizes extracted text for consistent downstream processing
     /// </summary>

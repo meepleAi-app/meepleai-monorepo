@@ -214,7 +214,6 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         };
 
         var config = new ConfigurationBuilder().Build();
-        var domainService = new PdfTextProcessingDomainService(config);
 
         services.AddSingleton<IHttpClientFactory>(sp =>
             new TestHttpClientFactory(unavailableClient));

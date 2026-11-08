@@ -55,7 +55,6 @@ internal static class DocumentProcessingServiceExtensions
 
         // Domain Services (stateless, can be singleton for performance)
         services.AddSingleton<PdfValidationDomainService>(); // PDF-09: Business validation rules
-        services.AddScoped<PdfTextProcessingDomainService>(); // DDD-PHASE4: Text processing business rules
         services.AddScoped<PdfQualityValidationDomainService>(); // BGAI-012: Quality threshold enforcement
         services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>(); // User tier-based upload quotas
         services.AddScoped<IUserQuotaInfoService, UserQuotaInfoService>(); // Local read service for user quota info (avoids cross-BC IUserRepository dependency)

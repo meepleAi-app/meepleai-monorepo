@@ -1,5 +1,4 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
-using Microsoft.Extensions.Configuration;
 using Xunit;
 using FluentAssertions;
 using Api.Tests.Constants;
@@ -7,83 +6,12 @@ using Api.Tests.Constants;
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 
 /// <summary>
-/// Tests for PdfTextProcessingDomainService
+/// Tests for PdfTextProcessingDomainService (static since #4437: the OCR decision that needed configuration is gone)
 /// ISSUE-1818: Migrated to FluentAssertions
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class PdfTextProcessingDomainServiceTests
 {
-    private readonly PdfTextProcessingDomainService _sut;
-    private readonly IConfiguration _configuration;
-
-    public PdfTextProcessingDomainServiceTests()
-    {
-        // Setup configuration with default threshold
-        var configData = new Dictionary<string, string?>
-        {
-            { "PdfExtraction:Ocr:ThresholdCharsPerPage", "100" }
-        };
-        _configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData)
-            .Build();
-
-        _sut = new PdfTextProcessingDomainService(_configuration);
-    }
-    [Fact]
-    public void ShouldTriggerOcr_BelowThreshold_ReturnsTrue()
-    {
-        // Arrange: 10 chars / 2 pages = 5 chars/page (< 100 threshold)
-        var extractedText = "short text";
-        var pageCount = 2;
-
-        // Act
-        var result = _sut.ShouldTriggerOcr(extractedText, pageCount);
-
-        // Assert
-        result.Should().BeTrue("Should trigger OCR when chars/page < threshold");
-    }
-
-    [Fact]
-    public void ShouldTriggerOcr_AboveThreshold_ReturnsFalse()
-    {
-        // Arrange: 1000 chars / 5 pages = 200 chars/page (> 100 threshold)
-        var extractedText = new string('a', 1000);
-        var pageCount = 5;
-
-        // Act
-        var result = _sut.ShouldTriggerOcr(extractedText, pageCount);
-
-        // Assert
-        result.Should().BeFalse("Should not trigger OCR when chars/page >= threshold");
-    }
-
-    [Fact]
-    public void ShouldTriggerOcr_ZeroPages_ReturnsFalse()
-    {
-        // Arrange
-        var extractedText = "some text";
-        var pageCount = 0;
-
-        // Act
-        var result = _sut.ShouldTriggerOcr(extractedText, pageCount);
-
-        // Assert
-        result.Should().BeFalse("Should not trigger OCR for zero pages (invalid input)");
-    }
-
-    [Fact]
-    public void ShouldTriggerOcr_EmptyText_ReturnsTrue()
-    {
-        // Arrange
-        var extractedText = "";
-        var pageCount = 5;
-
-        // Act
-        var result = _sut.ShouldTriggerOcr(extractedText, pageCount);
-
-        // Assert
-        result.Should().BeTrue("Should trigger OCR for empty text (likely scanned PDF)");
-    }
     [Fact]
     public void NormalizeText_EmptyString_ReturnsEmpty()
     {

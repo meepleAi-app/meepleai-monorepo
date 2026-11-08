@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Threading.RateLimiting;
+using Api.Helpers;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace Api.Extensions;
@@ -757,15 +758,17 @@ internal static class RateLimitingServiceExtensions
             return;
         }
 
+        // ADR-058: what comes from the request (the method, the claims, the address) is sanitized before
+        // it reaches a log line — CodeQL's cs/log-forging gate (threshold 0) flagged the method.
         httpContext.RequestServices.GetService<ILoggerFactory>()?
             .CreateLogger("Api.RateLimiting")
             .LogWarning(
                 "Rate limit {Policy} rejected {Method} {Route} for user {User} from {Ip}; this bucket is not logged again for {Interval}",
                 policyName,
-                httpContext.Request.Method,
+                LogSanitizer.Sanitize(httpContext.Request.Method),
                 route,
-                user,
-                ip,
+                LogSanitizer.Sanitize(user),
+                LogSanitizer.Sanitize(ip),
                 RejectionLogInterval);
     }
 

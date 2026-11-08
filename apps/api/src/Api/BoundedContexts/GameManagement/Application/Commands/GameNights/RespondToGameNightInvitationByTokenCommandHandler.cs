@@ -15,6 +15,9 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 ///   <item>Same-status response → no-op (200 OK).</item>
 ///   <item>Switching Accepted ⇄ Declined → <see cref="ConflictException"/> (409).</item>
 ///   <item>Expired or Cancelled invitations → <see cref="GoneException"/> (410).</item>
+///   <item>#4947: accepting a seat on a full night → <see cref="ConflictException"/> (409,
+///   <see cref="GameNightSeats.FullCode"/>). The app refused it since #4921; the link did not, and a night
+///   of four seats filled to five through it.</item>
 /// </list>
 /// Issue #607 (Wave A.5a): GameNight token-based RSVP backend extension.
 /// </summary>
@@ -50,7 +53,14 @@ internal sealed class RespondToGameNightInvitationByTokenCommandHandler
         // #4744: the invitation carries its row version, so an answer that overlaps a withdrawal (or another answer)
         // is refused when it is saved. The attempt is then made again from the read: an invitation found withdrawn
         // is a 410, the same answer repeated is the idempotent no-op, a switch is a 409.
-        await InvitationWriteRetry.RunAsync(ct => AttemptAsync(command, ct), _events, cancellationToken).ConfigureAwait(false);
+        // #4947: each attempt is its own transaction (#3636: through the unit of work), so the seat lock it may take
+        // is released with it and the next attempt reads the night again under a fresh one.
+        await InvitationWriteRetry
+            .RunAsync(
+                ct => _unitOfWork.ExecuteInTransactionAsync(inner => AttemptAsync(command, inner), ct),
+                _events,
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task AttemptAsync(
@@ -91,6 +101,22 @@ internal sealed class RespondToGameNightInvitationByTokenCommandHandler
             throw new GoneException("This game night was cancelled: the invitation can no longer be answered.");
         }
 
+        // #4947: a seat is taken only by Pending → Accepted. The same answer repeated keeps the seat it already has
+        // (D2 b: a no-op, never a refusal), and a switch is refused below for its own reason. The night is read again
+        // under the lock: the copy above may be short of a seat by now.
+        if (command.Response == GameNightInvitationStatus.Accepted
+            && invitation.Status == GameNightInvitationStatus.Pending
+            && gameNight?.MaxPlayers is not null)
+        {
+            var (lockedNight, acceptedGuests) = await GameNightSeats
+                .ReadUnderLockAsync(invitation.GameNightId, _gameNightRepository, _invitationRepository, cancellationToken)
+                .ConfigureAwait(false);
+            if (lockedNight.IsFullWith(acceptedGuests))
+            {
+                throw GameNightSeats.Full();
+            }
+        }
+
         bool transitioned;
         try
         {
@@ -118,7 +144,7 @@ internal sealed class RespondToGameNightInvitationByTokenCommandHandler
             return;
         }
 
+        // The transaction saves and commits for us.
         await _invitationRepository.UpdateAsync(invitation, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

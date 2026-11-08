@@ -134,7 +134,8 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
       if (
         result?.kind === 'conflict-state-switch' ||
         result?.kind === 'success' ||
-        result?.kind === 'gone'
+        result?.kind === 'gone' ||
+        result?.kind === 'full'
       ) {
         await invitationQuery.refetch();
       }
@@ -248,7 +249,10 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
                 ? t('pages.gameNightJoin.error.generic.body')
                 : respond.result?.kind === 'invalid-display-name'
                   ? respond.result.message
-                  : null
+                  : respond.result?.kind === 'full'
+                    ? // #4947: no seat left; before, this 409 was read as «you have already responded».
+                      t('pages.gameNightJoin.error.full')
+                    : null
             }
           />
         )}

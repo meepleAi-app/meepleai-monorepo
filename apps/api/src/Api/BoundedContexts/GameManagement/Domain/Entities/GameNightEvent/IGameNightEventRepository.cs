@@ -52,6 +52,15 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
         IReadOnlyCollection<Guid> gameNightIds, Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #4947: serializes the seat decisions on one night. Takes a PostgreSQL transaction-scoped advisory lock keyed
+    /// by the night, held until the surrounding transaction ends, so that «count who sits, then write an answer»
+    /// cannot overlap another such decision on the same night. Callers run inside
+    /// <c>IUnitOfWork.ExecuteInTransactionAsync</c>; outside a transaction the lock would be released at once, so the
+    /// implementation refuses to take it. A no-op on a provider that is not PostgreSQL.
+    /// </summary>
+    Task LockSeatsAsync(Guid gameNightId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets published events with ScheduledAt between from and to, for reminder scheduling.
     /// </summary>
     Task<IReadOnlyList<GameNightEvent>> GetEventsNeedingReminderAsync(

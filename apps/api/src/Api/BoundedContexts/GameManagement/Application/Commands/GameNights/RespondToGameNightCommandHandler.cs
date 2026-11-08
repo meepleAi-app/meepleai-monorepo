@@ -1,8 +1,6 @@
-using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
-using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Application.Services;
@@ -25,7 +23,9 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 /// </para>
 /// <para>
 /// The seat check counts both: a night with four seats, four accepted members and three accepted
-/// guests was «not full» (<see cref="GameNightEvent.IsFullWith"/>).
+/// guests was «not full» (<see cref="GameNightEvent.IsFullWith"/>). #4947: it is taken under the night's
+/// seat lock (<see cref="GameNightSeats"/>), inside the transaction that writes the answer, so two answers
+/// for the last seat cannot both read it free.
 /// </para>
 /// </summary>
 internal sealed class RespondToGameNightCommandHandler : ICommandHandler<RespondToGameNightCommand>
@@ -60,23 +60,53 @@ internal sealed class RespondToGameNightCommandHandler : ICommandHandler<Respond
         var gameNight = await _repository.GetByIdAsync(command.GameNightId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
 
-        var rsvp = gameNight.GetRsvp(command.UserId);
-        if (rsvp is null)
+        if (gameNight.GetRsvp(command.UserId) is null)
         {
             // #4744: the invitation carries its row version; an answer that overlaps another write is read and
-            // decided again, as the token path does. The night is re-read inside the attempt: a seat decision
-            // made on the copy the first attempt already found outdated would be the same wrong decision.
+            // decided again, as the token path does. Each attempt is its own transaction, so the seat lock (#4947)
+            // is taken and released with it, and the night is re-read inside: a seat decision made on the copy the
+            // first attempt already found outdated would be the same wrong decision.
             await InvitationWriteRetry
-                .RunAsync(ct => AnswerAsEmailGuestAsync(command, ct), _events, cancellationToken)
+                .RunAsync(
+                    ct => _unitOfWork.ExecuteInTransactionAsync(inner => AnswerAsEmailGuestAsync(command, inner), ct),
+                    _events,
+                    cancellationToken)
                 .ConfigureAwait(false);
             return;
         }
 
+        // The transaction (#3636: through the unit of work, never BeginTransactionAsync) saves and commits for us.
+        // A night written in the meantime is refused by its row version and surfaces as 409 concurrent_edit
+        // (ADR-060), as every write to the aggregate does.
+        await _unitOfWork
+            .ExecuteInTransactionAsync(ct => AnswerAsMemberAsync(command, gameNight, ct), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task AnswerAsMemberAsync(RespondToGameNightCommand command, GameNightEvent gameNight, CancellationToken cancellationToken)
+    {
+        var rsvp = gameNight.GetRsvp(command.UserId)
+            ?? throw new NotFoundException("GameNightRsvp", $"EventId={gameNight.Id}, UserId={command.UserId}");
+
         switch (command.Response)
         {
             case RsvpStatus.Accepted:
-                if (rsvp.Status != RsvpStatus.Accepted && await IsFullAsync(gameNight, cancellationToken).ConfigureAwait(false))
-                    throw new ConflictException("This game night is full and cannot accept more players");
+                if (rsvp.Status != RsvpStatus.Accepted && gameNight.MaxPlayers.HasValue)
+                {
+                    // Under the lock, the night as it is NOW: the copy read before it may be short of a seat. The
+                    // member's own row is read again with it — if a twin request of theirs took the seat meanwhile,
+                    // their seat is one of the counted ones and must not bounce them.
+                    int acceptedGuests;
+                    (gameNight, acceptedGuests) = await GameNightSeats
+                        .ReadUnderLockAsync(gameNight.Id, _repository, _invitations, cancellationToken)
+                        .ConfigureAwait(false);
+                    rsvp = gameNight.GetRsvp(command.UserId)
+                        ?? throw new NotFoundException("GameNightRsvp", $"EventId={gameNight.Id}, UserId={command.UserId}");
+
+                    if (rsvp.Status != RsvpStatus.Accepted && gameNight.IsFullWith(acceptedGuests))
+                        throw GameNightSeats.Full();
+                }
+
                 rsvp.Accept();
                 break;
             case RsvpStatus.Declined:
@@ -93,7 +123,6 @@ internal sealed class RespondToGameNightCommandHandler : ICommandHandler<Respond
         gameNight.AddRsvpReceivedEvent(command.UserId, command.Response, gameNight.OrganizerId);
 
         await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task AnswerAsEmailGuestAsync(RespondToGameNightCommand command, CancellationToken cancellationToken)
@@ -121,11 +150,15 @@ internal sealed class RespondToGameNightCommandHandler : ICommandHandler<Respond
             {
                 case RsvpStatus.Accepted:
                     // Their own seat is already in the accepted-guest count when the invitation is Accepted; only
-                    // a change of mind competes for a seat.
-                    if (invitation.Status != GameNightInvitationStatus.Accepted
-                        && await IsFullAsync(gameNight, cancellationToken).ConfigureAwait(false))
+                    // a change of mind competes for a seat, and competes under the lock (#4947).
+                    if (invitation.Status != GameNightInvitationStatus.Accepted && gameNight.MaxPlayers.HasValue)
                     {
-                        throw new ConflictException("This game night is full and cannot accept more players");
+                        int acceptedGuests;
+                        (gameNight, acceptedGuests) = await GameNightSeats
+                            .ReadUnderLockAsync(gameNight.Id, _repository, _invitations, cancellationToken)
+                            .ConfigureAwait(false);
+                        if (gameNight.IsFullWith(acceptedGuests))
+                            throw GameNightSeats.Full();
                     }
 
                     transitioned = invitation.ChangeAnswer(GameNightInvitationStatus.Accepted, command.UserId, utcNow);
@@ -150,20 +183,9 @@ internal sealed class RespondToGameNightCommandHandler : ICommandHandler<Respond
         if (!transitioned)
             return;
 
-        // No RsvpReceived event here, as on the token path: that event is the aggregate's, and the
-        // aggregate is not written. The guest's confirmation email is the invitation's own flow.
+        // No RsvpReceived event here, as on the token path: that event is the aggregate's, and the aggregate is
+        // not written. The invitation raises its own (GameNightInvitationRespondedEvent), which tells the
+        // organizer (#4947) and sends the guest their confirmation. The transaction saves and commits.
         await _invitations.UpdateAsync(invitation, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task<bool> IsFullAsync(GameNightEvent gameNight, CancellationToken cancellationToken)
-    {
-        if (!gameNight.MaxPlayers.HasValue)
-            return false;
-
-        var acceptedGuests = await _invitations
-            .CountAcceptedByGameNightIdAsync(gameNight.Id, cancellationToken)
-            .ConfigureAwait(false);
-        return gameNight.IsFullWith(acceptedGuests);
     }
 }

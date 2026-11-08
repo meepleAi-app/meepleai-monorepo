@@ -1511,6 +1511,7 @@
       "banners": {
         "errorGeneric": "Response not sent. Check your connection and try again.",
         "stateSwitchConflict": "You've already responded: {currentResponse}. To change, use the dedicated button.",
+        "full": "The table is full: the last seats went while you were looking. You can still decline, so the host knows.",
         "goneExpired": "The invitation expired while you were responding.",
         "goneCancelled": "The host has cancelled the game night."
       },
@@ -1586,6 +1587,7 @@
         },
         "requestNewInviteCta": "Request a new invite",
         "homeCta": "Go to home",
+        "full": "The table is full: the last seats went while you were looking. You can still decline, so the host knows.",
         "rateLimited": {
           "heading": "Too many requests",
           "body": "You've submitted too many responses in a short window. Please wait a moment and try again.",

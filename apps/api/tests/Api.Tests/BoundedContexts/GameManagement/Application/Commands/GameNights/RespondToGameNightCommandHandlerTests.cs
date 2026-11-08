@@ -104,15 +104,32 @@ public sealed class RespondToGameNightCommandHandlerTests
     }
 
     [Fact]
-    public async Task EmailGuest_SwitchingBackToAccepted_IsRefusedAsFromTheEmailLink()
+    public async Task EmailGuest_CanChangeTheirMind_WhenASeatIsFree()
+    {
+        // The email link refuses a switch (a public credential replayed must not flip an answer); the
+        // account that answered is not a replay, and changes its mind as a member would.
+        var guest = Guid.NewGuid();
+        var night = NightWith(maxPlayers: 4);
+        var invitation = GuestInvitationOf(night, guest, GameNightInvitationStatus.Declined);
+        AcceptedGuests(night, 2);
+
+        await Respond(night, guest, RsvpStatus.Accepted);
+
+        invitation.Status.Should().Be(GameNightInvitationStatus.Accepted);
+        _invitations.Verify(r => r.UpdateAsync(invitation, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task EmailGuest_ChangingTheirMindBackToAccepted_IsRefusedWhenTheTableIsFull()
     {
         var guest = Guid.NewGuid();
-        var night = NightWith(maxPlayers: null);
+        var night = NightWith(maxPlayers: 2);
         GuestInvitationOf(night, guest, GameNightInvitationStatus.Declined);
+        AcceptedGuests(night, 2);
 
         var act = () => Respond(night, guest, RsvpStatus.Accepted);
 
-        await act.Should().ThrowAsync<ConflictException>();
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*full*");
     }
 
     [Fact]
@@ -175,9 +192,9 @@ public sealed class RespondToGameNightCommandHandlerTests
     {
         // Their seat is one of the counted ones; repeating the answer must not bounce them.
         var accepted = Guid.NewGuid();
-        var night = NightWith(maxPlayers: 1, accepted);
+        var night = NightWith(maxPlayers: 2, accepted);
         night.GetRsvp(accepted)!.Accept();
-        AcceptedGuests(night, 0);
+        AcceptedGuests(night, 1);
 
         await Respond(night, accepted, RsvpStatus.Accepted);
 

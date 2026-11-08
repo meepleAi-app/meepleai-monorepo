@@ -92,6 +92,10 @@ public sealed class GameNightListGuestCountsTests : IDisposable
     {
         _repo.Setup(r => r.GetUpcomingAsync(_organizerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([_first, _second]);
+        // #4921: the list also asks which nights the viewer sits at as an email guest; none here.
+        _repo.Setup(r => r.GetEmailGuestRsvpStatusesAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), _organizerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, RsvpStatus>());
         var handler = new GetUpcomingGameNightsQueryHandler(_repo.Object, _db);
 
         var result = await handler.Handle(

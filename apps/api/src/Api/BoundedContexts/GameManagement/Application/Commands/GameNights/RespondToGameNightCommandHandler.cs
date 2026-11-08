@@ -17,10 +17,11 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 /// <para>
 /// #4921: two kinds of guest answer here. A <b>member</b> has an RSVP row on the aggregate and the row
 /// takes the answer. An <b>email guest with an account</b> (#4759) has no row: their record is the
-/// invitation they answered while logged in, and the answer goes to it — accept or decline, with the
-/// invitation's own rules (a switch after the first answer is a 409, as from the email link), and no
-/// «maybe», which the invitation does not record. Nothing is written twice: the counts (#4706) keep
-/// summing the invitation once. Before this, the guest got a 404 and the email link was their only way.
+/// invitation they answered while logged in, and the answer goes to it — accept or decline, and a
+/// change of mind is admitted because the account is the responder (the email link, a public
+/// credential, refuses a switch: <see cref="GameNightInvitation.ChangeAnswer"/>), but no «maybe», which
+/// the invitation does not record. Nothing is written twice: the counts (#4706) keep summing the
+/// invitation once. Before this, the guest got a 404 and the email link was their only way.
 /// </para>
 /// <para>
 /// The seat check counts both: a night with four seats, four accepted members and three accepted
@@ -117,10 +118,10 @@ internal sealed class RespondToGameNightCommandHandler : ICommandHandler<Respond
                         throw new ConflictException("This game night is full and cannot accept more players");
                     }
 
-                    transitioned = invitation.Accept(command.UserId, utcNow);
+                    transitioned = invitation.ChangeAnswer(GameNightInvitationStatus.Accepted, command.UserId, utcNow);
                     break;
                 case RsvpStatus.Declined:
-                    transitioned = invitation.Decline(command.UserId, utcNow);
+                    transitioned = invitation.ChangeAnswer(GameNightInvitationStatus.Declined, command.UserId, utcNow);
                     break;
                 case RsvpStatus.Maybe:
                     throw new ConflictException(
@@ -132,7 +133,7 @@ internal sealed class RespondToGameNightCommandHandler : ICommandHandler<Respond
         }
         catch (InvalidOperationException ex)
         {
-            // The invitation's own rule (D2 b): a switch after the first answer is refused, as from the email link.
+            // The invitation's own rules: cancelled or expired, or not this account's answer to change.
             throw new ConflictException(ex.Message, ex);
         }
 

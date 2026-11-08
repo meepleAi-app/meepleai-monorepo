@@ -55,7 +55,8 @@ public sealed class GameNightEventCapacityTests
     [Fact]
     public void IsFull_IsIsFullWithZero()
     {
-        var night = NightWith(maxPlayers: 1, acceptedMembers: 1);
+        // The smallest table the aggregate admits is two seats.
+        var night = NightWith(maxPlayers: 2, acceptedMembers: 2);
 
         night.IsFull.Should().BeTrue();
         night.IsFull.Should().Be(night.IsFullWith(0));

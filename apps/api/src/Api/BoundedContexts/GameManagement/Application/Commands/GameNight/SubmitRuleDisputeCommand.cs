@@ -3,6 +3,7 @@ using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
@@ -169,10 +170,12 @@ internal sealed class SubmitRuleDisputeCommandHandler
                 "You must be a participant or host of this session to submit a rule dispute.");
         }
 
-        // 3. Verify session is InProgress
+        // 3. Verify session is InProgress. A PAUSED game is refused too, while ending it is allowed: the
+        //    code must say «paused», not «not started» (#4844).
         if (session.Status != LiveSessionStatus.InProgress)
         {
             throw new ConflictException(
+                LiveSessionConflictCodes.ForRejectedStatus(session.Status, LiveSessionConflictCodes.SessionAlreadyStarted),
                 $"Cannot submit a rule dispute for session in {session.Status} status. " +
                 "Session must be InProgress.");
         }

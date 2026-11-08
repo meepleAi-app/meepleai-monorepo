@@ -1,4 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.Session;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.Hubs;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
@@ -39,9 +41,14 @@ internal sealed class ProposeScoreCommandHandler : IRequestHandler<ProposeScoreC
             .ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
-        // Status 2=InProgress, 3=Paused
-        if (session.Status != 2 && session.Status != 3)
-            throw new ConflictException($"Cannot propose scores for session in status {session.Status}. Must be InProgress or Paused.");
+        // The EF entity keeps the status as a number: name it, or the message reads «in status 4» (#4844).
+        var status = (LiveSessionStatus)session.Status;
+        if (status is not (LiveSessionStatus.InProgress or LiveSessionStatus.Paused))
+        {
+            throw new ConflictException(
+                LiveSessionConflictCodes.ForRejectedStatus(status, LiveSessionConflictCodes.SessionAlreadyStarted),
+                $"Cannot propose scores for session in {status} status. Must be InProgress or Paused.");
+        }
 
         // Verify proposing participant is in the session
         var participantExists = await _dbContext.SessionParticipants

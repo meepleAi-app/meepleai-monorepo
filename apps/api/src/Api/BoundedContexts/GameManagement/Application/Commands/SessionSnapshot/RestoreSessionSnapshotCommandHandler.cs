@@ -2,6 +2,7 @@ using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -51,7 +52,12 @@ internal sealed class RestoreSessionSnapshotCommandHandler
             ?? throw new NotFoundException("LiveGameSession", command.SessionId.ToString());
 
         if (!session.IsActive)
-            throw new ConflictException($"Cannot restore snapshot on a session in {session.Status} status. Must be active.");
+        {
+            // Created or Completed: InProgress is active, so the in-progress code is never the answer (#4844).
+            throw new ConflictException(
+                LiveSessionConflictCodes.ForRejectedStatus(session.Status, LiveSessionConflictCodes.SessionAlreadyStarted),
+                $"Cannot restore snapshot on a session in {session.Status} status. Must be active.");
+        }
 
         // 2. Validate target snapshot exists
         _ = await _snapshotRepository.GetBySessionAndIndexAsync(

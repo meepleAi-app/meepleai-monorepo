@@ -166,12 +166,13 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
 
     /// <summary>
     /// #4437: some pages have text and some are scanned. The document reaches Ready with holes, and the only trace is a
-    /// structured warning with the count — asserted on the fields, not on the formatted text, so a field renamed or
-    /// dropped turns the test red.
+    /// structured log entry with the count — asserted on the fields, not on the formatted text, so a field renamed or
+    /// dropped turns the test red, and on the LEVEL: it is <c>Information</c>, because about one PDF in two has a cover or
+    /// a blank page under the limit and a warning that fires that often is not read.
     /// </summary>
     [Fact]
     [Trait("Issue", "4437")]
-    public async Task ProcessAsync_WhenSomePagesAreNearlyEmpty_WritesAStructuredWarningWithTheCounts()
+    public async Task ProcessAsync_WhenSomePagesAreNearlyEmpty_LogsAnInformationEntryWithTheCounts()
     {
         SeedPendingPdf();
         ExtractorReturns(TextLayerResult(TextPage(1), EmptyPage(2), TextPage(3)));
@@ -181,22 +182,24 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
 
         await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
 
-        _log.States.Should().Contain(s =>
-            Has(s, "PdfId", _pdfId)
-            && Has(s, "NearlyEmptyPages", 1)
-            && Has(s, "TotalPages", 3)
-            && Has(s, "MaxCharacters", NearlyEmptyPages.MaxCharacters));
-        _log.Entries.Should().Contain(
-            l => l.StartsWith("Warning", StringComparison.Ordinal) && l.Contains("1 of 3 pages", StringComparison.Ordinal));
+        _log.Entries.Zip(_log.States, (entry, state) => (Entry: entry, State: state)).Should().Contain(e =>
+            e.Entry.StartsWith("Information: ", StringComparison.Ordinal)
+            && Has(e.State, "PdfId", _pdfId)
+            && Has(e.State, "NearlyEmptyPages", 1)
+            && Has(e.State, "TotalPages", 3)
+            && Has(e.State, "MaxCharacters", NearlyEmptyPages.MaxCharacters));
+        _log.Entries.Should().NotContain(
+            l => l.StartsWith("Warning", StringComparison.Ordinal) && l.Contains("pages have fewer than", StringComparison.Ordinal),
+            "a signal that fires for about one PDF in two is information, not a warning");
     }
 
     /// <summary>
     /// #4437: SmolDocling returns one <c>PageTextChunk</c> per chunk of its service, with page numbers that look real, so
-    /// short chunks would be counted as nearly empty pages. Without the text-layer mark there is no warning.
+    /// short chunks would be counted as nearly empty pages. Without the text-layer mark there is no entry.
     /// </summary>
     [Fact]
     [Trait("Issue", "4437")]
-    public async Task ProcessAsync_WhenSomePagesAreShort_ButTheExtractorIsNotTextLayerOnly_WritesNoWarning()
+    public async Task ProcessAsync_WhenSomePagesAreShort_ButTheExtractorIsNotTextLayerOnly_LogsNoNearlyEmptyEntry()
     {
         SeedPendingPdf();
         ExtractorReturns(TextLayerResult(TextPage(1), new PageTextChunk(2, "a caption", 0, 8), TextPage(3)) with { TextLayerOnly = false });
@@ -211,7 +214,7 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
 
     [Fact]
     [Trait("Issue", "4437")]
-    public async Task ProcessAsync_WhenEveryPageHasText_WritesNoNearlyEmptyWarning()
+    public async Task ProcessAsync_WhenEveryPageHasText_LogsNoNearlyEmptyEntry()
     {
         SeedPendingPdf();
         ExtractorReturns(TextLayerResult(TextPage(1), TextPage(2)));

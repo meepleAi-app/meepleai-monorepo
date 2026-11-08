@@ -64,6 +64,7 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     private readonly BackgroundTaskGate _gate = new();
     private Mock<IPdfTextExtractor>? _extractorMock;
     private Mock<IAdvancedChunkingService>? _advancedChunkingMock;
+    private readonly RecordingLogger<UploadPdfCommandHandler> _uploadLog = new();
     private readonly List<ExtractedDocument> _chunkedDocuments = new();
 
     /// <summary>
@@ -105,6 +106,8 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>();
 
         services.AddScoped<UploadPdfCommandHandler>();
+        // Records every level (the console provider of CreateBase only lets Warning through): #4437 asserts an Information entry.
+        services.AddSingleton<ILogger<UploadPdfCommandHandler>>(_uploadLog);
 
         services.Configure<PdfProcessingOptions>(options =>
         {
@@ -611,6 +614,53 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
             "a scan does not grow text on a retry: RetryFailedPdfsJob must skip it");
         (await _dbContext.TextChunks.CountAsync(tc => tc.PdfDocumentId == pdfDocId, TestCancellationToken))
             .Should().Be(0, "nothing is indexed for a document without text");
+    }
+
+    // A method, not a local function: the assertion below is an expression tree, which cannot reference one.
+    private static bool IsPdf(IReadOnlyDictionary<string, object?> state, Guid id) =>
+        state.TryGetValue("PdfId", out var value) && Guid.TryParse(value?.ToString(), out var parsed) && parsed == id;
+
+    /// <summary>
+    /// #4437: some pages of a text-layer extraction are nearly empty (a cover, a blank back). The upload path leaves one
+    /// structured entry with the counts, at <c>Information</c>: about one PDF in two has such a page, and a warning that
+    /// fires that often is not read. The document goes on.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4437")]
+    public async Task ProcessPdfAsync_WhenSomePagesAreNearlyEmpty_LogsAnInformationEntryWithTheCounts()
+    {
+        var text = new string('a', 300);
+        _extractorMock!
+            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedTextExtractionResult.CreateSuccess(
+                pageChunks: [new PageTextChunk(1, text, 0, 299), new PageTextChunk(2, "", 0, 0), new PageTextChunk(3, text, 0, 299)],
+                totalPages: 3,
+                totalCharacters: 600,
+                ocrTriggered: false) with { TextLayerOnly = true });
+
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        var result = await handler.Handle(
+            new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+                GameId: testGame.Id.ToString(),
+                Metadata: null,
+                PrivateGameId: null,
+                UserId: testUser.Id,
+                File: CreateMockFormFile("cover-and-blank-back.pdf", CreateValidPdfBytes(1024))),
+            TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        result.Success.Should().BeTrue(result.Message);
+        var pdfGuid = Guid.Parse(result.Document!.Id.ToString());
+        _uploadLog.Entries.Zip(_uploadLog.States, (entry, state) => (Entry: entry, State: state)).Should().Contain(e =>
+            e.Entry.StartsWith("Information: ", StringComparison.Ordinal)
+            && IsPdf(e.State, pdfGuid)
+            && Equals(e.State.GetValueOrDefault("NearlyEmptyPages"), 1)
+            && Equals(e.State.GetValueOrDefault("TotalPages"), 3)
+            && Equals(e.State.GetValueOrDefault("MaxCharacters"), NearlyEmptyPages.MaxCharacters));
+        _uploadLog.Entries.Should().NotContain(
+            l => l.StartsWith("Warning", StringComparison.Ordinal) && l.Contains("pages have fewer than", StringComparison.Ordinal));
     }
 
     /// <summary>

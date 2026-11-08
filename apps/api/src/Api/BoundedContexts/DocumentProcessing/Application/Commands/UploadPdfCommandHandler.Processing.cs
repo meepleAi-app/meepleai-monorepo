@@ -81,10 +81,12 @@ internal partial class UploadPdfCommandHandler
                 return;
             }
 
+            // The only trace of the pages a text-layer extraction leaves empty. Information, not Warning: on the 126 rulebooks in data/rulebook about one PDF in two has a cover or a blank page under
+            // the limit, so a warning would fire for half the documents and nobody would read it. The limit itself is not tuned here.
             var nearlyEmptyPages = NearlyEmptyPages.CountIn(extraction);
             if (nearlyEmptyPages > 0)
             {
-                _logger.LogWarning(
+                _logger.LogInformation(
                     "PDF {PdfId}: {NearlyEmptyPages} of {TotalPages} pages have fewer than {MaxCharacters} characters of text; if they are scans, this extraction does not OCR them and they are missing from the index",
                     pdfId, nearlyEmptyPages, extraction.PageChunks.Count, NearlyEmptyPages.MaxCharacters);
             }

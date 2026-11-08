@@ -141,7 +141,7 @@ The DocumentProcessing bounded context manages the complete lifecycle of PDF rul
 **External Adapters (Extractors)**:
 - `UnstructuredPdfTextExtractor` - Stage 1 (Apache 2.0, RAG-optimized, 1.3s avg)
 - `SmolDoclingPdfTextExtractor` - Stage 2 (VLM 256M, complex layouts, 3-5s avg)
-- `DocnetPdfTextExtractor` - Stage 3 (Local fallback, fast). Reads the PDF text layer only: **it does not perform OCR** (#4437). A scanned page comes back empty; a PDF with no text on any page ends `Failed` with the cause in `ProcessingError` and category `Parsing` (not retried), and a PDF with some nearly empty pages gets a structured warning (`NearlyEmptyPages`). Scans need an extractor that OCRs (Unstructured, #4436)
+- `DocnetPdfTextExtractor` - Stage 3 (Local fallback, fast). Reads the PDF text layer only: **it does not perform OCR** (#4437). A scanned page comes back empty; a PDF with no text on any page ends `Failed` with the cause in `ProcessingError` and category `Parsing` (not retried), and a PDF with some nearly empty pages gets an informational, structured log entry (`NearlyEmptyPages`; `Information`, not `Warning`: about one PDF in two has a cover or a blank page under the limit). Scans need an extractor that OCRs (Unstructured, #4436)
 - `OrchestratedPdfTextExtractor` - Adapter wrapping orchestrator as `IPdfTextExtractor`
 
 **Interfaces**:

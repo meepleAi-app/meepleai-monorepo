@@ -118,6 +118,30 @@ internal static partial class MeepleAiMetrics
         unit: "ms",
         description: "pgvector indexing duration");
 
+    /// <summary>Wire value of the <c>outcome</c> tag: no page is nearly empty.</summary>
+    public const string NearlyEmptyClean = "clean";
+
+    /// <summary>Wire value of the <c>outcome</c> tag: some pages are nearly empty, not enough to flag the document.</summary>
+    public const string NearlyEmptyPartial = "partial";
+
+    /// <summary>Wire value of the <c>outcome</c> tag: enough of the document is nearly empty to be flagged (#4931).</summary>
+    public const string NearlyEmptyFlagged = "flagged";
+
+    /// <summary>
+    /// Counter of text-layer extractions (Docnet) by how many of their pages came back nearly empty (#4931), one count per
+    /// document, three series in all (no per-PDF label). <c>flagged</c> is the rule of <c>NearlyEmptyPages.Assess</c>: at
+    /// least half of the pages and at least two, i.e. a scan with holes in the index.
+    /// <list type="bullet">
+    ///   <item>Share of flagged documents:
+    ///     <c>sum(increase(meepleai_pdf_extraction_nearly_empty_total{outcome="flagged"}[7d])) / sum(increase(meepleai_pdf_extraction_nearly_empty_total[7d]))</c></item>
+    ///   <item>Which document: the Warning with the same wording in the API log carries the PDF id.</item>
+    /// </list>
+    /// </summary>
+    public static readonly Counter<long> PdfNearlyEmpty = Meter.CreateCounter<long>(
+        name: "meepleai.pdf.extraction.nearly_empty",
+        unit: "documents",
+        description: "Text-layer extractions by share of nearly-empty pages (clean/partial/flagged)");
+
     /// <summary>
     /// Records PDF upload attempt with status
     /// </summary>

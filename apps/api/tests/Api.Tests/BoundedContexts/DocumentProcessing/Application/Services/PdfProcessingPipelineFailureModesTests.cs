@@ -165,17 +165,17 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
     }
 
     /// <summary>
-    /// #4437: some pages have text and some are scanned. The document reaches Ready with holes, and the only trace is a
-    /// structured log entry with the count — asserted on the fields, not on the formatted text, so a field renamed or
-    /// dropped turns the test red, and on the LEVEL: it is <c>Information</c>, because about one PDF in two has a cover or
-    /// a blank page under the limit and a warning that fires that often is not read.
+    /// #4437, #4931: most pages are scanned. The document reaches Ready with holes, and the trace is a structured Warning
+    /// with the count — asserted on the fields, not on the formatted text, so a field renamed or dropped turns the test
+    /// red, and on the LEVEL: it is a <c>Warning</c> because the rule of <see cref="NearlyEmptyPages.Assess"/> flags the
+    /// document (at least half the pages, at least two), which on the local corpus is the scans and not the covers.
     /// </summary>
     [Fact]
-    [Trait("Issue", "4437")]
-    public async Task ProcessAsync_WhenSomePagesAreNearlyEmpty_LogsAnInformationEntryWithTheCounts()
+    [Trait("Issue", "4931")]
+    public async Task ProcessAsync_WhenMostPagesAreNearlyEmpty_LogsAWarningWithTheCounts()
     {
         SeedPendingPdf();
-        ExtractorReturns(TextLayerResult(TextPage(1), EmptyPage(2), TextPage(3)));
+        ExtractorReturns(TextLayerResult(TextPage(1), EmptyPage(2), EmptyPage(3)));
         SetupTwoChunks();
         _embeddings.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = false, ErrorMessage = "stop here: the warning is written at extraction" });
@@ -183,14 +183,32 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
         await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
 
         _log.Entries.Zip(_log.States, (entry, state) => (Entry: entry, State: state)).Should().Contain(e =>
-            e.Entry.StartsWith("Information: ", StringComparison.Ordinal)
-            && Has(e.State, "PdfId", _pdfId)
-            && Has(e.State, "NearlyEmptyPages", 1)
+            e.Entry.StartsWith("Warning: ", StringComparison.Ordinal)
+            && Has(e.State, "PdfId", _pdfId.ToString())
+            && Has(e.State, "NearlyEmptyPages", 2)
             && Has(e.State, "TotalPages", 3)
             && Has(e.State, "MaxCharacters", NearlyEmptyPages.MaxCharacters));
+    }
+
+    /// <summary>
+    /// #4931: a cover under the limit is not a scan. About one PDF in two on the local corpus has one, so it must not
+    /// raise a Warning (nor an Information line: the counter carries the share).
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4931")]
+    public async Task ProcessAsync_WhenOnlyTheCoverIsNearlyEmpty_RaisesNoWarning()
+    {
+        SeedPendingPdf();
+        ExtractorReturns(TextLayerResult(EmptyPage(1), TextPage(2), TextPage(3)));
+        SetupTwoChunks();
+        _embeddings.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult { Success = false, ErrorMessage = "stop here: the warning is written at extraction" });
+
+        await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
+
         _log.Entries.Should().NotContain(
-            l => l.StartsWith("Warning", StringComparison.Ordinal) && l.Contains("pages have fewer than", StringComparison.Ordinal),
-            "a signal that fires for about one PDF in two is information, not a warning");
+            l => (l.StartsWith("Warning", StringComparison.Ordinal) || l.StartsWith("Information", StringComparison.Ordinal))
+                && l.Contains("pages have fewer than", StringComparison.Ordinal));
     }
 
     /// <summary>

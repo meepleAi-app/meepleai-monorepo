@@ -99,4 +99,56 @@ public sealed class NearlyEmptyPagesTests
     {
         NearlyEmptyPages.NoPageHasText([]).Should().BeFalse("an extraction that found no pages is a different failure, not a scan");
     }
+
+    /// <summary>One page per character: <c>T</c> = a page of text, <c>.</c> = a page with no text.</summary>
+    private static PageTextChunk[] Pages(string pattern) =>
+        pattern.Select((c, i) => Page(i + 1, c == 'T' ? Chars(300) : "")).ToArray();
+
+    // #4931 — the rule, with the cases the issue asks for. The numbers come from NearlyEmptyPagesCorpusMeasurement on the
+    // local corpus: covers (one page, first or last) are the common case, the scans are the six documents above 90%.
+    [Theory]
+    [InlineData("..........", true, "a full scan")]
+    [InlineData("T.........", true, "a scan with one page of text (nine of ten empty)")]
+    [InlineData("T.T.", true, "exactly half of the pages, and two of them")]
+    [InlineData("TTT..", false, "two of five is 40%, below half")]
+    [InlineData(".TTTTTTTTT", false, "a cover and the rest text: one page")]
+    [InlineData("TTTTTTTTT.", false, "a blank back and the rest text: one page")]
+    [InlineData(".T", false, "one of two pages is 50% but a single page: a cover alone never flags")]
+    [InlineData("TTTTTTTTTT", false, "a document made only of text")]
+    [InlineData("..", true, "two pages, both empty: the floor is two pages, not three")]
+    public void Assess_FlagsOnlyADocumentWithAtLeastHalfItsPagesNearlyEmpty_AndAtLeastTwo(string pattern, bool flagged, string because)
+    {
+        var assessment = NearlyEmptyPages.Assess(Extraction(textLayerOnly: true, Pages(pattern)));
+
+        assessment.TotalPages.Should().Be(pattern.Length);
+        assessment.NearlyEmpty.Should().Be(pattern.Count(c => c == '.'));
+        assessment.Flagged.Should().Be(flagged, because);
+    }
+
+    [Fact]
+    public void Assess_WithEstimatedPages_NeverFlags_BecauseTheSlicesAreNotThePagesOfThePdf()
+    {
+        var pages = Pages("....").Select(p => p with { PageIsEstimated = true }).ToArray();
+
+        var assessment = NearlyEmptyPages.Assess(Extraction(textLayerOnly: true, pages));
+
+        assessment.NearlyEmpty.Should().Be(0);
+        assessment.Flagged.Should().BeFalse("equal slices of the whole text say nothing about the document");
+    }
+
+    [Fact]
+    public void Assess_WhenTheExtractorIsNotTextLayerOnly_NeverFlags()
+    {
+        NearlyEmptyPages.Assess(Extraction(textLayerOnly: false, Pages("...."))).Flagged.Should().BeFalse(
+            "an extractor that reads pixels, or does not know its pages, says nothing about a scan");
+    }
+
+    [Fact]
+    public void Assess_WithNoPages_IsNotFlagged_AndHasFractionZero()
+    {
+        var assessment = NearlyEmptyPages.Assess(Extraction(textLayerOnly: true));
+
+        assessment.Flagged.Should().BeFalse();
+        assessment.Fraction.Should().Be(0d);
+    }
 }

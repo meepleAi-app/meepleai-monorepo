@@ -3,6 +3,7 @@ using Api.Tests.Constants;
 using FluentAssertions;
 using SkiaSharp;
 using Xunit;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.ExtractionBench;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.ExtractionBench;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("Category", "PDF")]
+[Collection(QuestPdfRenderingCollection.Name)]
 public sealed class ExtractionFixtureTests
 {
     /// <summary>Sotto questa soglia di pixel scuri una pagina rasterizzata è, a tutti gli effetti, vuota.</summary>

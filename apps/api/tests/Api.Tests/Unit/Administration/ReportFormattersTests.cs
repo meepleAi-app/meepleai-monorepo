@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using FluentAssertions;
 using Xunit;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.Unit.Administration;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.Unit.Administration;
 /// ISSUE-919: Format conversion testing (90%+ coverage)
 /// ISSUE-2601: PDF tests marked as Integration (require QuestPDF)
 /// </summary>
+[Collection(QuestPdfRenderingCollection.Name)]
 public sealed class ReportFormattersTests
 {
     #region CSV Formatter Tests

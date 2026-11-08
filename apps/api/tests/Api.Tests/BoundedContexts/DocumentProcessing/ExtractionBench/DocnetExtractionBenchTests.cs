@@ -3,6 +3,7 @@ using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.ExtractionBench;
 
@@ -25,6 +26,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.ExtractionBench;
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("Category", "PDF")]
+[Collection(QuestPdfRenderingCollection.Name)]
 public sealed class DocnetExtractionBenchTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

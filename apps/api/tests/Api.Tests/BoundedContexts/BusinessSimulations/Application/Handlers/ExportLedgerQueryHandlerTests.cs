@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
 using Xunit;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.BoundedContexts.BusinessSimulations.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.BusinessSimulations.Application.Handlers;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "BusinessSimulations")]
+[Collection(QuestPdfRenderingCollection.Name)]
 public sealed class ExportLedgerQueryHandlerTests
 {
     private readonly Mock<ILedgerEntryRepository> _repositoryMock;

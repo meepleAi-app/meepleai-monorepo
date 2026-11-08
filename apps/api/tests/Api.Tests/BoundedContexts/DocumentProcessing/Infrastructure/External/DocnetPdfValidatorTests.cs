@@ -11,6 +11,7 @@ using Moq;
 using QuestPDF.Fluent;
 using Xunit;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
@@ -21,6 +22,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
+[Collection(QuestPdfRenderingCollection.Name)]
 public sealed class DocnetPdfValidatorTests : IDisposable
 {
     private readonly Mock<ILogger<DocnetPdfValidator>> _mockLogger;

@@ -60,6 +60,37 @@ internal partial class UploadPdfCommandHandler
             }
             _logger.LogInformation("✅ [PDF-DEBUG] Extraction SUCCESS for {PdfId}: {CharCount} chars, {Pages} pages", pdfId, fullText?.Length ?? 0, extractResult?.TotalPages ?? 0);
 
+            // #4437: Docnet reads the text layer and does not OCR, so a scanned PDF comes back with every page empty. It used
+            // to go on to the chunker, get zero chunks, and fail only because PdfIndexingPipeline.BeginIndexingAsync rejects
+            // a chunk count of zero: a Failed in category Unknown, which RetryFailedPdfsJob retries, with a text that says
+            // nothing. It fails here instead, before chunking, with the cause in the column and in a category the job
+            // leaves alone (a scan does not grow text). Only when the extractor reads the text layer alone; for any other
+            // extractor the old path is unchanged.
+            var extraction = extractResult!;
+            if (NearlyEmptyPages.NoTextAnywhere(extraction))
+            {
+                _logger.LogWarning(
+                    "PDF {PdfId} has no extractable text on any of its {Pages} pages (extractor {Extractor}): probably a scanned PDF, marking as failed",
+                    pdfId, extraction.PageChunks.Count, _pdfTextExtractor.GetType().Name);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, PdfFailureText.NoExtractableText, cancellationToken).ConfigureAwait(false);
+                await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
+                await TransitionToFailedAsync(
+                    scope, db, pdfGuid, PdfFailureText.NoExtractableText,
+                    Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Parsing,
+                    PdfProcessingState.Extracting, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            // The only trace of the pages a text-layer extraction leaves empty. Information, not Warning: on the 126 rulebooks in data/rulebook about one PDF in two has a cover or a blank page under
+            // the limit, so a warning would fire for half the documents and nobody would read it. The limit itself is not tuned here.
+            var nearlyEmptyPages = NearlyEmptyPages.CountIn(extraction);
+            if (nearlyEmptyPages > 0)
+            {
+                _logger.LogInformation(
+                    "PDF {PdfId}: {NearlyEmptyPages} of {TotalPages} pages have fewer than {MaxCharacters} characters of text; if they are scans, this extraction does not OCR them and they are missing from the index",
+                    pdfId, nearlyEmptyPages, extraction.PageChunks.Count, NearlyEmptyPages.MaxCharacters);
+            }
+
             await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Chunking, cancellationToken).ConfigureAwait(false);
 
             // Step 2: Chunk text with page tracking (40-60%)

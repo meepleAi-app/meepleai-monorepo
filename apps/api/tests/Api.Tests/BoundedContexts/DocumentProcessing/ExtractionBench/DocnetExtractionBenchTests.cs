@@ -1,8 +1,6 @@
-using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Tests.Constants;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -33,10 +31,7 @@ public sealed class DocnetExtractionBenchTests
 
     internal static DocnetPdfTextExtractor CreateExtractor()
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
-        return new DocnetPdfTextExtractor(
-            NullLogger<DocnetPdfTextExtractor>.Instance,
-            new PdfTextProcessingDomainService(configuration));
+        return new DocnetPdfTextExtractor(NullLogger<DocnetPdfTextExtractor>.Instance);
     }
 
     internal static Task<ExtractionBenchReport> RunAsync(

@@ -63,6 +63,8 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     /// <summary>#4443 R1: holds the background task at its first read of the aggregate.</summary>
     private readonly BackgroundTaskGate _gate = new();
     private Mock<IPdfTextExtractor>? _extractorMock;
+    private Mock<IAdvancedChunkingService>? _advancedChunkingMock;
+    private readonly RecordingLogger<UploadPdfCommandHandler> _uploadLog = new();
     private readonly List<ExtractedDocument> _chunkedDocuments = new();
 
     /// <summary>
@@ -104,6 +106,8 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>();
 
         services.AddScoped<UploadPdfCommandHandler>();
+        // Records every level (the console provider of CreateBase only lets Warning through): #4437 asserts an Information entry.
+        services.AddSingleton<ILogger<UploadPdfCommandHandler>>(_uploadLog);
 
         services.Configure<PdfProcessingOptions>(options =>
         {
@@ -154,6 +158,7 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         // heading-aware branch — irrelevant to this test's assertions but keeps the pipeline shape
         // identical to production (avoids depending on the flat-fallback branch by coincidence).
         var advancedChunkingMock = new Mock<IAdvancedChunkingService>();
+        _advancedChunkingMock = advancedChunkingMock;
         advancedChunkingMock
             .Setup(s => s.ChunkDocumentAsync(
                 It.IsAny<ExtractedDocument>(),
@@ -558,6 +563,149 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
             Api.BoundedContexts.DocumentProcessing.Application.Services.PdfFailureText.For(
                 Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing));
         persisted.ProcessingError.Should().NotContain("not found in storage at key");
+    }
+
+    /// <summary>
+    /// #4437: a scan on the upload path. Docnet reads the text layer and does not OCR, so every page comes back empty. This
+    /// path used to go on to the chunker, get zero chunks and fail only because <c>BeginIndexingAsync</c> rejects a chunk
+    /// count of zero: a Failed in category Unknown, which <c>RetryFailedPdfsJob</c> retries, with a text that says nothing.
+    /// It must end <c>Failed</c> with the cause in the column, in a category the job skips, and write nothing.
+    /// </summary>
+    /// <remarks>
+    /// The chunker in this harness is a double that always invents chunks, so with the guard off this test reaches
+    /// <c>Ready</c>: it proves the guard, not what the real chunker does with an empty text (that is the next test's job).
+    /// </remarks>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4437")]
+    public async Task ProcessPdfAsync_WhenNoPageHasText_FailsNamingTheCause_AndIndexesNothing()
+    {
+        _extractorMock!
+            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedTextExtractionResult.CreateSuccess(
+                pageChunks: [new PageTextChunk(1, "", 0, 0), new PageTextChunk(2, "   ", 0, 0)],
+                totalPages: 2,
+                totalCharacters: 0,
+                ocrTriggered: false) with { TextLayerOnly = true });
+
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        var result = await handler.Handle(
+            new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+                GameId: testGame.Id.ToString(),
+                Metadata: null,
+                PrivateGameId: null,
+                UserId: testUser.Id,
+                File: CreateMockFormFile("scanned-rules.pdf", CreateValidPdfBytes(1024))),
+            TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        result.Success.Should().BeTrue("the accept stage still succeeds; the pipeline is what fails");
+        var pdfDocId = result.Document!.Id;
+        var persisted = await _dbContext.PdfDocuments.AsNoTracking().FirstAsync(p => p.Id == pdfDocId, TestCancellationToken);
+
+        persisted.ProcessingState.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed),
+            "a PDF in which no page has text must not reach Ready with an empty index");
+        persisted.ProcessingError.Should().Be(
+            Api.BoundedContexts.DocumentProcessing.Application.Services.PdfFailureText.NoExtractableText);
+        persisted.ErrorCategory.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Parsing),
+            "a scan does not grow text on a retry: RetryFailedPdfsJob must skip it");
+        (await _dbContext.TextChunks.CountAsync(tc => tc.PdfDocumentId == pdfDocId, TestCancellationToken))
+            .Should().Be(0, "nothing is indexed for a document without text");
+    }
+
+    // A method, not a local function: the assertion below is an expression tree, which cannot reference one.
+    private static bool IsPdf(IReadOnlyDictionary<string, object?> state, Guid id) =>
+        state.TryGetValue("PdfId", out var value) && Guid.TryParse(value?.ToString(), out var parsed) && parsed == id;
+
+    /// <summary>
+    /// #4437: some pages of a text-layer extraction are nearly empty (a cover, a blank back). The upload path leaves one
+    /// structured entry with the counts, at <c>Information</c>: about one PDF in two has such a page, and a warning that
+    /// fires that often is not read. The document goes on.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4437")]
+    public async Task ProcessPdfAsync_WhenSomePagesAreNearlyEmpty_LogsAnInformationEntryWithTheCounts()
+    {
+        var text = new string('a', 300);
+        _extractorMock!
+            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedTextExtractionResult.CreateSuccess(
+                pageChunks: [new PageTextChunk(1, text, 0, 299), new PageTextChunk(2, "", 0, 0), new PageTextChunk(3, text, 0, 299)],
+                totalPages: 3,
+                totalCharacters: 600,
+                ocrTriggered: false) with { TextLayerOnly = true });
+
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        var result = await handler.Handle(
+            new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+                GameId: testGame.Id.ToString(),
+                Metadata: null,
+                PrivateGameId: null,
+                UserId: testUser.Id,
+                File: CreateMockFormFile("cover-and-blank-back.pdf", CreateValidPdfBytes(1024))),
+            TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        result.Success.Should().BeTrue(result.Message);
+        var pdfGuid = Guid.Parse(result.Document!.Id.ToString());
+        _uploadLog.Entries.Zip(_uploadLog.States, (entry, state) => (Entry: entry, State: state)).Should().Contain(e =>
+            e.Entry.StartsWith("Information: ", StringComparison.Ordinal)
+            && IsPdf(e.State, pdfGuid)
+            && Equals(e.State.GetValueOrDefault("NearlyEmptyPages"), 1)
+            && Equals(e.State.GetValueOrDefault("TotalPages"), 3)
+            && Equals(e.State.GetValueOrDefault("MaxCharacters"), NearlyEmptyPages.MaxCharacters));
+        _uploadLog.Entries.Should().NotContain(
+            l => l.StartsWith("Warning", StringComparison.Ordinal) && l.Contains("pages have fewer than", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// #4437: the text IS there but the chunker returns nothing (the heading-aware chunker drops the pieces that are not
+    /// substantial). That is not a scan, so the guard above does not fire; the document must still not end <c>Ready</c>
+    /// with an empty index. It does not: <c>PdfIndexingPipeline.BeginIndexingAsync</c> rejects a chunk count of zero, the
+    /// background task's catch records a Failed, and nothing is indexed. Pinned here as the invariant «never Ready with no
+    /// chunks»; the category and text of that failure are an accident of the exception and are left unasserted.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4437")]
+    public async Task ProcessPdfAsync_WhenTheTextIsThereButNoChunkComes_FailsAndIndexesNothing()
+    {
+        _advancedChunkingMock!
+            .Setup(s => s.ChunkDocumentAsync(
+                It.IsAny<ExtractedDocument>(),
+                It.IsAny<ChunkingConfiguration?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HierarchicalChunk>());
+
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        var result = await handler.Handle(
+            new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+                GameId: testGame.Id.ToString(),
+                Metadata: null,
+                PrivateGameId: null,
+                UserId: testUser.Id,
+                File: CreateMockFormFile("text-but-no-chunks.pdf", CreateValidPdfBytes(1024))),
+            TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        result.Success.Should().BeTrue("the accept stage still succeeds; the pipeline is what fails");
+        var pdfDocId = result.Document!.Id;
+        var persisted = await _dbContext.PdfDocuments.AsNoTracking().FirstAsync(p => p.Id == pdfDocId, TestCancellationToken);
+
+        persisted.ProcessingState.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed),
+            $"a document with no chunks must not reach Ready (ProcessingError='{persisted.ProcessingError}')");
+        persisted.ProcessingError.Should().NotBe(
+            Api.BoundedContexts.DocumentProcessing.Application.Services.PdfFailureText.NoExtractableText,
+            "the text is there: this is not a scan");
+        (await _dbContext.TextChunks.CountAsync(tc => tc.PdfDocumentId == pdfDocId, TestCancellationToken))
+            .Should().Be(0, "nothing is indexed");
     }
 
     /// <summary>

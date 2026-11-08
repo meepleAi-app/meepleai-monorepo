@@ -77,6 +77,156 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
         pdf.FailedAtState.Should().Be("Chunking", "la fase in cui il documento si è fermato");
     }
 
+    /// <summary>What Docnet returns: the pages of the PDF's own text layer, marked as such (#4437).</summary>
+    private static PagedTextExtractionResult TextLayerResult(params PageTextChunk[] pages) =>
+        PagedTextExtractionResult.CreateSuccess(pages, pages.Length, pages.Sum(p => p.CharCount), ocrTriggered: false)
+        with { TextLayerOnly = true };
+
+    private void ExtractorReturns(PagedTextExtractionResult result) =>
+        _extractor.Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(result);
+
+    private void ChunkerReturnsNothing() =>
+        _advancedChunking
+            .Setup(s => s.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HierarchicalChunk>());
+
+    private static bool Has(IReadOnlyDictionary<string, object?> state, string key, object? value) =>
+        state.TryGetValue(key, out var found) && Equals(found, value);
+
+    private static PageTextChunk EmptyPage(int number) => new(number, "", 0, 0);
+
+    private static PageTextChunk TextPage(int number) => new(number, new string('a', 300), 0, 299);
+
+    /// <summary>
+    /// #4437: a scan. Docnet reads the text layer and does not OCR, so every page comes back empty. The row must say why,
+    /// and must not be retried by <c>RetryFailedPdfsJob</c>: a category-less Failed is retried, and a scan does not grow
+    /// text on the next attempt.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4437")]
+    public async Task ProcessAsync_WhenNoPageHasText_FailsNamingTheCause_AndIsNotRetriable()
+    {
+        SeedPendingPdf();
+        ExtractorReturns(TextLayerResult(EmptyPage(1), new PageTextChunk(2, "  ", 0, 0), EmptyPage(3)));
+        ChunkerReturnsNothing();
+
+        var outcome = await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        outcome.Should().Be(PdfPipelineOutcome.Failed);
+        var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
+        pdf.ProcessingState.Should().Be("Failed");
+        pdf.ProcessingError.Should().Be(PdfFailureText.NoExtractableText);
+        pdf.ErrorCategory.Should().Be(nameof(ErrorCategory.Parsing), "a scan does not grow text on a retry: RetryFailedPdfsJob must skip it");
+        _log.Entries.Should().Contain(
+            l => l.StartsWith("Warning", StringComparison.Ordinal) && l.Contains(_pdfId.ToString(), StringComparison.Ordinal)
+                 && l.Contains("no extractable text", StringComparison.OrdinalIgnoreCase),
+            "the log carries the detail the column leaves out");
+    }
+
+    /// <summary>
+    /// #4437: the same empty pages from an extractor that is NOT text-layer-only (SmolDocling reads pixels, Unstructured
+    /// may too, and a result that went through the orchestrator no longer says who produced it). «The extraction does not
+    /// perform OCR» would be false for them, and an empty page is no proof of a scan: the failure stays what it was —
+    /// the generic text and no category.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4437")]
+    public async Task ProcessAsync_WhenNoPageHasText_ButTheExtractorIsNotTextLayerOnly_KeepsTheGenericFailure()
+    {
+        SeedPendingPdf();
+        ExtractorReturns(TextLayerResult(EmptyPage(1), EmptyPage(2)) with { TextLayerOnly = false });
+        ChunkerReturnsNothing();
+
+        await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
+        pdf.ProcessingState.Should().Be("Failed");
+        pdf.ProcessingError.Should().Be("Text extraction produced no usable chunks");
+        pdf.ErrorCategory.Should().BeNull("unchanged: the generic failure keeps the behaviour it had");
+        _log.Entries.Should().NotContain(l => l.Contains("no extractable text", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// #4437: the text IS there but the chunker produced nothing. That is not a scan, and the row must not say it is.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4437")]
+    public async Task ProcessAsync_WhenThePagesHaveTextButNoChunkComes_DoesNotBlameAScan()
+    {
+        SeedPendingPdf();
+        ChunkerReturnsNothing();
+
+        await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
+        pdf.ProcessingError.Should().NotBe(PdfFailureText.NoExtractableText);
+        pdf.ErrorCategory.Should().BeNull("unchanged: the generic failure keeps the behaviour it had");
+    }
+
+    /// <summary>
+    /// #4437: some pages have text and some are scanned. The document reaches Ready with holes, and the only trace is a
+    /// structured log entry with the count — asserted on the fields, not on the formatted text, so a field renamed or
+    /// dropped turns the test red, and on the LEVEL: it is <c>Information</c>, because about one PDF in two has a cover or
+    /// a blank page under the limit and a warning that fires that often is not read.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4437")]
+    public async Task ProcessAsync_WhenSomePagesAreNearlyEmpty_LogsAnInformationEntryWithTheCounts()
+    {
+        SeedPendingPdf();
+        ExtractorReturns(TextLayerResult(TextPage(1), EmptyPage(2), TextPage(3)));
+        SetupTwoChunks();
+        _embeddings.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult { Success = false, ErrorMessage = "stop here: the warning is written at extraction" });
+
+        await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        _log.Entries.Zip(_log.States, (entry, state) => (Entry: entry, State: state)).Should().Contain(e =>
+            e.Entry.StartsWith("Information: ", StringComparison.Ordinal)
+            && Has(e.State, "PdfId", _pdfId)
+            && Has(e.State, "NearlyEmptyPages", 1)
+            && Has(e.State, "TotalPages", 3)
+            && Has(e.State, "MaxCharacters", NearlyEmptyPages.MaxCharacters));
+        _log.Entries.Should().NotContain(
+            l => l.StartsWith("Warning", StringComparison.Ordinal) && l.Contains("pages have fewer than", StringComparison.Ordinal),
+            "a signal that fires for about one PDF in two is information, not a warning");
+    }
+
+    /// <summary>
+    /// #4437: SmolDocling returns one <c>PageTextChunk</c> per chunk of its service, with page numbers that look real, so
+    /// short chunks would be counted as nearly empty pages. Without the text-layer mark there is no entry.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4437")]
+    public async Task ProcessAsync_WhenSomePagesAreShort_ButTheExtractorIsNotTextLayerOnly_LogsNoNearlyEmptyEntry()
+    {
+        SeedPendingPdf();
+        ExtractorReturns(TextLayerResult(TextPage(1), new PageTextChunk(2, "a caption", 0, 8), TextPage(3)) with { TextLayerOnly = false });
+        SetupTwoChunks();
+        _embeddings.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult { Success = false, ErrorMessage = "stop here" });
+
+        await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        _log.States.Should().NotContain(s => s.ContainsKey("NearlyEmptyPages"));
+    }
+
+    [Fact]
+    [Trait("Issue", "4437")]
+    public async Task ProcessAsync_WhenEveryPageHasText_LogsNoNearlyEmptyEntry()
+    {
+        SeedPendingPdf();
+        ExtractorReturns(TextLayerResult(TextPage(1), TextPage(2)));
+        SetupTwoChunks();
+        _embeddings.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult { Success = false, ErrorMessage = "stop here" });
+
+        await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        _log.States.Should().NotContain(s => s.ContainsKey("NearlyEmptyPages"));
+    }
+
     [Fact]
     public async Task ProcessAsync_WhenTheEmbeddingBatchFails_EndsFailed_NotStuckInFlight()
     {

@@ -163,14 +163,12 @@ internal static class ApplicationServiceExtensions
         // DDD-COMPLETE: PDF services fully migrated to CQRS in DocumentProcessing bounded context
 
         // Issue #940 Phase 3: DDD PDF text extraction adapter
-        services.AddSingleton<BoundedContexts.DocumentProcessing.Domain.Services.PdfTextProcessingDomainService>();
         services.AddScoped<BoundedContexts.DocumentProcessing.Infrastructure.External.IPdfTextExtractor,
             BoundedContexts.DocumentProcessing.Infrastructure.External.DocnetPdfTextExtractor>();
 
-        // PDF-02: OCR service for fallback text extraction (Windows-only)
-#pragma warning disable CA1416 // TesseractOcrAdapter is Windows-only by design
-        services.AddSingleton<BoundedContexts.DocumentProcessing.Infrastructure.External.IOcrService, BoundedContexts.DocumentProcessing.Infrastructure.External.TesseractOcrAdapter>();
-#pragma warning restore CA1416
+        // #4437: no OCR here. Docnet reads the text layer only; the OCR fallback that used to hang off it (a Windows-only
+        // Tesseract adapter with no tessdata in the image) never ran, and is gone. Scans are the business of an extractor
+        // that OCRs (Unstructured, #4436). SessionTracking keeps its own IOcrService, for the gamebook photos.
 
         return services;
     }

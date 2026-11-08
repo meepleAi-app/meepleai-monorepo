@@ -115,7 +115,7 @@ internal class EnhancedPdfProcessingOrchestrator
     /// Extracts text from PDF using 3-stage fallback pipeline with quality-based routing
     /// </summary>
     /// <param name="pdfStream">PDF file stream</param>
-    /// <param name="enableOcrFallback">Whether to enable OCR fallback in Stage 3</param>
+    /// <param name="enableOcrFallback">Kept for the callers that pass it; Stage 3 (Docnet) ignores it and never performs OCR (#4437)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Extraction result with stage metadata</returns>
     public async Task<EnhancedExtractionResult> ExtractTextWithFallbackAsync(

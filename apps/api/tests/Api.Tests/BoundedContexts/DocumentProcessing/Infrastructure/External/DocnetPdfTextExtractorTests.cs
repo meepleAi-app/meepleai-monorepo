@@ -1,8 +1,6 @@
-using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Services;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -19,8 +17,6 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 public sealed class DocnetPdfTextExtractorTests : IDisposable
 {
     private readonly Mock<ILogger<DocnetPdfTextExtractor>> _mockLogger;
-    private readonly PdfTextProcessingDomainService _domainService;
-    private readonly Mock<IOcrService> _mockOcrService;
     private readonly DocnetPdfTextExtractor _sut;
     private readonly List<string> _tempFilesToCleanup;
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -28,23 +24,7 @@ public sealed class DocnetPdfTextExtractorTests : IDisposable
     public DocnetPdfTextExtractorTests()
     {
         _mockLogger = new Mock<ILogger<DocnetPdfTextExtractor>>();
-
-        // Setup configuration
-        var configData = new Dictionary<string, string?>
-        {
-            { "PdfExtraction:Ocr:ThresholdCharsPerPage", "50" } // Lower threshold for testing
-        };
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData)
-            .Build();
-
-        _domainService = new PdfTextProcessingDomainService(configuration);
-        _mockOcrService = new Mock<IOcrService>();
-
-        _sut = new DocnetPdfTextExtractor(
-            _mockLogger.Object,
-            _domainService,
-            _mockOcrService.Object);
+        _sut = new DocnetPdfTextExtractor(_mockLogger.Object);
 
         _tempFilesToCleanup = new List<string>();
     }
@@ -97,75 +77,41 @@ public sealed class DocnetPdfTextExtractorTests : IDisposable
         result.ErrorMessage.Should().NotBeNull();
     }
 
-    [Fact]
-    public async Task ExtractTextAsync_LowQualityPdf_TriggersOcr()
+    /// <summary>
+    /// #4437: Docnet reads the text layer and does not OCR. A PDF with almost no text used to be handed to an OCR service
+    /// that was never usable (a Windows-only adapter with no tessdata); now the result says what it is: the text Docnet
+    /// found, <c>OcrTriggered</c> false, whatever <c>enableOcrFallback</c> asks.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ExtractTextAsync_LowTextPdf_NeverReportsOcr_WhateverTheFlagAsks(bool enableOcrFallback)
     {
-        // Arrange: PDF with very little text (simulated by creating minimal content)
+        // Arrange: PDF with very little text
         var pdfStream = CreateMinimalTextPdfStream();
 
-        // Setup OCR to return better text
-        _mockOcrService
-            .Setup(ocr => ocr.ExtractTextFromPdfAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OcrResult
-            {
-                Success = true,
-                ExtractedText = new string('a', 500), // 500 chars = good OCR result
-                PageCount = 1,
-                MeanConfidence = 0.95F,
-                ErrorMessage = null
-            });
-
         // Act
-        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
+        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback, TestCancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
-        result.OcrTriggered.Should().BeTrue("OCR should be triggered for low-quality extraction");
-        _mockOcrService.Verify(ocr => ocr.ExtractTextFromPdfAsync(
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        result.OcrTriggered.Should().BeFalse("Docnet never performs OCR");
     }
 
+    /// <summary>
+    /// #4437: the pipelines read an empty page as a scan only when the extractor says it read the text layer alone. Docnet
+    /// says so on its paged result; a failure does not claim anything.
+    /// </summary>
     [Fact]
-    public async Task ExtractTextAsync_OcrDisabled_DoesNotTriggerOcr()
+    public async Task ExtractPagedTextAsync_MarksTheResultAsTextLayerOnly()
     {
-        // Arrange: Low quality PDF
-        var pdfStream = CreateMinimalTextPdfStream();
+        var pdfStream = CreateSimpleTestPdfStream();
 
-        // Act
-        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
+        var result = await _sut.ExtractPagedTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
 
-        // Assert
         result.Success.Should().BeTrue();
-        result.OcrTriggered.Should().BeFalse();
-        _mockOcrService.Verify(ocr => ocr.ExtractTextFromPdfAsync(
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ExtractTextAsync_OcrFails_FallsBackToStandardExtraction()
-    {
-        // Arrange: Low quality PDF
-        var pdfStream = CreateMinimalTextPdfStream();
-
-        // Setup OCR to fail
-        _mockOcrService
-            .Setup(ocr => ocr.ExtractTextFromPdfAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OcrResult
-            {
-                Success = false,
-                ErrorMessage = "OCR engine failed",
-                ExtractedText = string.Empty,
-                PageCount = 0
-            });
-
-        // Act
-        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
-
-        // Assert
-        result.Success.Should().BeTrue("Should fallback to standard extraction");
-        result.OcrTriggered.Should().BeFalse();
+        result.TextLayerOnly.Should().BeTrue("Docnet reads the PDF's own text layer and never OCRs");
+        PagedTextExtractionResult.CreateFailure("x").TextLayerOnly.Should().BeFalse();
     }
 
     [Fact]

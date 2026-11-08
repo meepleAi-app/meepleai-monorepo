@@ -21,6 +21,13 @@ internal static class PdfFailureText
     /// </summary>
     public const string TextExtraction = "Text extraction failed";
 
+    /// <summary>
+    /// The extraction found pages and not one had text (#4437): the PDF is probably a scan, and the text extraction in use
+    /// does not OCR it. Fixed like the others; which extractor read it and how many pages it had stay in the log.
+    /// </summary>
+    public const string NoExtractableText =
+        "The PDF has no extractable text. It is probably a scan: the current text extraction does not perform OCR";
+
     /// <summary>The fixed text for a failure of this category.</summary>
     public static string For(ErrorCategory category) => $"Processing failed ({category})";
 }

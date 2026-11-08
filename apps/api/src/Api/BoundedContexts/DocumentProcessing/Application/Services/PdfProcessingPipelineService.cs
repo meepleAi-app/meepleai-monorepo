@@ -218,6 +218,18 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
             if (chunks.Count == 0)
             {
+                // #4437: «no chunks» has two very different causes. A scan has pages and not one of them has text:
+                // the row says so, and is not retried (a scan does not grow text on the next attempt). Text that the
+                // chunker turned into nothing is a different failure and keeps the generic text and no category.
+                if (NearlyEmptyPages.NoTextAnywhere(extractResult))
+                {
+                    _logger.LogWarning(
+                        "[PdfPipeline] PDF {PdfId} has no extractable text on any of its {Pages} pages (extractor {Extractor}): probably a scanned PDF, marking as failed",
+                        pdfId, extractResult.PageChunks.Count, _pdfTextExtractor.GetType().Name);
+                    await MarkFailedAsync(pdfDoc, PdfFailureText.NoExtractableText, ErrorCategory.Parsing).ConfigureAwait(false);
+                    return PdfPipelineOutcome.Failed;
+                }
+
                 _logger.LogWarning("[PdfPipeline] No chunks produced for {PdfId}, marking as failed", pdfId);
                 await MarkFailedAsync(pdfDoc, "Text extraction produced no usable chunks").ConfigureAwait(false);
                 return PdfPipelineOutcome.Failed;
@@ -627,6 +639,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 throw new PdfExtractionFailedException(
                     $"Text extraction failed: {extractResult.ErrorMessage}",
                     extractResult.IsPermanentFailure);
+            }
+
+            // #4437: Docnet reads the text layer and does not OCR. A scanned page comes back empty and the document can
+            // still reach Ready with holes in it; this line is the only trace of them. Information, not Warning: on the 126 rulebooks in data/rulebook about one PDF in two has a cover or a blank page under
+            // the limit, so a warning would fire for half the documents and nobody would read it. The limit itself is not tuned here.
+            var nearlyEmptyPages = NearlyEmptyPages.CountIn(extractResult);
+            if (nearlyEmptyPages > 0)
+            {
+                _logger.LogInformation(
+                    "[PdfPipeline] PDF {PdfId}: {NearlyEmptyPages} of {TotalPages} pages have fewer than {MaxCharacters} characters of text; if they are scans, this extraction does not OCR them and they are missing from the index",
+                    pdfDoc.Id, nearlyEmptyPages, extractResult.PageChunks.Count, NearlyEmptyPages.MaxCharacters);
             }
 
             var joinedText = PageTextJoiner.Join(extractResult.PageChunks);
@@ -1297,12 +1320,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
     }
 
-    private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage)
+    private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage, ErrorCategory? category = null)
     {
         RecordFailedAtState(pdfDoc);
         // Issue #4215: Use Failed state
         pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
         pdfDoc.ProcessingError = errorMessage;
+        // #4437: a null category is retried by RetryFailedPdfsJob; the callers that know the failure is permanent say so.
+        if (category is not null)
+        {
+            pdfDoc.ErrorCategory = category.Value.ToString();
+        }
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         try
         {

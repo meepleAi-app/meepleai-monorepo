@@ -130,11 +130,6 @@
     <PackageReference Include="System.Drawing.Common" Version="10.0.13" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
-    <!-- #4437: Tesseract.Drawing has no user left (only the DocumentProcessing OCR adapter called PixConverter, and it is
-         gone), but it stays: without it the extraction bench (ExtractionBench, Docnet + QuestPDF) went red in about 5 runs
-         out of 8 on a Windows checkout (the first extraction came back with most words missing), and with it, or on the
-         original code, in none of 12. The mechanism is not known; remove it only together with 12 clean runs of the bench. -->
-    <PackageReference Include="Tesseract.Drawing" Version="5.2.0" />
     <!-- OPS-02: OpenTelemetry packages -->
     <PackageReference Include="OpenTelemetry" Version="1.15.3" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />

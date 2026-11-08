@@ -58,10 +58,9 @@ public class PdfDocumentEntity
 
     // PDF-03: Structured data extraction fields.
     // LEGACY (#4440, fase expand): l'estrattore iText che li scriveva e' stato tolto, quindi nessuna
-    // pipeline li scrive piu' e restano solo i valori storici. ExtractedTables e ExtractedDiagrams non
-    // hanno lettori e si eliminano nella fase contract. AtomicRules ha un lettore,
-    // GenerateRuleSpecFromPdfCommandHandler, che ripiega su ExtractedText quando manca: la sua colonna
-    // resta finche' non se ne decide il destino. I tre contatori non hanno lettori.
+    // pipeline li scrive piu' e restano solo i valori storici. Nessuno ha piu' lettori (#4930:
+    // GenerateRuleSpecFromPdfCommandHandler legge solo ExtractedText), quindi tutte le colonne di questo
+    // gruppo si eliminano nella fase contract.
     public string? ExtractedTables { get; set; } // JSON array of tables
     public string? ExtractedDiagrams { get; set; } // JSON array of diagram metadata
     public string? AtomicRules { get; set; } // JSON array of atomic rules from tables

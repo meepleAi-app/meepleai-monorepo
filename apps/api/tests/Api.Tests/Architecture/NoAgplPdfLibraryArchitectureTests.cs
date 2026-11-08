@@ -11,23 +11,25 @@ namespace Api.Tests.Architecture;
 /// legale: dice solo che oggi il codice non la nomina.
 /// </summary>
 /// <remarks>
-/// Limite, ammesso: vede i riferimenti ai pacchetti dei due progetti e gli spazi dei nomi nel CODICE (un commento o
-/// una stringa che li nomina, come questo, non conta: è la proprietà di <see cref="SourceScanner"/> che rende
-/// utilizzabile un gate così). Una libreria AGPL che arrivasse come dipendenza transitiva di un'altra non si vede.
+/// Limite, ammesso: vede i riferimenti ai pacchetti in ogni file di progetto sotto <c>apps/api</c> e ogni spazio dei
+/// nomi <c>iText.</c> nel CODICE (un commento o una stringa che lo nomina, come questo, non conta: è la proprietà di
+/// <see cref="SourceScanner"/> che rende utilizzabile un gate così). Una libreria AGPL che arrivasse come dipendenza
+/// transitiva di un'altra non si vede.
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Architecture")]
 [Trait("Issue", "4440")]
 public sealed class NoAgplPdfLibraryArchitectureTests
 {
-    private static readonly string[] ForbiddenInCode =
-    [
-        "using iText.",
-        "iText.Kernel.",
-        "iText.Layout.",
-        "iText.IO.",
-        "iText.Forms.",
-    ];
+    /// <summary>
+    /// Ogni <c>iText.</c> nel codice, di qualunque sotto-spazio e anche dopo <c>using static</c> o <c>global::</c>: l'elenco
+    /// per sotto-spazio (Kernel, Layout, IO, Forms) lasciava fuori <c>iText.Commons.</c>, <c>iText.Pdfa.</c> e
+    /// <c>using static iText.…</c> (#4930). Un identificatore che finisce in «iText» (<c>ApiText.</c>) non conta.
+    /// </summary>
+    private static List<int> FindITextNamespaces(string text) =>
+        SourceScanner.FindCodeOccurrences(text, "iText.")
+            .Where(offset => offset == 0 || !(char.IsLetterOrDigit(text[offset - 1]) || text[offset - 1] == '_'))
+            .ToList();
 
     [Fact]
     public void NoSourceFileOfTheApiOrItsTestsNamesAnITextNamespace()
@@ -39,11 +41,8 @@ public sealed class NoAgplPdfLibraryArchitectureTests
             foreach (var path in Directory.EnumerateFiles(folder, "*.cs", SearchOption.AllDirectories).Where(p => !IsBuildOutput(p)))
             {
                 var text = File.ReadAllText(path);
-                foreach (var needle in ForbiddenInCode)
-                {
-                    offenders.AddRange(SourceScanner.FindCodeOccurrences(text, needle)
-                        .Select(offset => $"{Path.GetRelativePath(root, path).Replace('\\', '/')}:{LineOf(text, offset)} ({needle})"));
-                }
+                offenders.AddRange(FindITextNamespaces(text)
+                    .Select(offset => $"{Path.GetRelativePath(root, path).Replace('\\', '/')}:{LineOf(text, offset)}"));
             }
         }
 
@@ -53,19 +52,24 @@ public sealed class NoAgplPdfLibraryArchitectureTests
     }
 
     [Fact]
-    public void NeitherProjectReferencesAnITextPackage()
+    public void NoProjectFileUnderTheApiReferencesAnITextPackage()
     {
         var root = LocateRepoRoot();
-        foreach (var project in new[]
+        var projectFiles = Directory.EnumerateFiles(Path.Combine(root, "apps", "api"), "*.*", SearchOption.AllDirectories)
+            .Where(p => !IsBuildOutput(p)
+                && (p.EndsWith(".csproj", StringComparison.Ordinal)
+                    || p.EndsWith(".props", StringComparison.Ordinal)
+                    || p.EndsWith(".targets", StringComparison.Ordinal)))
+            .ToList();
+
+        projectFiles.Should().Contain(p => p.EndsWith("Api.csproj", StringComparison.Ordinal))
+            .And.Contain(p => p.EndsWith("Api.Tests.csproj", StringComparison.Ordinal), "the scan must reach the two main projects");
+
+        foreach (var file in projectFiles)
         {
-            Path.Combine(root, "apps", "api", "src", "Api", "Api.csproj"),
-            Path.Combine(root, "apps", "api", "tests", "Api.Tests", "Api.Tests.csproj"),
-        })
-        {
-            File.Exists(project).Should().BeTrue($"the project file must be at {project}");
-            File.ReadAllText(project).Should().NotContainEquivalentOf(
+            File.ReadAllText(file).Should().NotContainEquivalentOf(
                 "Include=\"itext",
-                $"{Path.GetFileName(project)} must not reference an iText package (AGPLv3, #4440)");
+                $"{Path.GetFileName(file)} must not reference an iText package (AGPLv3, #4440)");
         }
     }
 
@@ -78,6 +82,18 @@ public sealed class NoAgplPdfLibraryArchitectureTests
         SourceScanner.FindCodeOccurrences("/// <see cref=\"iText.Kernel.Pdf.PdfReader\"/>", "iText.Kernel.").Should().BeEmpty();
         SourceScanner.FindCodeOccurrences("var s = \"using iText.Kernel;\";", "using iText.").Should().BeEmpty();
     }
+
+    [Theory]
+    [InlineData("using iText.Kernel.Pdf;", 1)]
+    [InlineData("using static iText.Kernel.Pdf.PdfName;", 1)]
+    [InlineData("using iText.Pdfa;", 1)]
+    [InlineData("var u = iText.Commons.Utils.Foo.Bar();", 1)]
+    [InlineData("var u = global::iText.Layout.Document.Create();", 1)]
+    [InlineData("var t = ApiText.Length + multi_iText.Count;", 0)]
+    [InlineData("// using iText.Kernel.Pdf;", 0)]
+    [InlineData("var s = \"iText.Kernel.\";", 0)]
+    public void TheGateSeesEveryITextNamespaceAndNoIdentifierThatEndsInIt(string code, int expected) =>
+        FindITextNamespaces(code).Should().HaveCount(expected);
 
     [Fact]
     public void TheGateReallyLooksAtTheApi()

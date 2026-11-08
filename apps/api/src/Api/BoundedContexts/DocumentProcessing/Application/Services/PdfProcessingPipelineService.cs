@@ -431,9 +431,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 return PdfPipelineOutcome.AbortedConcurrency;
             }
 
-            // Step 3a: Generate embeddings (for all chunks: original + translated)
+            // Step 3: Generate embeddings (for all chunks: original + translated)
             var allChunkInputs = translatedChunks.Select(t => t.chunk).ToList();
-            _logger.LogInformation("[PdfPipeline] Step 3a/4: Generating embeddings for {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
+            _logger.LogInformation("[PdfPipeline] Step 3/4: Generating embeddings for {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
             var embeddings = await GenerateEmbeddingsAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Transition to Indexing state
@@ -455,7 +455,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 return PdfPipelineOutcome.AbortedConcurrency;
             }
 
-            // Step 3b: Index in pgvector.
+            // Step 4: Index in pgvector.
             // Order matters: SaveTextChunksAsync MUST run BEFORE IndexInVectorStoreAsync.
             // IndexInVectorStoreAsync denormalizes role_tags + source_chunk_id onto the pgvector
             // rows by reading the freshly-saved (and freshly-classified) text_chunks keyed by
@@ -463,7 +463,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             // join by ChunkIndex is stable. If indexing ran first the lookup would be empty and every
             // pgvector row would be born with role_tags=0 / source_chunk_id=null (silent corpus-wide
             // role-boost loss — see FusionSignals.ComputeRoleMatchBoost).
-            _logger.LogInformation("[PdfPipeline] Step 3b/4: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
+            _logger.LogInformation("[PdfPipeline] Step 4/4: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
             await SaveTextChunksAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
             await IndexInVectorStoreAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
 

@@ -743,7 +743,7 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
 
         await _gate.Reached.WaitAsync(TimeSpan.FromSeconds(30), TestCancellationToken);
         bool claimedByTheOther;
-        using (var scope = _serviceProvider.CreateScope())
+        using (var scope = _serviceProvider!.CreateScope())
         {
             claimedByTheOther = await new RelationalPdfClaimService(scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>())
                 .TryClaimPendingAsync(pdfId, TestCancellationToken);

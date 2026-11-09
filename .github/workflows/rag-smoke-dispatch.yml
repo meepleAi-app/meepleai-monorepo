@@ -357,6 +357,13 @@ jobs:
              JOIN pdf_documents d ON d.\"Id\" = v.\"PdfDocumentId\"
              GROUP BY 1,2 ORDER BY 1,2;" > tuning-dump/lang-by-document.txt
 
+          # 3) I nomi dei candidati (#4955). aggregate.log identifica il documento con il suo id, che
+          #    cambia a ogni bake, e il gioco con il suo id: senza queste due mappe un candidato si
+          #    nomina solo per inferenza, ed è così che il chunk 0 di Maracaibo è rimasto un GUID.
+          #    Stesso formato di --doc-names e --game-titles di infra/scripts/rag-fusion-bench.py.
+          q "SELECT json_object_agg(\"Id\", \"FileName\") FROM pdf_documents;" > tuning-dump/doc-names.json
+          q "SELECT json_object_agg(id, title) FROM shared_games;"           > tuning-dump/game-titles.json
+
           echo "::group::distribuzione lang"; cat tuning-dump/lang-distribution.txt; echo "::endgroup::"
 
           # Lo stack era su e non ha prodotto una riga: il wiring del livello di log è rotto, e un

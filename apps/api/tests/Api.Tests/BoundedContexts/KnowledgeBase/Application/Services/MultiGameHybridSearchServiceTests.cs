@@ -486,6 +486,53 @@ public class MultiGameHybridSearchServiceTests
         // cosine fra due posizioni contigue: il calcolo è in #3735.
     }
 
+    /// <summary>
+    /// #4955: il match lessicale di un altro gioco non scavalca la cosine nettamente migliore.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// È <c>dominion-buy-phase-it</c> del gate ridotto a quattro candidati: una domanda italiana su
+    /// un manuale inglese. Il chunk giusto (Dominion, cosine 0,848) non ha alcun match lessicale,
+    /// perché le parole della domanda sono italiane; i chunk italiani di altri giochi hanno una cosine
+    /// poco più bassa e corrispondono alla domanda (7 Wonders a 0,50, Root a 0,35).
+    /// </para>
+    /// <para>
+    /// Con il peso lessicale a 0,3 il chunk giusto finisce terzo. Fino a #4955 non succedeva solo
+    /// perché il genitore a documento intero, con un ts_rank_cd fra 1 e 3,4, era il massimo della
+    /// normalizzazione e schiacciava il lessicale di tutti gli altri; tolto il genitore dal braccio
+    /// lessicale, è il peso a doverlo tenere al suo posto. Le lingue sono meno di cinque candidati per
+    /// gruppo, quindi la correzione per lingua non interviene e il test guarda i soli pesi.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task CrossGame_AnotherGamesKeywordMatch_DoesNotOvertakeAClearlyBetterCosine()
+    {
+        var expectedGame = Guid.NewGuid();
+        var sevenWonders = Guid.NewGuid();
+        var root = Guid.NewGuid();
+        var unrelated = Guid.NewGuid();
+
+        _perGame.Returns(expectedGame, Passage(chunkIndex: 16, hybridScore: 0.0164f,
+            vectorScore: 0.851f, keywordScore: null, language: "en"));
+        _perGame.Returns(sevenWonders, Passage(chunkIndex: 62, hybridScore: 0.0328f,
+            vectorScore: 0.809f, keywordScore: 0.50f, language: "it"));
+        _perGame.Returns(root, Passage(chunkIndex: 115, hybridScore: 0.0328f,
+            vectorScore: 0.828f, keywordScore: 0.35f, language: "it"));
+        // Fissa gli estremi della normalizzazione, come la coda dei candidati nel dump vero.
+        _perGame.Returns(unrelated, Passage(chunkIndex: 3, hybridScore: 0.0164f,
+            vectorScore: 0.725f, keywordScore: 0.02f, language: "it"));
+
+        var sut = CreateSut();
+
+        var results = await SearchAsync(sut,
+            "Durante la fase di acquisto quante carte posso comprare e come funzionano le monete in Dominion?",
+            new[] { sevenWonders, root, unrelated, expectedGame },
+            limit: 3);
+
+        results[0].GameId.Should().Be(expectedGame,
+            "a keyword match in another game's chunk must not outweigh a clearly better cosine (#4955)");
+    }
+
     private static SearchResultDto[] BuildPassages(int count, float baseScore) =>
         Enumerable.Range(0, count)
             .Select(i => Passage(chunkIndex: i, hybridScore: baseScore - i * 0.01f, vectorScore: baseScore - i * 0.01f))

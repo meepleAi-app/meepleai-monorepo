@@ -63,7 +63,12 @@ from pathlib import Path
 
 DECODER = json.JSONDecoder()
 
-# Devono corrispondere a MultiGameHybridSearchService.
+# Devono corrispondere a MultiGameHybridSearchService.GlobalVectorWeight/GlobalKeywordWeight: la
+# fusione GLOBALE, fra giochi. 0,85/0,15 da #4955, quando il genitore a documento intero e' uscito
+# dal braccio lessicale (il motivo e' nel commento delle costanti C#).
+GLOBAL_VECTOR_WEIGHT = 0.85
+GLOBAL_KEYWORD_WEIGHT = 0.15
+# I pesi dell'RRF PER-GIOCO (HybridFusionCore, profilo di default): non cambiano con quelli globali.
 VECTOR_WEIGHT = 0.7
 KEYWORD_WEIGHT = 0.3
 MIN_LANGUAGE_GROUP_SIZE = 5
@@ -125,8 +130,8 @@ def fuse(candidates, language_correction: bool):
 
     scored = [
         (
-            VECTOR_WEIGHT * normalise(adj, v_low, v_high)
-            + KEYWORD_WEIGHT * normalise(c.get("k"), k_low, k_high),
+            GLOBAL_VECTOR_WEIGHT * normalise(adj, v_low, v_high)
+            + GLOBAL_KEYWORD_WEIGHT * normalise(c.get("k"), k_low, k_high),
             c,
         )
         for c, adj in zip(candidates, adjusted)

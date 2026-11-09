@@ -415,11 +415,32 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     /// Pesi della fusione globale (#3735). Il vettoriale pesa più del lessicale perché è il segnale
     /// che distingue i manuali fra loro: le parole di una query di regolamento («setup», «board»,
     /// «turn») compaiono in ogni manuale, quindi il lessicale da solo non discrimina il gioco — è
-    /// il modo esatto in cui il difetto si manifestava. Stessi pesi del percorso per-gioco
-    /// (<c>GenerateToolkitFromKbHandler</c> usa 0.7/0.3) per non introdurre una seconda taratura.
+    /// il modo esatto in cui il difetto si manifestava.
     /// </summary>
-    private const float GlobalVectorWeight = 0.7f;
-    private const float GlobalKeywordWeight = 0.3f;
+    /// <remarks>
+    /// <para>
+    /// <b>0,15 e non più 0,3 (#4955).</b> Fino a #4955 nel braccio lessicale entrava il genitore a
+    /// documento intero, con un <c>ts_rank_cd</c> fra 1 e 3,4 contro 0,3-0,5 dei migliori chunk
+    /// veri. Era lui il massimo della normalizzazione, quindi il lessicale di ogni altro candidato
+    /// entrava schiacciato: un figlio a 0,47 contro un genitore a 2,72 vale 0,17 normalizzato, cioè
+    /// 0,05 nella somma. Il peso nominale era 0,3, quello effettivo sui chunk veri circa 0,04-0,15.
+    /// </para>
+    /// <para>
+    /// Tolto il genitore, il lessicale dei figli torna a pesare per intero, e a 0,3 una domanda in
+    /// italiano su un manuale inglese perde il manuale giusto: i chunk italiani di ALTRI giochi
+    /// corrispondono alle parole della domanda, quello giusto no. Misurato con
+    /// <c>infra/scripts/rag-fusion-bench.py</c> sui dump del gate (snapshot del 2026-10-14 e del
+    /// 2026-11-08): senza genitori il gate semantico vale 8/11 a 0,3 e 10/11 per ogni peso fra 0,05
+    /// e 0,20 (9/11 a 0); 0,15 sta a metà di quell'intervallo. Le posizioni dei top-3 che vanno al
+    /// gioco giusto passano da 15-16 a 22 su 33, e nessun documento intero resta nei top-3 (oggi 15-16).
+    /// </para>
+    /// <para>
+    /// Il percorso per-gioco (<c>GenerateToolkitFromKbHandler</c>, 0,7/0,3) non cambia: là il
+    /// lessicale confronta chunk dello stesso manuale, nella stessa lingua.
+    /// </para>
+    /// </remarks>
+    private const float GlobalVectorWeight = 0.85f;
+    private const float GlobalKeywordWeight = 0.15f;
 
     /// <summary>
     /// Ricalcola il punteggio su base GLOBALE, unica per tutti i giochi (#3735).

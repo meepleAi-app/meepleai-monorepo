@@ -7,7 +7,8 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 /// <summary>
 /// Triggers an event-based snapshot with debounce protection.
 /// Returns null if the snapshot was debounced (skipped).
-/// Issue #4761: Turn Phases from TurnTemplate + Event-Triggered Snapshots.
+/// Sent only by <see cref="AdvanceLiveSessionPhaseCommandHandler"/>: the HTTP route that exposed it had no client
+/// and was retired by #4936.
 /// </summary>
 internal sealed record TriggerEventSnapshotCommand(
     Guid SessionId,

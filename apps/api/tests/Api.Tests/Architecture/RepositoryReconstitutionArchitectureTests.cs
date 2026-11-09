@@ -86,9 +86,6 @@ public sealed class RepositoryReconstitutionArchitectureTests
         ["Api.BoundedContexts.AgentMemory.Infrastructure.Persistence.GroupMemoryRepository → GroupMemory.Create"] =
             "Id, CreatedAt e LastProcessedEventId tornano via reflection, il JoinedAt dei membri subito dopo " +
             "AddMember; nessun evento.",
-        ["Api.BoundedContexts.GameManagement.Infrastructure.Persistence.RuleDisputeRepository → RuleDispute.Open"] =
-            "Id, CreatedAt e FinalOutcome tornano via reflection; Open non solleva eventi, e l'unico evento " +
-            "(RaiseResolvedEvent) il mapper non lo chiama.",
         ["Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.AgentTestResultRepository → AgentTestResult.Create"] =
             "Id ed ExecutedAt tornano via reflection; nessun evento; UpdateAsync non ha chiamanti in produzione.",
         ["Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.ArbitroValidationFeedbackRepository → ArbitroValidationFeedback.Create"] =

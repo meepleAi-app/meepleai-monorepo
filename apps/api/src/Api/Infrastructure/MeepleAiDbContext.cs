@@ -301,7 +301,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameNightPhotoEntity> GameNightPhotos => Set<GameNightPhotoEntity>(); // ISSUE-2724: Recap photo gallery
     public DbSet<GameNightInvitationEntity> GameNightInvitations => Set<GameNightInvitationEntity>(); // ISSUE-607: Token-based public RSVP invitations
     public DbSet<GameNightGuestEmailOptOutEntity> GameNightGuestEmailOptOuts => Set<GameNightGuestEmailOptOutEntity>(); // #4846: guest addresses that asked to stop game night emails
-    public DbSet<RuleDisputeEntity> RuleDisputes => Set<RuleDisputeEntity>(); // Structured rule dispute persistence
+    public DbSet<RuleDisputeEntity> RuleDisputes => Set<RuleDisputeEntity>(); // Retired dispute v2 (#4936): kept mapped until DROP TABLE (#4960)
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity> GameMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity>(); // AgentMemory: per-game memory
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity> GroupMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity>(); // AgentMemory: play group memory
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity> PlayerMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity>(); // AgentMemory: player statistics
@@ -469,7 +469,6 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment>(); // ISSUE-5360
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionPlayer>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionTeam>(); // ISSUE-4747
-        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RuleDispute>(); // Structured rule dispute aggregate
         modelBuilder.Ignore<BoundedContexts.AgentMemory.Domain.Entities.GameMemory>(); // AgentMemory: domain aggregate
         modelBuilder.Ignore<BoundedContexts.AgentMemory.Domain.Entities.GroupMemory>(); // AgentMemory: domain aggregate
         modelBuilder.Ignore<BoundedContexts.AgentMemory.Domain.Entities.PlayerMemory>(); // AgentMemory: domain aggregate

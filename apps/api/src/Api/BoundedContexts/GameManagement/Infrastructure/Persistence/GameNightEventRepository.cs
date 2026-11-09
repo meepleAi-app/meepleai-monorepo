@@ -59,23 +59,11 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
     /// invitation the user accepted while logged in (no RSVP row is written on that path). Mirrors
     /// <c>GameNightParticipation</c> on the loaded aggregate: change one, change the other.
     /// </summary>
-    private async Task<Expression<Func<GameNightEventEntity, bool>>> ParticipatedByAsync(
-        Guid userId, CancellationToken cancellationToken)
-    {
-        // The invitation rule is GameNightInvitationQueries.AcceptedBy, composed here as a correlated
-        // subquery: the same expression HasAcceptedEmailInvitationAsync applies, so the lists and
-        // the detail gate cannot drift apart. It needs the account's address (one read), and an
-        // account without one is admitted by the organizer/RSVP part only.
-        var email = await GameNightInvitationQueries.NormalizedEmailOfAsync(DbContext, userId, cancellationToken)
-            .ConfigureAwait(false);
-        if (email is null)
-            return e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId);
-
-        var acceptedByUser = DbContext.GameNightInvitations.Where(GameNightInvitationQueries.AcceptedBy(userId, email));
-        return e => e.OrganizerId == userId
-            || e.Rsvps.Any(r => r.UserId == userId)
-            || acceptedByUser.Any(i => i.GameNightId == e.Id);
-    }
+    private Task<Expression<Func<GameNightEventEntity, bool>>> ParticipatedByAsync(
+        Guid userId, CancellationToken cancellationToken) =>
+        // #4943: the expression moved next to the invitation rule it composes, so that the statistics that
+        // start from «the nights I was at» use the same one as the lists and the detail gate.
+        GameNightInvitationQueries.ParticipatedByAsync(DbContext, userId, cancellationToken);
 
     public async Task<bool> HasAcceptedEmailInvitationAsync(
         Guid gameNightId, Guid userId, CancellationToken cancellationToken = default)

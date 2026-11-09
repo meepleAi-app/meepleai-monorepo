@@ -22,16 +22,15 @@ public sealed class GameNightParticipationArchitectureTests
         "apps/api/src/Api/BoundedContexts/GameManagement/Application/Services/GameNightParticipation.cs";
 
     /// <summary>
-    /// Files allowed to test an RSVP row by user id, relative to <c>apps/api/src/Api/</c>. The first
-    /// two ARE the rule. The third uses the RSVP rows for a purpose that is not access to one night —
-    /// who counts as a friend — and whether email guests belong there is a separate decision, taken
-    /// in neither direction here.
+    /// Files allowed to test an RSVP row by user id, relative to <c>apps/api/src/Api/</c>: the two that
+    /// ARE the rule, on the loaded aggregate and in EF (<c>GameNightInvitationQueries.ParticipatedByAsync</c>,
+    /// which the repository and the statistics compose). The friends feed used to be a third entry, kept
+    /// open until #4943 decided that email guests count there too; it now composes the EF rule.
     /// </summary>
     private static readonly string[] AllowedFiles =
     [
+        "BoundedContexts/GameManagement/Application/Services/GameNightInvitationQueries.cs",
         "BoundedContexts/GameManagement/Application/Services/GameNightParticipation.cs",
-        "BoundedContexts/GameManagement/Infrastructure/Persistence/GameNightEventRepository.cs",
-        "BoundedContexts/GameManagement/Application/Queries/Dashboard/GetFriendsActivityQueryHandler.cs",
     ];
 
     [Fact]

@@ -68,4 +68,69 @@ internal static class GameNightInvitationQueries
             && i.Email == normalizedEmail
             && (i.Status == accepted || i.Status == declined);
     }
+
+    /// <summary>
+    /// #4759: the one EF form of «this user sits at this table». Organizer, an RSVP row, or an email
+    /// invitation the user accepted while logged in (no RSVP row is written on that path). Mirrors
+    /// <c>GameNightParticipation</c> on the loaded aggregate: change one, change the other. The lists and
+    /// the detail gate of <c>GameNightEventRepository</c> compose it; since #4943 so do the statistics
+    /// that start from «the nights I was at» (friends, regulars).
+    /// </summary>
+    public static async Task<Expression<Func<GameNightEventEntity, bool>>> ParticipatedByAsync(
+        MeepleAiDbContext db, Guid userId, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+
+        // The invitation rule is AcceptedBy, composed as a correlated subquery: the same expression
+        // HasAcceptedEmailInvitationAsync applies, so the lists and the detail gate cannot drift apart. It
+        // needs the account's address (one read), and an account without one is admitted by the
+        // organizer/RSVP part only.
+        var email = await NormalizedEmailOfAsync(db, userId, cancellationToken).ConfigureAwait(false);
+        if (email is null)
+            return e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId);
+
+        var acceptedByUser = db.GameNightInvitations.Where(AcceptedBy(userId, email));
+        return e => e.OrganizerId == userId
+            || e.Rsvps.Any(r => r.UserId == userId)
+            || acceptedByUser.Any(i => i.GameNightId == e.Id);
+    }
+
+    /// <summary>A seat taken through an email invitation by a registered account (#4943).</summary>
+    public sealed record AcceptedGuestSeat(Guid GameNightId, Guid UserId, DateTimeOffset? RespondedAt);
+
+    /// <summary>
+    /// #4943: the registered accounts that sit at some nights through an email invitation — the
+    /// <see cref="AcceptedBy"/> rule read from the other side, for many users at once: invitation
+    /// <c>Accepted</c>, answered by an account, <em>and addressed to that account's email</em>. The address
+    /// binding is checked here, in memory, after one join with the users: the users' addresses are stored as
+    /// typed, the invitations' normalized, and the normalization is C#. A forwarded link does not seat the
+    /// account that answered it. <paramref name="scope"/> narrows the invitations (by night, by account).
+    /// </summary>
+    public static async Task<IReadOnlyList<AcceptedGuestSeat>> AcceptedGuestSeatsAsync(
+        MeepleAiDbContext db,
+        Expression<Func<GameNightInvitationEntity, bool>> scope,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+        ArgumentNullException.ThrowIfNull(scope);
+
+        var accepted = nameof(GameNightInvitationStatus.Accepted);
+        var rows = await db.GameNightInvitations
+            .AsNoTracking()
+            .Where(i => i.Status == accepted && i.RespondedByUserId != null)
+            .Where(scope)
+            .Join(
+                db.Users.AsNoTracking(),
+                i => i.RespondedByUserId,
+                u => (Guid?)u.Id,
+                (i, u) => new { i.GameNightId, UserId = u.Id, UserEmail = u.Email, InvitationEmail = i.Email, i.RespondedAt })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows
+            .Where(r => !string.IsNullOrWhiteSpace(r.UserEmail)
+                && string.Equals(GameNightGuestEmailOptOut.Normalize(r.UserEmail), r.InvitationEmail, StringComparison.Ordinal))
+            .Select(r => new AcceptedGuestSeat(r.GameNightId, r.UserId, r.RespondedAt))
+            .ToList();
+    }
 }

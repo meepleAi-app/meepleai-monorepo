@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "_comment": "Golden baseline for the RAG smoke harness (#2480). Captured once against a fresh, verified snapshot by running `bash infra/scripts/rag-smoke-assert.sh --update-baseline` after `make dev-from-snapshot`. Each entry pins the top-3 retrieved chunks (source + page) for a canonical query; the harness then fails if retrieval drifts. relevanceScore is advisory (compared with tolerance, not exact). Regenerate after an intentional re-index (embedding model change, chunker change, seed-table schema-version bump). See docs/for-developers/operations/rag-smoke-runbook.md.",
-  "capturedAt": "2026-11-08T16:56:36Z",
+  "capturedAt": "2026-11-09T12:54:04Z",
   "snapshot": "meepleai_seed_20261108T111745Z_intfloat_multilingual-e5-base_2a4eda00c",
   "embeddingModel": "intfloat/multilingual-e5-base",
   "baseline": {
@@ -11,12 +11,12 @@
         "page": 12
       },
       {
-        "document": "twilight-imperium-4e_rulebook.pdf",
-        "page": 1
+        "document": "catan_en_rulebook.pdf",
+        "page": 8
       },
       {
-        "document": "revive_rulebook.pdf",
-        "page": 1
+        "document": "fields-of-arle_rulebook.pdf",
+        "page": 3
       }
     ],
     "wingspan-round-goals": [
@@ -25,8 +25,8 @@
         "page": 15
       },
       {
-        "document": "wingspan-asia_rulebook.pdf",
-        "page": 1
+        "document": "wingspan_en_rulebook.pdf",
+        "page": 11
       },
       {
         "document": "wingspan_en_rulebook.pdf",
@@ -35,23 +35,19 @@
     ],
     "dominion-buy-phase": [
       {
-        "document": "dominion-prosperity_rulebook.pdf",
-        "page": 1
-      },
-      {
-        "document": "dominion_rulebook.pdf",
-        "page": 1
-      },
-      {
         "document": "dominion_rulebook.pdf",
         "page": 4
+      },
+      {
+        "document": "dominion_rulebook.pdf",
+        "page": 8
+      },
+      {
+        "document": "dominion_rulebook.pdf",
+        "page": 7
       }
     ],
     "ark-nova-conservation": [
-      {
-        "document": "ark-nova_rulebook.pdf",
-        "page": 1
-      },
       {
         "document": "ark-nova_rulebook.pdf",
         "page": 7
@@ -59,44 +55,48 @@
       {
         "document": "ark-nova_rulebook.pdf",
         "page": 18
+      },
+      {
+        "document": "ark-nova_rulebook.pdf",
+        "page": 3
       }
     ],
     "seven-wonders-military": [
       {
-        "document": "through-the-ages_rulebook.pdf",
-        "page": 1
-      },
-      {
         "document": "7-wonders-duel_rulebook.pdf",
-        "page": 1
+        "page": 11
       },
       {
         "document": "7-wonders-duel_rulebook.pdf",
         "page": 3
+      },
+      {
+        "document": "7-wonders-duel_rulebook.pdf",
+        "page": 1
       }
     ],
     "catan-setup-it": [
-      {
-        "document": "carcassone_rulebook.pdf",
-        "page": null
-      },
       {
         "document": "catan_en_rulebook.pdf",
         "page": 12
       },
       {
-        "document": "revive_rulebook.pdf",
-        "page": 1
+        "document": "imperial-settlers_rulebook.pdf",
+        "page": 8
+      },
+      {
+        "document": "catan_en_rulebook.pdf",
+        "page": 12
       }
     ],
     "wingspan-round-goals-it": [
       {
         "document": "wingspan-asia_rulebook.pdf",
-        "page": 1
+        "page": 15
       },
       {
-        "document": "wingspan-asia_rulebook.pdf",
-        "page": 15
+        "document": "barrage_rulebook.pdf",
+        "page": 20
       },
       {
         "document": "wingspan_en_rulebook.pdf",
@@ -105,12 +105,12 @@
     ],
     "dominion-buy-phase-it": [
       {
-        "document": "root_rulebook.pdf",
-        "page": 1
-      },
-      {
         "document": "dominion_rulebook.pdf",
         "page": 4
+      },
+      {
+        "document": "root_rulebook.pdf",
+        "page": 21
       },
       {
         "document": "concordia_rulebook.pdf",
@@ -123,12 +123,12 @@
         "page": 7
       },
       {
-        "document": "maracaibo_rulebook.pdf",
-        "page": 1
+        "document": "ark-nova_rulebook.pdf",
+        "page": 18
       },
       {
         "document": "ark-nova_rulebook.pdf",
-        "page": 18
+        "page": 3
       }
     ],
     "seven-wonders-military-it": [
@@ -137,12 +137,12 @@
         "page": 1
       },
       {
-        "document": "root_rulebook.pdf",
-        "page": 1
-      },
-      {
         "document": "7-wonders-duel_rulebook.pdf",
         "page": 3
+      },
+      {
+        "document": "7-wonders_rulebook.pdf",
+        "page": 5
       }
     ],
     "tmars-setup-it": [
@@ -155,8 +155,8 @@
         "page": 7
       },
       {
-        "document": "7-wonders_rulebook.pdf",
-        "page": 1
+        "document": "terraforming-mars_rulebook.pdf",
+        "page": 7
       }
     ]
   }

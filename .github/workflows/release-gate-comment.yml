@@ -164,7 +164,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_SHA: ${{ steps.pr.outputs.head_sha }}
+          # Not GITHUB_SHA: GITHUB_* variables cannot be overwritten, so the script used to read the
+          # check-runs of the commit this workflow runs on instead of the release head (#4937).
+          RELEASE_HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
           # GITHUB_STEP_SUMMARY is set by GH Actions automatically.
         run: node comment.mjs

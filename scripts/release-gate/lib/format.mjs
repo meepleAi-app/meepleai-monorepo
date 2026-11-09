@@ -39,7 +39,12 @@ function countBy(failures) {
   return counts;
 }
 
-export function formatComment({ failures, meta, gates, error = null }) {
+function pendingLine(pending, suffix) {
+  const n = pending.length;
+  return `⏳ ${n} check${n === 1 ? "" : "s"} still running — ${suffix}`;
+}
+
+export function formatComment({ failures, pending = [], meta, gates, error = null }) {
   const lines = [];
   lines.push(SIGNATURE_HEADER);
   lines.push("");
@@ -59,7 +64,10 @@ export function formatComment({ failures, meta, gates, error = null }) {
   }
 
   if (failures.length === 0) {
-    lines.push("✅ No failed checks classified.");
+    // #4937: "✅" only once every check on the head has an outcome.
+    lines.push(pending.length > 0
+      ? pendingLine(pending, "no verdict until they complete.")
+      : "✅ No failed checks classified.");
     return lines.join("\n");
   }
 
@@ -70,6 +78,10 @@ export function formatComment({ failures, meta, gates, error = null }) {
   lines.push("");
   lines.push(`${counts.blocker} blocker · ${counts.warning} warning · ${counts.informational} informational`);
   lines.push("");
+  if (pending.length > 0) {
+    lines.push(pendingLine(pending, "this classification is partial."));
+    lines.push("");
+  }
 
   lines.push("| Check | Severity | Owner | Override path | Notes |");
   lines.push("|---|---|---|---|---|");

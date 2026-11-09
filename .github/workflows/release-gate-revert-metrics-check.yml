@@ -40,8 +40,27 @@ jobs:
         working-directory: scripts/release-gate
         run: pnpm install --frozen-lockfile
 
+      # #4937: with Phase 2b kill-switched off there are no revert events and no state branch, so the
+      # check failed on every weekly run since the first one (2026-06-22) — a red nobody read. While
+      # bot.phase2b.enabled is false there is nothing to measure: say so and stop green.
+      - name: Phase 2b kill-switch
+        id: gate
+        working-directory: scripts/release-gate
+        run: |
+          ENABLED=$(node --input-type=module -e "
+            import { readFileSync } from 'node:fs';
+            import yaml from 'js-yaml';
+            const gates = yaml.load(readFileSync('../../.github/release-gates.yml', 'utf8'));
+            console.log(gates?.bot?.phase2b?.enabled === true ? 'true' : 'false');
+          ")
+          echo "enabled=$ENABLED" >> "$GITHUB_OUTPUT"
+          if [ "$ENABLED" != "true" ]; then
+            echo "::notice::bot.phase2b.enabled is false in .github/release-gates.yml — no revert events to measure, check skipped."
+          fi
+
       - name: Run --metrics-only
         id: metrics
+        if: steps.gate.outputs.enabled == 'true'
         working-directory: scripts/release-gate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -51,7 +70,7 @@ jobs:
           echo "$OUTPUT" | jq .
 
       - name: Open issue on breach
-        if: fromJSON(steps.metrics.outputs.metrics).breach == true
+        if: steps.gate.outputs.enabled == 'true' && fromJSON(steps.metrics.outputs.metrics).breach == true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           METRICS_JSON: ${{ steps.metrics.outputs.metrics }}

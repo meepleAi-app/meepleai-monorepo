@@ -41,6 +41,21 @@ function parseRepo() {
   return { owner, repo };
 }
 
+// Check-runs the bot itself creates: the job of release-gate-comment.yml and the Phase 2a verdict.
+export const BOT_OWN_CHECK_NAMES = new Set(["Classify release-PR failures", VERDICT_CHECK_NAME]);
+
+// listForRef returns at most 100 check-runs per page; total_count says how many there are.
+async function listAllCheckRuns({ octokit, owner, repo, ref }) {
+  const all = [];
+  for (let page = 1; ; page++) {
+    const res = await octokit.checks.listForRef({ owner, repo, ref, per_page: 100, page });
+    const batch = res.data?.check_runs ?? [];
+    all.push(...batch);
+    const total = res.data?.total_count;
+    if (batch.length === 0 || typeof total !== "number" || all.length >= total) return all;
+  }
+}
+
 // Exported for tests; the bot logic with an injected octokit + appendSummary.
 export async function runBot({
   octokit,
@@ -56,29 +71,16 @@ export async function runBot({
   const generatedAt = now().toISOString();
   const shortSha = commitSha ? commitSha.slice(0, 7) : "unknown";
 
-  // 1. Fetch check_runs for the PR's head SHA
+  // 1. Fetch check_runs for the PR's head SHA (every page: a release head carries close to 100)
   let checkRuns = [];
   try {
-    if (commitSha) {
-      const res = await octokit.checks.listForRef({
-        owner,
-        repo,
-        ref: commitSha,
-        per_page: 100,
-      });
-      checkRuns = res.data?.check_runs ?? [];
-    } else {
+    let ref = commitSha;
+    if (!ref) {
       // Fallback: list check-runs for PR's head ref via pulls API
       const pr = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
-      const headSha = pr.data.head.sha;
-      const res = await octokit.checks.listForRef({
-        owner,
-        repo,
-        ref: headSha,
-        per_page: 100,
-      });
-      checkRuns = res.data?.check_runs ?? [];
+      ref = pr.data.head.sha;
     }
+    checkRuns = await listAllCheckRuns({ octokit, owner, repo, ref });
   } catch (err) {
     return postFallback({
       octokit,
@@ -94,7 +96,14 @@ export async function runBot({
     });
   }
 
-  // 2. Filter failures (failure + cancelled treated as failures-of-interest)
+  // 2a. The bot's own check-runs are not CI under review (#4937): its job, cancelled by its own
+  // concurrency, used to come back as a "🆕 new check" failure.
+  checkRuns = checkRuns.filter((c) => !BOT_OWN_CHECK_NAMES.has(c.name));
+
+  // A check still running has no outcome yet: report it instead of declaring the head clean (#4937).
+  const pending = checkRuns.filter((c) => c.status && c.status !== "completed").map((c) => c.name);
+
+  // 2b. Filter failures (failure + cancelled treated as failures-of-interest)
   const FAILURE_CONCLUSIONS = new Set(["failure", "cancelled", "timed_out", "action_required"]);
   const failures = checkRuns
     .filter((c) => FAILURE_CONCLUSIONS.has(c.conclusion))
@@ -112,7 +121,7 @@ export async function runBot({
     generated_at: generatedAt,
     duration_ms: Date.now() - started,
   };
-  const body = formatComment({ failures, meta, gates });
+  const body = formatComment({ failures, pending, meta, gates });
 
   // 4. Idempotency: find existing bot comment by signature header.
   // NOTE: per_page=100 only reads the first page. Past 100 comments, the
@@ -162,16 +171,19 @@ export async function runBot({
   // 6. Phase 2a (#1444) — synthesize the verdict check-run on the head SHA.
   // Soft-fail per AC-8: any error here logs and continues — the Phase 1
   // comment posted above is the canonical durable signal.
-  const verdictResult = await publishVerdict({
-    octokit,
-    owner,
-    repo,
-    sha: commitSha,
-    failures,
-    gates,
-    commentUrl,
-    startedAt: started,
-  });
+  // No verdict check-run while CI is still running: a "success" then would claim what nobody checked.
+  const verdictResult = pending.length > 0
+    ? { published: false, reason: "checks-pending" }
+    : await publishVerdict({
+        octokit,
+        owner,
+        repo,
+        sha: commitSha,
+        failures,
+        gates,
+        commentUrl,
+        startedAt: started,
+      });
 
   // 7. Observability — GH Actions summary
   if (appendSummary) {
@@ -190,6 +202,8 @@ export async function runBot({
       );
     } else if (verdictResult.reason === "kill-switch-disabled") {
       appendSummary(`\n## Release-Gate Verdict (Phase 2a)\n\nbot.phase2a.enabled=false → verdict skipped.\n`);
+    } else if (verdictResult.reason === "checks-pending") {
+      appendSummary(`\n## Release-Gate Verdict (Phase 2a)\n\n${pending.length} checks still running → verdict skipped.\n`);
     } else if (verdictResult.reason === "no-sha") {
       appendSummary(`\n## Release-Gate Verdict (Phase 2a)\n\nNo head SHA available — verdict skipped.\n`);
     } else {
@@ -205,6 +219,7 @@ export async function runBot({
   return {
     ok: true,
     failures,
+    pending,
     total_checks: checkRuns.length,
     existing_comment_id: existingId,
     edited: existingId !== null,

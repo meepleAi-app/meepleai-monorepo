@@ -96,7 +96,10 @@ internal class ConfigureLiveSessionPhasesCommandHandler : ICommandHandler<Config
 /// <summary>
 /// Handles triggering an event-based snapshot with debounce protection.
 /// Returns null if debounced (skipped), or the snapshot DTO if created.
-/// Issue #4761: Turn Phases from TurnTemplate + Event-Triggered Snapshots.
+/// No session-status guard of its own, on purpose (#4936): its only sender goes through
+/// <c>LiveGameSession.AdvancePhase</c>, which already requires InProgress, and the snapshot family
+/// (<see cref="Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot.CreateSnapshotCommand"/>)
+/// runs on a paused session by design (pause auto-snapshot, save-with-pause, pre-restore).
 /// </summary>
 internal class TriggerEventSnapshotCommandHandler
     : ICommandHandler<TriggerEventSnapshotCommand, SessionSnapshotDto?>

@@ -9,7 +9,6 @@ import {
   getSession,
   getScores,
   cleanupSession,
-  parseUuid,
   TEST_PLAYERS,
 } from './helpers/improvvisata-helpers';
 
@@ -197,48 +196,5 @@ test.describe('Improvvisata Data Integrity — Integration', () => {
     // Fresh invite code should differ from original PIN
     expect(resumeBody.inviteCode).toBeTruthy();
     expect(resumeBody.inviteCode).not.toBe(invite.pin);
-  });
-
-  test('dispute resolution does not affect session state', async () => {
-    sessionId = await createGenericSession(api, 'Dispute Isolation Test');
-    const playerIds = await addPlayersToSession(api, sessionId, TEST_PLAYERS);
-    await startSession(api, sessionId);
-    await recordScore(api, sessionId, playerIds[0], 1, 10);
-
-    const sessionBefore = await getSession(api, sessionId);
-    const scoresBefore = await getScores(api, sessionId);
-
-    // Open dispute v2
-    const openRes = await api.post(`/api/v1/live-sessions/${sessionId}/disputes`, {
-      data: { initiatorPlayerId: playerIds[0], initiatorClaim: 'Isolation test' },
-      headers: JSON_HEADERS,
-    });
-    expect(openRes.ok()).toBe(true);
-    const disputeId = parseUuid(await openRes.text());
-
-    // Respond + vote + tally
-    await api.put(`/api/v1/live-sessions/${sessionId}/disputes/${disputeId}/respond`, {
-      data: { respondentPlayerId: playerIds[1], respondentClaim: 'Counter' },
-      headers: JSON_HEADERS,
-    });
-    for (const pid of playerIds) {
-      await api.post(`/api/v1/live-sessions/${sessionId}/disputes/${disputeId}/vote`, {
-        data: { playerId: pid, acceptsVerdict: true },
-        headers: JSON_HEADERS,
-      });
-    }
-    await api.post(`/api/v1/live-sessions/${sessionId}/disputes/${disputeId}/tally`);
-
-    // Session state unchanged
-    const sessionAfter = await getSession(api, sessionId);
-    expect(sessionAfter.status).toBe('InProgress');
-    expect(sessionAfter.status).toBe(sessionBefore.status);
-
-    const scoresAfter = await getScores(api, sessionId);
-    expect(scoresAfter.length).toBe(scoresBefore.length);
-
-    // Note: GET /api/v1/games/{gameId}/dispute-history requires a gameId linked to the session.
-    // Generic sessions created via POST /live-sessions don't expose a gameId in their response.
-    // Dispute history verification is deferred to Phase 5 (full pipeline with real game entities).
   });
 });

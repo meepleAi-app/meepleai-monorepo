@@ -60,7 +60,6 @@ Orchestrazione e casi d'uso (CQRS pattern con MediatR):
   - `PlayerMemoryDto`, `PlayerGameStatsDto`, `ClaimableGuestDto`
 - **Validators/**: FluentValidation per ogni command
 - **EventHandlers/**: Gestori di domain events cross-context
-  - `OnDisputeOverriddenAddHouseRuleHandler`: Alla risoluzione di una disputa con verdetto override, aggiunge automaticamente la regola come house rule
   - `OnSessionCompletedUpdateStatsHandler`: Alla conclusione di una sessione live, aggiorna statistiche giocatore e gruppo
 
 ### Infrastructure/
@@ -135,7 +134,7 @@ Tutti gli endpoint richiedono autenticazione (`RequireAuthenticatedUser`).
 - **MediatR**: CQRS orchestration e domain events
 - **FluentValidation**: Validazione input per tutti i commands
 - **SharedKernel**: `AggregateRoot<T>`, `IUnitOfWork`
-- **GameManagement BC**: Eventi `StructuredDisputeResolvedEvent` e `LiveSessionCompletedEvent`, `ILiveSessionRepository`
+- **GameManagement BC**: Evento `LiveSessionCompletedEvent`, `ILiveSessionRepository` (il gestore di `StructuredDisputeResolvedEvent` è stato ritirato con la disputa v2, #4936)
 - **IFeatureFlagService**: Abilitazione condizionale del contesto
 
 ## Related Documentation

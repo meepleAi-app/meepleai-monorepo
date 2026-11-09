@@ -187,17 +187,6 @@ internal static class LiveSessionEndpoints
             .WithSummary("Configure turn phases")
             .WithDescription("Sets the phase names for the session's turn structure. Issue #4761.");
 
-        group.MapPost("/live-sessions/{sessionId}/trigger-snapshot", HandleTriggerSnapshot)
-            .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
-            .Produces<SessionSnapshotDto>(201)
-            .Produces(204)
-            .Produces(400)
-            .Produces(404)
-            .WithTags("LiveSessions")
-            .WithSummary("Trigger an event-based snapshot")
-            .WithDescription("Triggers a snapshot with debounce protection. Returns 204 if debounced. Issue #4761.");
-
         group.MapPut("/live-sessions/{sessionId}/notes", HandleUpdateNotes)
             .RequireAuthenticatedUser()
             .RequireLiveSessionParticipant()
@@ -273,57 +262,9 @@ internal static class LiveSessionEndpoints
             .WithSummary("Get diary entries for a live session")
             .WithDescription("Returns all diary entries ordered by CreatedAt ascending. 403 if caller is not a session participant. 404 if session not found. Issue #2570 SP3.");
 
-        // === Dispute v2 ===
-
-        group.MapPost("/live-sessions/{sessionId}/disputes", HandleOpenDispute)
-            .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
-            .Produces<Guid>(201)
-            .Produces(400)
-            .Produces(404)
-            .WithTags("LiveSessions")
-            .WithSummary("Open a structured rule dispute")
-            .WithDescription("Opens a new structured rule dispute during a live game session. Returns the dispute ID.");
-
-        group.MapPut("/live-sessions/{sessionId}/disputes/{disputeId}/respond", HandleRespondToDispute)
-            .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
-            .Produces(204)
-            .Produces(400)
-            .Produces(404)
-            .WithTags("LiveSessions")
-            .WithSummary("Respond to a dispute")
-            .WithDescription("Adds a respondent's counter-claim to an existing dispute.");
-
-        group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/timeout", HandleRespondentTimeout)
-            .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
-            .Produces(204)
-            .Produces(400)
-            .Produces(404)
-            .WithTags("LiveSessions")
-            .WithSummary("Trigger respondent timeout")
-            .WithDescription("Handles the timeout scenario when a respondent does not reply to a dispute.");
-
-        group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/vote", HandleCastVote)
-            .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
-            .Produces(204)
-            .Produces(400)
-            .Produces(404)
-            .WithTags("LiveSessions")
-            .WithSummary("Cast a vote on a dispute verdict")
-            .WithDescription("Records a player's vote on an active dispute verdict.");
-
-        group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/tally", HandleTallyVotes)
-            .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
-            .Produces(204)
-            .Produces(400)
-            .Produces(404)
-            .WithTags("LiveSessions")
-            .WithSummary("Tally dispute votes")
-            .WithDescription("Tallies all cast votes on a dispute and determines the final outcome.");
+        // The structured dispute v2 (open / respond / timeout / vote / tally) was retired by #4936: no client
+        // since #1423, no path ever set its verdict, and it trusted player ids written in the request body.
+        // The Arbitro tab uses SubmitRuleDispute and reads DisputesJson through the two GETs below.
 
         group.MapGet("/live-sessions/{sessionId}/disputes", HandleGetSessionDisputes)
             .RequireAuthenticatedUser()
@@ -684,21 +625,6 @@ internal static class LiveSessionEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> HandleTriggerSnapshot(
-        Guid sessionId,
-        [FromBody] TriggerSnapshotRequest request,
-        [FromServices] IMediator mediator,
-        CancellationToken cancellationToken)
-    {
-        var result = await mediator.Send(new TriggerEventSnapshotCommand(
-            sessionId, request.TriggerType, request.Description, request.CreatedByPlayerId),
-            cancellationToken).ConfigureAwait(false);
-
-        return result != null
-            ? Results.Created($"/api/v1/live-sessions/{sessionId}/snapshots/{result.Id}", result)
-            : Results.NoContent();
-    }
-
     private static async Task<IResult> HandleUpdateNotes(
         Guid sessionId,
         [FromBody] UpdateNotesRequest request,
@@ -813,70 +739,6 @@ internal static class LiveSessionEndpoints
             cancellationToken).ConfigureAwait(false);
 
         return Results.Ok(entries);
-    }
-
-    private static async Task<IResult> HandleOpenDispute(
-        Guid sessionId,
-        [FromBody] OpenDisputeRequest request,
-        [FromServices] IMediator mediator,
-        CancellationToken cancellationToken)
-    {
-        var command = new OpenStructuredDisputeCommand(
-            sessionId,
-            request.InitiatorPlayerId,
-            request.InitiatorClaim);
-
-        var disputeId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
-        return Results.Created($"/api/v1/live-sessions/{sessionId}/disputes/{disputeId}", disputeId);
-    }
-
-    private static async Task<IResult> HandleRespondToDispute(
-        Guid sessionId,
-        Guid disputeId,
-        [FromBody] RespondToDisputeRequest request,
-        [FromServices] IMediator mediator,
-        CancellationToken cancellationToken)
-    {
-        await mediator.Send(
-            new RespondToDisputeCommand(sessionId, disputeId, request.RespondentPlayerId, request.RespondentClaim),
-            cancellationToken).ConfigureAwait(false);
-        return Results.NoContent();
-    }
-
-    private static async Task<IResult> HandleRespondentTimeout(
-        Guid sessionId,
-        Guid disputeId,
-        [FromServices] IMediator mediator,
-        CancellationToken cancellationToken)
-    {
-        await mediator.Send(new RespondentTimeoutCommand(sessionId, disputeId), cancellationToken).ConfigureAwait(false);
-        return Results.NoContent();
-    }
-
-    private static async Task<IResult> HandleCastVote(
-        Guid sessionId,
-        Guid disputeId,
-        [FromBody] CastVoteRequest request,
-        [FromServices] IMediator mediator,
-        CancellationToken cancellationToken)
-    {
-        await mediator.Send(
-            new CastVoteOnDisputeCommand(sessionId, disputeId, request.PlayerId, request.AcceptsVerdict),
-            cancellationToken).ConfigureAwait(false);
-        return Results.NoContent();
-    }
-
-    private static async Task<IResult> HandleTallyVotes(
-        Guid sessionId,
-        Guid disputeId,
-        [FromBody] TallyVotesRequest request,
-        [FromServices] IMediator mediator,
-        CancellationToken cancellationToken)
-    {
-        await mediator.Send(
-            new TallyDisputeVotesCommand(sessionId, disputeId, request.OverrideRule),
-            cancellationToken).ConfigureAwait(false);
-        return Results.NoContent();
     }
 
     private static async Task<IResult> HandleGetDisputeHistory(
@@ -1210,11 +1072,6 @@ internal static class LiveSessionEndpoints
 
     private sealed record ConfigurePhasesRequest(string[] PhaseNames);
 
-    private sealed record TriggerSnapshotRequest(
-        SnapshotTrigger TriggerType,
-        string? Description = null,
-        Guid? CreatedByPlayerId = null);
-
     private sealed record GenerateSetupChecklistRequest(int PlayerCount);
 
     // Diary (SP3) request model
@@ -1222,22 +1079,6 @@ internal static class LiveSessionEndpoints
 
     /// <summary>Body for PUT /live-sessions/{id}/game-state. Opaque JSON (#3025 L1).</summary>
     private sealed record UpdateGameStateRequest(System.Text.Json.JsonElement State);
-
-    // Dispute v2 request models
-    internal sealed record OpenDisputeRequest(
-        Guid InitiatorPlayerId,
-        string InitiatorClaim);
-
-    internal sealed record RespondToDisputeRequest(
-        Guid RespondentPlayerId,
-        string RespondentClaim);
-
-    internal sealed record CastVoteRequest(
-        Guid PlayerId,
-        bool AcceptsVerdict);
-
-    internal sealed record TallyVotesRequest(
-        string? OverrideRule = null);
 
     #endregion
 }

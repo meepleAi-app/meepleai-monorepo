@@ -428,15 +428,18 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     /// <para>
     /// Tolto il genitore, il lessicale dei figli torna a pesare per intero, e a 0,3 una domanda in
     /// italiano su un manuale inglese perde il manuale giusto: i chunk italiani di ALTRI giochi
-    /// corrispondono alle parole della domanda, quello giusto no. Misurato con
-    /// <c>infra/scripts/rag-fusion-bench.py</c> sui dump del gate (snapshot del 2026-10-14 e del
-    /// 2026-11-08): senza genitori il gate semantico vale 8/11 a 0,3 e 10/11 per ogni peso fra 0,05
-    /// e 0,20 (9/11 a 0); 0,15 sta a metà di quell'intervallo. Le posizioni dei top-3 che vanno al
-    /// gioco giusto passano da 15-16 a 22 su 33, e nessun documento intero resta nei top-3 (oggi 15-16).
+    /// corrispondono alle parole della domanda, quello giusto no. La misura che ha deciso il valore,
+    /// fatta il 2026-11-09 con <c>infra/scripts/rag-fusion-bench.py --without-chunk0
+    /// --keyword-weight W</c> sui dump del gate degli snapshot del 2026-10-14 e del 2026-11-08: senza
+    /// genitori il gate semantico valeva 8/11 a 0,3, 10/11 per ogni peso fra 0,05 e 0,20 e 9/11 a 0;
+    /// 0,15 sta a metà di quell'intervallo. Sono numeri di quel corpus e di quella data: un peso che
+    /// si sposta va rimisurato sul dump del momento, non dedotto da qui.
     /// </para>
     /// <para>
-    /// Il percorso per-gioco (<c>GenerateToolkitFromKbHandler</c>, 0,7/0,3) non cambia: là il
-    /// lessicale confronta chunk dello stesso manuale, nella stessa lingua.
+    /// I pesi dell'RRF per gioco (<c>HybridFusionCore</c>, profilo di default 0,7/0,3) non cambiano:
+    /// là il lessicale confronta chunk dello stesso manuale. Il braccio lessicale per gioco invece
+    /// cambia, perché il filtro sui genitori sta in <c>KeywordSearchService</c> e vale per ogni
+    /// chiamante, compresa la ricerca di un solo gioco, che il gate RAG non misura.
     /// </para>
     /// </remarks>
     private const float GlobalVectorWeight = 0.85f;

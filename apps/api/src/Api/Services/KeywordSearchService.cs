@@ -123,7 +123,9 @@ internal class KeywordSearchService : IKeywordSearchService
             // (97 + 14 + 2 occorrenze, nessuna parola di contenuto), il suo miglior figlio 0,16.
             // Il testo del genitore è già tutto nei figli, quindi non si perde nulla; un chunk
             // radice SENZA figli (paragrafo corto di ProcessPlainText, o indicizzazione piatta)
-            // resta, perché è l'unico che porta quel testo.
+            // resta, perché è l'unico che porta quel testo. Vale per ogni chiamante, quindi anche
+            // per la ricerca di un solo gioco. Stesso filtro in TextChunkSearchService e in
+            // PgVectorStoreAdapter: un chunk che ha figli non è un candidato in nessun percorso.
             var sql = $@"
                 SELECT * FROM (
                     SELECT

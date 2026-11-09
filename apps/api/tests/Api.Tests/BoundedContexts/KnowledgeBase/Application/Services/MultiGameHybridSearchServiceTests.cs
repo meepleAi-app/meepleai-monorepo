@@ -492,16 +492,20 @@ public class MultiGameHybridSearchServiceTests
     /// <remarks>
     /// <para>
     /// È <c>dominion-buy-phase-it</c> del gate ridotto a quattro candidati: una domanda italiana su
-    /// un manuale inglese. Il chunk giusto (Dominion, cosine 0,848) non ha alcun match lessicale,
-    /// perché le parole della domanda sono italiane; i chunk italiani di altri giochi hanno una cosine
-    /// poco più bassa e corrispondono alla domanda (7 Wonders a 0,50, Root a 0,35).
+    /// un manuale inglese. Il chunk giusto (Dominion#16) non ha alcun match lessicale, perché le
+    /// parole della domanda sono italiane; i chunk italiani di altri giochi hanno una cosine poco più
+    /// bassa e corrispondono alla domanda (7 Wonders#62 a 0,50, Root#115 a 0,35).
+    /// </para>
+    /// <para>
+    /// Le cosine sono quelle del dump DOPO la correzione per lingua (Dominion 0,848 grezza → 0,851,
+    /// 7 Wonders 0,838 → 0,809, Root 0,856 → 0,828): qui ogni lingua ha meno di cinque candidati, la
+    /// correzione non interviene, e i valori seminati sono già quelli che la fusione confrontava.
     /// </para>
     /// <para>
     /// Con il peso lessicale a 0,3 il chunk giusto finisce terzo. Fino a #4955 non succedeva solo
     /// perché il genitore a documento intero, con un ts_rank_cd fra 1 e 3,4, era il massimo della
     /// normalizzazione e schiacciava il lessicale di tutti gli altri; tolto il genitore dal braccio
-    /// lessicale, è il peso a doverlo tenere al suo posto. Le lingue sono meno di cinque candidati per
-    /// gruppo, quindi la correzione per lingua non interviene e il test guarda i soli pesi.
+    /// lessicale, è il peso a doverlo tenere al suo posto.
     /// </para>
     /// </remarks>
     [Fact]

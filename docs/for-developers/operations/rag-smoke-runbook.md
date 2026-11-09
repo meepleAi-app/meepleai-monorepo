@@ -134,6 +134,16 @@ python infra/scripts/rag-fusion-bench.py --reference /tmp/tuning-off --compare /
 
 Storia: quattro configurazioni provate contro il gate fra il 17 e il 22 agosto (10/11 → 8/11 → 5/11 → 7/11), tutte a scommessa. Lo script ha ripagato il costo di scriverlo alla prima domanda a cui ha risposto — se la correzione per lingua funzionasse ora che `lang` arriva davvero alla fusione.
 
+**Valutare un altro peso.** `--keyword-weight W` (ripetibile) valuta la fusione globale con peso lessicale `W` e vettoriale `1 - W`. La validazione resta fatta con il peso con cui la run di riferimento **ha girato**: `--as-run-keyword-weight`, di default quello di oggi. Per un dump di prima del #4955, che aveva i pesi `0.7/0.3` e i genitori a documento intero fra i candidati, si aggiunge `--without-chunk0`, che toglie i chunk 0 come fa oggi la ricerca. Vale per il corpus del gate (Docnet), dove il chunk 0 è proprio quel genitore. È così che è stato scelto `0.15`:
+
+```bash
+git show dbf6431ebb:infra/fixtures/rag-golden-baseline.json > /tmp/fx/rag-golden-baseline.json
+git show dbf6431ebb:infra/fixtures/rag-canonical-queries.json > /tmp/fx/rag-canonical-queries.json
+python infra/scripts/rag-fusion-bench.py --reference /tmp/tuning-42499639933 --fixtures /tmp/fx \
+  --as-run-keyword-weight 0.3 --without-chunk0 \
+  --keyword-weight 0.3 --keyword-weight 0.2 --keyword-weight 0.15 --keyword-weight 0.1 --keyword-weight 0.05 --keyword-weight 0
+```
+
 **Dare un nome ai candidati.** `aggregate.log` identifica il documento con il suo id, che cambia a ogni bake, e il gioco con il suo id. Dal 2026-11 l'artifact porta anche `doc-names.json` (`pdf_documents.Id → FileName`) e `game-titles.json` (`shared_games.id → title`), nel formato di `--doc-names` e `--game-titles`. Senza, il candidato che in #4955 portava Maracaibo al secondo posto di una domanda su Ark Nova si nominava solo per inferenza: l'id del gioco (`g`) è stabile fra un bake e l'altro, quello del documento (`d`) no.
 
 ⚠️ **Se `FuseGlobally` cambia, questo script va cambiato con essa.** La validazione lo scopre, ma solo quando qualcuno lo esegue — ed è già successo: dopo il merge della correzione per lingua (#3740) la replica ha riportato **8 conflitti**, perché validava ancora col comportamento precedente. Il segnale è arrivato al primo utilizzo utile e il fix è stato una riga (il default di `language_correction`). Un banco senza quella validazione avrebbe continuato a stampare numeri, semplicemente sbagliati.

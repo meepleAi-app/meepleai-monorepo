@@ -361,8 +361,18 @@ jobs:
           #    cambia a ogni bake, e il gioco con il suo id: senza queste due mappe un candidato si
           #    nomina solo per inferenza, ed è così che il chunk 0 di Maracaibo è rimasto un GUID.
           #    Stesso formato di --doc-names e --game-titles di infra/scripts/rag-fusion-bench.py.
-          q "SELECT json_object_agg(\"Id\", \"FileName\") FROM pdf_documents;" > tuning-dump/doc-names.json
-          q "SELECT json_object_agg(id, title) FROM shared_games;"           > tuning-dump/game-titles.json
+          #    Il gioco del dump è COALESCE(GameId, PrivateGameId): i titoli vengono da entrambe le
+          #    tabelle. COALESCE(…, '{}') perché su una tabella vuota json_object_agg dà NULL, cioè
+          #    un file vuoto che json.load non legge.
+          q "SELECT COALESCE(json_object_agg(\"Id\", \"FileName\"), '{}') FROM pdf_documents;" > tuning-dump/doc-names.json
+          q "SELECT COALESCE(json_object_agg(id, title), '{}')
+             FROM (SELECT id, title FROM shared_games UNION ALL SELECT id, title FROM private_games) g;" > tuning-dump/game-titles.json
+          # q() unisce stderr all'output, quindi un errore di psql finirebbe DENTRO il file: lo si
+          # dice qui invece di lasciarlo scoprire a json.load.
+          for f in tuning-dump/doc-names.json tuning-dump/game-titles.json; do
+            jq -e 'type == "object"' "$f" >/dev/null 2>&1 \
+              || echo "::warning:: $f non è un oggetto JSON: $(head -c 200 "$f")"
+          done
 
           echo "::group::distribuzione lang"; cat tuning-dump/lang-distribution.txt; echo "::endgroup::"
 

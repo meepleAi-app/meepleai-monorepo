@@ -7,7 +7,7 @@
 //   GITHUB_REPOSITORY  (e.g. "meepleAi-app/meepleai-monorepo")
 //   PR_NUMBER          (release PR number; required)
 //   RELEASE_GATES_YAML (optional, override default .github/release-gates.yml)
-//   GITHUB_SHA         (optional, commit SHA for header)
+//   RELEASE_HEAD_SHA   (optional, the PR head commit; resolved from the PR when absent)
 //   DRY_RUN            (if set, prints to stdout instead of posting/editing)
 //   GITHUB_STEP_SUMMARY (if set, append observability summary)
 
@@ -69,18 +69,18 @@ export async function runBot({
 }) {
   const started = Date.now();
   const generatedAt = now().toISOString();
-  const shortSha = commitSha ? commitSha.slice(0, 7) : "unknown";
+  let shortSha = commitSha ? commitSha.slice(0, 7) : "unknown";
 
   // 1. Fetch check_runs for the PR's head SHA (every page: a release head carries close to 100)
   let checkRuns = [];
   try {
-    let ref = commitSha;
-    if (!ref) {
-      // Fallback: list check-runs for PR's head ref via pulls API
+    if (!commitSha) {
+      // No head given: the PR's head commit is where its check-runs live (#4937).
       const pr = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
-      ref = pr.data.head.sha;
+      commitSha = pr.data.head.sha;
+      shortSha = commitSha.slice(0, 7);
     }
-    checkRuns = await listAllCheckRuns({ octokit, owner, repo, ref });
+    checkRuns = await listAllCheckRuns({ octokit, owner, repo, ref: commitSha });
   } catch (err) {
     return postFallback({
       octokit,
@@ -410,7 +410,10 @@ async function main() {
   if (!Number.isInteger(prNumber) || prNumber <= 0) {
     throw new Error(`PR_NUMBER must be a positive integer, got: ${process.env.PR_NUMBER}`);
   }
-  const commitSha = process.env.GITHUB_SHA ?? null;
+  // #4937: not GITHUB_SHA. GitHub does not let a workflow overwrite GITHUB_* variables, so that one is
+  // always the commit the workflow runs on (main-dev for workflow_run and dispatch, the synthetic merge
+  // commit for pull_request), never the release head whose check-runs are under review.
+  const commitSha = process.env.RELEASE_HEAD_SHA || null;
 
   const octokit = new Octokit({ auth: token });
 

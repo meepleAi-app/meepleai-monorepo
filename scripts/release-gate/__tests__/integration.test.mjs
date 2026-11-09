@@ -510,3 +510,28 @@ describe("runBot — what CI has not decided yet (#4937)", () => {
     expect(result.failures.map((f) => f.name)).toEqual(["Backend - Unit Tests"]);
   });
 });
+
+// #4937: the workflow passed the head in GITHUB_SHA, which GitHub does not let a workflow overwrite, so the bot
+// read the check-runs of the commit the workflow ran on. Without an explicit head it must ask the PR.
+describe("runBot — which commit it reads (#4937)", () => {
+  it("reads the check-runs of the PR head when no head SHA is given", async () => {
+    const octokit = makeOctokit({
+      checkRuns: [{ name: "Backend - Unit Tests", status: "completed", conclusion: "failure" }],
+    });
+
+    await runBot({ ...BASE_ARGS, commitSha: null, octokit, gates });
+
+    expect(octokit.pulls.get).toHaveBeenCalledWith(expect.objectContaining({ pull_number: 1016 }));
+    expect(octokit.checks.listForRef.mock.calls[0][0].ref).toBe("head1234");
+    expect(octokit.issues.createComment.mock.calls[0][0].body).toContain("Commit `head123`");
+  });
+
+  it("reads the given head without asking the PR", async () => {
+    const octokit = makeOctokit({ checkRuns: [] });
+
+    await runBot({ ...BASE_ARGS, octokit, gates });
+
+    expect(octokit.pulls.get).not.toHaveBeenCalled();
+    expect(octokit.checks.listForRef.mock.calls[0][0].ref).toBe("abcdef1234567890");
+  });
+});

@@ -95,10 +95,18 @@ internal static class SessionQueryEndpoints
     {
         group.MapGet("/game-sessions/code/{code}", async (
             string code,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var query = new GetSessionByCodeQuery(code);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            // #4939: the full session is for the owner or a participant; anyone else gets the 404 of an unknown code.
+            var query = new GetSessionByCodeQuery(code, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (result == null)

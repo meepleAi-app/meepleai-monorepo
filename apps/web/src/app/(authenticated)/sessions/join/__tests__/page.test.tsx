@@ -13,15 +13,17 @@ import { RateLimitError } from '@/lib/api/core/errors';
 import JoinSessionPage from '../page';
 
 const routerPush = vi.hoisted(() => vi.fn());
+// #4939: the page reads the PUBLIC lobby (id and nothing of the players' identities); the full session by
+// code is for participants only, and whoever is on this page is not one yet.
 const getLiveByCode = vi.hoisted(() => vi.fn());
+const getLiveFullByCode = vi.hoisted(() => vi.fn());
 const joinTrackingByCode = vi.hoisted(() => vi.fn());
-const getTrackingByCode = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: routerPush }) }));
 vi.mock('@/lib/api', () => ({
   api: {
-    liveSessions: { getByCode: getLiveByCode },
-    sessionTracking: { joinByCode: joinTrackingByCode, getByCode: getTrackingByCode },
+    liveSessions: { getPublicByCode: getLiveByCode, getByCode: getLiveFullByCode },
+    sessionTracking: { joinByCode: joinTrackingByCode },
   },
 }));
 
@@ -43,10 +45,16 @@ describe('JoinSessionPage — #4156', () => {
     expect(joinTrackingByCode).not.toHaveBeenCalled();
   });
 
+  it('never asks for the full session by code: that read is for participants (#4939)', async () => {
+    getLiveByCode.mockResolvedValue({ id: 'live-1' });
+    join('ABC123');
+    await waitFor(() => expect(routerPush).toHaveBeenCalled());
+    expect(getLiveFullByCode).not.toHaveBeenCalled();
+  });
+
   it('confirms the join of a game-night session instead of opening /sessions/{id}', async () => {
     getLiveByCode.mockRejectedValue(new Error('not a live session'));
     joinTrackingByCode.mockResolvedValue(undefined);
-    getTrackingByCode.mockResolvedValue({ id: 'tracking-1' });
     join('XYZ789');
     expect(await screen.findByTestId('joined-night-session')).toBeInTheDocument();
     expect(joinTrackingByCode).toHaveBeenCalledWith('XYZ789');

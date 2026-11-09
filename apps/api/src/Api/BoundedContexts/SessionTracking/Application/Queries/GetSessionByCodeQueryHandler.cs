@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
 
@@ -27,6 +28,15 @@ public class GetSessionByCodeQueryHandler : IRequestHandler<GetSessionByCodeQuer
 
         if (session == null)
             return null;
+
+        // #4939: the same rule as GET /game-sessions/{id} (#4883), answered as «not found» rather than 403: a
+        // stranger holding a guessed code must not learn from this route that the code is live. Fail-closed on
+        // an empty caller (SessionAccessPolicy never matches it).
+        if (!SessionAccessPolicy.IsAccessible(
+                session.UserId, session.Participants.Select(p => p.UserId), request.RequestedBy))
+        {
+            return null;
+        }
 
         // Get score entries
         var scoreEntries = await _context.SessionTrackingScoreEntries

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Api.Middleware;
 
@@ -35,7 +36,7 @@ internal sealed class HubOriginGuardMiddleware
 
     public async Task InvokeAsync(HttpContext context, ICorsPolicyProvider policies)
     {
-        if (context.Request.Path.StartsWithSegments("/hubs", StringComparison.Ordinal)
+        if (IsHubRequest(context)
             && context.Request.Headers.Origin is { Count: > 0 } origin
             && !await IsAllowedAsync(context, policies, origin.ToString()).ConfigureAwait(false))
         {
@@ -49,6 +50,16 @@ internal sealed class HubOriginGuardMiddleware
 
         await _next(context).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// The router's own answer (the endpoint it resolved carries <see cref="HubMetadata"/>, which
+    /// <c>MapHub</c> adds), so the guard and the router cannot disagree about which requests reach a hub.
+    /// The path test is a second net for requests the router has not resolved, and it ignores case like the
+    /// router does: an ordinal test would let <c>/HUBS/gamestate</c> through to the hub unguarded.
+    /// </summary>
+    internal static bool IsHubRequest(HttpContext context) =>
+        context.GetEndpoint()?.Metadata.GetMetadata<HubMetadata>() is not null
+        || context.Request.Path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase);
 
     private static async Task<bool> IsAllowedAsync(HttpContext context, ICorsPolicyProvider policies, string origin)
     {

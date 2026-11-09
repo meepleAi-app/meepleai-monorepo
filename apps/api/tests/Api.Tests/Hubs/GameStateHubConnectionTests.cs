@@ -120,6 +120,18 @@ public sealed class GameStateHubConnectionTests
     }
 
     [Fact]
+    public async Task APageOfAnotherSite_CannotSlipPastTheGuardWithADifferentCasing()
+    {
+        // The router matches /HUBS/gamestate to the hub (routes ignore case): so must the guard.
+        await using var app = await StartAppAsync(participant: true);
+
+        var connect = () => RawHubClient.ConnectAsync(
+            app.GetTestServer(), cookieToken: GoodToken, origin: "https://evil.example", path: "/HUBS/gamestate");
+
+        (await connect.Should().ThrowAsync<InvalidOperationException>()).WithMessage("*403*");
+    }
+
+    [Fact]
     public async Task ARetiredRelay_CannotBeInvoked()
     {
         await using var app = await StartAppAsync(participant: true);
@@ -222,7 +234,8 @@ public sealed class GameStateHubConnectionTests
         private RawHubClient(WebSocket socket) => _socket = socket;
 
         public static async Task<RawHubClient> ConnectAsync(
-            TestServer server, string? cookieToken, string query = "", string? origin = null)
+            TestServer server, string? cookieToken, string query = "", string? origin = null,
+            string path = "/hubs/gamestate")
         {
             var wsClient = server.CreateWebSocketClient();
             wsClient.ConfigureRequest = request =>
@@ -238,7 +251,7 @@ public sealed class GameStateHubConnectionTests
                 }
             };
 
-            var socket = await wsClient.ConnectAsync(new Uri($"ws://localhost/hubs/gamestate{query}"), CancellationToken.None);
+            var socket = await wsClient.ConnectAsync(new Uri($"ws://localhost{path}{query}"), CancellationToken.None);
             var client = new RawHubClient(socket);
 
             await client.SendAsync("{\"protocol\":\"json\",\"version\":1}");

@@ -207,6 +207,8 @@ The baseline must be captured against a **fresh, compatible snapshot** (`snapsho
    This writes `infra/fixtures/rag-golden-baseline.json` (`baseline`, `snapshot`, `embeddingModel`, `capturedAt`).
 4. Review the diff and commit it.
 
+🔴 **Anche la cattura conta il criterio semantico, e sotto il pavimento non scrive la baseline** (#4965). Fino a #4965 lo script usciva con `exit 0` subito dopo aver scritto la baseline, prima del riepilogo semantico: un dispatch con `update_baseline=true` era verde a qualunque conteggio, e i due di #4959 non avevano una riga `semantico:` nel log. Ora la riga c'è in entrambe le modalità. In cattura, sotto il pavimento, il run esce con 1 e `baseline NOT written`, come quando una query non ha citazioni. Se il calo è voluto, `semanticFloor` si abbassa nello stesso commit, con il motivo.
+
 **Con la baseline v2 un semplice re-bake NON richiede più una rigenerazione** (#3666): la chiave è il nome del documento, che il re-bake conserva. Rigenera solo quando cambia davvero ciò che il gate misura — modello di embedding, chunker, o un bump di `seed-schema.version` che sposta il retrieval — e solo dopo aver stabilito che lo scostamento è **voluto**. Un drift non intenzionale è esattamente ciò che questo gate esiste per segnalare: indagalo prima di rigenerare, altrimenti la nuova baseline lo certifica come normale.
 
 ### Capturing the EN + IT baseline via CI dispatch (preferred)

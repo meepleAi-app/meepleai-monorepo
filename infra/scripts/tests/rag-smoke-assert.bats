@@ -184,3 +184,105 @@ write_latest() {
         return 1
     }
 }
+
+# --- cattura e criterio semantico, script vero (#4965) -------------------------------------
+# Questi arrivano al ciclo delle query: una curl finta nel PATH risponde alla mappa documenti
+# (GET /admin/pdfs) e a ogni domanda con una citazione SSE del documento in FAKE_CITED. Servono
+# perché il difetto stava proprio lì: in cattura lo script usciva con `exit 0` prima del criterio
+# semantico, quindi un dispatch con update_baseline=true era verde a qualunque conteggio — i due
+# di #4959 non avevano una riga `semantico:` nel log.
+
+write_semantic_fixture() {
+    cat > "$TMP/infra/fixtures/rag-canonical-queries.json" <<'JSON'
+{
+  "endpoint": "/api/v1/knowledge-base/ask/global",
+  "topK": 3,
+  "language": "en",
+  "semanticFloor": 1,
+  "queries": [
+    { "queryId": "catan-setup", "query": "How do you set up Catan?", "expectedDocument": "catan_rulebook.pdf" }
+  ]
+}
+JSON
+}
+
+# $1 = documento che la baseline pinna per catan-setup
+write_named_baseline() {
+    cat > "$TMP/infra/fixtures/rag-golden-baseline.json" <<JSON
+{ "schemaVersion": 2, "snapshot": "",
+  "baseline": { "catan-setup": [ { "document": "$1", "page": 1 } ] } }
+JSON
+}
+
+install_fake_curl() {
+    mkdir -p "$TMP/bin"
+    cat > "$TMP/bin/curl" <<'SH'
+#!/usr/bin/env bash
+for arg in "$@"; do
+  case "$arg" in
+    *admin/pdfs*)
+      echo '{"items":[{"id":"doc-catan","fileName":"catan_rulebook.pdf"},{"id":"doc-other","fileName":"other_rulebook.pdf"}]}'
+      exit 0 ;;
+  esac
+done
+printf 'data: {"type":1,"data":{"citations":[{"source":"%s","page":1,"score":0.9}]}}\n' "$FAKE_CITED"
+SH
+    chmod +x "$TMP/bin/curl"
+    export PATH="$TMP/bin:$PATH"
+    unset SMOKE_EMAIL SMOKE_PASSWORD TEST_EMAIL TEST_PASSWORD
+}
+
+@test "cattura: il criterio semantico compare nel log e la baseline viene scritta (#4965)" {
+    write_semantic_fixture
+    write_named_baseline "previous_rulebook.pdf"
+    install_fake_curl
+    export FAKE_CITED=doc-catan
+
+    run bash "$SCRIPT" --update-baseline
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"semantico: 1/1"* ]]
+    [ "$(jq -r '.baseline["catan-setup"][0].document' "$TMP/infra/fixtures/rag-golden-baseline.json")" = "catan_rulebook.pdf" ]
+}
+
+@test "cattura sotto il pavimento: uscita 1 e la baseline resta quella di prima (#4965)" {
+    write_semantic_fixture
+    write_named_baseline "previous_rulebook.pdf"
+    cp "$TMP/infra/fixtures/rag-golden-baseline.json" "$TMP/before.json"
+    install_fake_curl
+    export FAKE_CITED=doc-other
+
+    run bash "$SCRIPT" --update-baseline
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"semantico: 0/1"* ]]
+    [[ "$output" == *"baseline NOT written"* ]]
+    cmp "$TMP/before.json" "$TMP/infra/fixtures/rag-golden-baseline.json"
+}
+
+@test "assert: stesso esito e stessa riga semantica di prima (#4965)" {
+    write_semantic_fixture
+    write_named_baseline "catan_rulebook.pdf"
+    install_fake_curl
+    export FAKE_CITED=doc-catan
+
+    run bash "$SCRIPT"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"PASS  catan-setup"* ]]
+    [[ "$output" == *"result: 1 passed, 0 failed"* ]]
+    [[ "$output" == *"semantico: 1/1"* ]]
+}
+
+@test "assert: sotto il pavimento resta rosso anche se la baseline combacia (#4965)" {
+    write_semantic_fixture
+    write_named_baseline "other_rulebook.pdf"
+    install_fake_curl
+    export FAKE_CITED=doc-other
+
+    run bash "$SCRIPT"
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"PASS  catan-setup"* ]]
+    [[ "$output" == *"Criterio semantico sceso a 0/1"* ]]
+}

@@ -72,9 +72,16 @@ jobs:
     runs-on: ubuntu-latest
     # Restrict to release PRs (main-staging / main target) + manual dispatch. workflow_run is already
     # filtered to `release/**` heads by `on.workflow_run.branches`.
+    #
+    # #4969: on workflow_run, only heads of THIS repository. The `release/**` filter matches a branch
+    # NAME, which a fork PR chooses freely, and workflow_run runs with this workflow's write token
+    # (pull-requests, issues, checks) even when the triggering run came from a fork, whose PR can
+    # also redefine the "CI" workflow and so pick the check-runs this bot reads. Real release PRs
+    # are branches of this repository. Guarded for every workflow_run trigger by
+    # infra/scripts/tests/workflow-run-trust-boundary.bats.
     if: |
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'workflow_run' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name == github.repository) ||
       (github.event_name == 'pull_request' && (github.base_ref == 'main-staging' || github.base_ref == 'main'))
     timeout-minutes: 5
 

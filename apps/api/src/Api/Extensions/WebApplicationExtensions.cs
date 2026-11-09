@@ -193,6 +193,10 @@ internal static class WebApplicationExtensions
         // This middleware reads session cookies and populates HttpContext.Items["ActiveSession"]
         app.UseSessionAuthentication();
 
+        // #4962: hubs are authenticated by the session cookie (SameSite=None in Production) and CORS does not
+        // cover a WebSocket: a browser request to /hubs from an origin outside the "web" policy stops here.
+        app.UseMiddleware<Api.Middleware.HubOriginGuardMiddleware>();
+
         // AUTH-03: Standard authentication middleware for ClaimsPrincipal
         app.UseAuthentication();
 

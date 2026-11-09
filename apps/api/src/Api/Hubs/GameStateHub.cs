@@ -67,18 +67,8 @@ public class GameStateHub : Hub
             throw new HubException(AuthenticationRequiredMessage);
         }
 
-        var access = await _sender
-            .Send(new GetLiveSessionParticipantContextQuery(liveSessionId, userId), Context.ConnectionAborted)
-            .ConfigureAwait(false);
-
-        if (!access.Found || !access.Authorized)
+        if (!await IsParticipantAsync(liveSessionId, userId).ConfigureAwait(false))
         {
-            _logger.LogWarning(
-                "JoinSession refused for user {UserId} on session {SessionId} (found: {Found}) (Connection: {ConnectionId})",
-                userId,
-                liveSessionId,
-                access.Found,
-                Context.ConnectionId);
             throw new HubException(SessionNotFoundMessage);
         }
 
@@ -116,10 +106,22 @@ public class GameStateHub : Hub
     /// Relay a game-state change to the other clients of a session the connection has joined
     /// (game-state editor, #2406). The payload is the editor's state and is relayed as is.
     /// </summary>
-    /// <exception cref="HubException">The connection has not joined that session.</exception>
+    /// <remarks>
+    /// Participation is checked again on every relay, not only at join: a player removed from the live
+    /// session is taken out of the group here and refused.
+    /// </remarks>
+    /// <exception cref="HubException">The connection has not joined that session, or no longer takes part.</exception>
     public async Task BroadcastStateChange(string sessionId, object stateChange)
     {
         var liveSessionId = RequireJoined(sessionId);
+
+        var userId = Context.User?.GetUserId() ?? Guid.Empty;
+        if (userId == Guid.Empty || !await IsParticipantAsync(liveSessionId, userId).ConfigureAwait(false))
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetSessionGroup(liveSessionId)).ConfigureAwait(false);
+            JoinedSessions().Remove(liveSessionId);
+            throw new HubException(NotJoinedMessage);
+        }
 
         var message = new
         {
@@ -164,6 +166,30 @@ public class GameStateHub : Hub
         }
 
         await base.OnDisconnectedAsync(exception).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The rule of <c>RequireLiveSessionParticipant</c> (#2573): creator or active linked player. Unknown
+    /// session and non-participant are the same answer to the caller.
+    /// </summary>
+    private async Task<bool> IsParticipantAsync(Guid liveSessionId, Guid userId)
+    {
+        var access = await _sender
+            .Send(new GetLiveSessionParticipantContextQuery(liveSessionId, userId), Context.ConnectionAborted)
+            .ConfigureAwait(false);
+
+        if (access.Found && access.Authorized)
+        {
+            return true;
+        }
+
+        _logger.LogWarning(
+            "Hub access refused for user {UserId} on session {SessionId} (found: {Found}) (Connection: {ConnectionId})",
+            userId,
+            liveSessionId,
+            access.Found,
+            Context.ConnectionId);
+        return false;
     }
 
     private Guid RequireJoined(string sessionId)

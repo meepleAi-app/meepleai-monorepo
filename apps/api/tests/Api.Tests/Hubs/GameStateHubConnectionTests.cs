@@ -6,6 +6,7 @@ using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.Hubs;
 using Api.Infrastructure.Authentication;
+using Api.Middleware;
 using SessionCookieConfiguration = Api.Models.SessionCookieConfiguration;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -44,6 +45,7 @@ namespace Api.Tests.Hubs;
 public sealed class GameStateHubConnectionTests
 {
     private const string GoodToken = "token-of-a-signed-in-user";
+    private const string WebOrigin = "http://localhost:3000";
 
     private static readonly Guid SessionId = Guid.Parse("4962cccc-0000-0000-0000-000000000003");
     private static readonly Guid UserId = Guid.Parse("4962dddd-0000-0000-0000-000000000004");
@@ -52,7 +54,8 @@ public sealed class GameStateHubConnectionTests
     public async Task AParticipantWithItsSessionCookie_Joins_AndReceivesWhatTheServerSendsToTheSession()
     {
         await using var app = await StartAppAsync(participant: true);
-        await using var client = await RawHubClient.ConnectAsync(app.GetTestServer(), cookieToken: GoodToken);
+        await using var client = await RawHubClient.ConnectAsync(
+            app.GetTestServer(), cookieToken: GoodToken, origin: WebOrigin);
 
         var completion = await client.InvokeAsync("JoinSession", SessionId.ToString());
         completion.TryGetProperty("error", out _).Should().BeFalse(completion.ToString());
@@ -104,6 +107,19 @@ public sealed class GameStateHubConnectionTests
     }
 
     [Fact]
+    public async Task APageOfAnotherSite_CannotOpenTheHub_EvenWithTheVictimsCookie()
+    {
+        // Cross-Site WebSocket Hijacking: the session cookie is SameSite=None in Production, CORS does not
+        // apply to a WebSocket, and the browser attaches the cookie. The origin is what tells the two apart.
+        await using var app = await StartAppAsync(participant: true);
+
+        var connect = () => RawHubClient.ConnectAsync(
+            app.GetTestServer(), cookieToken: GoodToken, origin: "https://evil.example");
+
+        (await connect.Should().ThrowAsync<InvalidOperationException>()).WithMessage("*403*");
+    }
+
+    [Fact]
     public async Task ARetiredRelay_CannotBeInvoked()
     {
         await using var app = await StartAppAsync(participant: true);
@@ -148,8 +164,12 @@ public sealed class GameStateHubConnectionTests
             .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>("SessionCookie", _ => { });
         builder.Services.AddSingleton<IUserIdProvider, SessionParticipantIdProvider>();
         builder.Services.AddSignalR();
+        builder.Services.AddCors(o => o.AddPolicy(
+            HubOriginGuardMiddleware.PolicyName, p => p.WithOrigins(WebOrigin).AllowCredentials()));
 
         var app = builder.Build();
+        // Same order as ConfigureAuthMiddleware: the origin guard, then authentication.
+        app.UseMiddleware<HubOriginGuardMiddleware>();
         app.UseAuthentication();
         app.MapHub<GameStateHub>("/hubs/gamestate");
         await app.StartAsync();
@@ -201,13 +221,22 @@ public sealed class GameStateHubConnectionTests
 
         private RawHubClient(WebSocket socket) => _socket = socket;
 
-        public static async Task<RawHubClient> ConnectAsync(TestServer server, string? cookieToken, string query = "")
+        public static async Task<RawHubClient> ConnectAsync(
+            TestServer server, string? cookieToken, string query = "", string? origin = null)
         {
             var wsClient = server.CreateWebSocketClient();
-            if (cookieToken is not null)
+            wsClient.ConfigureRequest = request =>
             {
-                wsClient.ConfigureRequest = request => request.Headers["Cookie"] = $"meepleai_session={cookieToken}";
-            }
+                if (cookieToken is not null)
+                {
+                    request.Headers["Cookie"] = $"meepleai_session={cookieToken}";
+                }
+
+                if (origin is not null)
+                {
+                    request.Headers["Origin"] = origin;
+                }
+            };
 
             var socket = await wsClient.ConnectAsync(new Uri($"ws://localhost/hubs/gamestate{query}"), CancellationToken.None);
             var client = new RawHubClient(socket);

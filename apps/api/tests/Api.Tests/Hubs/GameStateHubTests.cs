@@ -205,6 +205,21 @@ public sealed class GameStateHubTests
         _groups.Verify(g => g.RemoveFromGroupAsync(ConnectionId, Group, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task BroadcastStateChange_AfterBeingRemovedFromTheSession_IsRefused_AndLeavesTheGroup()
+    {
+        AccessIs(found: true, authorized: true);
+        var hub = NewHub(SignedIn(UserId));
+        await hub.JoinSession(SessionId.ToString());
+        AccessIs(found: true, authorized: false); // removed from the live session after joining
+
+        var act = () => hub.BroadcastStateChange(SessionId.ToString(), new { score = 99 });
+
+        (await act.Should().ThrowAsync<HubException>()).WithMessage(GameStateHub.NotJoinedMessage);
+        _groups.Verify(g => g.RemoveFromGroupAsync(ConnectionId, Group, It.IsAny<CancellationToken>()), Times.Once);
+        _clients.Verify(c => c.OthersInGroup(It.IsAny<string>()), Times.Never);
+    }
+
     // ── Surface ──
 
     [Fact]

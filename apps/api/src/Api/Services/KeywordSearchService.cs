@@ -113,6 +113,19 @@ internal class KeywordSearchService : IKeywordSearchService
             // #4244: a private game lives in "PrivateGameId"; "GameId" is an FK to shared_games and
             // is null for its chunks. The filter looks at both columns, and the projection
             // coalesces them, because the row type reads the game as a non-nullable Guid.
+            //
+            // #4955: un chunk che ha figli non entra nel braccio lessicale. È il genitore di
+            // AdvancedChunkingService, che concatena i suoi figli: senza titoli nell'estrazione
+            // (Docnet) la sezione è una sola e il genitore è il DOCUMENTO INTERO, fino a 270.000
+            // caratteri. ts_rank_cd normalizzato 1 divide solo per il logaritmo della lunghezza,
+            // quindi il genitore vince per numero di occorrenze: misurato sul gate, il chunk 0 di
+            // Maracaibo vale 1,24 per una domanda su Ark Nova con le sole «e», «di», «come»
+            // (97 + 14 + 2 occorrenze, nessuna parola di contenuto), il suo miglior figlio 0,16.
+            // Il testo del genitore è già tutto nei figli, quindi non si perde nulla; un chunk
+            // radice SENZA figli (paragrafo corto di ProcessPlainText, o indicizzazione piatta)
+            // resta, perché è l'unico che porta quel testo. Vale per ogni chiamante, quindi anche
+            // per la ricerca di un solo gioco. Stesso filtro in TextChunkSearchService e in
+            // PgVectorStoreAdapter: un chunk che ha figli non è un candidato in nessun percorso.
             var sql = $@"
                 SELECT * FROM (
                     SELECT
@@ -129,6 +142,9 @@ internal class KeywordSearchService : IKeywordSearchService
                     WHERE
                         (""GameId"" = @gameId::uuid OR ""PrivateGameId"" = @gameId::uuid)
                         AND {tsvectorExpr} @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
+                        AND NOT EXISTS (
+                            SELECT 1 FROM text_chunks AS child
+                            WHERE child.""ParentChunkId"" = text_chunks.""Id"")
                 ) ranked
                 WHERE ""RelevanceScore"" >= @minScore
                 ORDER BY ""RelevanceScore"" DESC

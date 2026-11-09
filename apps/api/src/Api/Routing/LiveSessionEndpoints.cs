@@ -915,9 +915,13 @@ internal static class LiveSessionEndpoints
     private static async Task<IResult> HandleGetSessionByCode(
         string code,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetLiveSessionByCodeQuery(code), cancellationToken).ConfigureAwait(false);
+        // #4939: the full session is for the creator or an active player; anyone else gets the 404 of an unknown
+        // code. The lobby preview for whoever holds the code is the /public route below (#2590).
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetLiveSessionByCodeQuery(code, userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

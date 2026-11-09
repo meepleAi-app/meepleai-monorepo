@@ -4,7 +4,11 @@
  * Issue #5041 — Sessions Redesign Phase 1
  *
  * Enter a 6-character session code to join an existing session.
- * Calls liveSessionsClient.getByCode() → redirects to /sessions/[id].
+ * Calls liveSessionsClient.getPublicByCode() → redirects to /sessions/[id].
+ *
+ * #4939: the lookup is the PUBLIC lobby projection (#2590), which carries the id and nothing of the players'
+ * identities. The full session by code is answered only to its participants now, and this page is used by
+ * people who are not yet one.
  */
 
 'use client';
@@ -50,8 +54,8 @@ export default function JoinSessionPage() {
     setError(null);
 
     try {
-      // First try LiveSession code
-      const session = await api.liveSessions.getByCode(trimmed);
+      // First try LiveSession code — the public lobby, which has the id (#4939).
+      const session = await api.liveSessions.getPublicByCode(trimmed);
       router.push(`/sessions/${session.id}`);
     } catch (lookupError) {
       // #4912: a throttled lookup is not an unknown code. Falling through would spend the join bucket

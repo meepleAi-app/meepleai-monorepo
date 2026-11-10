@@ -79,7 +79,7 @@ public sealed class RepositoryReconstitutionArchitectureTests
     private static readonly Dictionary<string, string> Exempt = new(StringComparer.Ordinal)
     {
         ["Api.BoundedContexts.AgentMemory.Infrastructure.Persistence.GameMemoryRepository → GameMemory.Create"] =
-            "Id, CreatedAt e LastProcessedEventId tornano via reflection subito dopo; la factory non solleva eventi.",
+            "Id e CreatedAt tornano via reflection subito dopo; la factory non solleva eventi.",
         ["Api.BoundedContexts.AgentMemory.Infrastructure.Persistence.GameMemoryRepository → HouseRule.Restore"] =
             "Genera un id solo se la regola salvata nel JSON non ne ha uno (righe precedenti a #1464, migrazione " +
             "pigra voluta); un id salvato lo conserva.",

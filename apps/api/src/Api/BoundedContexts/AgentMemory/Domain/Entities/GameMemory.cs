@@ -26,14 +26,6 @@ internal sealed class GameMemory : AggregateRoot<Guid>
 
     public DateTime CreatedAt { get; private set; }
 
-    /// <summary>
-    /// Last domain event id processed against this aggregate (issue #1939 / CF-3). Its only writer was the
-    /// dispute-override handler, retired with the structured dispute v2 (#4936). The repository still
-    /// round-trips it so that an update does not blank the column; property, <see cref="MarkProcessed"/> and
-    /// column go together with the contract step (#4960).
-    /// </summary>
-    public Guid? LastProcessedEventId { get; private set; }
-
     /// <summary>EF Core constructor.</summary>
     private GameMemory() { }
 
@@ -104,14 +96,5 @@ internal sealed class GameMemory : AggregateRoot<Guid>
         }
 
         _glossaryEntries.Add(GlossaryEntry.Create(term, definition, language, source));
-    }
-
-    /// <summary>
-    /// Records which domain event has just been processed against this aggregate (issue #1939 / CF-3).
-    /// No caller since #4936 retired the dispute-override handler; removed with the column in #4960.
-    /// </summary>
-    public void MarkProcessed(Guid eventId)
-    {
-        LastProcessedEventId = eventId;
     }
 }

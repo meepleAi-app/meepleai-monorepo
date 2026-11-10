@@ -117,8 +117,10 @@ jobs:
           PR_HEAD_SHA_PR_EVENT: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER_DISPATCH: ${{ github.event.inputs.pr_number }}
           WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO_SLUG: ${{ github.repository }}
+          REPO_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
           case "$EVENT_NAME" in
@@ -141,13 +143,17 @@ jobs:
               echo "head_sha=$SHA" >> "$GITHUB_OUTPUT"
               ;;
             workflow_run)
-              # Look up the open release PR whose head is the commit this workflow ran on.
+              # Look up the open release PR by the branch this workflow ran on (#4974). Not by commit:
+              # for a commit already on the default branch, commits/{sha}/pulls lists only the merged
+              # PR that introduced it, and the head of a main-dev → main-staging promotion always is
+              # one (the release branch is a fast-forward of main-dev). The job's `if` already limits
+              # workflow_run to heads of this repository, so <owner>:<branch> names the right branch.
               # If none, skip gracefully (a release/** branch without a release PR).
-              PR_NUM=$(gh api "repos/$REPO_SLUG/commits/$WORKFLOW_RUN_HEAD_SHA/pulls" \
-                --jq '.[] | select(.state == "open" and (.base.ref == "main-staging" or .base.ref == "main")) | .number' \
+              PR_NUM=$(gh api -X GET "repos/$REPO_SLUG/pulls" -f state=open -f head="$REPO_OWNER:$WORKFLOW_RUN_HEAD_BRANCH" \
+                --jq '.[] | select(.base.ref == "main-staging" or .base.ref == "main") | .number' \
                 | head -n1 || echo "")
               if [ -z "$PR_NUM" ]; then
-                echo "No open release PR associated with $WORKFLOW_RUN_HEAD_SHA — skipping."
+                echo "No open release PR from $WORKFLOW_RUN_HEAD_BRANCH — skipping."
                 echo "skip=true" >> "$GITHUB_OUTPUT"
                 exit 0
               fi

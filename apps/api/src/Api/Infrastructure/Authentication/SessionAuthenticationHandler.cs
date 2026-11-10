@@ -47,8 +47,10 @@ internal class SessionAuthenticationHandler : AuthenticationHandler<Authenticati
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        // Skip authentication for non-API routes (static files, health checks, etc.)
-        if (!Context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal))
+        // Skip authentication for non-API routes (static files, health checks, etc.). The SignalR hubs
+        // (/hubs/...) are in: without this, a hub connection was always anonymous whatever cookie it
+        // carried, so the hub could not tell a session participant from anyone else (#4962).
+        if (!IsAuthenticatedPath(Context.Request.Path))
         {
             return AuthenticateResult.NoResult();
         }
@@ -129,6 +131,14 @@ internal class SessionAuthenticationHandler : AuthenticationHandler<Authenticati
         Response.StatusCode = StatusCodes.Status403Forbidden;
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Paths whose requests carry the session cookie to an identity-aware handler: the API and the
+    /// SignalR hubs (negotiate and the WebSocket upgrade, whose user becomes the hub connection's).
+    /// </summary>
+    internal static bool IsAuthenticatedPath(PathString path) =>
+        path.StartsWithSegments("/api", StringComparison.Ordinal)
+        || path.StartsWithSegments("/hubs", StringComparison.Ordinal);
 
     private static AuthenticationTicket CreateTicketFromSessionStatus(SessionStatusDto sessionStatus, string schemeName)
     {

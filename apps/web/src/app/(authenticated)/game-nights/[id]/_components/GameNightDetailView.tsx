@@ -52,6 +52,8 @@ import { useSharedGames, useSharedGamesByIds } from '@/hooks/queries/useSharedGa
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/hooks/useTranslation';
+import { ApiError } from '@/lib/api/core/errors';
+import { GAME_NIGHT_FULL_CODE } from '@/lib/api/game-night-invitations';
 import type {
   GameNightStatus,
   GuestInvitationStatus,
@@ -219,10 +221,16 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         };
         toast({ title: t(`gameNightDetail.rsvp.${toastKey[submitted]}`) });
       },
-      onError: () => {
+      onError: (_response, error) => {
+        // #4947: a full table is a 409 with its own code; everything else stays the generic refusal.
+        const full = error instanceof ApiError && error.code === GAME_NIGHT_FULL_CODE;
         toast({
           title: t('common.error'),
-          description: t('gameNightDetail.rsvp.errors.generic'),
+          description: t(
+            full
+              ? 'gameNightDetail.rsvp.errors.capacityExceeded'
+              : 'gameNightDetail.rsvp.errors.generic'
+          ),
           variant: 'destructive',
         });
       },

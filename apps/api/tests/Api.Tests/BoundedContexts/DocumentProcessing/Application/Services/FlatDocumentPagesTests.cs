@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Services;
 using Api.Tests.Constants;
@@ -71,9 +72,11 @@ public sealed class FlatDocumentPagesTests
         return starts.Last(s => s.Start <= first).Page;
     }
 
-    private Task<List<DocumentChunk>> BuildAsync(string text, IReadOnlyList<PageSpan>? spans) =>
+    private Task<List<DocumentChunk>> BuildAsync(
+        string text, IReadOnlyList<PageSpan>? spans, int? documentPageCount = null) =>
         HeadingAwareChunker.BuildAsync(
-            structuredElements: null, text, DocumentId, gameId: null, _chunker, Token, pageSpans: spans);
+            structuredElements: null, text, DocumentId, gameId: null, _chunker, Token,
+            pageSpans: spans, documentPageCount: documentPageCount);
 
     [Fact]
     public async Task AFlatDocumentWithMeasuredPages_ProducesChunksOnTheirTruePages()
@@ -106,12 +109,26 @@ public sealed class FlatDocumentPagesTests
     }
 
     [Fact]
-    public async Task TheSameDocumentWithoutAPageMap_IsStillOnePageOne_TheDefectThisFixes()
+    public async Task TheSameDocumentWithoutAPageMap_HasNoPage_NotAFalsePageOne()
     {
+        // Twelve pages and no map: every chunk used to say page 1 (the defect of #4782). It now says it does not know,
+        // which is what the stored column and the readers can tell apart from a measured page.
         var joined = PageTextJoiner.Join(RulebookPages());
 
-        var chunks = await BuildAsync(joined.Text, spans: null);
+        var chunks = await BuildAsync(joined.Text, spans: null, documentPageCount: Pages);
 
+        chunks.Should().NotBeEmpty();
+        chunks.Select(c => c.Page).Distinct().Should().Equal(ChunkPage.Unknown);
+    }
+
+    [Fact]
+    public async Task ADocumentOfOnePageWithoutAPageMap_IsOnPageOne_BecauseThereIsNoOtherPage()
+    {
+        var onePage = PageTextJoiner.Join(RulebookPages().Take(1));
+
+        var chunks = await BuildAsync(onePage.Text, spans: null, documentPageCount: 1);
+
+        chunks.Should().NotBeEmpty();
         chunks.Select(c => c.Page).Distinct().Should().Equal(1);
     }
 
@@ -130,14 +147,14 @@ public sealed class FlatDocumentPagesTests
     }
 
     [Fact]
-    public async Task APageMapThatNoLongerFitsTheText_FallsBackToPageOne_NotToWrongPages()
+    public async Task APageMapThatNoLongerFitsTheText_HasNoPage_NotWrongPages()
     {
         var joined = PageTextJoiner.Join(RulebookPages());
         var staleSpans = joined.Spans!.Select(s => new PageSpan(s.Page, s.Start + 1)).ToList();
 
-        var chunks = await BuildAsync(joined.Text, staleSpans);
+        var chunks = await BuildAsync(joined.Text, staleSpans, documentPageCount: Pages);
 
-        chunks.Select(c => c.Page).Distinct().Should().Equal(1);
+        chunks.Select(c => c.Page).Distinct().Should().Equal(ChunkPage.Unknown);
     }
 
     // Sentences and pages of uneven lengths slide the page boundaries across the steps of the chunker. The unevenness

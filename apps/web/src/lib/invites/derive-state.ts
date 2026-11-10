@@ -13,7 +13,7 @@
  *   2. SSR `initialBannerState === 'token-invalid'` (404 token)
  *   3. Mutation outcome (`success | gone`) — reflects user's last interaction,
  *      outranks stale GET cache
- *   4. Server-side status snapshot (`Expired`/`Cancelled` → expired,
+ *   4. Server-side status snapshot (`Expired`/`Cancelled` or a cancelled night → expired,
  *      `alreadyRespondedAs` non-null → already-accepted)
  *   5. Pending invitation, anonymous vs logged-in for pre-fill UX
  *
@@ -81,6 +81,9 @@ export function deriveState({
     // if it also fails.
     return hasSession ? 'logged-in' : 'default';
   }
+  // #4856: a night that was cancelled is a dead link even for a guest who had answered: the invitation keeps its own
+  // state, the night is what is off.
+  if (data.nightCancelled === true) return 'token-expired';
   if (data.status === 'Expired' || data.status === 'Cancelled') return 'token-expired';
   if (data.alreadyRespondedAs === 'Accepted' || data.alreadyRespondedAs === 'Declined') {
     return 'already-accepted';

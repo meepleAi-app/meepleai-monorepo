@@ -60,6 +60,31 @@ internal partial class UploadPdfCommandHandler
             }
             _logger.LogInformation("✅ [PDF-DEBUG] Extraction SUCCESS for {PdfId}: {CharCount} chars, {Pages} pages", pdfId, fullText?.Length ?? 0, extractResult?.TotalPages ?? 0);
 
+            // #4437: Docnet reads the text layer and does not OCR, so a scanned PDF comes back with every page empty. It used
+            // to go on to the chunker, get zero chunks, and fail only because PdfIndexingPipeline.BeginIndexingAsync rejects
+            // a chunk count of zero: a Failed in category Unknown, which RetryFailedPdfsJob retries, with a text that says
+            // nothing. It fails here instead, before chunking, with the cause in the column and in a category the job
+            // leaves alone (a scan does not grow text). Only when the extractor reads the text layer alone; for any other
+            // extractor the old path is unchanged.
+            var extraction = extractResult!;
+            if (NearlyEmptyPages.NoTextAnywhere(extraction))
+            {
+                _logger.LogWarning(
+                    "PDF {PdfId} has no extractable text on any of its {Pages} pages (extractor {Extractor}): probably a scanned PDF, marking as failed",
+                    pdfId, extraction.PageChunks.Count, _pdfTextExtractor.GetType().Name);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, PdfFailureText.NoExtractableText, cancellationToken).ConfigureAwait(false);
+                await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
+                await TransitionToFailedAsync(
+                    scope, db, pdfGuid, PdfFailureText.NoExtractableText,
+                    Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Parsing,
+                    PdfProcessingState.Extracting, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            // The pages a text-layer extraction leaves (almost) empty: a Warning and a counter only when the rule of
+            // NearlyEmptyPages.Assess flags the document (#4931); a lone cover is a Debug line, not noise for every other PDF.
+            NearlyEmptyPagesReport.Record(_logger, pdfId, extraction);
+
             await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Chunking, cancellationToken).ConfigureAwait(false);
 
             // Step 2: Chunk text with page tracking (40-60%)
@@ -219,7 +244,7 @@ internal partial class UploadPdfCommandHandler
     }
 
     /// <summary>
-    /// Extracts PDF text and structured content (tables, diagrams).
+    /// Extracts the PDF text, page by page.
     /// Returns (success, fullText, extractResult).
     /// </summary>
     private async Task<(bool success, string? fullText, PagedTextExtractionResult? result)> ExtractPdfContentAsync(
@@ -334,79 +359,9 @@ internal partial class UploadPdfCommandHandler
 
             RecordPipelineMetricSafely("pages_processed", extractResult.TotalPages);
 
-            // Extract structured content (tables, diagrams)
-            await ExtractStructuredContentAsync(filePath, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
-
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, extractResult.TotalPages, extractResult.TotalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
             return (true, fullText, extractResult);
-        }
-    }
-
-    /// <summary>
-    /// Extracts structured content (tables, diagrams, atomic rules) from PDF.
-    /// </summary>
-    private async Task ExtractStructuredContentAsync(
-                string filePath,
-        PdfDocumentEntity pdfDoc,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        CancellationToken cancellationToken)
-    {
-        var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
-        if (tableExtractor == null) return;
-
-        // #3846: the extractor takes a FILE. Under S3 `filePath` is a bucket key, so it used to fail
-        // File.Exists and return a failure result that the line below drops without a word — tables,
-        // diagrams and atomic rules silently missing on every remote-storage upload, with the PDF
-        // still reaching Ready. Materialize the object first, and say something when it does fail.
-        using var localFile = await PdfLocalFile
-            .AcquireAsync(_blobStorageService, pdfDoc.Id, filePath, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (localFile is null)
-        {
-            _logger.LogWarning(
-                "[PDF-DEBUG] Structured content skipped for PDF {PdfId}: object not available in storage ({FilePath})",
-                pdfDoc.Id, filePath);
-            return;
-        }
-
-        var structuredResult = await tableExtractor.ExtractStructuredContentAsync(localFile.Path, cancellationToken).ConfigureAwait(false);
-        if (!structuredResult.Success)
-        {
-            _logger.LogWarning(
-                "[PDF-DEBUG] Structured content extraction failed for PDF {PdfId}: {Error}",
-                pdfDoc.Id, structuredResult.ErrorMessage);
-            return;
-        }
-
-        pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
-        pdfDoc.ExtractedDiagrams = System.Text.Json.JsonSerializer.Serialize(
-            structuredResult.Diagrams.Select(d => new
-            {
-                d.PageNumber,
-                d.DiagramType,
-                d.Description,
-                d.Width,
-                d.Height
-            }));
-        pdfDoc.AtomicRules = System.Text.Json.JsonSerializer.Serialize(structuredResult.AtomicRules);
-        pdfDoc.TableCount = structuredResult.TableCount;
-        pdfDoc.DiagramCount = structuredResult.DiagramCount;
-        pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(UploadPdfCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfDoc.Id, nameof(UploadPdfCommandHandler));
         }
     }
 
@@ -443,7 +398,8 @@ internal partial class UploadPdfCommandHandler
                 advancedChunking,
                 cancellationToken,
                 // #4782: the pages of a flat document (no structured elements) come from here.
-                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans).ConfigureAwait(false);
+                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans,
+                documentPageCount: extractResult.TotalPages).ConfigureAwait(false);
             allDocumentChunks = HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
         }
         else
@@ -891,8 +847,7 @@ internal partial class UploadPdfCommandHandler
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, CancellationToken.None).ConfigureAwait(false);
 
         // Issue #3281 / pre-existing AsNoTracking bug: the pipeline's working pdfDoc is AsNoTracking,
-        // so extraction output written during ExtractPdfContentAsync/ExtractStructuredContentAsync never
-        // persists. Re-persist it here on a freshly TRACKED entity AFTER the final Ready transition
+        // so extraction output written during ExtractPdfContentAsync never persists. Re-persist it here on a freshly TRACKED entity AFTER the final Ready transition
         // (mirrors ExtractPdfTextCommandHandler). Until #4347 the repository transitions also nulled
         // these columns; they no longer do. Needed for re-index parity: IndexPdf reads
         // StructuredElementsJson and requires non-null ExtractedText.
@@ -912,12 +867,6 @@ internal partial class UploadPdfCommandHandler
             tracked.PageSpansJson = pdfDoc.PageSpansJson;
             tracked.PageCount = pdfDoc.PageCount;
             tracked.CharacterCount = pdfDoc.CharacterCount;
-            tracked.ExtractedTables = pdfDoc.ExtractedTables;
-            tracked.ExtractedDiagrams = pdfDoc.ExtractedDiagrams;
-            tracked.AtomicRules = pdfDoc.AtomicRules;
-            tracked.TableCount = pdfDoc.TableCount;
-            tracked.DiagramCount = pdfDoc.DiagramCount;
-            tracked.AtomicRuleCount = pdfDoc.AtomicRuleCount;
             try
             {
                 await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);

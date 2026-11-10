@@ -1,3 +1,4 @@
+using Api.Infrastructure;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -87,7 +88,7 @@ internal sealed class PdfReportFormatter : IReportFormatter
         });
 
         using var ms = new MemoryStream();
-        document.GeneratePdf(ms);
+        QuestPdfRenderGate.GeneratePdf(document, ms);
         return ms.ToArray();
     }
 

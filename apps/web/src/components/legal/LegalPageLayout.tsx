@@ -164,7 +164,11 @@ function LegalPageContent({
               id={sectionKey}
               className="border rounded-lg px-4 bg-card"
             >
-              <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline">
+              {/* The sections of the page, right under its h1: h2, not Radix's h3 (#4916). */}
+              <AccordionTrigger
+                headingLevel={2}
+                className="text-left font-semibold text-foreground hover:no-underline"
+              >
                 {t(`legal.${pageKey}.sections.${sectionKey}.title`)}
               </AccordionTrigger>
               <AccordionContent>

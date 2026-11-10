@@ -29,7 +29,7 @@ public class GetDiceRollHistoryQueryHandlerTests
         _sessionRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Session?)null);
 
-        var query = new GetDiceRollHistoryQuery(Guid.NewGuid());
+        var query = new GetDiceRollHistoryQuery(Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -40,19 +40,37 @@ public class GetDiceRollHistoryQueryHandlerTests
     public async Task Handle_NoDiceRolls_ReturnsEmptyCollection()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var ownerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
         _diceRollRepoMock.Setup(r => r.GetRecentBySessionIdAsync(session.Id, 20, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DiceRoll>());
 
-        var query = new GetDiceRollHistoryQuery(session.Id);
+        var query = new GetDiceRollHistoryQuery(session.Id, ownerId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task Handle_StrangerWhoIsNeitherOwnerNorParticipant_ThrowsForbiddenAndReadsNothing()
+    {
+        // #4883: the history of a session was answered to any authenticated user.
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var query = new GetDiceRollHistoryQuery(session.Id, Guid.NewGuid());
+
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => _handler.Handle(query, CancellationToken.None));
+        _diceRollRepoMock.Verify(
+            r => r.GetRecentBySessionIdAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

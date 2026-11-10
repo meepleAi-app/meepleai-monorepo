@@ -28,6 +28,10 @@ public class GetDiceRollHistoryQueryHandler : IRequestHandler<GetDiceRollHistory
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
+        // #4883: the roll history is owner/participant-only (#3119 predicate).
+        if (!session.IsAccessibleBy(request.RequestedBy))
+            throw new ForbiddenException("You do not have access to this session.");
+
         // Get recent dice rolls
         var diceRolls = await _diceRollRepository.GetRecentBySessionIdAsync(
             request.SessionId,

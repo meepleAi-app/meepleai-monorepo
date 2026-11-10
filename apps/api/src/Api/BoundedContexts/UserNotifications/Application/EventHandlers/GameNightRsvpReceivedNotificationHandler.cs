@@ -1,8 +1,6 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.GameManagement.Domain.Events;
-using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
-using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -10,7 +8,8 @@ namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
 /// Handles GameNightRsvpReceivedEvent to notify the organizer of a new RSVP response via NotificationDispatcher.
-/// Issue #44/#47: Game night notification types.
+/// Issue #44/#47: Game night notification types. A guest invited by email answers through
+/// <see cref="GameNightGuestRespondedNotificationHandler"/> (#4947); the message is the same.
 /// </summary>
 internal sealed class GameNightRsvpReceivedNotificationHandler : INotificationHandler<GameNightRsvpReceivedEvent>
 {
@@ -34,31 +33,20 @@ internal sealed class GameNightRsvpReceivedNotificationHandler : INotificationHa
         {
             // Resolve the responding user's name
             var respondingUser = await _userRepository.GetByIdAsync(notification.UserId, cancellationToken).ConfigureAwait(false);
-            var respondingUserName = respondingUser?.DisplayName ?? "A user";
+            var respondingUserName = respondingUser?.DisplayName ?? GameNightRsvpReceivedMessage.UnknownResponder;
 
-            var statusText = notification.RsvpStatus switch
-            {
-                GameManagement.Domain.Enums.RsvpStatus.Accepted => "accepted",
-                GameManagement.Domain.Enums.RsvpStatus.Declined => "declined",
-                GameManagement.Domain.Enums.RsvpStatus.Maybe => "responded maybe to",
-                _ => "responded to"
-            };
-
-            await _dispatcher.DispatchAsync(new NotificationMessage
-            {
-                Type = NotificationType.GameNightRsvpReceived,
-                RecipientUserId = notification.OrganizerId,
-                Payload = new GenericPayload(
-                    "RSVP Received",
-                    $"{respondingUserName} {statusText} your game night invitation"),
-                DeepLinkPath = NotificationRoutes.GameNight(notification.GameNightEventId),
-                // Issue #1937 / CF-1: propagate event id for dispatcher dedup
-                SourceEventId = notification.EventId
-            }, cancellationToken).ConfigureAwait(false);
+            await _dispatcher.DispatchAsync(
+                GameNightRsvpReceivedMessage.For(
+                    organizerId: notification.OrganizerId,
+                    gameNightId: notification.GameNightEventId,
+                    responderName: respondingUserName,
+                    status: notification.RsvpStatus,
+                    sourceEventId: notification.EventId),
+                cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Dispatched RSVP received notification for organizer {OrganizerId} - user {UserId} {Status} event {EventId}",
-                notification.OrganizerId, notification.UserId, statusText, notification.GameNightEventId);
+                notification.OrganizerId, notification.UserId, notification.RsvpStatus, notification.GameNightEventId);
         }
 #pragma warning disable CA1031
         catch (Exception ex)

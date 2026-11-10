@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
@@ -34,7 +35,9 @@ internal sealed class GetGameNightSummaryQueryHandler
             ?? throw new NotFoundException("GameNightEvent", query.GameNightId.ToString());
 
         var isOrganizer = gameNight.OrganizerId == query.CallerUserId;
-        var isParticipant = isOrganizer || gameNight.Rsvps.Any(r => r.UserId == query.CallerUserId);
+        var isParticipant = await GameNightParticipation
+            .IsParticipantAsync(gameNight, query.CallerUserId, _repository, cancellationToken)
+            .ConfigureAwait(false);
         if (!isParticipant)
             throw new ForbiddenException("Only the organizer or an invited player can view the summary.");
 

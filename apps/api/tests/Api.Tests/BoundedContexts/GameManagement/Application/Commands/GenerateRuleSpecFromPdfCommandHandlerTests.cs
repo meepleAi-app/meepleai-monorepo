@@ -35,7 +35,14 @@ public class GenerateRuleSpecFromPdfCommandHandlerTests
             _db, new RuleAtomParsingDomainService(), TimeProvider.System);
     }
 
-    private PdfDocumentEntity SeedPdf(Guid? privateGameId, Guid? sharedGameId)
+    private const string TwoAtomicRules = "[\"Rule one\", \"Rule two\"]";
+    private const string TwoLinesOfText = "Prima regola\nSeconda regola";
+
+    private PdfDocumentEntity SeedPdf(
+        Guid? privateGameId,
+        Guid? sharedGameId,
+        string? atomicRules = null,
+        string? extractedText = TwoLinesOfText)
     {
         var pdf = new PdfDocumentEntity
         {
@@ -47,7 +54,8 @@ public class GenerateRuleSpecFromPdfCommandHandlerTests
             FileSizeBytes = 1000,
             UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
-            AtomicRules = "[\"Rule one\", \"Rule two\"]"
+            AtomicRules = atomicRules,
+            ExtractedText = extractedText
         };
         _db.PdfDocuments.Add(pdf);
         return pdf;
@@ -64,6 +72,57 @@ public class GenerateRuleSpecFromPdfCommandHandlerTests
 
         result.GameId.Should().Be(gameId);
         result.Atoms.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Handle_BuildsOneAtomPerNonBlankExtractedTextLine()
+    {
+        // #4440: la pipeline non scrive piu' AtomicRules (le produceva l'estrattore iText, tolto), quindi
+        // ExtractedText e' l'unica fonte di POST /ingest/pdf/{id}/rulespec: le righe vuote non diventano atomi.
+        var pdf = SeedPdf(
+            privateGameId: Guid.NewGuid(),
+            sharedGameId: null,
+            extractedText: "Prima regola\r\nSeconda regola\n\nTerza regola");
+        await _db.SaveChangesAsync();
+
+        var result = await _handler.Handle(new GenerateRuleSpecFromPdfCommand(pdf.Id), CancellationToken.None);
+
+        result.Atoms.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task Handle_WhenBothAtomicRulesAndExtractedTextArePresent_ExtractedTextWins()
+    {
+        // #4930: e' lo stato di tutti i PDF storici. AtomicRules vive di un estrattore tolto e non si rinfresca
+        // piu': su una riga rielaborata il RuleSpec deve nascere dal testo nuovo, non dagli atomi vecchi.
+        var pdf = SeedPdf(
+            privateGameId: Guid.NewGuid(),
+            sharedGameId: null,
+            atomicRules: TwoAtomicRules,
+            extractedText: "Testo nuovo uno\nTesto nuovo due\nTesto nuovo tre");
+        await _db.SaveChangesAsync();
+
+        var result = await _handler.Handle(new GenerateRuleSpecFromPdfCommand(pdf.Id), CancellationToken.None);
+
+        result.Atoms.Select(a => a.Text).Should().Equal("Testo nuovo uno", "Testo nuovo due", "Testo nuovo tre");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   \n  ")]
+    public async Task Handle_WhenExtractedTextHasNoRules_ThrowsEvenIfAtomicRulesIsFilled(string? extractedText)
+    {
+        var pdf = SeedPdf(
+            privateGameId: Guid.NewGuid(),
+            sharedGameId: null,
+            atomicRules: TwoAtomicRules,
+            extractedText: extractedText);
+        await _db.SaveChangesAsync();
+
+        var act = () => _handler.Handle(new GenerateRuleSpecFromPdfCommand(pdf.Id), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*does not contain any parsed rules*");
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -33,8 +34,9 @@ internal sealed class GetGameNightVoteTallyQueryHandler
             ?? throw new NotFoundException("GameNightEvent", query.GameNightId.ToString());
 
         // #2698 IDOR: participant-scoped read (organizer or invited).
-        var isParticipant = gameNight.OrganizerId == query.CallerUserId
-            || gameNight.Rsvps.Any(r => r.UserId == query.CallerUserId);
+        var isParticipant = await GameNightParticipation
+            .IsParticipantAsync(gameNight, query.CallerUserId, _repository, cancellationToken)
+            .ConfigureAwait(false);
         if (!isParticipant)
             throw new ForbiddenException("Only the organizer or an invited player can view the vote tally.");
 

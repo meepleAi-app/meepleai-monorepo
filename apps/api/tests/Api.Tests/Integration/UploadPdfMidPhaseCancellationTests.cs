@@ -244,12 +244,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             services.AddSingleton<IPdfTextExtractor>(extractorMock.Object);
         }
 
-        if (!services.Any(s => s.ServiceType == typeof(IPdfTableExtractor)))
-        {
-            var tableExtractorMock = new Mock<IPdfTableExtractor>();
-            services.AddSingleton<IPdfTableExtractor>(tableExtractorMock.Object);
-        }
-
         if (!services.Any(s => s.ServiceType == typeof(IPdfUploadQuotaService)))
         {
             var quotaMock = new Mock<IPdfUploadQuotaService>();
@@ -1101,12 +1095,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         }
 
         services.AddSingleton(extractor.Object);
-
-        var tableExtractor = new Mock<IPdfTableExtractor>();
-        tableExtractor
-            .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(StructuredContentResult.CreateFailure("Skipped in test"));
-        services.AddSingleton(tableExtractor.Object);
 
         services.AddSingleton<ITextChunkingService, TextChunkingService>();
 

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -12,17 +13,17 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.Dashboard;
 ///
 /// <para>Algorithm:
 /// <list type="number">
-///   <item>Find GameNights where the current user is organizer OR has an RSVP,
-///         scheduled in the last <see cref="FriendsWindowDays"/> days. These are
-///         the "shared game nights".</item>
+///   <item>Find GameNights where the current user sits at the table (organizer, RSVP row, or an email
+///         invitation accepted while logged in — the one rule, #4759/#4943), scheduled in the last
+///         <see cref="FriendsWindowDays"/> days. These are the "shared game nights".</item>
 ///   <item>Collect distinct other User-linked participants from those nights:
-///         organizers + RSVP user ids, excluding the current user. These are
-///         qualified "friends" (MAJ-5).</item>
+///         organizers, RSVP user ids and accepted email guests bound to their account, excluding the
+///         current user. These are qualified "friends" (MAJ-5).</item>
 ///   <item>Project recent activities by those friends across all their GameNights
 ///         (not only the shared ones) into three verbs:
 ///         <c>created</c> (friend is organizer, status != Completed),
 ///         <c>completed</c> (friend is organizer, status == Completed),
-///         <c>joined</c> (friend has an Accepted RSVP).</item>
+///         <c>joined</c> (friend has an Accepted RSVP, or accepted an email invitation).</item>
 ///   <item>Order by timestamp DESC and take <see cref="GetFriendsActivityQuery.Limit"/>.</item>
 /// </list></para>
 ///
@@ -77,6 +78,16 @@ internal sealed class GetFriendsActivityQueryHandler
             return Array.Empty<FriendActivityDto>();
         }
 
+        // #4943: the nights a friend sits at through an email invitation, read once for all friends. They
+        // are both a reason to load the night (step 2) and a «joined» activity (step 4).
+        var friendGuestSeats = await GameNightInvitationQueries
+            .AcceptedGuestSeatsAsync(_context, i => friendUserIds.Contains(i.RespondedByUserId!.Value), cancellationToken)
+            .ConfigureAwait(false);
+        var guestSeatsByNight = friendGuestSeats
+            .GroupBy(s => s.GameNightId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var friendGuestNightIds = guestSeatsByNight.Keys.ToList();
+
         // Step 2: load recent GameNights touched by any of those friends.
         // Overfetch (Limit * 3) so the per-night fan-out (1 organizer activity +
         // N accepted-RSVP activities) still has enough material after the final
@@ -85,7 +96,8 @@ internal sealed class GetFriendsActivityQueryHandler
         var recentNights = await _context.GameNightEvents
             .AsNoTracking()
             .Where(gn => friendUserIds.Contains(gn.OrganizerId)
-                || gn.Rsvps.Any(r => friendUserIds.Contains(r.UserId)))
+                || gn.Rsvps.Any(r => friendUserIds.Contains(r.UserId))
+                || friendGuestNightIds.Contains(gn.Id))
             .OrderByDescending(gn => gn.UpdatedAt ?? gn.CreatedAt)
             .Take(overfetchCount)
             .Select(gn => new GameNightProjection(
@@ -132,30 +144,40 @@ internal sealed class GetFriendsActivityQueryHandler
                     Timestamp: night.UpdatedAt ?? night.CreatedAt));
             }
 
-            // Joined activities (accepted RSVPs by friends, excluding self-organized rows).
-            foreach (var rsvp in night.FriendAcceptedRsvps)
+            // Joined activities: accepted RSVPs by friends, and seats taken through an email invitation
+            // (#4943). One per (friend, night): a friend with both an RSVP row and an accepted invitation on
+            // the same night joined it once.
+            var joined = night.FriendAcceptedRsvps
+                .Select(r => (r.UserId, r.RespondedAt))
+                .Concat(guestSeatsByNight.TryGetValue(night.Id, out var seats)
+                    ? seats.Select(s => (s.UserId, s.RespondedAt))
+                    : [])
+                .GroupBy(j => j.UserId)
+                .Select(g => g.First());
+
+            foreach (var (userId, respondedAt) in joined)
             {
-                if (rsvp.UserId == night.OrganizerId)
+                if (userId == night.OrganizerId)
                 {
                     // Avoid double-counting when an organizer also has an RSVP row
                     // (defensive — RSVPs typically don't include the organizer).
                     continue;
                 }
 
-                if (!friendInfoMap.TryGetValue(rsvp.UserId, out var friend))
+                if (!friendInfoMap.TryGetValue(userId, out var friend))
                 {
                     continue;
                 }
 
                 activities.Add(new FriendActivityDto(
-                    FriendUserId: rsvp.UserId,
+                    FriendUserId: userId,
                     Avatar: friend.AvatarUrl ?? string.Empty,
                     Name: friend.DisplayName,
                     Verb: "joined",
                     GameOrEventId: night.Id,
                     GameOrEventType: GameNightEntityType,
                     GameOrEventName: night.Title,
-                    Timestamp: rsvp.RespondedAt ?? night.CreatedAt));
+                    Timestamp: respondedAt ?? night.CreatedAt));
             }
         }
 
@@ -167,21 +189,27 @@ internal sealed class GetFriendsActivityQueryHandler
 
     /// <summary>
     /// Discovers User-linked friends of <paramref name="userId"/> by looking at
-    /// GameNights scheduled within the friends window where the current user is
-    /// either the organizer or an invitee.
+    /// GameNights scheduled within the friends window where the current user sits at the table
+    /// (<see cref="GameNightInvitationQueries.ParticipatedByAsync"/>: organizer, RSVP row, or an email
+    /// invitation accepted while logged in). The friends are everybody else at those tables: the
+    /// organizer, the RSVP rows, and the email guests bound to their account (#4943).
     /// </summary>
     private async Task<HashSet<Guid>> DiscoverFriendUserIdsAsync(
         Guid userId,
         DateTimeOffset windowStart,
         CancellationToken cancellationToken)
     {
-        // Composite query: pull (OrganizerId, RsvpUserIds) for shared nights only.
+        var participatedBy = await GameNightInvitationQueries
+            .ParticipatedByAsync(_context, userId, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Composite query: pull (Id, OrganizerId, RsvpUserIds) for shared nights only.
         var sharedNights = await _context.GameNightEvents
             .AsNoTracking()
             .Where(gn => gn.ScheduledAt >= windowStart)
-            .Where(gn => gn.OrganizerId == userId
-                || gn.Rsvps.Any(r => r.UserId == userId))
+            .Where(participatedBy)
             .Select(gn => new SharedNightProjection(
+                gn.Id,
                 gn.OrganizerId,
                 gn.Rsvps.Select(r => r.UserId).ToList()))
             .ToListAsync(cancellationToken)
@@ -200,6 +228,21 @@ internal sealed class GetFriendsActivityQueryHandler
                 if (participantId != userId)
                 {
                     friendIds.Add(participantId);
+                }
+            }
+        }
+
+        if (sharedNights.Count > 0)
+        {
+            var sharedNightIds = sharedNights.Select(n => n.Id).ToList();
+            var guestSeats = await GameNightInvitationQueries
+                .AcceptedGuestSeatsAsync(_context, i => sharedNightIds.Contains(i.GameNightId), cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var seat in guestSeats)
+            {
+                if (seat.UserId != userId)
+                {
+                    friendIds.Add(seat.UserId);
                 }
             }
         }
@@ -260,6 +303,7 @@ internal sealed class GetFriendsActivityQueryHandler
     // ── Projection records (private nested) ─────────────────────────────────
 
     private sealed record SharedNightProjection(
+        Guid Id,
         Guid OrganizerId,
         List<Guid> ParticipantUserIds);
 

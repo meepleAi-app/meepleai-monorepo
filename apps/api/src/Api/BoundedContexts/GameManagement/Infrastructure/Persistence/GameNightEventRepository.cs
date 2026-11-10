@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Text.Json;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
@@ -53,6 +54,92 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return corruptedFallback;
     }
 
+    /// <summary>
+    /// #4759: the one EF form of «this user sits at this table». Organizer, an RSVP row, or an email
+    /// invitation the user accepted while logged in (no RSVP row is written on that path). Mirrors
+    /// <c>GameNightParticipation</c> on the loaded aggregate: change one, change the other.
+    /// </summary>
+    private Task<Expression<Func<GameNightEventEntity, bool>>> ParticipatedByAsync(
+        Guid userId, CancellationToken cancellationToken) =>
+        // #4943: the expression moved next to the invitation rule it composes, so that the statistics that
+        // start from «the nights I was at» use the same one as the lists and the detail gate.
+        GameNightInvitationQueries.ParticipatedByAsync(DbContext, userId, cancellationToken);
+
+    public async Task<bool> HasAcceptedEmailInvitationAsync(
+        Guid gameNightId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var email = await GameNightInvitationQueries.NormalizedEmailOfAsync(DbContext, userId, cancellationToken)
+            .ConfigureAwait(false);
+        if (email is null)
+            return false;
+
+        return await DbContext.GameNightInvitations
+            .AsNoTracking()
+            .Where(GameNightInvitationQueries.AcceptedBy(userId, email))
+            .AnyAsync(i => i.GameNightId == gameNightId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The first key of the two-int advisory lock of <see cref="LockSeatsAsync"/>: the «game night seats» class.
+    /// The second is the night, hashed. Two nights that hash alike only wait for each other.
+    /// </summary>
+    internal const int SeatLockClass = 0x47_4E_53_54; // "GNST"
+
+    public async Task LockSeatsAsync(Guid gameNightId, CancellationToken cancellationToken = default)
+    {
+        if (!DbContext.Database.IsNpgsql())
+        {
+            return;
+        }
+
+        // pg_advisory_xact_lock lives as long as the transaction. Taken with none open, it is released at the end of
+        // this very statement and the caller decides on seats as if it had never been taken: refused, not silent.
+        if (DbContext.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "LockSeatsAsync needs an open transaction (IUnitOfWork.ExecuteInTransactionAsync): " +
+                "a transaction-scoped advisory lock taken outside one is released immediately.");
+        }
+
+        var nightKey = gameNightId.ToString();
+        await DbContext.Database
+            .ExecuteSqlAsync($"SELECT pg_advisory_xact_lock({SeatLockClass}, hashtext({nightKey}))", cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, RsvpStatus>> GetEmailGuestRsvpStatusesAsync(
+        IReadOnlyCollection<Guid> gameNightIds, Guid userId, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(gameNightIds);
+        if (gameNightIds.Count == 0 || userId == Guid.Empty)
+            return new Dictionary<Guid, RsvpStatus>();
+
+        var email = await GameNightInvitationQueries.NormalizedEmailOfAsync(DbContext, userId, cancellationToken)
+            .ConfigureAwait(false);
+        if (email is null)
+            return new Dictionary<Guid, RsvpStatus>();
+
+        var accepted = nameof(GameNightInvitationStatus.Accepted);
+        var rows = await DbContext.GameNightInvitations
+            .AsNoTracking()
+            .Where(GameNightInvitationQueries.AnsweredBy(userId, email))
+            .Where(i => gameNightIds.Contains(i.GameNightId))
+            .Select(i => new { i.GameNightId, i.Status })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // One invitation per address per night is the rule of the create command; if two ever exist, an
+        // acceptance outranks a decline, as it does for participation.
+        return rows
+            .GroupBy(r => r.GameNightId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Any(r => string.Equals(r.Status, accepted, StringComparison.Ordinal))
+                    ? RsvpStatus.Accepted
+                    : RsvpStatus.Declined);
+    }
+
     public async Task<GameNightEvent?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.GameNightEvents
@@ -86,7 +173,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Sessions)
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt > DateTimeOffset.UtcNow)
-            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
+            .Where(await ParticipatedByAsync(userId, cancellationToken).ConfigureAwait(false))
             .OrderBy(e => e.ScheduledAt)
             .Take(50)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -113,7 +200,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Completed)
                 || (e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt < now))
-            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
+            .Where(await ParticipatedByAsync(userId, cancellationToken).ConfigureAwait(false))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(cap)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -128,7 +215,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
             .Include(e => e.Votes)
-            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
+            .Where(await ParticipatedByAsync(userId, cancellationToken).ConfigureAwait(false))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(50)
             .ToListAsync(cancellationToken).ConfigureAwait(false);

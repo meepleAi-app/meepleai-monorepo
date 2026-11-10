@@ -9,27 +9,22 @@ using Docnet.Core.Models;
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 /// <summary>
-/// Docnet.Core adapter for PDF text extraction with OCR fallback coordination
+/// Docnet.Core adapter for PDF text extraction. It reads the text layer of the PDF and nothing else: <b>no OCR</b>
+/// (#4437). A scanned page comes back empty; what the pipelines do about that is in <c>NearlyEmptyPages</c> and the
+/// failure text of a PDF with no text at all. Scans belong to an extractor that OCRs (Unstructured, #4436).
 /// Implements thread-safe PDF processing with semaphore-based concurrency control
 /// </summary>
 internal class DocnetPdfTextExtractor : IPdfTextExtractor
 {
     private readonly ILogger<DocnetPdfTextExtractor> _logger;
-    private readonly PdfTextProcessingDomainService _domainService;
-    private readonly IOcrService? _ocrService;
 
     // Semaphore to prevent concurrent access to Docnet.Core (not thread-safe)
     // Max 4 concurrent extractions to prevent native library crashes
     private static readonly SemaphoreSlim DocnetSemaphore = new(4, 4);
 
-    public DocnetPdfTextExtractor(
-        ILogger<DocnetPdfTextExtractor> logger,
-        PdfTextProcessingDomainService domainService,
-        IOcrService? ocrService = null)
+    public DocnetPdfTextExtractor(ILogger<DocnetPdfTextExtractor> logger)
     {
         _logger = logger;
-        _domainService = domainService;
-        _ocrService = ocrService;
     }
 
     public async Task<TextExtractionResult> ExtractTextAsync(
@@ -56,14 +51,17 @@ internal class DocnetPdfTextExtractor : IPdfTextExtractor
                 // Step 4: Assess quality (domain service)
                 var quality = PdfTextProcessingDomainService.AssessQuality(normalizedText, pageCount);
 
-                // Step 5: OCR fallback if needed
-                return await ProcessWithOcrFallbackAsync(
+                // enableOcrFallback belongs to the interface and is ignored: Docnet never OCRs (#4437).
+                _logger.LogInformation(
+                    "Extracted text from PDF. Pages: {PageCount}, Characters: {CharCount}, Quality: {Quality}",
+                    pageCount, normalizedText.Length, quality);
+
+                return TextExtractionResult.CreateSuccess(
                     normalizedText,
                     pageCount,
-                    quality,
-                    enableOcrFallback,
-                    tempFilePath,
-                    cancellationToken).ConfigureAwait(false);
+                    normalizedText.Length,
+                    ocrTriggered: false,
+                    quality);
             }
             finally
             {
@@ -113,75 +111,6 @@ internal class DocnetPdfTextExtractor : IPdfTextExtractor
         }
     }
 
-    /// <summary>
-    /// Processes extraction result with OCR fallback if quality is too low.
-    /// </summary>
-    private async Task<TextExtractionResult> ProcessWithOcrFallbackAsync(
-        string normalizedText,
-        int pageCount,
-        ExtractionQuality quality,
-        bool enableOcrFallback,
-        string tempFilePath,
-        CancellationToken cancellationToken)
-    {
-        // Check if OCR fallback is needed
-        var shouldOcr = enableOcrFallback
-            && _ocrService != null
-            && _domainService.ShouldTriggerOcr(normalizedText, pageCount);
-
-        if (!shouldOcr)
-        {
-            // Standard extraction was good enough
-            _logger.LogInformation(
-                "Extracted text from PDF. Pages: {PageCount}, Characters: {CharCount}, Quality: {Quality}",
-                pageCount, normalizedText.Length, quality);
-
-            return TextExtractionResult.CreateSuccess(
-                normalizedText,
-                pageCount,
-                normalizedText.Length,
-                ocrTriggered: false,
-                quality);
-        }
-
-        // Trigger OCR fallback
-        _logger.LogInformation(
-            "Standard extraction quality too low (Quality: {Quality}). Falling back to OCR for temp file",
-            quality);
-
-        var ocrResult = await _ocrService!.ExtractTextFromPdfAsync(tempFilePath, cancellationToken).ConfigureAwait(false);
-
-        if (!ocrResult.Success)
-        {
-            _logger.LogWarning(
-                "OCR fallback failed: {Error}. Using standard extraction.",
-                ocrResult.ErrorMessage);
-
-            // Use standard extraction despite poor quality
-            return TextExtractionResult.CreateSuccess(
-                normalizedText,
-                pageCount,
-                normalizedText.Length,
-                ocrTriggered: false,
-                quality);
-        }
-
-        // Process OCR result
-        var normalizedOcrText = PdfTextProcessingDomainService.NormalizeText(ocrResult.ExtractedText);
-        var ocrQuality = PdfTextProcessingDomainService.AssessQuality(normalizedOcrText, ocrResult.PageCount);
-
-        _logger.LogInformation(
-            "OCR extraction completed. Pages: {PageCount}, Characters: {CharCount}, Quality: {Quality}",
-            ocrResult.PageCount, normalizedOcrText.Length, ocrQuality);
-
-        return TextExtractionResult.CreateSuccess(
-            normalizedOcrText,
-            ocrResult.PageCount,
-            normalizedOcrText.Length,
-            ocrTriggered: true,
-            ocrQuality);
-    }
-
     public async Task<PagedTextExtractionResult> ExtractPagedTextAsync(
         Stream pdfStream,
         bool enableOcrFallback = true,
@@ -208,13 +137,13 @@ internal class DocnetPdfTextExtractor : IPdfTextExtractor
                     "Extracted paged text from PDF. Pages: {TotalPages}, Non-empty: {NonEmpty}, Total chars: {TotalChars}",
                     totalPages, nonEmptyPages, totalChars);
 
-                // Note: OCR fallback for paged extraction not implemented in MVP
-                // Would require per-page OCR coordination which is complex
+                // No OCR on this path either (#4437): it never had one, and it is the path the pipelines use. The pages that
+                // come back without text are reported by the callers (NearlyEmptyPages), not repaired here.
                 return PagedTextExtractionResult.CreateSuccess(
                     pageChunks,
                     totalPages,
                     totalChars,
-                    ocrTriggered: false);
+                    ocrTriggered: false) with { TextLayerOnly = true };
             }
             finally
             {

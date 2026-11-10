@@ -23,7 +23,6 @@ import {
   LiveSessionSummaryDtoSchema,
   LiveSessionPlayerDtoSchema,
   LiveSessionRoundScoreDtoSchema,
-  SessionSnapshotDtoSchema,
   SessionToolsDtoSchema,
   TurnPhasesDtoSchema,
   type LiveSessionDto,
@@ -31,7 +30,6 @@ import {
   type LiveSessionSummaryDto,
   type LiveSessionPlayerDto,
   type LiveSessionRoundScoreDto,
-  type SessionSnapshotDto,
   type SessionToolsDto,
   type TurnPhasesDto,
   type CreateLiveSessionRequest,
@@ -40,7 +38,6 @@ import {
   type CreateTeamRequest,
   type RecordScoreRequest,
   type ConfigurePhasesRequest,
-  type TriggerSnapshotRequest,
   type UpdateNotesRequest,
   LiveSessionDiaryEntryDtoSchema,
   type LiveSessionDiaryEntryDto,
@@ -166,14 +163,6 @@ export interface LiveSessionsClient {
   /** Configure phase names */
   configurePhases(sessionId: string, request: ConfigurePhasesRequest): Promise<void>;
 
-  // ========== Snapshots ==========
-
-  /** Trigger a snapshot */
-  triggerSnapshot(
-    sessionId: string,
-    request: TriggerSnapshotRequest
-  ): Promise<SessionSnapshotDto | null>;
-
   // ========== Notes ==========
 
   /** Update session notes */
@@ -243,53 +232,6 @@ export interface LiveSessionsClient {
    * POST /api/v1/game-night/sessions/{sessionId}/pause-snapshot
    */
   createPauseSnapshot(sessionId: string): Promise<CreatePauseSnapshotResponse>;
-
-  // ========== Dispute v2 ==========
-
-  /**
-   * Open a structured rule dispute.
-   * POST /api/v1/live-sessions/{sessionId}/disputes
-   */
-  openStructuredDispute(
-    sessionId: string,
-    initiatorPlayerId: string,
-    initiatorClaim: string,
-    respondentPlayerId?: string
-  ): Promise<string>;
-
-  /**
-   * Respond to an existing dispute with a counter-claim.
-   * PUT /api/v1/live-sessions/{sessionId}/disputes/{disputeId}/respond
-   */
-  respondToDispute(
-    sessionId: string,
-    disputeId: string,
-    respondentPlayerId: string,
-    respondentClaim: string
-  ): Promise<void>;
-
-  /**
-   * Trigger the respondent timeout for a dispute.
-   * POST /api/v1/live-sessions/{sessionId}/disputes/{disputeId}/timeout
-   */
-  respondentTimeout(sessionId: string, disputeId: string): Promise<void>;
-
-  /**
-   * Cast a vote on a dispute verdict.
-   * POST /api/v1/live-sessions/{sessionId}/disputes/{disputeId}/vote
-   */
-  castVote(
-    sessionId: string,
-    disputeId: string,
-    playerId: string,
-    acceptsVerdict: boolean
-  ): Promise<void>;
-
-  /**
-   * Tally votes on a dispute and determine final outcome.
-   * POST /api/v1/live-sessions/{sessionId}/disputes/{disputeId}/tally
-   */
-  tallyVotes(sessionId: string, disputeId: string, overrideRule?: string): Promise<void>;
 
   // ========== Setup Wizard (Task 8) ==========
 
@@ -513,17 +455,6 @@ export function createLiveSessionsClient({
       await httpClient.put(`${BASE}/${encodeURIComponent(sessionId)}/phases`, request);
     },
 
-    // ========== Snapshots ==========
-
-    async triggerSnapshot(sessionId, request) {
-      const response = await httpClient.post<SessionSnapshotDto | null>(
-        `${BASE}/${encodeURIComponent(sessionId)}/trigger-snapshot`,
-        request
-      );
-      if (!response) return null;
-      return SessionSnapshotDtoSchema.parse(response);
-    },
-
     // ========== Notes ==========
 
     async updateNotes(sessionId, request) {
@@ -572,47 +503,6 @@ export function createLiveSessionsClient({
       );
       if (!response) throw new Error('Pause snapshot creation failed');
       return CreatePauseSnapshotResponseSchema.parse(response);
-    },
-
-    // ========== Dispute v2 ==========
-
-    async openStructuredDispute(sessionId, initiatorPlayerId, initiatorClaim, respondentPlayerId) {
-      const response = await httpClient.post<string>(
-        `${BASE}/${encodeURIComponent(sessionId)}/disputes`,
-        {
-          initiatorPlayerId,
-          initiatorClaim,
-          respondentPlayerId: respondentPlayerId ?? null,
-        }
-      );
-      return response as string;
-    },
-
-    async respondToDispute(sessionId, disputeId, respondentPlayerId, respondentClaim) {
-      await httpClient.put(
-        `${BASE}/${encodeURIComponent(sessionId)}/disputes/${encodeURIComponent(disputeId)}/respond`,
-        { respondentPlayerId, respondentClaim }
-      );
-    },
-
-    async respondentTimeout(sessionId, disputeId) {
-      await httpClient.post(
-        `${BASE}/${encodeURIComponent(sessionId)}/disputes/${encodeURIComponent(disputeId)}/timeout`
-      );
-    },
-
-    async castVote(sessionId, disputeId, playerId, acceptsVerdict) {
-      await httpClient.post(
-        `${BASE}/${encodeURIComponent(sessionId)}/disputes/${encodeURIComponent(disputeId)}/vote`,
-        { playerId, acceptsVerdict }
-      );
-    },
-
-    async tallyVotes(sessionId, disputeId, overrideRule) {
-      await httpClient.post(
-        `${BASE}/${encodeURIComponent(sessionId)}/disputes/${encodeURIComponent(disputeId)}/tally`,
-        { overrideRule: overrideRule ?? null }
-      );
     },
 
     // ========== Setup Wizard (Task 8) ==========

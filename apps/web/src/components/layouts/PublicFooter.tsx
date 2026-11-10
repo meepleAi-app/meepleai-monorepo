@@ -103,7 +103,7 @@ export function PublicFooter({
 
             {/* Column 2: Quick Links */}
             <div>
-              <h3 className="text-sm font-semibold mb-4">Link Rapidi</h3>
+              <h2 className="text-sm font-semibold mb-4">Link Rapidi</h2>
               <ul className="space-y-2">
                 {QUICK_LINKS.map(link => (
                   <li key={link.href}>
@@ -125,7 +125,7 @@ export function PublicFooter({
             <div className="space-y-6">
               {/* About Section */}
               <div>
-                <h3 className="text-sm font-semibold mb-4">Chi Siamo</h3>
+                <h2 className="text-sm font-semibold mb-4">Chi Siamo</h2>
                 <ul className="space-y-2">
                   {ABOUT_LINKS.map(link => (
                     <li key={link.href}>
@@ -145,7 +145,7 @@ export function PublicFooter({
 
               {/* Legal Section */}
               <div>
-                <h3 className="text-sm font-semibold mb-4">Legale</h3>
+                <h2 className="text-sm font-semibold mb-4">Legale</h2>
                 <ul className="space-y-2">
                   {LEGAL_LINKS.map(link => (
                     <li key={link.href}>

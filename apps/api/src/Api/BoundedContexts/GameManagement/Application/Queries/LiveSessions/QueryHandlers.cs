@@ -115,6 +115,13 @@ internal class GetLiveSessionByCodeQueryHandler : IQueryHandler<GetLiveSessionBy
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", $"code:{query.SessionCode}");
 
+        // #4939: knowing the code is not being at the table. The same 404 as an unknown code, so that a guessed
+        // code does not confirm it is live; the lobby preview for code holders is the /public route (#2590).
+        if (!session.IsAuthorizedParticipant(query.RequestedBy))
+        {
+            throw new NotFoundException("LiveGameSession", $"code:{query.SessionCode}");
+        }
+
         return GetLiveSessionQueryHandler.MapToDto(session);
     }
 }

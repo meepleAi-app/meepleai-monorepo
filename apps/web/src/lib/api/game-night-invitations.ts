@@ -63,6 +63,12 @@ export const PublicGameNightInvitationSchema = z.object({
    * with the Wave A.5b legacy `/invites/[token]` consumer.
    */
   respondedByName: z.string().nullable().optional(),
+  /**
+   * #4856: true when the NIGHT was cancelled, whatever the state of the invitation (which keeps its own).
+   * A link that is no longer alive (withdrawn, expired, or a cancelled night) carries only its state and the host's
+   * name: title, time, place, game and counts are empty (#4745). Optional on the wire for older backends.
+   */
+  nightCancelled: z.boolean().optional(),
 });
 
 export type PublicGameNightInvitation = z.infer<typeof PublicGameNightInvitationSchema>;
@@ -98,6 +104,14 @@ export type RespondToInvitationResult =
   | {
       readonly kind: 'gone';
       readonly reason: 'expired' | 'cancelled' | 'past-expiry';
+    }
+  | {
+      /**
+       * #4947: the table has no seat left. A 409 too, but not a state switch: the guest never answered, the
+       * seats went while they looked. Told apart from `conflict-state-switch` by the body's `error` code, or
+       * the page would read it as «you have already responded».
+       */
+      readonly kind: 'full';
     }
   | {
       readonly kind: 'rate-limited';
@@ -170,9 +184,13 @@ export class InvitationRateLimitedError extends Error {
 interface ServerConflictBody {
   // Backend `ConflictException` middleware shape — the relevant payload field
   // for state-switch is `alreadyRespondedAs` echoed from the entity row.
+  // `error` carries the machine code: `GAME_NIGHT_FULL_CODE` for a full table (#4947), `conflict` otherwise.
   error?: string;
   alreadyRespondedAs?: RsvpAction;
 }
+
+/** The 409 code of a full table, as `GameNightSeats.FullCode` names it on the backend (#4947). */
+export const GAME_NIGHT_FULL_CODE = 'game_night_full';
 
 interface ServerGoneBody {
   error?: string;
@@ -328,6 +346,9 @@ export async function respondToInvitation(
 
   if (response.status === 409) {
     const body = (await response.json().catch(() => ({}))) as ServerConflictBody;
+    if (body.error === GAME_NIGHT_FULL_CODE) {
+      return { kind: 'full' };
+    }
     // Server SHOULD echo `alreadyRespondedAs` for the switch case; if it
     // doesn't, fall back to "the other action" since we know we're 409.
     const currentlyRespondedAs: RsvpAction =

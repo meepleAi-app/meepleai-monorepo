@@ -28,7 +28,6 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
 {
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IPdfTextExtractor> _pdfTextExtractorMock = new();
-    private readonly Mock<IPdfTableExtractor> _tableExtractorMock = new();
     private readonly Mock<ITextChunkingService> _chunkingServiceMock = new();
     private readonly Mock<IEmbeddingService> _embeddingServiceMock = new();
     private readonly Mock<IBlobStorageService> _blobStorageServiceMock = new();
@@ -286,7 +285,6 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
             _db,
             new Api.Tests.TestHelpers.InMemoryPdfClaimService(_db),
             _pdfTextExtractorMock.Object,
-            _tableExtractorMock.Object,
             _chunkingServiceMock.Object,
             _embeddingServiceMock.Object,
             _blobStorageServiceMock.Object,
@@ -348,10 +346,6 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
         _pdfTextExtractorMock
             .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
-
-        _tableExtractorMock
-            .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(StructuredContentResult.CreateFailure("Not applicable"));
     }
 
     private void SetupChunkingToReturn(int chunkCount)

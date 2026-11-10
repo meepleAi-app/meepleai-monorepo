@@ -29,6 +29,41 @@ public class SessionCheckpointHandlerTests
     }
 
     [Fact]
+    public async Task ListHandler_StrangerWhoIsNeitherOwnerNorParticipant_ThrowsForbiddenAndReadsNothing()
+    {
+        // #4883: the query carried RequesterId and the handler ignored it.
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var mockSessionRepo = new Mock<ISessionRepository>();
+        mockSessionRepo.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        var mockCheckpointRepo = new Mock<ISessionCheckpointRepository>();
+        var handler = new ListSessionCheckpointsQueryHandler(mockSessionRepo.Object, mockCheckpointRepo.Object);
+
+        var act = () =>
+            handler.Handle(new ListSessionCheckpointsQuery(session.Id, Guid.NewGuid()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        mockCheckpointRepo.Verify(
+            r => r.GetBySessionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ListHandler_Owner_ReturnsCheckpoints()
+    {
+        var ownerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
+        var mockSessionRepo = new Mock<ISessionRepository>();
+        mockSessionRepo.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        var mockCheckpointRepo = new Mock<ISessionCheckpointRepository>();
+        mockCheckpointRepo.Setup(r => r.GetBySessionIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SessionCheckpoint>());
+        var handler = new ListSessionCheckpointsQueryHandler(mockSessionRepo.Object, mockCheckpointRepo.Object);
+
+        var result = await handler.Handle(new ListSessionCheckpointsQuery(session.Id, ownerId), CancellationToken.None);
+
+        result.Checkpoints.Should().BeEmpty();
+    }
+
+    [Fact]
     public void ListHandler_NullSessionRepo_Throws() =>
         ((Action)(() => new ListSessionCheckpointsQueryHandler(null!, new Mock<ISessionCheckpointRepository>().Object))).Should().Throw<ArgumentNullException>();
 

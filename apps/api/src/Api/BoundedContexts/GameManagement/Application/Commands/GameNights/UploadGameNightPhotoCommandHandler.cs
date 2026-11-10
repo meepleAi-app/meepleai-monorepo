@@ -63,8 +63,9 @@ internal sealed class UploadGameNightPhotoCommandHandler
 
         // Participant guard (IDOR): only the organizer or a tagged/invited/accepted
         // participant may contribute to a night's recap gallery.
-        var isParticipant = night.OrganizerId == command.UserId
-            || night.Rsvps.Any(r => r.UserId == command.UserId);
+        var isParticipant = await GameNightParticipation
+            .IsParticipantAsync(night, command.UserId, _eventRepository, cancellationToken)
+            .ConfigureAwait(false);
         if (!isParticipant)
             throw new ForbiddenException("You do not have permission to add photos to this game night.");
 

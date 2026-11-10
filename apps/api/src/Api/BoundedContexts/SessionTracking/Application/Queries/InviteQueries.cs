@@ -20,7 +20,6 @@ public sealed record GetSessionByInviteQuery(
 /// </summary>
 public sealed record SessionInviteResponse(
     Guid SessionId,
-    string SessionCode,
     string? GameName,
     string? GameImageUrl,
     DateTime SessionDate,

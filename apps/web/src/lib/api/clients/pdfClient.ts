@@ -9,6 +9,8 @@ import { z } from 'zod';
 
 import { getApiBase, type HttpClient } from '../core/httpClient';
 import {
+  PdfIngestResponseSchema,
+  type PdfExistingKbInfo,
   ProcessingProgressSchema,
   type ProcessingProgress,
   PdfMetricsSchema,
@@ -119,14 +121,16 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
      * @param onProgress Optional progress callback (0-100) via XMLHttpRequest
      * @param options.priority Processing priority (#4443): admin and editor only, a user gets 403.
      *   An admin upload is queued by the backend with it — do not enqueue it again.
-     * @returns Upload result with documentId and fileName
+     * @returns Upload result with documentId and fileName. When the same content is already stored for the
+     *   game (#4893) the backend stores nothing and answers with the existing document: `documentId` is
+     *   that document's id and `existingKb` says so (with its processing state).
      */
     async uploadPdf(
       gameId: string,
       file: File,
       onProgress?: (percent: number) => void,
       options?: { isPrivateGame?: boolean; priority?: 'normal' | 'urgent' }
-    ): Promise<{ documentId: string; fileName: string }> {
+    ): Promise<{ documentId: string; fileName: string; existingKb?: PdfExistingKbInfo }> {
       const baseUrl = getApiBase();
       const query = options?.priority ? `?priority=${options.priority}` : '';
       const url = `${baseUrl}/api/v1/ingest/pdf${query}`;
@@ -147,12 +151,29 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
 
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
+            let body: unknown;
             try {
-              const data = JSON.parse(xhr.responseText);
-              resolve({ documentId: data.documentId, fileName: data.fileName });
+              body = JSON.parse(xhr.responseText);
             } catch {
+              // A 2xx with no JSON body at all: the old behaviour, an empty id.
               resolve({ documentId: '', fileName: file.name });
+              return;
             }
+            // #4893: JSON that is neither an upload nor an existing KB is an error, not an empty id.
+            const outcome = PdfIngestResponseSchema.safeParse(body);
+            if (!outcome.success) {
+              reject(new Error('Risposta del server non valida'));
+              return;
+            }
+            resolve(
+              outcome.data.kind === 'existing'
+                ? {
+                    documentId: outcome.data.documentId,
+                    fileName: outcome.data.fileName,
+                    existingKb: outcome.data.existingKb,
+                  }
+                : { documentId: outcome.data.documentId, fileName: outcome.data.fileName }
+            );
           } else {
             let message = `Upload failed (${xhr.status})`;
             let errorCode: string | undefined;

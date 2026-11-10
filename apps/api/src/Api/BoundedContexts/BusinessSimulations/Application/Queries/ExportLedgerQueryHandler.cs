@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Api.BoundedContexts.BusinessSimulations.Domain.Entities;
 using Api.BoundedContexts.BusinessSimulations.Domain.Repositories;
+using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using ClosedXML.Excel;
 using QuestPDF.Fluent;
@@ -256,7 +257,7 @@ internal sealed class ExportLedgerQueryHandler : IQueryHandler<ExportLedgerQuery
         });
 
         using var ms = new MemoryStream();
-        document.GeneratePdf(ms);
+        QuestPdfRenderGate.GeneratePdf(document, ms);
         var fileName = BuildFileName("ledger-report", request, "pdf");
         return new ExportLedgerResult(ms.ToArray(), "application/pdf", fileName);
     }

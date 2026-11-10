@@ -111,7 +111,8 @@ internal sealed class CompleteNightLinkForLiveSessionCommandHandler
         if (firstPlace.Count != 1 || firstPlace[0].UserId is not { } winnerUserId)
             return null;
 
-        var details = await _mediator.Send(new GetSessionDetailsQuery(trackingSessionId), cancellationToken)
+        // System read (#4883): the follow-up acts for the organizer, who need not sit in the tracking session.
+        var details = await _mediator.Send(new GetSessionDetailsForSystemQuery(trackingSessionId), cancellationToken)
             .ConfigureAwait(false);
 
         return details?.Participants.FirstOrDefault(p => p.UserId == winnerUserId)?.Id;

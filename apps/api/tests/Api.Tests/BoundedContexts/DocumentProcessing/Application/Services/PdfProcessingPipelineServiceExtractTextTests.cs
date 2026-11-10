@@ -74,7 +74,6 @@ public sealed class PdfProcessingPipelineServiceExtractTextTests : IDisposable
             db: _db,
             pdfClaimService: _claimService.Object,
             pdfTextExtractor: _textExtractor.Object,
-            tableExtractor: Mock.Of<IPdfTableExtractor>(),
             chunkingService: Mock.Of<ITextChunkingService>(),
             embeddingService: Mock.Of<IEmbeddingService>(),
             blobStorageService: _blob.Object,

@@ -70,8 +70,6 @@
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-    <PackageReference Include="itext7" Version="9.4.0" />
-    <PackageReference Include="itext7.bouncy-castle-adapter" Version="9.4.0" />
     <!-- Magick.NET-Q8-AnyCPU (Apache 2.0): replaces SixLabors.ImageSharp 3.x (Split License,
          requires commercial paid). DEC-3d-1 LOCKED 2026-06-20, issue #2055 Phase G AC-G2. -->
     <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.15.0" />
@@ -132,7 +130,6 @@
     <PackageReference Include="System.Drawing.Common" Version="10.0.13" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
-    <PackageReference Include="Tesseract.Drawing" Version="5.2.0" />
     <!-- OPS-02: OpenTelemetry packages -->
     <PackageReference Include="OpenTelemetry" Version="1.15.3" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />

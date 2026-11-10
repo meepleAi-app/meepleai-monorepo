@@ -63,7 +63,12 @@ from pathlib import Path
 
 DECODER = json.JSONDecoder()
 
-# Devono corrispondere a MultiGameHybridSearchService.
+# Devono corrispondere a MultiGameHybridSearchService.GlobalVectorWeight/GlobalKeywordWeight: la
+# fusione GLOBALE, fra giochi. 0,85/0,15 da #4955, quando il genitore a documento intero e' uscito
+# dal braccio lessicale (il motivo e' nel commento delle costanti C#).
+GLOBAL_VECTOR_WEIGHT = 0.85
+GLOBAL_KEYWORD_WEIGHT = 0.15
+# I pesi dell'RRF PER-GIOCO (HybridFusionCore, profilo di default): non cambiano con quelli globali.
 VECTOR_WEIGHT = 0.7
 KEYWORD_WEIGHT = 0.3
 MIN_LANGUAGE_GROUP_SIZE = 5
@@ -114,7 +119,12 @@ def language_offsets(candidates):
     }
 
 
-def fuse(candidates, language_correction: bool):
+def fuse(candidates, language_correction: bool, keyword_weight=None):
+    """`keyword_weight` None = il peso di produzione; il vettoriale e' sempre 1 - keyword_weight."""
+    if keyword_weight is None:
+        vector_weight, keyword_weight = GLOBAL_VECTOR_WEIGHT, GLOBAL_KEYWORD_WEIGHT
+    else:
+        vector_weight = 1.0 - keyword_weight
     offsets = language_offsets(candidates) if language_correction else {}
     adjusted = [
         None if c.get("v") is None else c["v"] - offsets.get((c.get("l") or "?").lower(), 0.0)
@@ -125,8 +135,8 @@ def fuse(candidates, language_correction: bool):
 
     scored = [
         (
-            VECTOR_WEIGHT * normalise(adj, v_low, v_high)
-            + KEYWORD_WEIGHT * normalise(c.get("k"), k_low, k_high),
+            vector_weight * normalise(adj, v_low, v_high)
+            + keyword_weight * normalise(c.get("k"), k_low, k_high),
             c,
         )
         for c, adj in zip(candidates, adjusted)
@@ -145,13 +155,23 @@ def fuse(candidates, language_correction: bool):
     return [c for _, c in scored]
 
 
-def top_documents(candidates, k, language_correction=True):
+def top_documents(candidates, k, language_correction=True, keyword_weight=None):
     """La correzione per lingua e' ATTIVA per default: dal 2026-08-22 (#3740) e' il comportamento
     di produzione, quindi e' quello che la replica deve riprodurre per essere fedele."""
-    return [c["d"] for c in fuse(candidates, language_correction)[:k]]
+    return [c["d"] for c in fuse(candidates, language_correction, keyword_weight)[:k]]
 
 
-def build_document_map(rows, baseline, query_ids, top_k):
+def without_chunk0(rows):
+    """#4955: le righe senza i chunk 0, cioe' la ricerca di oggi applicata a un dump di prima.
+
+    Dal #4955 un chunk che ha figli non e' un candidato in nessun braccio. Nel corpus del gate
+    (Docnet, senza titoli) il chunk 0 di ogni documento e' proprio quel genitore a documento intero;
+    su un corpus con i titoli i genitori sono uno per sezione e questa approssimazione non vale.
+    """
+    return [dict(row, c=[c for c in row["c"] if c["i"] != 0]) for row in rows]
+
+
+def build_document_map(rows, baseline, query_ids, top_k, keyword_weight=None):
     """GUID -> fileName, per contatto fra i top-3 ricostruiti e la golden baseline.
 
     I conflitti sono il segnale d'errore: se la replica non riproducesse l'ordinamento reale, lo
@@ -162,7 +182,7 @@ def build_document_map(rows, baseline, query_ids, top_k):
         query_id = query_ids.get(row["q"])
         if query_id is None or query_id not in baseline:
             continue
-        rebuilt = top_documents(row["c"], top_k)
+        rebuilt = top_documents(row["c"], top_k, keyword_weight=keyword_weight)
         expected = baseline[query_id]
         if len(rebuilt) != len(expected):
             conflicts.append((query_id, "lunghezza diversa", rebuilt, expected))
@@ -174,14 +194,16 @@ def build_document_map(rows, baseline, query_ids, top_k):
     return mapping, conflicts
 
 
-def semantic_count(rows, query_ids, expected_docs, mapping, top_k, language_correction):
+def semantic_count(rows, query_ids, expected_docs, mapping, top_k, language_correction,
+                   keyword_weight=None):
     hits, misses = 0, []
     for row in rows:
         query_id = query_ids.get(row["q"])
         if query_id is None:
             continue
         want = expected_docs[query_id]
-        got = [mapping.get(g, g) for g in top_documents(row["c"], top_k, language_correction)]
+        got = [mapping.get(g, g)
+               for g in top_documents(row["c"], top_k, language_correction, keyword_weight)]
         if want in got:
             hits += 1
         else:
@@ -374,6 +396,16 @@ def main():
                         help="JSON gameId -> titolo: valuta la variante che esclude i token del "
                              "nome del gioco dai termini di heading-match")
     parser.add_argument("--fixtures", type=Path, default=Path("infra/fixtures"))
+    parser.add_argument("--as-run-keyword-weight", type=float, default=GLOBAL_KEYWORD_WEIGHT,
+                        help="peso lessicale globale con cui ha GIRATO la run di --reference: e' quello "
+                             "con cui la si valida contro la baseline. Default: il peso di oggi. Per un "
+                             "dump di prima del #4955: 0.3")
+    parser.add_argument("--keyword-weight", type=float, action="append", default=[],
+                        help="peso lessicale globale da VALUTARE (ripetibile); il vettoriale e' 1 - peso. "
+                             "Default: il peso di oggi")
+    parser.add_argument("--without-chunk0", action="store_true",
+                        help="valuta senza i chunk 0: il filtro sui genitori del #4955 applicato a un dump "
+                             "di prima. Vale per il corpus del gate (Docnet), dove il chunk 0 e' il genitore")
     args = parser.parse_args()
 
     if not args.reference and not args.per_game:
@@ -391,7 +423,10 @@ def main():
     baseline = {qid: [hit["document"] for hit in hits] for qid, hits in golden["baseline"].items()}
 
     reference = load_dump(args.reference)
-    mapping, conflicts = build_document_map(reference, baseline, query_ids, top_k)
+    # La validazione usa la configurazione con cui la run HA girato, non quella da valutare: e' il
+    # solo modo in cui la baseline di quella run e' un ground truth.
+    mapping, conflicts = build_document_map(reference, baseline, query_ids, top_k,
+                                            keyword_weight=args.as_run_keyword_weight)
 
     print(f"validazione: {len(mapping)} documenti mappati, {len(conflicts)} conflitti")
     if conflicts:
@@ -400,15 +435,26 @@ def main():
         print("\nLa replica non riproduce l'ordinamento reale: i numeri sotto sarebbero infondati.")
         return 1
 
+    weights = args.keyword_weight or [GLOBAL_KEYWORD_WEIGHT]
     datasets = [(args.reference, reference)] + [(d, load_dump(d)) for d in args.compare]
     for directory, rows in datasets:
-        for correction in (True, False):
-            label = (f"{directory.name} "
-                     f"{'(come in produzione)' if correction else 'SENZA correzione lingua'}")
-            hits, misses = semantic_count(rows, query_ids, expected_docs, mapping, top_k, correction)
-            print(f"\n{label}: semantico {hits}/{len(rows)}")
-            for query_id, want, got in misses:
-                print(f"    {query_id:<26} atteso {want:<28} -> {got}")
+        # #4955: l'artifact porta doc-names.json, che nomina anche i documenti fuori dalla baseline.
+        names = dict(mapping)
+        names_file = directory / "doc-names.json"
+        if names_file.exists():
+            names = {**json.load(io.open(names_file, encoding="utf-8")), **mapping}
+        if args.without_chunk0:
+            rows = without_chunk0(rows)
+        for weight in weights:
+            for correction in (True, False):
+                label = (f"{directory.name} lessicale {weight:.2f}"
+                         f"{' senza chunk 0' if args.without_chunk0 else ''} "
+                         f"{'(come in produzione)' if correction else 'SENZA correzione lingua'}")
+                hits, misses = semantic_count(rows, query_ids, expected_docs, names, top_k, correction,
+                                              keyword_weight=weight)
+                print(f"\n{label}: semantico {hits}/{len(rows)}")
+                for query_id, want, got in misses:
+                    print(f"    {query_id:<26} atteso {want:<28} -> {got}")
 
     return 0
 

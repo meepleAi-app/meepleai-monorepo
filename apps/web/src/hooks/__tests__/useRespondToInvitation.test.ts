@@ -87,6 +87,8 @@ const GONE_RESULT: RespondToInvitationResult = {
   reason: 'expired',
 };
 
+const FULL_RESULT: RespondToInvitationResult = { kind: 'full' };
+
 interface MockMutationOptions {
   status?: 'idle' | 'pending' | 'success' | 'error';
   data?: RespondToInvitationResult | undefined;
@@ -159,6 +161,17 @@ describe('useRespondToInvitation (Wave A.5b)', () => {
 
       expect(result.current.state).toBe('conflict');
       expect(result.current.result).toEqual(CONFLICT_RESULT);
+    });
+
+    it('derives full when status=success and result.kind=full (#4947: no seat left, not a state switch)', () => {
+      vi.mocked(useMutation).mockReturnValue(
+        buildMockMutation({ status: 'success', data: FULL_RESULT })
+      );
+
+      const { result } = renderHook(() => useRespondToInvitation({ token: 'tok-abc' }));
+
+      expect(result.current.state).toBe('full');
+      expect(result.current.result).toEqual(FULL_RESULT);
     });
 
     it('derives gone when status=success and result.kind=gone', () => {

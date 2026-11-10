@@ -6,7 +6,6 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Observability;
-using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -42,7 +41,6 @@ public sealed class GameNightReminder24hGuestEmailHandlerTests
     private readonly Mock<IUserRepository> _users = new();
     private readonly Mock<IGameNightEmailService> _email = new();
     private readonly Mock<IGameNightGuestEmailOptOutRepository> _optOuts = new();
-    private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly FakeTimeProvider _time = new(Now);
     private readonly Mock<ILogger<GameNightReminder24hGuestEmailHandler>> _logger = new();
 
@@ -52,7 +50,7 @@ public sealed class GameNightReminder24hGuestEmailHandlerTests
             PublicBaseUrlTestSupport.ProviderFor(new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?> { ["Frontend:BaseUrl"] = BaseUrl })
                 .Build()),
-            _unitOfWork.Object, _time, _logger.Object);
+            _time, _logger.Object);
 
     private static GameNightInvitation Invitation(
         string email,
@@ -98,14 +96,26 @@ public sealed class GameNightReminder24hGuestEmailHandlerTests
             .Setup(r => r.GetByGameNightIdAsync(night.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(invitations);
 
-        // The handler reads each row again just before it writes it: here, the same one.
-        foreach (var invitation in invitations)
-        {
-            _invitations
-                .Setup(r => r.GetByIdAsync(invitation.Id, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(invitation);
-        }
+        // What the repository does with a mark: it lands on the row, and a later read finds it. (The handler no longer
+        // touches the aggregate it read: #4744.)
+        _invitations
+            .Setup(r => r.MarkReminder24hSentAsync(
+                It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .Callback((Guid id, DateTimeOffset at, CancellationToken _) =>
+                invitations.Single(i => i.Id == id).MarkReminder24hSent(at))
+            .Returns(Task.CompletedTask);
     }
+
+    private void VerifyMarked(GameNightInvitation invitation, Times times) =>
+        _invitations.Verify(
+            r => r.MarkReminder24hSentAsync(invitation.Id, Now, It.IsAny<CancellationToken>()),
+            times);
+
+    private void VerifyNothingMarked() =>
+        _invitations.Verify(
+            r => r.MarkReminder24hSentAsync(
+                It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()),
+            Times.Never);
 
     private void VerifySentTo(string address, Times times) =>
         _email.Verify(
@@ -301,10 +311,8 @@ public sealed class GameNightReminder24hGuestEmailHandlerTests
             Times.Once);
         first.Reminder24hSentAt.Should().Be(Now);
         second.Reminder24hSentAt.Should().Be(Now);
-        _invitations.Verify(
-            r => r.UpdateAsync(It.Is<GameNightInvitation>(i => i.Reminder24hSentAt == Now), It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        VerifyMarked(first, Times.Once());
+        VerifyMarked(second, Times.Once());
     }
 
     [Fact]
@@ -322,57 +330,34 @@ public sealed class GameNightReminder24hGuestEmailHandlerTests
         _email.Invocations.Should().HaveCount(2, "SMTP has no remote dedup: one email per address in all");
         VerifySentTo("first@example.com", Times.Once());
         VerifySentTo("second@example.com", Times.Once());
-        // What the second delivery relies on is the SAVED mark, not the objects the mock hands back: one save per
-        // address in the first delivery, none in the second.
-        _invitations.Verify(r => r.UpdateAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+        // What the second delivery relies on is the WRITTEN mark: one write per address in the first delivery, none
+        // in the second.
+        _invitations.Verify(
+            r => r.MarkReminder24hSentAsync(
+                It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
 
     [Fact]
-    public async Task Handle_TheRowIsReadAgainBeforeItIsWritten_SoAnAnswerThatArrivedMeanwhileIsNotUndone()
+    public async Task Handle_TheMarkIsAWriteOfThatColumnOnly_SoAnAnswerThatArrivedMeanwhileIsNotUndone()
     {
-        // UpdateAsync rewrites the whole invitation. The list was read before the first email went out: if the guest
-        // accepted in the meantime, writing that copy back would put them at Pending again.
+        // #4744. The list was read before the first email went out: if the guest accepted (or the organizer withdrew)
+        // in the meantime, rewriting that copy whole would put the old state back. The mark is a write of its own
+        // column, so there is no copy to write back: the aggregate is never handed to UpdateAsync.
         var night = PublishedNight(Guid.NewGuid());
         var stale = Invitation("guest@example.com", GameNightInvitationStatus.Pending);
         Given(night, stale);
-        var acceptedMeanwhile = GameNightInvitation.Reconstitute(
-            id: stale.Id, token: stale.Token, gameNightId: stale.GameNightId, email: stale.Email,
-            status: GameNightInvitationStatus.Accepted, expiresAt: stale.ExpiresAt, respondedAt: Now,
-            respondedByUserId: null, createdAt: stale.CreatedAt, createdBy: stale.CreatedBy,
-            unsubscribeKey: stale.UnsubscribeKey);
-        _invitations
-            .Setup(r => r.GetByIdAsync(stale.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(acceptedMeanwhile);
 
         await CreateHandler().Handle(Reminder(night), CancellationToken.None);
 
+        VerifyMarked(stale, Times.Once());
         _invitations.Verify(
-            r => r.UpdateAsync(
-                It.Is<GameNightInvitation>(i => i.Status == GameNightInvitationStatus.Accepted && i.Reminder24hSentAt == Now),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-        _invitations.Verify(
-            r => r.UpdateAsync(
-                It.Is<GameNightInvitation>(i => i.Status == GameNightInvitationStatus.Pending),
-                It.IsAny<CancellationToken>()),
+            r => r.UpdateAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()),
             Times.Never);
-    }
-
-    [Fact]
-    public async Task Handle_AnInvitationRemovedMeanwhile_IsSkippedWhenTheMarkIsWritten()
-    {
-        var night = PublishedNight(Guid.NewGuid());
-        var gone = Invitation("gone@example.com", GameNightInvitationStatus.Accepted);
-        Given(night, gone);
-        _invitations
-            .Setup(r => r.GetByIdAsync(gone.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((GameNightInvitation?)null);
-
-        var act = () => CreateHandler().Handle(Reminder(night), CancellationToken.None);
-
-        await act.Should().NotThrowAsync();
-        _invitations.Verify(r => r.UpdateAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()), Times.Never);
+        _invitations.Verify(
+            r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the mark does not need the row again: the repository writes the column and nothing else");
     }
 
     [Fact]
@@ -431,7 +416,7 @@ public sealed class GameNightReminder24hGuestEmailHandlerTests
         await CreateHandler().Handle(Reminder(night), CancellationToken.None);
 
         _email.Invocations.Should().BeEmpty();
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        VerifyNothingMarked();
     }
 
     [Fact]

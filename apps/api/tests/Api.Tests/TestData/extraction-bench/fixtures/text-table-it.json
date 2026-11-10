@@ -1,0 +1,27 @@
+{
+  "id": "text-table-it",
+  "language": "it",
+  "description": "Tabella di testo con intestazione fra due paragrafi, in italiano (accenti: può, più, perché).",
+  "pages": [
+    {
+      "number": 1,
+      "kind": "text",
+      "columns": 1,
+      "blocks": [
+        { "type": "heading", "level": 1, "text": "Il Mercato di Valmora" },
+        { "type": "paragraph", "text": "Ogni lavorante ha un prezzo di ingaggio e una rendita a fine turno, come indicato nella tabella seguente." },
+        {
+          "type": "table",
+          "render": "text",
+          "rows": [
+            ["Mestiere", "Costo", "Guadagno"],
+            ["Mercante", "due monete", "tre gemme"],
+            ["Fabbro", "tre monete", "cinque gemme"],
+            ["Locandiere", "una moneta", "due gemme"]
+          ]
+        },
+        { "type": "paragraph", "text": "Un giocatore non può ingaggiare più di due lavoranti uguali nello stesso turno, perché la piazza è piccola." }
+      ]
+    }
+  ]
+}

@@ -277,7 +277,8 @@ fake_matrix() {
 
 @test "dev-async e ci.yml selezionano gli stessi test: stessi token, stesso Core" {
     # dev-async puo' avere una ripartizione piu' fine di ci.yml (#3742 divide Games in due, #4484 e
-    # #4571 staccano AuthIntegration e DocProcessing da KnowledgeBase), ma l'unione dev'essere la
+    # #4571 staccano AuthIntegration e DocProcessing da KnowledgeBase; #4880 stacca CoreEndpoints da
+    # Core in entrambi, perche' Core dev'essere identico nei due), ma l'unione dev'essere la
     # stessa: un test che un solo gate esegue e' il difetto di #3622. Le esclusioni possono
     # differire fra i due: decidono quale shard tiene un test, non se qualcuno lo tiene, e quello lo
     # verificano le regole qui sopra.

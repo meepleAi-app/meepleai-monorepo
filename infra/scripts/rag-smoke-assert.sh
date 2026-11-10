@@ -230,26 +230,14 @@ while IFS= read -r qid; do
   fi
 done < <(jq -r '.queries[].queryId' "$QUERIES")
 
-if [ "$UPDATE_BASELINE" = true ]; then
-  # Never write a partial baseline: a query that returned no citations would be
-  # silently omitted and later assert runs would blame the operator. Fail loudly.
-  [ "$FAIL" -eq 0 ] || fail "$FAIL query(ies) returned no citations — baseline NOT written (fix retrieval/auth first)"
-  snap=$(cat "$OUT_DIR/.latest" 2>/dev/null || echo "unknown")
-  model=$(jq -r '.embedding_model // "unknown"' "$OUT_DIR/$snap.meta.json" 2>/dev/null || echo "unknown")
-  ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  # schemaVersion 2 (#3666): le entry sono {document,page}, non più {source,page}. Il campo
-  # `snapshot` resta — non serve più a invalidare la baseline, ma a dire su quale corpus è
-  # stata catturata quando si legge un fallimento.
-  jq --slurpfile b "$TMP_BASELINE" --arg snap "$snap" --arg model "$model" --arg ts "$ts" \
-     '.schemaVersion=2 | .baseline=$b[0] | .snapshot=$snap | .embeddingModel=$model | .capturedAt=$ts' \
-     "$BASELINE" > "$BASELINE.2" && mv "$BASELINE.2" "$BASELINE"
-  log "golden baseline updated → $BASELINE (snapshot=$snap, model=$model)"
-  exit 0
+if [ "$UPDATE_BASELINE" = false ]; then
+  log "result: $PASS passed, $FAIL failed, $SKIPPED skipped (pending baseline)"
 fi
 
-log "result: $PASS passed, $FAIL failed, $SKIPPED skipped (pending baseline)"
-
 # --- criterio semantico (#3740) ------------------------------------------------------------
+# #4965: PRIMA del blocco di cattura. Stava dopo, e quel blocco esce con `exit 0`: in cattura il
+# conteggio veniva fatto e mai stampato né applicato, contro quanto promette il commento nel ciclo.
+# I due dispatch di cattura di #4959 erano verdi senza una riga `semantico:` nel log.
 SEM_TOTAL=$(jq -r '[.queries[] | select(.expectedDocument)] | length' "$QUERIES")
 log "semantico: $SEM_HIT/$SEM_TOTAL con il manuale proprio del gioco nei top-$TOPK (pavimento $SEM_FLOOR)"
 if [ -n "$SEM_MISS" ]; then
@@ -266,6 +254,27 @@ if [ "$SEM_HIT" -lt "$SEM_FLOOR" ]; then
   SEM_STATUS=1
 elif [ "$SEM_HIT" -gt "$SEM_FLOOR" ]; then
   echo "::notice::Criterio semantico salito a $SEM_HIT/$SEM_TOTAL (pavimento $SEM_FLOOR): alza semanticFloor per fissare il guadagno."
+fi
+
+if [ "$UPDATE_BASELINE" = true ]; then
+  # Never write a partial baseline: a query that returned no citations would be
+  # silently omitted and later assert runs would blame the operator. Fail loudly.
+  [ "$FAIL" -eq 0 ] || fail "$FAIL query(ies) returned no citations — baseline NOT written (fix retrieval/auth first)"
+  # #4965: per la stessa ragione non si scrive una baseline sotto il pavimento semantico. Il cron
+  # del lunedì la asserirebbe come buona, e fisserebbe il recupero sbagliato che il criterio
+  # esiste per fermare. Se il calo è voluto, semanticFloor si abbassa nello stesso commit.
+  [ "$SEM_STATUS" -eq 0 ] || fail "criterio semantico sotto il pavimento ($SEM_HIT/$SEM_TOTAL, pavimento $SEM_FLOOR) — baseline NOT written"
+  snap=$(cat "$OUT_DIR/.latest" 2>/dev/null || echo "unknown")
+  model=$(jq -r '.embedding_model // "unknown"' "$OUT_DIR/$snap.meta.json" 2>/dev/null || echo "unknown")
+  ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  # schemaVersion 2 (#3666): le entry sono {document,page}, non più {source,page}. Il campo
+  # `snapshot` resta — non serve più a invalidare la baseline, ma a dire su quale corpus è
+  # stata catturata quando si legge un fallimento.
+  jq --slurpfile b "$TMP_BASELINE" --arg snap "$snap" --arg model "$model" --arg ts "$ts" \
+     '.schemaVersion=2 | .baseline=$b[0] | .snapshot=$snap | .embeddingModel=$model | .capturedAt=$ts' \
+     "$BASELINE" > "$BASELINE.2" && mv "$BASELINE.2" "$BASELINE"
+  log "golden baseline updated → $BASELINE (snapshot=$snap, model=$model)"
+  exit 0
 fi
 
 # Exit non-zero su una FAIL vera (deriva / niente citazioni) OPPURE sotto il pavimento semantico.

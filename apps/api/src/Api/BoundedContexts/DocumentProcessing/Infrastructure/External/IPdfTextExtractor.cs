@@ -5,15 +5,15 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 /// <summary>
 /// Adapter interface for PDF text extraction infrastructure
-/// Abstracts the underlying PDF processing library (Docnet.Core)
+/// Abstracts the underlying PDF processing library (Docnet.Core, which reads the text layer and does not OCR)
 /// </summary>
 internal interface IPdfTextExtractor
 {
     /// <summary>
-    /// Extracts text from a PDF file with optional OCR fallback
+    /// Extracts text from a PDF file
     /// </summary>
     /// <param name="pdfStream">PDF file stream</param>
-    /// <param name="enableOcrFallback">Whether to enable OCR fallback for low-quality extraction</param>
+    /// <param name="enableOcrFallback">Kept for the callers that pass it; <see cref="DocnetPdfTextExtractor"/> ignores it, it never performs OCR (#4437)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Extraction result with text and metadata</returns>
     Task<TextExtractionResult> ExtractTextAsync(
@@ -22,10 +22,10 @@ internal interface IPdfTextExtractor
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Extracts text from a PDF file page-by-page with optional OCR fallback
+    /// Extracts text from a PDF file page-by-page
     /// </summary>
     /// <param name="pdfStream">PDF file stream</param>
-    /// <param name="enableOcrFallback">Whether to enable OCR fallback for low-quality extraction</param>
+    /// <param name="enableOcrFallback">Kept for the callers that pass it; <see cref="DocnetPdfTextExtractor"/> ignores it, it never performs OCR (#4437)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Extraction result with page-aware chunks</returns>
     Task<PagedTextExtractionResult> ExtractPagedTextAsync(
@@ -93,7 +93,11 @@ internal record PagedTextExtractionResult(
     string? ErrorMessage = null,
     IReadOnlyList<ExtractedElement>? StructuredElements = null,
     // #3589: see TextExtractionResult.IsPermanentFailure.
-    bool IsPermanentFailure = false)
+    bool IsPermanentFailure = false,
+    // #4437: true when the pages are the PDF's own text layer and nothing else (Docnet). Only then is an empty page
+    // evidence of a scan. A VLM or an OCR extractor (SmolDocling, Unstructured hi_res) reads pixels, and one that cuts the
+    // whole text into estimated parts has no pages to count. Default false: unknown never says «scan».
+    bool TextLayerOnly = false)
 {
     public static PagedTextExtractionResult CreateSuccess(
         IList<PageTextChunk> pageChunks,

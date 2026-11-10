@@ -84,6 +84,13 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     /// </summary>
     public DateTimeOffset? Reminder24hSentAt { get; private set; }
 
+    /// <summary>
+    /// The row version PostgreSQL keeps in its <c>xmin</c> system column (#4744, ADR-060), as the aggregate was read.
+    /// It travels through the mapper so that the <c>UPDATE</c> says <c>WHERE xmin = @read</c>: a write that overlaps
+    /// another is refused instead of silently undoing it. <c>0</c> for an invitation never persisted.
+    /// </summary>
+    public uint Xmin { get; private set; }
+
 #pragma warning disable CS8618
     private GameNightInvitation() : base() { } // EF Core
 #pragma warning restore CS8618
@@ -103,7 +110,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         DateTimeOffset? rsvpConfirmationSentAt = null,
         DateTimeOffset? cancellationNoticeSentAt = null,
         string? unsubscribeKey = null,
-        DateTimeOffset? reminder24hSentAt = null) : base(id)
+        DateTimeOffset? reminder24hSentAt = null,
+        uint xmin = 0) : base(id)
     {
         Token = token;
         GameNightId = gameNightId;
@@ -119,6 +127,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         CancellationNoticeSentAt = cancellationNoticeSentAt;
         UnsubscribeKey = unsubscribeKey;
         Reminder24hSentAt = reminder24hSentAt;
+        Xmin = xmin;
     }
 
     /// <summary>
@@ -195,7 +204,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         DateTimeOffset? rsvpConfirmationSentAt = null,
         DateTimeOffset? cancellationNoticeSentAt = null,
         string? unsubscribeKey = null,
-        DateTimeOffset? reminder24hSentAt = null)
+        DateTimeOffset? reminder24hSentAt = null,
+        uint xmin = 0)
     {
         return new GameNightInvitation(
             id: id,
@@ -212,7 +222,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             rsvpConfirmationSentAt: rsvpConfirmationSentAt,
             cancellationNoticeSentAt: cancellationNoticeSentAt,
             unsubscribeKey: unsubscribeKey,
-            reminder24hSentAt: reminder24hSentAt);
+            reminder24hSentAt: reminder24hSentAt,
+            xmin: xmin);
     }
 
     /// <summary>
@@ -267,6 +278,48 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     public bool Decline(Guid? userId, DateTimeOffset utcNow, string? respondedByName = null)
     {
         return Respond(GameNightInvitationStatus.Declined, userId, utcNow, respondedByName);
+    }
+
+    /// <summary>
+    /// #4921: the answer the ACCOUNT that answered this invitation gives again, from the app. The token
+    /// path refuses a switch (D2 b) because a public link replayed must not flip an answer; an account
+    /// that is the responder is not a replay, and changing one's mind is what the member RSVPs allow,
+    /// so for them the switch is admitted — the seat check is the caller's. Same answer → <c>false</c>;
+    /// another account, or a cancelled or expired invitation → <see cref="InvalidOperationException"/>.
+    /// </summary>
+    public bool ChangeAnswer(GameNightInvitationStatus desired, Guid userId, DateTimeOffset utcNow)
+    {
+        if (desired is not (GameNightInvitationStatus.Accepted or GameNightInvitationStatus.Declined))
+        {
+            throw new ArgumentOutOfRangeException(nameof(desired), desired, "An answer is Accepted or Declined.");
+        }
+
+        if (userId == Guid.Empty || RespondedByUserId != userId)
+        {
+            throw new InvalidOperationException("Only the account that answered this invitation can change the answer.");
+        }
+
+        if (Status == GameNightInvitationStatus.Cancelled || Status == GameNightInvitationStatus.Expired)
+        {
+            throw new InvalidOperationException($"Cannot respond to invitation in status {Status}.");
+        }
+
+        if (Status == desired)
+        {
+            return false;
+        }
+
+        Status = desired;
+        RespondedAt = utcNow;
+
+        AddDomainEvent(new GameNightInvitationRespondedEvent(
+            gameNightInvitationId: Id,
+            gameNightId: GameNightId,
+            token: Token,
+            status: desired,
+            respondedByUserId: userId));
+
+        return true;
     }
 
     /// <summary>

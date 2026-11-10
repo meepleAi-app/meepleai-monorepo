@@ -5,6 +5,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { AA_NORMAL_TEXT, contrastRatio } from '@/test-utils/wcag';
+
 import { GameNightAvatar, computeInitials, deriveHueFromId } from '../GameNightAvatar';
 
 describe('GameNightAvatar', () => {
@@ -23,6 +25,32 @@ describe('GameNightAvatar', () => {
     const el = screen.getByRole('img') as HTMLElement;
     expect(el.style.getPropertyValue('--avatar-bg')).toBe('hsl(120, 60%, 55%)');
     expect(el.className).toContain('bg-[var(--avatar-bg)]');
+  });
+
+  it('pairs the background with a foreground that reaches 4.5:1, for every hue (#4910)', () => {
+    // White on hsl(h, 60%, 55%) measured 2.52 in the browser for one real host (#47afd1). The pair is measured on what
+    // the component actually renders, so a change to either half of it is caught here.
+    const failures: string[] = [];
+    for (let hue = 0; hue < 360; hue += 1) {
+      const { unmount } = render(<GameNightAvatar initials="TU" label="Test User" hue={hue} />);
+      const el = screen.getByRole('img') as HTMLElement;
+      const ratio = contrastRatio(
+        el.style.getPropertyValue('--avatar-fg'),
+        el.style.getPropertyValue('--avatar-bg')
+      );
+      if (ratio < AA_NORMAL_TEXT) failures.push(`${hue}: ${ratio.toFixed(2)}`);
+      unmount();
+    }
+
+    expect(failures).toEqual([]);
+  });
+
+  it('takes its text colour from --avatar-fg instead of a fixed white (#4910)', () => {
+    render(<GameNightAvatar initials="TU" label="Test User" hue={197} />);
+    const el = screen.getByRole('img');
+
+    expect(el.className).toContain('text-[var(--avatar-fg)]');
+    expect(el.className).not.toContain('text-white');
   });
 
   it('switches border to entity-player ring when highlightSelf=true', () => {

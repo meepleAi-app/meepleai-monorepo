@@ -16,6 +16,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { api } from '@/lib/api';
+import { RateLimitError } from '@/lib/api/core/errors';
 import type {
   LiveSessionDto,
   LiveSessionSummaryDto,
@@ -114,7 +115,13 @@ export const useSessionStore = create<SessionStore>()(
           set({ activeSession: session, isLoading: false }, false, 'joinSession/success');
           return session;
         } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Failed to join session';
+          // #4912: past 30 lookups a minute the server answers 429; that is not a wrong code.
+          const msg =
+            err instanceof RateLimitError
+              ? 'Troppi tentativi: aspetta un minuto prima di riprovare.'
+              : err instanceof Error
+                ? err.message
+                : 'Failed to join session';
           set({ error: msg, isLoading: false }, false, 'joinSession/error');
           throw err;
         }

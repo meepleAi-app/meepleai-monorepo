@@ -36,7 +36,8 @@ internal sealed class GameMemoryEntityConfiguration : IEntityTypeConfiguration<G
         builder.Property(e => e.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Issue #1939 / CF-3 — idempotency guard for OnDisputeOverriddenAddHouseRuleHandler
+        // Issue #1939 / CF-3 — idempotency guard of the dispute-override handler, retired with the structured
+        // dispute v2 (#4936). Nothing writes it any more; the column is dropped with the contract step (#4960).
         builder.Property(e => e.LastProcessedEventId)
             .HasColumnName("last_processed_event_id");
 

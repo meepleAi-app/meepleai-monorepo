@@ -304,6 +304,7 @@ Tensioni meno gravi emerse durante la risoluzione delle 5 principali. Non blocca
 - "Invited" demo è la transizione **Publish**/`AddInvitees` (Published phase, eventi → email + notifica → user vede).
 - Il backend ha 3 stati intermedi che il demo collassa: `Draft` + `Cancelled` + `Corrupted` non hanno equivalente demo (l'umbrella tratta `Cancelled` come fuori-flusso, `Corrupted` come guard interno).
 - Il backend ha **2 tipi di "invitation"**: `GameNightRsvp` (per User-linked) e `GameNightInvitation` (token-based per email guest, issue #607 Wave A.5a + #1169). Il demo confonde i due → in v2 sono solo "invited player" generico, ma il backend deve gestire entrambi i flow.
+- **Il token RSVP di `GameNightInvitation` non esce mai verso l'organizzatore** (#4874): è la credenziale dell'endpoint anonimo `POST /api/v1/game-nights/invitations/{token}/respond`, e chi la tiene risponde al posto dell'invitato. Sta nell'email dell'invitato e basta, come la chiave di disiscrizione (#4846). La risposta di creazione (`POST /api/v1/game-nights/{id}/invitations`, 201) porta l'`Id` dell'invito, con cui l'organizzatore lo identifica e lo ritira; la lista (`GET …/guest-invitations`) non ha mai avuto il token. Una risposta «per conto» dell'invitato (data a voce o su carta) non esiste oggi: se serve, è un'azione esplicita dell'organizzatore, autenticata e tracciata, non il token anonimo.
 
 ---
 

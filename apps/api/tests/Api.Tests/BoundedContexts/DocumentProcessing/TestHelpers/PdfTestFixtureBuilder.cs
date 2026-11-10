@@ -42,7 +42,6 @@ internal class PdfTestFixtureBuilder
     private Mock<IServiceScopeFactory>? _scopeFactoryMock;
     private Mock<ILogger<UploadPdfCommandHandler>>? _loggerMock;
     private Mock<IPdfTextExtractor>? _pdfTextExtractorMock;
-    private Mock<IPdfTableExtractor>? _tableExtractorMock;
     private Mock<IBackgroundTaskService>? _backgroundTaskServiceMock;
     private Mock<IAiResponseCacheService>? _cacheServiceMock;
     private Mock<IBlobStorageService>? _blobStorageServiceMock;
@@ -60,7 +59,6 @@ internal class PdfTestFixtureBuilder
         _scopeFactoryMock = new Mock<IServiceScopeFactory>();
         _loggerMock = new Mock<ILogger<UploadPdfCommandHandler>>();
         _pdfTextExtractorMock = new Mock<IPdfTextExtractor>();
-        _tableExtractorMock = new Mock<IPdfTableExtractor>();
         _backgroundTaskServiceMock = new Mock<IBackgroundTaskService>();
         _cacheServiceMock = new Mock<IAiResponseCacheService>();
         _blobStorageServiceMock = new Mock<IBlobStorageService>();
@@ -339,7 +337,6 @@ internal class PdfTestFixtureBuilder
             _scopeFactoryMock!,
             _loggerMock!,
             _pdfTextExtractorMock!,
-            _tableExtractorMock!,
             _backgroundTaskServiceMock!,
             _cacheServiceMock!,
             _blobStorageServiceMock!,
@@ -360,7 +357,6 @@ internal sealed class PdfTestFixture : IDisposable
     public Mock<IServiceScopeFactory> ScopeFactoryMock { get; }
     public Mock<ILogger<UploadPdfCommandHandler>> LoggerMock { get; }
     public Mock<IPdfTextExtractor> PdfTextExtractorMock { get; }
-    public Mock<IPdfTableExtractor> TableExtractorMock { get; }
     public Mock<IBackgroundTaskService> BackgroundTaskServiceMock { get; }
     public Mock<IAiResponseCacheService> CacheServiceMock { get; }
     public Mock<IBlobStorageService> BlobStorageServiceMock { get; }
@@ -375,7 +371,6 @@ internal sealed class PdfTestFixture : IDisposable
         Mock<IServiceScopeFactory> scopeFactoryMock,
         Mock<ILogger<UploadPdfCommandHandler>> loggerMock,
         Mock<IPdfTextExtractor> pdfTextExtractorMock,
-        Mock<IPdfTableExtractor> tableExtractorMock,
         Mock<IBackgroundTaskService> backgroundTaskServiceMock,
         Mock<IAiResponseCacheService> cacheServiceMock,
         Mock<IBlobStorageService> blobStorageServiceMock,
@@ -388,7 +383,6 @@ internal sealed class PdfTestFixture : IDisposable
         ScopeFactoryMock = scopeFactoryMock;
         LoggerMock = loggerMock;
         PdfTextExtractorMock = pdfTextExtractorMock;
-        TableExtractorMock = tableExtractorMock;
         BackgroundTaskServiceMock = backgroundTaskServiceMock;
         CacheServiceMock = cacheServiceMock;
         BlobStorageServiceMock = blobStorageServiceMock;
@@ -417,7 +411,6 @@ internal sealed class PdfTestFixture : IDisposable
             ScopeFactoryMock.Object,
             LoggerMock.Object,
             PdfTextExtractorMock.Object,
-            TableExtractorMock.Object,
             BackgroundTaskServiceMock.Object,
             CacheServiceMock.Object,
             BlobStorageServiceMock.Object,
@@ -441,7 +434,6 @@ internal sealed class PdfTestFixture : IDisposable
                 ScopeFactoryMock.Object,
                 LoggerMock.Object,
                 PdfTextExtractorMock.Object,
-                TableExtractorMock.Object,
                 BackgroundTaskServiceMock.Object,
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
@@ -455,7 +447,6 @@ internal sealed class PdfTestFixture : IDisposable
                 null!,
                 LoggerMock.Object,
                 PdfTextExtractorMock.Object,
-                TableExtractorMock.Object,
                 BackgroundTaskServiceMock.Object,
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
@@ -469,7 +460,6 @@ internal sealed class PdfTestFixture : IDisposable
                 ScopeFactoryMock.Object,
                 null!,
                 PdfTextExtractorMock.Object,
-                TableExtractorMock.Object,
                 BackgroundTaskServiceMock.Object,
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
@@ -482,21 +472,6 @@ internal sealed class PdfTestFixture : IDisposable
                 DbContext,
                 ScopeFactoryMock.Object,
                 LoggerMock.Object,
-                null!,
-                TableExtractorMock.Object,
-                BackgroundTaskServiceMock.Object,
-                CacheServiceMock.Object,
-                BlobStorageServiceMock.Object,
-                QuotaServiceMock.Object,
-                TierEnforcementServiceMock.Object,
-                PdfOptions,
-                MediatorMock.Object),
-
-            nameof(TableExtractorMock) => new UploadPdfCommandHandler(
-                DbContext,
-                ScopeFactoryMock.Object,
-                LoggerMock.Object,
-                PdfTextExtractorMock.Object,
                 null!,
                 BackgroundTaskServiceMock.Object,
                 CacheServiceMock.Object,
@@ -511,7 +486,6 @@ internal sealed class PdfTestFixture : IDisposable
                 ScopeFactoryMock.Object,
                 LoggerMock.Object,
                 PdfTextExtractorMock.Object,
-                TableExtractorMock.Object,
                 null!,
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
@@ -525,7 +499,6 @@ internal sealed class PdfTestFixture : IDisposable
                 ScopeFactoryMock.Object,
                 LoggerMock.Object,
                 PdfTextExtractorMock.Object,
-                TableExtractorMock.Object,
                 BackgroundTaskServiceMock.Object,
                 null!,
                 BlobStorageServiceMock.Object,
@@ -539,7 +512,6 @@ internal sealed class PdfTestFixture : IDisposable
                 ScopeFactoryMock.Object,
                 LoggerMock.Object,
                 PdfTextExtractorMock.Object,
-                TableExtractorMock.Object,
                 BackgroundTaskServiceMock.Object,
                 CacheServiceMock.Object,
                 null!,
@@ -553,7 +525,6 @@ internal sealed class PdfTestFixture : IDisposable
                 ScopeFactoryMock.Object,
                 LoggerMock.Object,
                 PdfTextExtractorMock.Object,
-                TableExtractorMock.Object,
                 BackgroundTaskServiceMock.Object,
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
@@ -567,7 +538,6 @@ internal sealed class PdfTestFixture : IDisposable
                 ScopeFactoryMock.Object,
                 LoggerMock.Object,
                 PdfTextExtractorMock.Object,
-                TableExtractorMock.Object,
                 BackgroundTaskServiceMock.Object,
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
@@ -581,7 +551,6 @@ internal sealed class PdfTestFixture : IDisposable
                 ScopeFactoryMock.Object,
                 LoggerMock.Object,
                 PdfTextExtractorMock.Object,
-                TableExtractorMock.Object,
                 BackgroundTaskServiceMock.Object,
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,

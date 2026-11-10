@@ -165,18 +165,6 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
                 ocrTriggered: false));
         services.AddSingleton<IPdfTextExtractor>(extractorMock.Object);
 
-        // Mock IPdfTableExtractor: returns Success=false so pipeline skips structured content step.
-        // (bare Mock.Of returns default StructuredContentResult? = null → NRE at Processing.cs:294)
-        var tableExtractorMock = new Mock<IPdfTableExtractor>();
-        tableExtractorMock
-            .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>()!, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StructuredContentResult
-            {
-                Success = false,
-                ErrorMessage = "Skipped in test"
-            });
-        services.AddSingleton<IPdfTableExtractor>(tableExtractorMock.Object);
-
         // Mock IBlobStorageService: write to temp dir
         var blobStorageMock = new Mock<IBlobStorageService>();
         blobStorageMock

@@ -294,7 +294,6 @@ export interface InviteTokenResponse {
 
 export interface SessionInviteResponse {
   sessionId: string;
-  sessionCode: string;
   gameName: string | null;
   gameImageUrl: string | null;
   sessionDate: Date;

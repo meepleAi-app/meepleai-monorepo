@@ -41,6 +41,7 @@ import { useRespondToInvitation } from '@/hooks/useRespondToInvitation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { type PublicGameNightInvitation, type RsvpAction } from '@/lib/api/game-night-invitations';
 import { deriveState, parseStateOverride } from '@/lib/invites/derive-state';
+import { inviteSubject } from '@/lib/invites/invite-subject';
 
 // --------------------------------------------------------------------------
 // FSM override gate (env-derived)
@@ -137,9 +138,16 @@ export function InvitesTokenPageClient({
   const handleAccept = useCallback(async (): Promise<void> => {
     setLastSubmittedAction('Accepted');
     const result = await respond.submit('Accepted');
-    if (result?.kind === 'conflict-state-switch') {
+    if (
+      result?.kind === 'conflict-state-switch' ||
+      result?.kind === 'gone' ||
+      result?.kind === 'full'
+    ) {
       // Refetch to surface fresh `alreadyRespondedAs` so the banner copy
-      // matches the server state (not just our optimistic view).
+      // matches the server state (not just our optimistic view). After a 410 it is how the page learns WHY the
+      // link is gone: the 410 carries no reason, and a cancelled night is told apart from an expired invitation by
+      // the fresh `nightCancelled` (#4856). After a full table (#4947) it brings the seat count the guest just
+      // found out about.
       await refetch();
     }
   }, [refetch, respond]);
@@ -147,7 +155,7 @@ export function InvitesTokenPageClient({
   const handleDecline = useCallback(async (): Promise<void> => {
     setLastSubmittedAction('Declined');
     const result = await respond.submit('Declined');
-    if (result?.kind === 'conflict-state-switch') {
+    if (result?.kind === 'conflict-state-switch' || result?.kind === 'gone') {
       await refetch();
     }
   }, [refetch, respond]);
@@ -276,7 +284,10 @@ export function InvitesTokenPageClient({
                 : t('pages.invites.states.alreadyAccepted.subTextDeclined'),
           }),
         }
-      : null;
+      : respond.state === 'full'
+        ? // #4947: a 409 too, but the seats went, not the answer. Read as a state switch it said «you already answered».
+          { tone: 'warning' as const, children: t('pages.invites.banners.full') }
+        : null;
 
   const errorBanner =
     respond.state === 'error'
@@ -284,8 +295,9 @@ export function InvitesTokenPageClient({
       : null;
 
   // ---- Render -----------------------------------------------------------
+  // A named region, not a <main>: the public layout already provides the page's <main> (#4910).
   return (
-    <main
+    <section
       data-slot="invites-token-page"
       data-state={state}
       aria-label={t('pages.invites.states.default.ariaRegion')}
@@ -317,7 +329,11 @@ export function InvitesTokenPageClient({
           {state === 'token-invalid' ? (
             <TokenInvalidShell t={t} />
           ) : state === 'token-expired' ? (
-            <TokenExpiredShell t={t} hostName={invitation?.hostDisplayName ?? ''} />
+            <TokenExpiredShell
+              t={t}
+              hostName={invitation?.hostDisplayName ?? ''}
+              nightCancelled={invitation?.nightCancelled === true}
+            />
           ) : state === 'accepted-success' && invitation ? (
             <AcceptedSuccessSurface
               invitation={invitation}
@@ -374,7 +390,7 @@ export function InvitesTokenPageClient({
           )}
         </section>
       </div>
-    </main>
+    </section>
   );
 }
 
@@ -419,13 +435,14 @@ function PendingSurface({
   onDecline,
   t,
 }: PendingSurfaceProps): JSX.Element {
+  const subject = inviteSubject(invitation);
   return (
     <>
       <InviteHero
         eyebrowText={t('pages.invites.metadata.title')}
         hostName={invitation.hostDisplayName}
-        gameName={invitation.primaryGameName ?? ''}
-        inviteVerb="ti invita a giocare a"
+        gameName={subject.name}
+        inviteVerb={subject.verb}
         dateShort={heroDate}
         time={heroTime}
       />
@@ -536,7 +553,7 @@ function AcceptedSuccessSurface({
           hostName: invitation.hostDisplayName,
         })}
         summaryLabel="Riepilogo"
-        gameName={invitation.primaryGameName ?? '—'}
+        gameName={inviteSubject(invitation).name || '—'}
         summaryMeta={summaryMeta}
         icsLabel={t('pages.invites.states.acceptedSuccess.addToCalendarCta')}
       />
@@ -579,9 +596,11 @@ function DeclinedSurface({
 interface TokenExpiredShellProps {
   readonly t: T;
   readonly hostName: string;
+  /** #4856: the NIGHT was cancelled (not the invitation withdrawn or expired): say so. */
+  readonly nightCancelled: boolean;
 }
 
-function TokenExpiredShell({ t, hostName }: TokenExpiredShellProps): JSX.Element {
+function TokenExpiredShell({ t, hostName, nightCancelled }: TokenExpiredShellProps): JSX.Element {
   return (
     <div data-slot="invite-expired" className="flex flex-col items-center px-5 py-8 text-center">
       <div
@@ -591,12 +610,18 @@ function TokenExpiredShell({ t, hostName }: TokenExpiredShellProps): JSX.Element
         ⌛
       </div>
       <h2 className="m-0 mb-1.5 font-display text-[18px] font-bold text-foreground">
-        {t('pages.invites.states.tokenExpired.heading')}
+        {nightCancelled
+          ? t('pages.invites.states.nightCancelled.heading')
+          : t('pages.invites.states.tokenExpired.heading')}
       </h2>
       <p className="m-0 mb-4 text-[12px] leading-relaxed text-[hsl(var(--text-muted))]">
-        {hostName.length > 0
-          ? t('pages.invites.states.tokenExpired.subText', { hostName })
-          : t('pages.invites.banners.goneExpired')}
+        {nightCancelled
+          ? hostName.length > 0
+            ? t('pages.invites.states.nightCancelled.subText', { hostName })
+            : t('pages.invites.states.nightCancelled.subTextNoHost')
+          : hostName.length > 0
+            ? t('pages.invites.states.tokenExpired.subText', { hostName })
+            : t('pages.invites.banners.goneExpired')}
       </p>
       <Link
         href="/"
@@ -653,13 +678,14 @@ function AlreadyRespondedSurface({
   t,
 }: AlreadyRespondedSurfaceProps): JSX.Element {
   const wasAccepted = invitation.alreadyRespondedAs === 'Accepted';
+  const subject = inviteSubject(invitation);
   return (
     <>
       <InviteHero
         eyebrowText={t('pages.invites.metadata.title')}
         hostName={invitation.hostDisplayName}
-        gameName={invitation.primaryGameName ?? ''}
-        inviteVerb="ti invita a giocare a"
+        gameName={subject.name}
+        inviteVerb={subject.verb}
         dateShort={heroDate}
         time={heroTime}
       />

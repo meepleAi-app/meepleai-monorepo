@@ -426,3 +426,112 @@ describe("publishVerdict — Phase 2a integration (AC-1, AC-4, AC-7, AC-8)", () 
     );
   });
 });
+
+// #4937: the bot posted "✅ No failed checks" on release PR #4897 while CI was still running, and listed its
+// own cancelled job as a "🆕 new check" on #4892.
+describe("runBot — what CI has not decided yet (#4937)", () => {
+  it("does not classify its own job, even when its concurrency cancelled it", async () => {
+    const octokit = makeOctokit({
+      checkRuns: [
+        { name: "Classify release-PR failures", status: "completed", conclusion: "cancelled" },
+        { name: "Classify release-PR failures", status: "completed", conclusion: "cancelled" },
+        { name: VERDICT_CHECK_NAME, status: "completed", conclusion: "failure" },
+        { name: "Backend - Unit Tests", status: "completed", conclusion: "success" },
+      ],
+    });
+
+    const result = await runBot({ ...BASE_ARGS, octokit, gates });
+
+    expect(result.failures).toEqual([]);
+    expect(result.total_checks).toBe(1);
+    const body = octokit.issues.createComment.mock.calls[0][0].body;
+    expect(body).not.toContain("Classify release-PR failures");
+    expect(body).not.toContain("🆕");
+  });
+
+  it("says how many checks are still running instead of declaring the head clean", async () => {
+    const octokit = makeOctokit({
+      checkRuns: [
+        { name: "Backend - Unit Tests", status: "completed", conclusion: "success" },
+        { name: "Backend - Integration (Core)", status: "in_progress", conclusion: null },
+        { name: "Frontend - Lint", status: "queued", conclusion: null },
+      ],
+    });
+
+    const result = await runBot({ ...BASE_ARGS, octokit, gates });
+
+    expect(result.pending).toEqual(["Backend - Integration (Core)", "Frontend - Lint"]);
+    const body = octokit.issues.createComment.mock.calls[0][0].body;
+    expect(body).not.toContain("✅");
+    expect(body).toContain("⏳ 2 checks still running — no verdict until they complete.");
+    expect(result.verdict).toEqual({ published: false, reason: "checks-pending" });
+    expect(octokit.checks.create).not.toHaveBeenCalled();
+  });
+
+  it("marks a classification with failures as partial while other checks run", async () => {
+    const octokit = makeOctokit({
+      checkRuns: [
+        { name: "Backend - Unit Tests", status: "completed", conclusion: "failure" },
+        { name: "Backend - Integration (Core)", status: "in_progress", conclusion: null },
+      ],
+    });
+
+    await runBot({ ...BASE_ARGS, octokit, gates });
+
+    const body = octokit.issues.createComment.mock.calls[0][0].body;
+    expect(body).toMatch(/BLOCKER/);
+    expect(body).toContain("⏳ 1 check still running — this classification is partial.");
+  });
+
+  it("still says ✅ once every check has completed without failures", async () => {
+    const octokit = makeOctokit({
+      checkRuns: [{ name: "Backend - Unit Tests", status: "completed", conclusion: "success" }],
+    });
+
+    await runBot({ ...BASE_ARGS, octokit, gates });
+
+    expect(octokit.issues.createComment.mock.calls[0][0].body).toContain("✅ No failed checks classified.");
+  });
+
+  it("reads every page of check-runs, not only the first hundred", async () => {
+    const page1 = Array.from({ length: 100 }, (_, i) => ({
+      name: `Check ${i}`, status: "completed", conclusion: "success",
+    }));
+    const page2 = [{ name: "Backend - Unit Tests", status: "completed", conclusion: "failure" }];
+    const octokit = makeOctokit();
+    octokit.checks.listForRef = vi.fn(async ({ page }) => ({
+      data: { total_count: 101, check_runs: page === 1 ? page1 : page === 2 ? page2 : [] },
+    }));
+
+    const result = await runBot({ ...BASE_ARGS, octokit, gates });
+
+    expect(octokit.checks.listForRef).toHaveBeenCalledTimes(2);
+    expect(result.total_checks).toBe(101);
+    expect(result.failures.map((f) => f.name)).toEqual(["Backend - Unit Tests"]);
+  });
+});
+
+// #4937: the workflow passed the head in GITHUB_SHA, which GitHub does not let a workflow overwrite, so the bot
+// read the check-runs of the commit the workflow ran on. Without an explicit head it must ask the PR.
+describe("runBot — which commit it reads (#4937)", () => {
+  it("reads the check-runs of the PR head when no head SHA is given", async () => {
+    const octokit = makeOctokit({
+      checkRuns: [{ name: "Backend - Unit Tests", status: "completed", conclusion: "failure" }],
+    });
+
+    await runBot({ ...BASE_ARGS, commitSha: null, octokit, gates });
+
+    expect(octokit.pulls.get).toHaveBeenCalledWith(expect.objectContaining({ pull_number: 1016 }));
+    expect(octokit.checks.listForRef.mock.calls[0][0].ref).toBe("head1234");
+    expect(octokit.issues.createComment.mock.calls[0][0].body).toContain("Commit `head123`");
+  });
+
+  it("reads the given head without asking the PR", async () => {
+    const octokit = makeOctokit({ checkRuns: [] });
+
+    await runBot({ ...BASE_ARGS, octokit, gates });
+
+    expect(octokit.pulls.get).not.toHaveBeenCalled();
+    expect(octokit.checks.listForRef.mock.calls[0][0].ref).toBe("abcdef1234567890");
+  });
+});

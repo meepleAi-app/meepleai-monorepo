@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities.PauseSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
@@ -100,6 +101,7 @@ internal sealed class CreatePauseSnapshotCommandHandler
         if (session.Status != LiveSessionStatus.InProgress)
         {
             throw new ConflictException(
+                LiveSessionConflictCodes.ForRejectedStatus(session.Status, LiveSessionConflictCodes.SessionAlreadyStarted),
                 $"Cannot create a pause snapshot for session in {session.Status} status. " +
                 "Session must be InProgress.");
         }

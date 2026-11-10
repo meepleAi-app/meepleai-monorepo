@@ -60,6 +60,12 @@
   "shards": {
     "Core": {
       "_comment": [
+        "#4880 — Core diviso: i test sotto Integration.Routing, Integration.Testing e Integration.Events",
+        "passano a CoreEndpoints. Conteggi e nomi invariati: nessuno dei nomi dichiarati qui cade in quei",
+        "token (controllo: jq sui nomi | grep -ciE 'Integration\\.(Routing|Testing|Events)' -> 0; -i perche'",
+        "FullyQualifiedName~ di vstest confronta senza distinguere le maiuscole). Lo shard",
+        "scende da 1309 a 1119 test (ripartizione del .trx del run 42073703384).",
+        "",
         "#4609 — skipped 47 -> 46, DICHIARATO prima del run, NON ancora misurato: va ricontrollato sul",
         ".trx di `integration-results-Core` del primo run di dev-async dopo il merge.",
         "  -1 UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledWhileSavingVectorRows_LeavesNoCompletedVectorDocument",
@@ -179,6 +185,23 @@
         "Api.Tests.Integration.UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledMidTextExtraction_ReleasesResources"
       ]
     },
+    "CoreEndpoints": {
+      "_comment": [
+        "Staccato da Core con #4880: i test il cui nome completo contiene Integration.Routing,",
+        "Integration.Testing o Integration.Events. Core li esclude.",
+        "",
+        "DERIVATI, non ancora misurati: la voce di Core ripartita come la ripartisce il filtro. Nessuno dei",
+        "2 falliti e dei 46 saltati di Core sta sotto quei token. Controprova sul .trx di",
+        "`integration-results-Core` del run 42073703384 (SHA 7de327b27): dei 1309 test di Core 190 cadono",
+        "nel filtro nuovo, tutti Passed, e i 1119 restanti tengono i 2 falliti e i 46 saltati.",
+        "Da ricatturare col primo run completo: shard-skip-assert.sh --shard CoreEndpoints --trx <file>",
+        "--log <file> --update-baseline, annotando run, job, sessione e modo del runner."
+      ],
+      "failed": 0,
+      "skipped": 0,
+      "failedTests": [],
+      "skippedTests": []
+    },
     "KnowledgeBase": {
       "_comment": [
         "Divisa il 2026-10-20 (#4571): i nomi dichiarati che cadono nel filtro di DocProcessing sono",
@@ -223,10 +246,17 @@
         "raccolta di servizi della classe non registrava ISemanticResponseCache (dipendenza di",
         "DeletePdfCommandHandler da #3982), quindi il gestore non si costruiva e nessun test della classe",
         "lo eseguiva. Registrato il doppio, la classe passa intera: misurato in locale su Postgres",
-        "(Testcontainers), 12 su 12. Gli altri nomi di questa voce non c'entrano con DeletePdf e restano."
+        "(Testcontainers), 12 su 12. Gli altri nomi di questa voce non c'entrano con DeletePdf e restano.",
+        "",
+        "PR #4923 (#4434 parte a): +2 saltati, le due righe della Theory",
+        "UnstructuredExtractionBenchTests (namespace ...DocumentProcessing.ExtractionBench, quindi nel filtro",
+        "di questo shard). Sono salti PREVISTO: senza TEST_UNSTRUCTURED_URL, che nessun workflow imposta, e",
+        "restano tali finche' non esiste un host con unstructured-service (decisioni dell'epic #4433). I nomi",
+        "sono quelli che scrive il .trx, ricavati da un run locale con lo stesso comparatore. Il conteggio",
+        "passa da 2 a 4; quando un host c'e', le due righe girano e vanno tolte da qui con --update-baseline."
       ],
       "failed": 5,
-      "skipped": 2,
+      "skipped": 4,
       "failedTests": [
         "Api.Tests.Integration.DocumentProcessing.OrphanCleanupAndReattemptIntegrationTests.CleanupThenReattempt_RemovesOrphansCascade_AndReEnqueuesOnlyValidPending",
         "Api.Tests.Integration.DocumentProcessing.OrphanCleanupAndReattemptIntegrationTests.Cleanup_IsIdempotent_OnSecondRun",
@@ -235,6 +265,8 @@
         "Api.Tests.Integration.DocumentProcessing.PdfRowVersionConcurrencyIntegrationTests.Reindex_RacesWithDelete_LeavesNoOrphanState"
       ],
       "skippedTests": [
+        "Api.Tests.BoundedContexts.DocumentProcessing.ExtractionBench.UnstructuredExtractionBenchTests.Unstructured_DoesNotFallBelowItsCommittedBaseline(extractorId: \"unstructured-fast\", strategy: Fast, blocking: True)",
+        "Api.Tests.BoundedContexts.DocumentProcessing.ExtractionBench.UnstructuredExtractionBenchTests.Unstructured_DoesNotFallBelowItsCommittedBaseline(extractorId: \"unstructured-hires\", strategy: HiRes, blocking: False)",
         "Api.Tests.Integration.DocumentProcessing.S3BlobStorageIntegrationTests.GetPresignedDownloadUrlAsync_AfterStore_ReturnsValidUrl",
         "Api.Tests.Integration.DocumentProcessing.S3BlobStorageIntegrationTests.StoreAsync_ValidFile_ReturnsSuccessWithFileId"
       ]

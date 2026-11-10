@@ -44,8 +44,8 @@ const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 const adminEmail =
   process.env.PLAYWRIGHT_ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'admin@meepleai.app';
-const adminPassword =
-  process.env.PLAYWRIGHT_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || '5ZwHNfXqTkRfTQG5bFr5MAPh';
+// No fallback value: the password comes from the environment only (infra/secrets/admin.secret).
+const adminPassword = process.env.PLAYWRIGHT_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,6 +58,14 @@ const adminPassword =
  * Returns the raw session cookie value for diagnostic use, or null on failure.
  */
 async function loginViaBackendApi(page: Page): Promise<boolean> {
+  if (!adminPassword) {
+    console.error(
+      '[admin-kb-navcounts] No admin password: set PLAYWRIGHT_ADMIN_PASSWORD or ADMIN_PASSWORD ' +
+        '(see infra/secrets/admin.secret)'
+    );
+    return false;
+  }
+
   const response = await page.request.post(`${apiBase}/api/v1/auth/login`, {
     headers: { 'Content-Type': 'application/json' },
     data: { email: adminEmail, password: adminPassword },

@@ -283,7 +283,8 @@ public sealed class GetShareableSessionQueryHandler : IRequestHandler<GetShareab
 
         return new ShareableSessionResponse(
             SessionId: session.Id,
-            SessionCode: session.SessionCode,
+            // No SessionCode: this read is anonymous and the code is the credential that lets a stranger
+            // join the session (#4883).
             GameName: null, // Would need to join with Game table
             GameImageUrl: null,
             SessionDate: session.SessionDate,
@@ -348,7 +349,9 @@ public sealed class GenerateSessionShareLinkQueryHandler : IRequestHandler<Gener
             .OrderByDescending(x => x.Score)
             .FirstOrDefault();
 
-        var title = $"MeepleAI Session - {session.SessionCode}";
+        // The title ends up in the Open Graph tags of a link made to be pasted into social media: it must
+        // not carry the session code, which is the credential for joining (#4883).
+        var title = $"MeepleAI Session - {session.SessionDate:MMMM d, yyyy}";
         var description = session.Participants.Count == 1
             ? $"Solo session on {session.SessionDate:MMMM d, yyyy}"
             : winnerParticipant?.Score > 0

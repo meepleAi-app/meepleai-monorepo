@@ -6,7 +6,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Answers <see cref="GetDocumentsWithUnreliablePageNumbersQuery"/>: a document is unreliable when it is known to have
-/// more than one page and the page its passages claim most often holds more than half of them.
+/// more than one page and either the page its passages claim most often holds more than half of them, or half of its
+/// passages or more carry no page at all.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -22,11 +23,20 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// than a false one» that is the right side to err on, and its passages inherit the start page of the section anyway.
 /// </para>
 /// <para>
-/// A page number of 0 or less is no page: the indexing paths write <c>chunk.Page</c> as it comes (0 when unset), and
-/// the citation clamps it to 1, so counting a 0 as a page would believe a document whose passages say 1. A document
+/// A page number of 0 or less, or no page number at all (<c>NULL</c>), is no page: the indexing paths used to write
+/// <c>chunk.Page</c> as it came (0 when unset) and now write <c>NULL</c> for a page nobody measured (#4782), and the
+/// citation clamps either to 1, so counting it as a page would believe a document whose passages say 1. A document
 /// whose page count is unknown, or is one, is given the benefit of the doubt: with one page there is nothing to
 /// confuse, and without the count there is nothing to say the numbers are wrong. A document with several pages and no
 /// passage carrying a page is unreliable.
+/// </para>
+/// <para>
+/// <b>Passages without a page count against the document (#4782).</b> A flat document used to claim page 1 for every
+/// passage, and the concentration rule above flagged it. Now its body has no page, and a rule that only looks at the
+/// passages that DO carry one would stop seeing it: forty passages without a page plus three tables extracted
+/// afterwards on three different pages would tell «three pages, one passage each» and be believed, while the citation
+/// of any body passage still says the page of its vector row, which is never unknown. So the passages that carry a
+/// real page must also be more than half of all the passages of the document.
 /// </para>
 /// </remarks>
 internal sealed class GetDocumentsWithUnreliablePageNumbersQueryHandler
@@ -71,9 +81,20 @@ internal sealed class GetDocumentsWithUnreliablePageNumbersQueryHandler
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // How many passages each of them has, with or without a page.
+        var totals = await _dbContext.TextChunks
+            .AsNoTracking()
+            .Where(c => withSeveralPages.Contains(c.PdfDocumentId))
+            .GroupBy(c => c.PdfDocumentId)
+            .Select(g => new { PdfDocumentId = g.Key, Passages = g.Count() })
+            .ToDictionaryAsync(t => t.PdfDocumentId, t => t.Passages, cancellationToken)
+            .ConfigureAwait(false);
+
         var believed = claims
             .GroupBy(c => c.PdfDocumentId)
-            .Where(g => g.Max(c => c.Passages) * 2 <= g.Sum(c => c.Passages))
+            .Where(g => g.Max(c => c.Passages) * 2 <= g.Sum(c => c.Passages)
+                && totals.TryGetValue(g.Key, out var total)
+                && g.Sum(c => c.Passages) * 2 > total)
             .Select(g => g.Key)
             .ToHashSet();
 

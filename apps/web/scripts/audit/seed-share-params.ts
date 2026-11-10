@@ -165,12 +165,13 @@ export async function seedShareParams(): Promise<{
   await step('gameNightInviteToken', async () => {
     if (!gameNightId) throw new Error('nessun game night creato nel passo precedente');
     // Email sempre nuova: un invito pendente per lo stesso indirizzo fa rispondere 409.
-    const dto = await post<{ token: string }>(
-      user,
-      `/api/v1/game-nights/${gameNightId}/invitations`,
-      { email: `audit-invitee-${stamp}@meepleai.test` }
-    );
-    params.gameNightInviteToken = dto.token;
+    // Il token RSVP non torna più nella risposta (#4874): è la credenziale anonima di risposta e va
+    // solo all'invitato, nell'email. Qui si crea l'invito; il token lo legge subito dopo
+    // `PARAM_QUERIES.gameNightInviteToken` dal database (l'invito più recente), e `main-params`
+    // unisce il risultato SQL a quello del seed.
+    await post<{ id: string }>(user, `/api/v1/game-nights/${gameNightId}/invitations`, {
+      email: `audit-invitee-${stamp}@meepleai.test`,
+    });
   });
 
   await step('liveSessionCode', async () => {

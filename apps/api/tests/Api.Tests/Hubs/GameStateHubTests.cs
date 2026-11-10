@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.Hubs;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -9,228 +11,230 @@ using Xunit;
 
 namespace Api.Tests.Hubs;
 
+/// <summary>
+/// #4962: <see cref="GameStateHub"/> is reachable by any connection (<c>[AllowAnonymous]</c>), so it must judge
+/// the connection's own user. Before: <c>JoinSession</c> put anyone in any session group, and a dozen methods
+/// relayed a client payload into any group (a fake verdict on the Arbitro tab, a fake pause, a forged score).
+/// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameManagement")]
-public class GameStateHubTests
+[Trait("Issue", "4962")]
+public sealed class GameStateHubTests
 {
-    private readonly Mock<IHubCallerClients> _mockClients;
-    private readonly Mock<IGroupManager> _mockGroups;
-    private readonly Mock<HubCallerContext> _mockContext;
-    private readonly Mock<IClientProxy> _mockClientProxy;
-    private readonly GameStateHub _hub;
+    private static readonly Guid SessionId = Guid.Parse("4962aaaa-0000-0000-0000-000000000001");
+    private static readonly Guid UserId = Guid.Parse("4962bbbb-0000-0000-0000-000000000002");
+    private static readonly string Group = $"session:{SessionId}";
+    private const string ConnectionId = "conn-4962";
 
-    private const string TestSessionId = "session-123";
-    private const string TestSessionGroup = $"session:{TestSessionId}";
-    private const string TestConnectionId = "conn-abc";
-    private const string TestParticipantId = "user-456";
+    private readonly Mock<ISender> _sender = new();
+    private readonly Mock<IGroupManager> _groups = new();
+    private readonly Mock<IHubCallerClients> _clients = new();
+    private readonly Mock<IClientProxy> _others = new();
+    private readonly Mock<HubCallerContext> _context = new();
+    private readonly Dictionary<object, object?> _items = new();
 
-    public GameStateHubTests()
+    private GameStateHub NewHub(ClaimsPrincipal? user)
     {
-        _mockClients = new Mock<IHubCallerClients>();
-        _mockGroups = new Mock<IGroupManager>();
-        _mockContext = new Mock<HubCallerContext>();
-        _mockClientProxy = new Mock<IClientProxy>();
+        _context.Setup(c => c.ConnectionId).Returns(ConnectionId);
+        _context.Setup(c => c.User).Returns(user);
+        _context.Setup(c => c.Items).Returns(_items);
+        _context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
+        _clients.Setup(c => c.OthersInGroup(It.IsAny<string>())).Returns(_others.Object);
 
-        _mockContext.Setup(c => c.ConnectionId).Returns(TestConnectionId);
-        _mockContext.Setup(c => c.UserIdentifier).Returns("test-user");
-
-        var logger = new Mock<ILogger<GameStateHub>>();
-        var publisher = new Mock<IPublisher>();
-        _hub = new GameStateHub(logger.Object, publisher.Object)
+        return new GameStateHub(new Mock<ILogger<GameStateHub>>().Object, _sender.Object)
         {
-            Clients = _mockClients.Object,
-            Groups = _mockGroups.Object,
-            Context = _mockContext.Object
+            Groups = _groups.Object,
+            Clients = _clients.Object,
+            Context = _context.Object,
         };
     }
 
-    // ── JoinSessionWithRole ──
+    private static ClaimsPrincipal SignedIn(Guid userId) =>
+        new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId.ToString())], "SessionCookie"));
 
-    [Fact]
-    public async Task JoinSessionWithRole_WithHostRole_JoinsBothSessionAndHostGroups()
-    {
-        // Arrange
-        _mockGroups
-            .Setup(g => g.AddToGroupAsync(TestConnectionId, It.IsAny<string>(), default))
-            .Returns(Task.CompletedTask);
+    private static ClaimsPrincipal Anonymous() => new(new ClaimsIdentity());
 
-        // Act
-        await _hub.JoinSessionWithRole(TestSessionId, "host");
+    private void AccessIs(bool found, bool authorized) =>
+        _sender
+            .Setup(s => s.Send(
+                It.Is<GetLiveSessionParticipantContextQuery>(q => q.SessionId == SessionId && q.UserId == UserId),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LiveSessionParticipantContextResult(found, authorized));
 
-        // Assert
-        _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, TestSessionGroup, default),
-            Times.Once);
-        _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, $"{TestSessionGroup}:host", default),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task JoinSessionWithRole_WithHostRole_CaseInsensitive_JoinsBothGroups()
-    {
-        // Arrange
-        _mockGroups
-            .Setup(g => g.AddToGroupAsync(TestConnectionId, It.IsAny<string>(), default))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await _hub.JoinSessionWithRole(TestSessionId, "HOST");
-
-        // Assert
-        _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, TestSessionGroup, default),
-            Times.Once);
-        _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, $"{TestSessionGroup}:host", default),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task JoinSessionWithRole_WithPlayerRole_JoinsOnlySessionGroup()
-    {
-        // Arrange
-        _mockGroups
-            .Setup(g => g.AddToGroupAsync(TestConnectionId, It.IsAny<string>(), default))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await _hub.JoinSessionWithRole(TestSessionId, "player");
-
-        // Assert
-        _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, TestSessionGroup, default),
-            Times.Once);
-        _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, $"{TestSessionGroup}:host", default),
+    private void VerifyNotAdded() =>
+        _groups.Verify(
+            g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
-    }
 
-    // ── ProposeScore ──
+    // ── JoinSession ──
 
     [Fact]
-    public async Task ProposeScore_SendsToHostGroupOnly()
+    public async Task JoinSession_AParticipant_EntersTheSessionGroup()
     {
-        // Arrange
-        var proposal = new { playerId = "p1", score = 42 };
-        _mockClients
-            .Setup(c => c.Group($"{TestSessionGroup}:host"))
-            .Returns(_mockClientProxy.Object);
-        _mockClientProxy
-            .Setup(p => p.SendCoreAsync("ScoreProposed", It.IsAny<object?[]>(), default))
-            .Returns(Task.CompletedTask);
+        AccessIs(found: true, authorized: true);
+        var hub = NewHub(SignedIn(UserId));
 
-        // Act
-        await _hub.ProposeScore(TestSessionId, proposal);
+        await hub.JoinSession(SessionId.ToString());
 
-        // Assert
-        _mockClients.Verify(c => c.Group($"{TestSessionGroup}:host"), Times.Once);
-        _mockClientProxy.Verify(
-            p => p.SendCoreAsync("ScoreProposed", It.Is<object?[]>(args => args[0] == (object)proposal), default),
+        _groups.Verify(g => g.AddToGroupAsync(ConnectionId, Group, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task JoinSession_AnAuthenticatedNonParticipant_IsRefused_AndNotAdded()
+    {
+        AccessIs(found: true, authorized: false);
+        var hub = NewHub(SignedIn(UserId));
+
+        var act = () => hub.JoinSession(SessionId.ToString());
+
+        (await act.Should().ThrowAsync<HubException>()).WithMessage(GameStateHub.SessionNotFoundMessage);
+        VerifyNotAdded();
+    }
+
+    [Fact]
+    public async Task JoinSession_AnUnknownSession_GetsTheSameErrorAsANonParticipant()
+    {
+        AccessIs(found: false, authorized: false);
+        var hub = NewHub(SignedIn(UserId));
+
+        var act = () => hub.JoinSession(SessionId.ToString());
+
+        (await act.Should().ThrowAsync<HubException>()).WithMessage(GameStateHub.SessionNotFoundMessage);
+        VerifyNotAdded();
+    }
+
+    [Fact]
+    public async Task JoinSession_AnAnonymousConnection_IsRefusedWithoutAskingWhoTakesPart()
+    {
+        var hub = NewHub(Anonymous());
+
+        var act = () => hub.JoinSession(SessionId.ToString());
+
+        (await act.Should().ThrowAsync<HubException>()).WithMessage(GameStateHub.AuthenticationRequiredMessage);
+        VerifyNotAdded();
+        _sender.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task JoinSession_AGuestTokenIdentity_IsNotAnAuthenticatedUser()
+    {
+        // SessionParticipantIdProvider turns ?sessionToken=… into UserIdentifier "guest:…" without checking
+        // it: the hub must not read that as an identity.
+        _context.Setup(c => c.UserIdentifier).Returns("guest:anything");
+        var hub = NewHub(Anonymous());
+
+        var act = () => hub.JoinSession(SessionId.ToString());
+
+        (await act.Should().ThrowAsync<HubException>()).WithMessage(GameStateHub.AuthenticationRequiredMessage);
+        VerifyNotAdded();
+    }
+
+    [Fact]
+    public async Task JoinSession_ANonGuidId_IsRefused()
+    {
+        var hub = NewHub(SignedIn(UserId));
+
+        var act = () => hub.JoinSession("session-123");
+
+        (await act.Should().ThrowAsync<HubException>()).WithMessage(GameStateHub.SessionNotFoundMessage);
+        VerifyNotAdded();
+    }
+
+    [Fact]
+    public async Task JoinSession_UsesTheGroupNameTheServerSendsTo_WhateverTheCasing()
+    {
+        AccessIs(found: true, authorized: true);
+        var hub = NewHub(SignedIn(UserId));
+
+        await hub.JoinSession(SessionId.ToString().ToUpperInvariant());
+
+        _groups.Verify(g => g.AddToGroupAsync(ConnectionId, Group, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── BroadcastStateChange ──
+
+    [Fact]
+    public async Task BroadcastStateChange_WithoutJoining_IsRefused_AndNothingIsSent()
+    {
+        var hub = NewHub(SignedIn(UserId));
+
+        var act = () => hub.BroadcastStateChange(SessionId.ToString(), new { score = 99 });
+
+        (await act.Should().ThrowAsync<HubException>()).WithMessage(GameStateHub.NotJoinedMessage);
+        _clients.Verify(c => c.OthersInGroup(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task BroadcastStateChange_AfterJoining_RelaysToTheOthersInThatSession()
+    {
+        AccessIs(found: true, authorized: true);
+        var hub = NewHub(SignedIn(UserId));
+        await hub.JoinSession(SessionId.ToString());
+
+        await hub.BroadcastStateChange(SessionId.ToString(), new { score = 99 });
+
+        _clients.Verify(c => c.OthersInGroup(Group), Times.Once);
+        _others.Verify(
+            p => p.SendCoreAsync("StateChanged", It.Is<object?[]>(a => a.Length == 1), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task ProposeScore_DoesNotSendToFullSessionGroup()
+    public async Task BroadcastStateChange_IntoAnotherSession_IsRefused_EvenAfterJoiningOne()
     {
-        // Arrange
-        var proposal = new { playerId = "p1", score = 42 };
-        _mockClients
-            .Setup(c => c.Group($"{TestSessionGroup}:host"))
-            .Returns(_mockClientProxy.Object);
-        _mockClientProxy
-            .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object?[]>(), default))
-            .Returns(Task.CompletedTask);
+        AccessIs(found: true, authorized: true);
+        var hub = NewHub(SignedIn(UserId));
+        await hub.JoinSession(SessionId.ToString());
 
-        // Act
-        await _hub.ProposeScore(TestSessionId, proposal);
+        var act = () => hub.BroadcastStateChange(Guid.NewGuid().ToString(), new { score = 99 });
 
-        // Assert — never calls Group(sessionGroup) without ":host" suffix
-        _mockClients.Verify(c => c.Group(TestSessionGroup), Times.Never);
-    }
-
-    // ── ConfirmScore ──
-
-    [Fact]
-    public async Task ConfirmScore_SendsToEntireSessionGroup()
-    {
-        // Arrange
-        var confirmation = new { playerId = "p1", score = 42, confirmed = true };
-        _mockClients
-            .Setup(c => c.Group(TestSessionGroup))
-            .Returns(_mockClientProxy.Object);
-        _mockClientProxy
-            .Setup(p => p.SendCoreAsync("ScoreConfirmed", It.IsAny<object?[]>(), default))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await _hub.ConfirmScore(TestSessionId, confirmation);
-
-        // Assert
-        _mockClients.Verify(c => c.Group(TestSessionGroup), Times.Once);
-        _mockClientProxy.Verify(
-            p => p.SendCoreAsync("ScoreConfirmed", It.Is<object?[]>(args => args[0] == (object)confirmation), default),
-            Times.Once);
-    }
-
-    // ── UpdateAgentAccess ──
-
-    [Fact]
-    public async Task UpdateAgentAccess_SendsToSessionGroup()
-    {
-        // Arrange — hub broadcasts to Group, not User (SignalR identity != participant DB GUID)
-        _mockClients
-            .Setup(c => c.Group(TestSessionGroup))
-            .Returns(_mockClientProxy.Object);
-        _mockClientProxy
-            .Setup(p => p.SendCoreAsync("AgentAccessChanged", It.IsAny<object?[]>(), default))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await _hub.UpdateAgentAccess(TestSessionId, TestParticipantId, true);
-
-        // Assert
-        _mockClients.Verify(c => c.Group(TestSessionGroup), Times.Once);
-        _mockClientProxy.Verify(
-            p => p.SendCoreAsync("AgentAccessChanged", It.IsAny<object?[]>(), default),
-            Times.Once);
+        (await act.Should().ThrowAsync<HubException>()).WithMessage(GameStateHub.NotJoinedMessage);
     }
 
     [Fact]
-    public async Task UpdateAgentAccess_WithDisabledAccess_BroadcastsToSessionGroup()
+    public async Task BroadcastStateChange_AfterLeaving_IsRefused()
     {
-        // Arrange
-        _mockClients
-            .Setup(c => c.Group(TestSessionGroup))
-            .Returns(_mockClientProxy.Object);
-        _mockClientProxy
-            .Setup(p => p.SendCoreAsync("AgentAccessChanged", It.IsAny<object?[]>(), default))
-            .Returns(Task.CompletedTask);
+        AccessIs(found: true, authorized: true);
+        var hub = NewHub(SignedIn(UserId));
+        await hub.JoinSession(SessionId.ToString());
+        await hub.LeaveSession(SessionId.ToString());
 
-        // Act
-        await _hub.UpdateAgentAccess(TestSessionId, TestParticipantId, false);
+        var act = () => hub.BroadcastStateChange(SessionId.ToString(), new { score = 99 });
 
-        // Assert
-        _mockClientProxy.Verify(
-            p => p.SendCoreAsync("AgentAccessChanged", It.IsAny<object?[]>(), default),
-            Times.Once);
+        (await act.Should().ThrowAsync<HubException>()).WithMessage(GameStateHub.NotJoinedMessage);
+        _groups.Verify(g => g.RemoveFromGroupAsync(ConnectionId, Group, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task UpdateAgentAccess_DoesNotSendToSpecificUser()
+    public async Task BroadcastStateChange_AfterBeingRemovedFromTheSession_IsRefused_AndLeavesTheGroup()
     {
-        // Arrange — hub broadcasts to group, never to individual user
-        _mockClients
-            .Setup(c => c.Group(TestSessionGroup))
-            .Returns(_mockClientProxy.Object);
-        _mockClientProxy
-            .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object?[]>(), default))
-            .Returns(Task.CompletedTask);
+        AccessIs(found: true, authorized: true);
+        var hub = NewHub(SignedIn(UserId));
+        await hub.JoinSession(SessionId.ToString());
+        AccessIs(found: true, authorized: false); // removed from the live session after joining
 
-        // Act
-        await _hub.UpdateAgentAccess(TestSessionId, TestParticipantId, true);
+        var act = () => hub.BroadcastStateChange(SessionId.ToString(), new { score = 99 });
 
-        // Assert — never sends to a specific user (broadcasts to group instead)
-        _mockClients.Verify(c => c.User(It.IsAny<string>()), Times.Never);
+        (await act.Should().ThrowAsync<HubException>()).WithMessage(GameStateHub.NotJoinedMessage);
+        _groups.Verify(g => g.RemoveFromGroupAsync(ConnectionId, Group, It.IsAny<CancellationToken>()), Times.Once);
+        _clients.Verify(c => c.OthersInGroup(It.IsAny<string>()), Times.Never);
+    }
+
+    // ── Surface ──
+
+    [Fact]
+    public void TheHub_ExposesOnlyJoinLeaveAndTheStateRelay()
+    {
+        // Every public method of a hub can be invoked by any connected client. The server notifies through
+        // IHubContext<GameStateHub>; a new hub method is a new client entry point and needs its own check.
+        var methods = typeof(GameStateHub)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
+                        | System.Reflection.BindingFlags.DeclaredOnly)
+            .Where(m => !m.IsSpecialName)
+            .Select(m => m.Name)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        methods.Should().Equal("BroadcastStateChange", "JoinSession", "LeaveSession", "OnDisconnectedAsync");
     }
 }

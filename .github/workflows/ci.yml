@@ -691,7 +691,7 @@ jobs:
         continue-on-error: true
 
   # Backend Integration Tests (requires service containers, runs in parallel with unit tests)
-  # Phase 2+3: 4 parallel threads per shard, 3-shard matrix for ~4-12x total speedup
+  # Phase 2+3: 4 parallel threads per shard, one shard per matrix entry (four since #4880) for ~4-12x total speedup
   #
   # Spec R1 — CI optimization (2026-04-09): backend-integration runs ONLY on
   # release-candidate PRs (target main-staging or main) and on workflow_dispatch
@@ -699,7 +699,7 @@ jobs:
   # skip this job to keep wall-clock under 10min on the commit stage. Coverage
   # is regained at the acceptance stage when merging into main-staging.
   #
-  # Build-Once refactor 2026-05-25: each of 3 shards consumes the upstream
+  # Build-Once refactor 2026-05-25: each shard consumes the upstream
   # build-backend artifact (~30s download) instead of running its own
   # dotnet build (~5 min). Coverage switched from coverlet.msbuild (build-time
   # instrumentation, incompatible with --no-build) to dotnet-coverage wrapper
@@ -721,6 +721,8 @@ jobs:
         # KnowledgeBase cede a Games i test col nome di entrambi (#4488): le esclusioni sono
         # precedenze, spiegate sopra la matrice di dev-async.yml, e infra/scripts/tests/
         # integration-shard-matrix.bats verifica doppi e cicli in entrambi i workflow.
+        # CoreEndpoints (#4880) e' staccato da Core qui come in dev-async.yml: Core e' il resto, e il
+        # bats pretende che i due Core siano identici. Cede a KnowledgeBase e a Games.
         shard:
           - name: "KnowledgeBase"
             filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
@@ -728,8 +730,11 @@ jobs:
           - name: "Games"
             filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"
             coverage_file: "integration-coverage-shard2.xml"
+          - name: "CoreEndpoints"
+            filter_extra: "&(FullyQualifiedName~Integration.Routing|FullyQualifiedName~Integration.Testing|FullyQualifiedName~Integration.Events)&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            coverage_file: "integration-coverage-shard4.xml"
           - name: "Core"
-            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration&FullyQualifiedName!~Integration.Routing&FullyQualifiedName!~Integration.Testing&FullyQualifiedName!~Integration.Events"
             coverage_file: "integration-coverage-shard3.xml"
 
     services:

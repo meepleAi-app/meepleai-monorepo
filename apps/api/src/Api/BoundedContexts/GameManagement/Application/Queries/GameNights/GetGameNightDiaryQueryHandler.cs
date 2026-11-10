@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -41,8 +42,9 @@ internal sealed class GetGameNightDiaryQueryHandler
         var gameNight = await _gameNightRepository.GetByIdAsync(query.GameNightId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("GameNightEvent", query.GameNightId.ToString());
 
-        var isParticipant = gameNight.OrganizerId == query.CallerUserId
-            || gameNight.Rsvps.Any(r => r.UserId == query.CallerUserId);
+        var isParticipant = await GameNightParticipation
+            .IsParticipantAsync(gameNight, query.CallerUserId, _gameNightRepository, cancellationToken)
+            .ConfigureAwait(false);
         if (!isParticipant)
             throw new ForbiddenException("Only the organizer or an invited player can view the night diary.");
 

@@ -20,7 +20,7 @@ When a release PR (`main-dev → main-staging` or `main-staging → main`) is op
 
 > **Only heads of this repository** (#4969): on `workflow_run` the job runs only if `github.event.workflow_run.head_repository.full_name == github.repository`. `workflow_run` runs with this workflow's write token (`pull-requests`, `issues`, `checks`) even when the triggering run came from a fork. The `release/**` filter matches only a branch **name**, which a fork chooses freely, and a fork PR can redefine in its own branch the workflows that trigger the bot, and so the check-runs the bot reads. Real release PRs are branches of this repository. `infra/scripts/tests/workflow-run-trust-boundary.bats` requires the same guard in every workflow triggered by `workflow_run`.
 
-The comment is an index for the release round, not its verdict: pre-existing reds are told apart by comparing failing test **names** with a control run on `main-dev` (see the notes in `.github/release-gates.yml` and #4961).
+The comment is an index for the release round, not its verdict: pre-existing reds are told apart by comparing failing test **names** with a control run on `main-dev` (see the notes in `.github/release-gates.yml` and [release-promotion.md § 2](../workflows/release-promotion.md#2-leggere-la-ci-di-una-pr-di-rilascio), #4961).
 
 Triage decision happens in < 1 min instead of manual classification per release.
 

@@ -155,6 +155,8 @@ git pull --ff-only         # MUST succeed
 
 See [CONTRIBUTING.md § Branch Hygiene](./CONTRIBUTING.md#-branch-hygiene--before-creating-a-feature-branch) for recovery via `git rebase --onto`.
 
+**Release** (`main-dev → main-staging → main`): [release-promotion.md](./docs/for-developers/workflows/release-promotion.md) — `release/*` branches created via API, merge commit, CI read by **test names** against a `main-dev` control run, merge on `main` with the account that has the permissions. Contract migrations (`DROP TABLE`/`DROP COLUMN`) wait for the release that removed the code reading them.
+
 **Commits**: `feat|fix|docs|refactor|test|chore(scope): description`
 
 ### Feature Development Flow

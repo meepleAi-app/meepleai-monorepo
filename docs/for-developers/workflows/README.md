@@ -488,6 +488,7 @@ pnpm update <package-name>
 ### Development Guides
 - ****Visual Studio Code Setup** _(planned)_** ⭐ Task automation, troubleshooting, Docker workflow
 - [Git Workflow](git-workflow.md)
+- [Release round `main-dev → main-staging → main`](release-promotion.md)
 - **Operational Guide** _(planned)_
 - **Documentation Tools** _(planned)_
 

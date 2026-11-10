@@ -438,9 +438,17 @@ public sealed class BatchJobIntegrationTests : IAsyncLifetime
         await _repository.AddAsync(job2, TestCancellationToken);
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
+        // #4954: each processor gets its own scope, hence its own DbContext. They used to share `_repository`, and a
+        // DbContext is not thread-safe: when the second processor started 50 ms after the first, the two sometimes
+        // overlapped on it ("A second operation was started on this context instance…"). The processor swallows every
+        // exception, so the collision showed up as a job left Failed or not Completed, and the assertion below as flaky.
         var logger = _serviceProvider!.GetRequiredService<ILogger<BatchJobProcessorJob>>();
-        var processor1 = new BatchJobProcessorJob(_repository, _serviceProvider, logger);
-        var processor2 = new BatchJobProcessorJob(_repository, _serviceProvider, logger);
+        using var scope1 = _serviceProvider.CreateScope();
+        using var scope2 = _serviceProvider.CreateScope();
+        var processor1 = new BatchJobProcessorJob(
+            scope1.ServiceProvider.GetRequiredService<IBatchJobRepository>(), _serviceProvider, logger);
+        var processor2 = new BatchJobProcessorJob(
+            scope2.ServiceProvider.GetRequiredService<IBatchJobRepository>(), _serviceProvider, logger);
 
         var contextMock = new Mock<IJobExecutionContext>();
         contextMock.Setup(x => x.CancellationToken).Returns(TestCancellationToken);
@@ -452,11 +460,14 @@ public sealed class BatchJobIntegrationTests : IAsyncLifetime
 
         await Task.WhenAll(task1, task2);
 
-        // Assert
-        var retrieved1 = await _repository.GetByIdAsync(job1.Id, TestCancellationToken);
-        var retrieved2 = await _repository.GetByIdAsync(job2.Id, TestCancellationToken);
+        // Assert - read through a context that took no part in the run
+        using var readScope = _serviceProvider.CreateScope();
+        var reader = readScope.ServiceProvider.GetRequiredService<IBatchJobRepository>();
+        var retrieved1 = await reader.GetByIdAsync(job1.Id, TestCancellationToken);
+        var retrieved2 = await reader.GetByIdAsync(job2.Id, TestCancellationToken);
 
-        // At least one should be completed
+        // At least one should be completed. Not "both": the processor has no atomic claim on a job (production relies on
+        // [DisallowConcurrentExecution]), so if the second one reads before the first has saved its claim, both take job1.
         var completedCount = new[] { retrieved1!.Status, retrieved2!.Status }
             .Count(s => s == JobStatus.Completed);
 

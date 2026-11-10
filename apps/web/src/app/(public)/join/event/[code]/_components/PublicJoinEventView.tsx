@@ -87,7 +87,11 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
   const surface: Surface = useMemo(() => {
     // Mutation-driven terminal first (the user just tried to respond):
     if (respondGone) {
-      return respondGone.reason === 'cancelled' ? 'token-cancelled' : 'token-expired';
+      // The 410 carries no reason of its own; the fresh invitation (refetched after the 410) says whether the NIGHT
+      // was cancelled (#4856).
+      return respondGone.reason === 'cancelled' || invitation?.nightCancelled === true
+        ? 'token-cancelled'
+        : 'token-expired';
     }
     if (respondRateLimited) return 'rate-limited';
 
@@ -103,7 +107,9 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
     if (invitationQuery.isLoading) return 'loading';
     if (!invitation) return 'loading';
 
-    // Data-driven terminal states off the DTO `status` field:
+    // Data-driven terminal states off the DTO `status` field. A cancelled NIGHT (#4856) is the cancelled surface
+    // too, even for a guest whose invitation is still Pending or Accepted:
+    if (invitation.nightCancelled === true) return 'token-cancelled';
     if (invitation.status === 'Cancelled') return 'token-cancelled';
     if (invitation.status === 'Expired') return 'token-expired';
 
@@ -125,7 +131,12 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
       // 409 conflict surfaces server-side `alreadyRespondedAs` — refetch the
       // GET so the form re-renders the "responded" confirmation panel using
       // the canonical DTO state (including the persisted respondedByName).
-      if (result?.kind === 'conflict-state-switch' || result?.kind === 'success') {
+      if (
+        result?.kind === 'conflict-state-switch' ||
+        result?.kind === 'success' ||
+        result?.kind === 'gone' ||
+        result?.kind === 'full'
+      ) {
         await invitationQuery.refetch();
       }
     },
@@ -138,8 +149,9 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
   }, [respond, invitationQuery]);
 
   // -- Top-level shell ------------------------------------------------------
+  // A named region, not a <main>: the public layout already provides the page's <main> (#4910).
   return (
-    <main
+    <section
       data-slot="public-join-event-page"
       data-surface={surface}
       aria-label={t('pages.gameNightJoin.metadata.title')}
@@ -237,12 +249,15 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
                 ? t('pages.gameNightJoin.error.generic.body')
                 : respond.result?.kind === 'invalid-display-name'
                   ? respond.result.message
-                  : null
+                  : respond.result?.kind === 'full'
+                    ? // #4947: no seat left; before, this 409 was read as «you have already responded».
+                      t('pages.gameNightJoin.error.full')
+                    : null
             }
           />
         )}
       </div>
-    </main>
+    </section>
   );
 }
 

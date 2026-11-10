@@ -29,7 +29,7 @@ public class GetSessionEventsQueryHandlerTests
         _sessionRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Session?)null);
 
-        var query = new GetSessionEventsQuery(Guid.NewGuid());
+        var query = new GetSessionEventsQuery(Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -37,10 +37,29 @@ public class GetSessionEventsQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_StrangerWhoIsNeitherOwnerNorParticipant_ThrowsForbiddenAndReadsNothing()
+    {
+        // #4883: the diary was answered to any authenticated user (the query did not even carry the caller).
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var query = new GetSessionEventsQuery(session.Id, Guid.NewGuid());
+
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => _handler.Handle(query, CancellationToken.None));
+        _eventRepoMock.Verify(
+            r => r.GetBySessionIdAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_ValidSession_ReturnsPaginatedEvents()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var ownerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
@@ -54,7 +73,7 @@ public class GetSessionEventsQueryHandlerTests
         _eventRepoMock.Setup(r => r.CountBySessionIdAsync(session.Id, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        var query = new GetSessionEventsQuery(session.Id);
+        var query = new GetSessionEventsQuery(session.Id, ownerId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -69,7 +88,8 @@ public class GetSessionEventsQueryHandlerTests
     public async Task Handle_WithPagination_ReturnsCorrectHasMore()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var ownerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
@@ -78,7 +98,7 @@ public class GetSessionEventsQueryHandlerTests
         _eventRepoMock.Setup(r => r.CountBySessionIdAsync(session.Id, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(25);
 
-        var query = new GetSessionEventsQuery(session.Id, Limit: 10, Offset: 0);
+        var query = new GetSessionEventsQuery(session.Id, ownerId, Limit: 10, Offset: 0);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);

@@ -4,7 +4,11 @@
  * Issue #5041 — Sessions Redesign Phase 1
  *
  * Enter a 6-character session code to join an existing session.
- * Calls liveSessionsClient.getByCode() → redirects to /sessions/[id].
+ * Calls liveSessionsClient.getPublicByCode() → redirects to /sessions/[id].
+ *
+ * #4939: the lookup is the PUBLIC lobby projection (#2590), which carries the id and nothing of the players'
+ * identities. The full session by code is answered only to its participants now, and this page is used by
+ * people who are not yet one.
  */
 
 'use client';
@@ -18,6 +22,18 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
+import { RateLimitError } from '@/lib/api/core/errors';
+
+/**
+ * #4912: the code routes answer 429 past 30 lookups (10 joins) a minute per user. A 429 is not a wrong
+ * code, and «riprova» would keep the player inside the window: say how long to wait instead.
+ */
+function rateLimitedMessage(error: RateLimitError): string {
+  const seconds = error.retryAfter;
+  return seconds != null && seconds > 0
+    ? `Troppi tentativi: riprova tra ${Math.ceil(seconds)} secondi.`
+    : 'Troppi tentativi: aspetta un minuto prima di riprovare.';
+}
 
 export default function JoinSessionPage() {
   const router = useRouter();
@@ -38,10 +54,17 @@ export default function JoinSessionPage() {
     setError(null);
 
     try {
-      // First try LiveSession code
-      const session = await api.liveSessions.getByCode(trimmed);
+      // First try LiveSession code — the public lobby, which has the id (#4939).
+      const session = await api.liveSessions.getPublicByCode(trimmed);
       router.push(`/sessions/${session.id}`);
-    } catch {
+    } catch (lookupError) {
+      // #4912: a throttled lookup is not an unknown code. Falling through would spend the join bucket
+      // on a guess the server has already refused to look at.
+      if (lookupError instanceof RateLimitError) {
+        setError(rateLimitedMessage(lookupError));
+        setIsJoining(false);
+        return;
+      }
       // Fallback: a SessionTracking session — the games of a game night.
       try {
         await api.sessionTracking.joinByCode(trimmed);
@@ -49,8 +72,12 @@ export default function JoinSessionPage() {
         // page is the night's, and the SessionTracking session does not carry the night id.
         setJoinedNightSession(true);
         setIsJoining(false);
-      } catch {
-        setError('Sessione non trovata. Controlla il codice e riprova.');
+      } catch (joinError) {
+        setError(
+          joinError instanceof RateLimitError
+            ? rateLimitedMessage(joinError)
+            : 'Sessione non trovata. Controlla il codice e riprova.'
+        );
         setIsJoining(false);
       }
     }

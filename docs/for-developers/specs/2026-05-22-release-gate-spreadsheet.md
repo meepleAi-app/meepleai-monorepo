@@ -126,7 +126,7 @@ Then comment includes row:
 | Failure fallback | Neutral conclusion + fallback comment | Avoid blocking release on bot infrastructure failure |
 | Unknown check default | `warning` (not `blocker`) | Fail-soft to avoid stuck PRs on new workflow additions |
 | Test infra | Vitest + nock (octokit mock) | Existing FE infra; no new test framework |
-| Trigger | `pull_request` + `check_suite.completed` | Catches both PR open and async check completion |
+| Trigger | `pull_request` + `check_suite.completed` | Catches both PR open and async check completion. **Corrected 2026-11-09 (#4937)**: `check_suite` is not emitted for check suites created by GitHub Actions, so it never caught our CI; replaced by `workflow_run: completed` on the release workflows. |
 
 ## Schema example `.github/release-gates.yml`
 

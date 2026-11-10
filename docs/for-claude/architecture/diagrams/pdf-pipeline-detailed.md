@@ -51,16 +51,7 @@ flowchart TD
         S3Save --> S3Semaphore[Acquire semaphore<br/>Max 4 concurrent]
         S3Semaphore --> S3Extract[Docnet extraction<br/>Native library]
         S3Extract --> S3Assess[Assess quality<br/>chars/page calculation]
-        S3Assess --> S3OCR{Should trigger<br/>OCR?<br/>< 100 chars/page}
-
-        S3OCR -->|Yes| S3Tesseract[Tesseract OCR<br/>Full page scan]
-        S3OCR -->|No| S3Done
-        S3Tesseract --> S3CompareOCR{OCR better<br/>than raw?}
-        S3CompareOCR -->|Yes| S3UseOCR[Use OCR result]
-        S3CompareOCR -->|No| S3UseRaw[Use raw extraction]
-
-        S3UseOCR --> S3Done[✓ STAGE 3 COMPLETE<br/>Best effort<br/>Avg time: 2-3s]
-        S3UseRaw --> S3Done
+        S3Assess --> S3Done[✓ STAGE 3 COMPLETE<br/>Text layer only, no OCR<br/>Avg time: 2-3s]
         S3Done --> S3Cleanup[Cleanup temp file<br/>Release semaphore]
     end
 
@@ -139,7 +130,7 @@ flowchart TD
 
     Stage2 -->|Quality >= 0.70<br/>~15% of cases| Done2[✓ Use Stage 2<br/>Complex layouts<br/>3-5s avg]
 
-    Stage2 -->|Quality < 0.70<br/>~5% of cases| Stage3{Stage 3:<br/>Docnet + OCR}
+    Stage2 -->|Quality < 0.70<br/>~5% of cases| Stage3{Stage 3:<br/>Docnet, text layer only}
 
     Stage3 --> Done3[✓ Use Stage 3<br/>Best effort<br/>2-3s avg]
 
@@ -211,7 +202,7 @@ flowchart TD
     subgraph "Normalization Steps"
         Normalize --> Step1[1. Normalize line endings<br/>\r\n → \n]
         Step1 --> Step2[2. Remove excessive whitespace<br/>Multiple spaces → single space]
-        Step2 --> Step3[3. Fix broken words<br/>Rejoin mid-word breaks]
+        Step2 --> Step3[3. De-hyphenate<br/>Rejoin words cut by a hyphen or U+FFFE at a line break<br/>A plain line break stays]
         Step3 --> Step4[4. Normalize newlines<br/>Max 2 consecutive]
         Step4 --> Step5[5. Unicode normalization<br/>Form C canonical]
         Step5 --> Step6[6. Remove zero-width chars<br/>Cleanup invisible chars]
@@ -250,44 +241,37 @@ flowchart TD
     style Result fill:#66bb6a,color:#000
 ```
 
-## OCR Decision Logic (Stage 3)
+## Pages without text (Stage 3)
+
+Docnet reads the text layer of the PDF and does **not** perform OCR (#4437). A scanned page comes back empty. The pipelines
+(`PdfProcessingPipelineService` and the upload path, `UploadPdfCommandHandler`) look at the pages of the extraction, and only
+when the extractor says it read the text layer alone (`PagedTextExtractionResult.TextLayerOnly`, set by Docnet): for an
+extractor that reads pixels, or that does not know its pages (SmolDocling, Unstructured), nothing changes.
 
 ```mermaid
 flowchart TD
-    Docnet[Docnet Extraction<br/>Complete] --> Chars[Count characters<br/>extracted]
+    Docnet[Docnet extraction<br/>complete] --> Layer{Text layer only?<br/>TextLayerOnly}
 
-    Chars --> Pages[Get page count]
+    Layer -->|No| Other[Other extractor:<br/>behaviour unchanged]
 
-    Pages --> Calc[Calculate<br/>chars/page]
+    Layer -->|Yes| Any{Any page<br/>with text?}
 
-    Calc --> Threshold{chars/page<br/>< 100?}
+    Any -->|No| Scan[Failed: no extractable text<br/>category Parsing, not retried]
 
-    Threshold -->|No| UseDocnet[✓ Use Docnet result<br/>Sufficient quality]
+    Any -->|Yes| Short{Pages under<br/>100 characters?}
 
-    Threshold -->|Yes| CheckOCR{OCR enabled<br/>in config?}
+    Short -->|Yes| Info[Log entry, level Information<br/>pages under limit, total pages]
+    Short -->|No| Go[Chunking]
+    Info --> Go
 
-    CheckOCR -->|No| UseDocnet
-
-    CheckOCR -->|Yes| TriggerOCR[🔍 Trigger Tesseract OCR]
-
-    subgraph "OCR Processing"
-        TriggerOCR --> OCRScan[Full page scan<br/>Image to text]
-        OCRScan --> OCRNormalize[Normalize OCR text]
-        OCRNormalize --> OCRQuality[Assess OCR quality]
-    end
-
-    OCRQuality --> Compare{OCR quality<br/>> Docnet quality?}
-
-    Compare -->|Yes| UseOCR[✓ Use OCR result<br/>Better quality]
-    Compare -->|No| UseDocnet
-
-    UseDocnet --> Output[Final Extraction Result]
-    UseOCR --> Output
-
-    style TriggerOCR fill:#ffa726,color:#000
-    style UseOCR fill:#66bb6a,color:#000
-    style UseDocnet fill:#81c784,color:#000
+    style Scan fill:#ef5350,color:#000
+    style Info fill:#ffa726,color:#000
+    style Go fill:#81c784,color:#000
 ```
+
+The limit is applied to each page after trimming the whitespace at both ends, so a cover or a blank separator counts. Measured on the
+rulebooks in `data/rulebook`, about one PDF in two has at least one such page, which is why the entry is `Information` and not `Warning`.
+The removed `ShouldTriggerOcr` compared an average over the whole document.
 
 ## Concurrency Control (Docnet Semaphore)
 
@@ -370,7 +354,7 @@ graph TB
         S3Metric1[Success Rate: ~5% fallback]
         S3Metric2[Avg Latency: 2-3s]
         S3Metric3[Quality: Best effort]
-        S3Metric4[OCR: If < 100 chars/page]
+        S3Metric4[No OCR: text layer only]
     end
 
     subgraph "Overall Pipeline"
@@ -467,9 +451,7 @@ flowchart TD
         "CircuitBreakerTimeoutSeconds": 30
       },
       "DocnetExtractor": {
-        "MaxConcurrentOperations": 4,
-        "EnableOcrFallback": true,
-        "OcrThresholdCharsPerPage": 100
+        "MaxConcurrentOperations": 4
       }
     },
     "Quality": {

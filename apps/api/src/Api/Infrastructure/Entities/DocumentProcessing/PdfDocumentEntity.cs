@@ -56,7 +56,11 @@ public class PdfDocumentEntity
     public string? ErrorCategory { get; set; } // ErrorCategory enum: Network, Parsing, Quota, Service, PayloadTooLarge, StorageObjectMissing, Cancelled, Unknown
     public string? FailedAtState { get; set; } // PdfProcessingState where failure occurred
 
-    // PDF-03: Structured data extraction fields
+    // PDF-03: Structured data extraction fields.
+    // LEGACY (#4440, fase expand): l'estrattore iText che li scriveva e' stato tolto, quindi nessuna
+    // pipeline li scrive piu' e restano solo i valori storici. Nessuno ha piu' lettori (#4930:
+    // GenerateRuleSpecFromPdfCommandHandler legge solo ExtractedText), quindi tutte le colonne di questo
+    // gruppo si eliminano nella fase contract.
     public string? ExtractedTables { get; set; } // JSON array of tables
     public string? ExtractedDiagrams { get; set; } // JSON array of diagram metadata
     public string? AtomicRules { get; set; } // JSON array of atomic rules from tables

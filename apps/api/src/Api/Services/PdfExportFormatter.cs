@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -34,7 +35,7 @@ internal class PdfExportFormatter : IExportFormatter
 
         var stream = new MemoryStream();
 
-        Document.Create(container =>
+        var document = Document.Create(container =>
         {
             container.Page(page =>
             {
@@ -60,8 +61,9 @@ internal class PdfExportFormatter : IExportFormatter
                         x.TotalPages();
                     });
             });
-        })
-        .GeneratePdf(stream);
+        });
+
+        QuestPdfRenderGate.GeneratePdf(document, stream);
 
         stream.Position = 0;
         return Task.FromResult<Stream>(stream);

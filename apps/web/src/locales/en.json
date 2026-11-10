@@ -1465,6 +1465,11 @@
           "subText": "This invitation is no longer valid. Ask {hostName} to send it again.",
           "ctaContactHost": "Contact the host"
         },
+        "nightCancelled": {
+          "heading": "Game night cancelled",
+          "subText": "{hostName} cancelled this game night.",
+          "subTextNoHost": "The host cancelled this game night."
+        },
         "tokenInvalid": {
           "heading": "Invitation not found",
           "subText": "The link you opened doesn't match any invitation. Make sure it's complete.",
@@ -1506,6 +1511,7 @@
       "banners": {
         "errorGeneric": "Response not sent. Check your connection and try again.",
         "stateSwitchConflict": "You've already responded: {currentResponse}. To change, use the dedicated button.",
+        "full": "The table is full: the last seats went while you were looking. You can still decline, so the host knows.",
         "goneExpired": "The invitation expired while you were responding.",
         "goneCancelled": "The host has cancelled the game night."
       },
@@ -1581,6 +1587,7 @@
         },
         "requestNewInviteCta": "Request a new invite",
         "homeCta": "Go to home",
+        "full": "The table is full: the last seats went while you were looking. You can still decline, so the host knows.",
         "rateLimited": {
           "heading": "Too many requests",
           "body": "You've submitted too many responses in a short window. Please wait a moment and try again.",
@@ -3962,6 +3969,15 @@
         "closeCta": "Close",
         "closeAriaLabel": "Close pause overlay"
       },
+      "conflicts": {
+        "notStarted": "The game has not started yet: start it before continuing.",
+        "paused": "The game is paused: this action only applies while it is in progress.",
+        "completed": "The game is already over.",
+        "alreadyStarted": "The game has already started.",
+        "notPaused": "The game is not paused.",
+        "concurrentEdit": "Someone else just changed the game: try again.",
+        "generic": "This action is not allowed in the game's current state."
+      },
       "endgameDialog": {
         "title": "Session ended",
         "winnerLabel": "Winner",
@@ -3969,7 +3985,6 @@
         "viewSummaryCta": "View summary",
         "saveGameCta": "Save game",
         "savingLabel": "Saving…",
-        "alreadyCompletedToast": "Game already finished",
         "photoUpload": {
           "sectionTitle": "Game photos",
           "addPhotosCta": "Select photos",

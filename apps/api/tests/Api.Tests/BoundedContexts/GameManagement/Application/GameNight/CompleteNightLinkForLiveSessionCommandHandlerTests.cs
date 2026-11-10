@@ -76,7 +76,7 @@ public sealed class CompleteNightLinkForLiveSessionCommandHandlerTests
 
     private void ArrangeTrackingParticipants(Guid trackingSessionId, params (Guid ParticipantId, Guid UserId)[] participants) =>
         _mediator.Setup(m => m.Send(
-                It.Is<GetSessionDetailsQuery>(q => q.SessionId == trackingSessionId), It.IsAny<CancellationToken>()))
+                It.Is<GetSessionDetailsForSystemQuery>(q => q.SessionId == trackingSessionId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SessionDetailsDto
             {
                 Participants = participants

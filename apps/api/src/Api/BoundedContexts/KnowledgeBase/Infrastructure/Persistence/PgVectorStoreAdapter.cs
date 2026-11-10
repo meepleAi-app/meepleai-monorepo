@@ -33,6 +33,21 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
     private const string VectorDocumentsOfPdfs =
         "SELECT \"Id\" FROM vector_documents WHERE \"PdfDocumentId\" = ANY(@pdfDocumentIds)";
 
+    /// <summary>
+    /// Il vettore di un chunk che ha figli non è un candidato.
+    /// </summary>
+    /// <remarks>
+    /// #4955. È il genitore di <c>AdvancedChunkingService</c>: con un'estrazione senza titoli è il
+    /// documento intero, fino a 270.000 caratteri di <c>text_content</c>, e il suo vettore è quello
+    /// dell'inizio del testo, troncato per l'embedding. Sul gate arrivava fino al quinto posto della
+    /// fusione fra giochi: una ricerca che prende cinque passaggi passava il manuale intero di un
+    /// altro gioco. Il suo testo è tutto nei figli. Una riga senza <c>source_chunk_id</c> (foto,
+    /// embedding scritto senza il suo chunk) non ha figli e resta. Lo stesso filtro sta nei due
+    /// percorsi full-text (<c>KeywordSearchService</c>, <c>TextChunkSearchService</c>).
+    /// </remarks>
+    private static string NotAParent(string sourceChunkColumn) =>
+        $"""NOT EXISTS (SELECT 1 FROM text_chunks AS child WHERE child."ParentChunkId" = {sourceChunkColumn})""";
+
     public PgVectorStoreAdapter(
         MeepleAiDbContext context,
         ILogger<PgVectorStoreAdapter> logger)
@@ -67,6 +82,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             FROM {TableName}
             WHERE game_id = @gameId
               AND 1 - (vector <=> @queryVector) >= @minScore
+              AND {NotAParent($"{TableName}.source_chunk_id")}
             """;
 
         if (pdfDocumentIds is { Count: > 0 })
@@ -185,6 +201,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             LEFT JOIN text_chunks tc ON tc."Id" = e.source_chunk_id
             WHERE e.game_id = @gameId
               AND 1 - (e.vector <=> @queryVector) >= @minScore
+              AND {NotAParent("e.source_chunk_id")}
             """;
 
         if (pdfDocumentIds is { Count: > 0 })
@@ -318,6 +335,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             FROM {TableName}
             WHERE game_id = ANY(@gameIds)
               AND 1 - (vector <=> @queryVector) >= @minScore
+              AND {NotAParent($"{TableName}.source_chunk_id")}
             """;
 
         if (pdfDocumentIds is { Count: > 0 })

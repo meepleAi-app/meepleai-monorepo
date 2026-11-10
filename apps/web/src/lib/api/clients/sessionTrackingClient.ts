@@ -82,8 +82,8 @@ export interface SessionTrackingClient {
   /** Get active session */
   getActiveSession(): Promise<SessionDto | null>;
 
-  /** Get session by code */
-  getByCode(code: string): Promise<SessionDto>;
+  // #4939: no `getByCode` here. GET /game-sessions/code/{code} answers the full session to its participants
+  // only, and no screen reads it; the join flow is `joinByCode` below.
 
   /** Join a session by code */
   joinByCode(code: string): Promise<void>;
@@ -286,12 +286,6 @@ export function createSessionTrackingClient({
 
     async getActiveSession() {
       return httpClient.get<SessionDto>(`${BASE}/active`, SessionDtoSchema);
-    },
-
-    async getByCode(code) {
-      const response = await httpClient.get<SessionDto>(`${BASE}/code/${encodeURIComponent(code)}`);
-      if (!response) throw new Error('Session not found');
-      return SessionDtoSchema.parse(response);
     },
 
     async joinByCode(code) {

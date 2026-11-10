@@ -289,8 +289,9 @@ classDiagram
     }
 
     class DocnetPdfTextExtractor {
+        <<TextLayerOnly>>
         +ExtractTextAsync(stream) TextExtractionResult
-        -IOcrService ocrService
+        +ExtractPagedTextAsync(stream) PagedTextExtractionResult
         -SemaphoreSlim docnetSemaphore
     }
 
@@ -305,7 +306,6 @@ classDiagram
         <<DomainService>>
         +NormalizeText(rawText) string
         +AssessQuality(text, pageCount) ExtractionQuality
-        +ShouldTriggerOcr(text, pageCount) bool
     }
 
     class IndexPdfCommandHandler {
@@ -373,9 +373,7 @@ sequenceDiagram
             Orch->>Stage3: ExtractTextAsync(stream)
             Stage3->>Stage3: Docnet local extraction
 
-            alt Low quality detected
-                Stage3->>Stage3: OCR fallback (Tesseract)
-            end
+            Note over Stage3: Text layer only, no OCR.<br/>A scanned page comes back empty and the<br/>pipeline reports it (NearlyEmptyPages).
 
             Stage3-->>Orch: TextExtractionResult<br/>{text, quality: bestEffort}
             Orch-->>Handler: EnhancedExtractionResult<br/>{stageUsed: 3, stageName: "Docnet"}

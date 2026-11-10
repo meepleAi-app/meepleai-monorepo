@@ -8,6 +8,7 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 /// </summary>
 public record GetSessionEventsQuery(
     Guid SessionId,
+    Guid RequestedBy, // #4883: owner/participant-only; derived from the principal, never from the client.
     string? EventType = null,
     int Limit = 50,
     int Offset = 0

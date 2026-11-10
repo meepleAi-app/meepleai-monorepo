@@ -28,6 +28,10 @@ internal static class HeadingAwareChunker
     /// Where each page begins in <paramref name="flatText"/>, when the extractor measured its pages (#4782). Without
     /// structured elements the document is flat, and this is the only thing that tells its pages apart.
     /// </param>
+    /// <param name="documentPageCount">
+    /// How many pages the PDF has, when the extractor counted them (#4782): a flat document of one page is on page 1,
+    /// and a flat document of more pages, with no page map, has no page at all.
+    /// </param>
     public static async Task<List<DocumentChunk>> BuildAsync(
         IReadOnlyList<ExtractedElement>? structuredElements,
         string flatText,
@@ -35,7 +39,8 @@ internal static class HeadingAwareChunker
         Guid? gameId,
         IAdvancedChunkingService advancedChunking,
         CancellationToken cancellationToken,
-        IReadOnlyList<PageSpan>? pageSpans = null)
+        IReadOnlyList<PageSpan>? pageSpans = null,
+        int? documentPageCount = null)
     {
         ArgumentNullException.ThrowIfNull(advancedChunking);
 
@@ -53,7 +58,8 @@ internal static class HeadingAwareChunker
             gameId,
             elements,
             flatText,
-            pageSpans);
+            pageSpans,
+            documentPageCount);
 
         var hierarchicalChunks = await advancedChunking
             .ChunkDocumentAsync(extractedDocument, config: null, cancellationToken)

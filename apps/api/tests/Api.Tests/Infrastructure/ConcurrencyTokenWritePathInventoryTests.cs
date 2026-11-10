@@ -93,6 +93,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["AbTestSession"] = (WritePathTechnique.TokenRoundTrip, "AbTestSessionRepository:87 — legge AsNoTracking e riattacca con Update(); l'aggregato è l'entità EF e trasporta il token letto (#3651 lotto 5)"),
             ["CertificationThresholdsConfigEntity"] = (WritePathTechnique.TokenRoundTrip, "CertificationThresholdsConfigRepository:87 — Xmin = config.XminVersion"),
             ["GameBook"] = (WritePathTechnique.TokenRoundTrip, "GameBookRepository:58 — l'aggregato è l'entità EF e trasporta il token letto"),
+            ["GameNightInvitationEntity"] = (WritePathTechnique.TokenRoundTrip, "GameNightInvitationRepository.MapToPersistence — Xmin = domain.Xmin, poi Update() su detached; i tre marcatori «scritto a» sono ExecuteUpdate mirati e non passano dal token. Provato su Postgres in GameNightInvitationXminConcurrencyTests e GameNightInvitationHandlerConcurrencyTests (#4744)"),
             ["GameNightPlaylistEntity"] = (WritePathTechnique.TokenRoundTrip, "GameNightPlaylistRepository:180 (#2306)"),
             ["MechanicAnalysisEntity"] = (WritePathTechnique.TokenRoundTrip, "MechanicAnalysisRepository:391, con Xmin escluso da IsModified"),
             ["MechanicCardEntity"] = (WritePathTechnique.TokenRoundTrip, "MechanicCardRepository:159"),

@@ -19,12 +19,10 @@ BoundedContexts/DocumentProcessing/Domain/Entities/PdfDocumentLanguageTests.cs
 BoundedContexts/DocumentProcessing/Domain/Entities/PdfDocumentStateTransitionTests.cs
 BoundedContexts/DocumentProcessing/Domain/Entities/PdfDocumentTests.cs
 BoundedContexts/DocumentProcessing/Domain/Entities/VersionLabelAndReclassifyTests.cs
-BoundedContexts/DocumentProcessing/Domain/Services/TableToAtomicRuleConverterTests.cs
 BoundedContexts/DocumentProcessing/Domain/ValueObjects/FileSizeTests.cs
 BoundedContexts/DocumentProcessing/Domain/ValueObjects/LanguageCodeTests.cs
 BoundedContexts/DocumentProcessing/Domain/ValueObjects/PageCountTests.cs
 BoundedContexts/DocumentProcessing/Infrastructure/DI/OrchestratorDICircularDependencyTests.cs
-BoundedContexts/DocumentProcessing/Infrastructure/External/ITextPdfTableExtractorTests.cs
 BoundedContexts/DocumentProcessing/Infrastructure/Services/PdfUploadQuotaServiceTests.cs
 BoundedContexts/DocumentProcessing/Infrastructure/Validation/PdfProcessingConfigurationValidatorTests.cs
 BoundedContexts/DocumentProcessing/TestHelpers/TestBase.cs
@@ -189,7 +187,6 @@ Services/LlmClients/OllamaLlmClientTests.cs
 Services/LlmClients/OpenRouterLlmClientStreamingTests.cs
 Services/LlmClients/OpenRouterLlmClientTests.cs
 Services/PasswordHashingServiceTests.cs
-Services/Pdf/ImageExtractionStrategyTests.cs
 Services/Rag/RagConfigurationProviderTests.cs
 Services/RagServiceIntegrationTests.cs
 Services/RagServicePerformanceTests.cs

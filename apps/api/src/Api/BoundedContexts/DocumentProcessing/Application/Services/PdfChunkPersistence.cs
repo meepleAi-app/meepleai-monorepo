@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -122,7 +123,7 @@ internal static class PdfChunkPersistence
                 PdfDocumentId = pdfId,
                 Content = chunk.Text,
                 ChunkIndex = index,
-                PageNumber = chunk.Page,
+                PageNumber = ChunkPage.ForStorage(chunk.Page),
                 CharacterCount = chunk.Text.Length,
                 CreatedAt = now,
                 // Issue #730: chunk hierarchy fields from the chunking pipeline

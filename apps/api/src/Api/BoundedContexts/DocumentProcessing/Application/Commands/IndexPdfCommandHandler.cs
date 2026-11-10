@@ -7,6 +7,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.Configuration;
 using Api.Constants;
 using Api.Infrastructure;
@@ -401,7 +402,8 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             _advancedChunkingService,
             cancellationToken,
             // #4782: this is the only place a re-index can learn where the pages of a flat document begin.
-            pageSpans: PageSpans.Parse(pdf.PageSpansJson)).ConfigureAwait(false);
+            pageSpans: PageSpans.Parse(pdf.PageSpansJson),
+            documentPageCount: pdf.PageCount).ConfigureAwait(false);
 
         if (chunks.Count == 0)
         {
@@ -613,7 +615,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 PdfDocumentId = pdfGuid,
                 Content = chunk.Text,
                 ChunkIndex = index,
-                PageNumber = chunk.Page,
+                PageNumber = ChunkPage.ForStorage(chunk.Page),
                 CharacterCount = chunk.Text.Length,
                 CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 // Issue #730: persist chunk hierarchy fields from chunking pipeline

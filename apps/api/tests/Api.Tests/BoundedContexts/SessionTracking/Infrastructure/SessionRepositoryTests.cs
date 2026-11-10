@@ -173,6 +173,74 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
     }
 
     [Fact]
+    public async Task UpdateAsync_AfterRemovingAParticipant_TheOldCodeAndTheOldInviteNoLongerOpenTheSession()
+    {
+        // #4883, the attack the issue describes: joining is open to whoever holds the code or the invite
+        // link, and the kick used to leave both valid. UpdateAsync also copied neither the new code, so a
+        // domain-only test of the rotation would pass while the row kept the old code — this goes through
+        // the database.
+        await ResetDatabaseAsync();
+        var ownerId = await CreateTestUserAsync("owner-4883@example.com");
+        var intruderId = await CreateTestUserAsync("intruder-4883@example.com");
+        var gameId = await CreateTestGameAsync();
+        var session = Session.Create(ownerId, gameId, SessionType.Generic);
+        session.AddParticipant(
+            Api.BoundedContexts.SessionTracking.Domain.ValueObjects.ParticipantInfo.Create("Intruder", false, 2),
+            intruderId);
+        var oldInviteToken = session.GenerateInviteToken(24);
+        var oldCode = session.SessionCode;
+        await Repository.AddAsync(session, TestContext.Current.CancellationToken);
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        // Precondition: before the kick, the code and the link both find the session.
+        (await Repository.GetByCodeAsync(oldCode, TestContext.Current.CancellationToken)).Should().NotBeNull();
+        (await Repository.GetByInviteTokenAsync(oldInviteToken, TestContext.Current.CancellationToken)).Should().NotBeNull();
+        DbContext.ChangeTracker.Clear();
+
+        var loaded = await Repository.GetByIdAsync(session.Id, TestContext.Current.CancellationToken);
+        loaded!.RemoveParticipant(loaded.Participants.Single(p => p.UserId == intruderId).Id);
+
+        // Act
+        await Repository.UpdateAsync(loaded, TestContext.Current.CancellationToken);
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        // Assert — what the removed participant still holds finds nothing …
+        (await Repository.GetByCodeAsync(oldCode, TestContext.Current.CancellationToken)).Should().BeNull();
+        (await Repository.GetByInviteTokenAsync(oldInviteToken, TestContext.Current.CancellationToken)).Should().BeNull();
+
+        // … and the session answers to the new code only.
+        var stored = await Repository.GetByIdAsync(session.Id, TestContext.Current.CancellationToken);
+        stored!.SessionCode.Should().NotBe(oldCode);
+        stored.SessionCode.Should().Be(loaded.SessionCode);
+        stored.Participants.Should().ContainSingle().Which.IsOwner.Should().BeTrue();
+        (await Repository.GetByCodeAsync(stored.SessionCode, TestContext.Current.CancellationToken))!.Id
+            .Should().Be(session.Id);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenTheRotatedCodeIsTakenByAnotherSession_ThrowsConflictNotAServerError()
+    {
+        // Same rule as AddAsync (#2552): a duplicate session code is a 409, not a 500 from the unique index.
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync("collide-4883@example.com");
+        var other = Session.Create(userId, await CreateTestGameAsync(), SessionType.Generic);
+        var mine = Session.Create(userId, await CreateTestGameAsync(), SessionType.Generic);
+        await Repository.AddAsync(other, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(mine, TestContext.Current.CancellationToken);
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        var loaded = await Repository.GetByIdAsync(mine.Id, TestContext.Current.CancellationToken);
+        typeof(Session).GetProperty("SessionCode")!.SetValue(loaded, other.SessionCode);
+
+        var act = () => Repository.UpdateAsync(loaded!, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*Session code*already exists*");
+    }
+
+    [Fact]
     public async Task DeleteAsync_ShouldSoftDelete()
     {
         // Arrange

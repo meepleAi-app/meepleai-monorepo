@@ -358,7 +358,9 @@ internal class DocnetPdfValidator : IPdfValidator
 
         try
         {
-            using var library = DocLib.Instance;
+            // Never dispose the library (#4929): Dispose calls FPDF_DestroyLibrary, so a document that the extractor
+            // has open at that moment is read from a destroyed pdfium and the whole process dies with an access violation.
+            var library = DocLib.Instance;
             using var docReader = library.GetDocReader(filePath, new PageDimensions(1080, 1920));
 
             var pageCount = docReader.GetPageCount();

@@ -2,17 +2,23 @@
 
 > **Status**: Phase 1 MVP (issue [#1016](https://github.com/meepleAi-app/meepleai-monorepo/issues/1016))
 > **Design doc**: [`docs/for-developers/specs/2026-05-22-release-gate-spreadsheet.md`](../specs/2026-05-22-release-gate-spreadsheet.md)
-> **Last updated**: 2026-05-22
+> **Last updated**: 2026-11-09 (#4937: trigger on CI completion, pending checks, own check-runs excluded; #4969: workflow_run only from heads of this repository)
 
 ## What it does
 
 When a release PR (`main-dev → main-staging` or `main-staging → main`) is opened or updated, the bot:
 
-1. Fetches all check_runs for the PR's head commit.
+1. Fetches all check_runs for the PR's head commit (every page), leaving out its own (`Classify release-PR failures`, `Release-Gate Verdict`).
 2. Filters failures (`failure`, `cancelled`, `timed_out`, `action_required`).
 3. Classifies each failure against `.github/release-gates.yml` (severity + owner + override path).
-4. Posts a single bot comment on the PR with a classification table and verdict.
-5. On re-runs (synchronize event, check_suite re-completion), **edits the same comment in-place** instead of duplicating.
+4. Posts a single bot comment on the PR with a classification table and verdict. While some check is still running it says so (`⏳ N checks still running`) and never writes `✅`.
+5. Re-runs on push (`pull_request: synchronize`) and **whenever a CI workflow finishes on the release head** (`workflow_run: completed`, filtered to `release/**`), and **edits the same comment in-place** instead of duplicating. A workflow that finished on an older commit is skipped, so it cannot overwrite the comment of the current head.
+
+> **Why `workflow_run` and not `check_suite`** (#4937): GitHub does not emit `check_suite` for check suites created by GitHub Actions, i.e. for all of our CI. Until 2026-11-09 the bot therefore ran only when the PR was opened, before any job had finished, and posted «✅ No failed checks» on release heads that were red (#4892, #4897). The list of workflows in `on.workflow_run.workflows` must name each workflow by its exact `name:`; add a new one there when it starts running on release PRs.
+
+> **Only heads of this repository** (#4969): on `workflow_run` the job runs only if `github.event.workflow_run.head_repository.full_name == github.repository`. `workflow_run` runs with this workflow's write token (`pull-requests`, `issues`, `checks`) even when the triggering run came from a fork. The `release/**` filter matches only a branch **name**, which a fork chooses freely, and a fork PR can redefine in its own branch the workflows that trigger the bot, and so the check-runs the bot reads. Real release PRs are branches of this repository. `infra/scripts/tests/workflow-run-trust-boundary.bats` requires the same guard in every workflow triggered by `workflow_run`.
+
+The comment is an index for the release round, not its verdict: pre-existing reds are told apart by comparing failing test **names** with a control run on `main-dev` (see the notes in `.github/release-gates.yml` and #4961).
 
 Triage decision happens in < 1 min instead of manual classification per release.
 
@@ -21,7 +27,7 @@ Triage decision happens in < 1 min instead of manual classification per release.
 | Path | Purpose |
 |---|---|
 | `.github/release-gates.yml` | Authoritative classification table (schema v1) |
-| `.github/workflows/release-gate-comment.yml` | GitHub Actions workflow (PR + check_suite + manual triggers) |
+| `.github/workflows/release-gate-comment.yml` | GitHub Actions workflow (PR + workflow_run on CI completion + manual triggers) |
 | `scripts/release-gate/comment.mjs` | Bot entry script (octokit + classification + idempotent comment) |
 | `scripts/release-gate/validate.mjs` | Schema validator CLI |
 | `scripts/release-gate/lib/classify.mjs` | Pure classification logic (exact match → fallback regex → unknown) |

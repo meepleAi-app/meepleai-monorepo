@@ -35,7 +35,6 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
 {
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IPdfTextExtractor> _pdfTextExtractorMock = new();
-    private readonly Mock<IPdfTableExtractor> _tableExtractorMock = new();
     private readonly Mock<ITextChunkingService> _chunkingServiceMock = new();
     private readonly Mock<IEmbeddingService> _embeddingServiceMock = new();
     private readonly Mock<IBlobStorageService> _blobStorageServiceMock = new();
@@ -197,6 +196,29 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
         doc!.PageSpansJson.Should().BeNull();
     }
 
+    // #4782: with no map, the page count of the PDF is what tells a flat document of one page (truly on page 1) from a
+    // flat document of several (no page). The architecture test only sees that the argument is passed; this sees its value.
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(2, ChunkPage.Unknown)]
+    [InlineData(12, ChunkPage.Unknown)]
+    public async Task ProcessAsync_FlatDocumentWithEstimatedPages_GivesTheChunkerThePageCount_SoOnlyOnePageIsPageOne(
+        int pages, int expectedPage)
+    {
+        SeedPdfDocument();
+        // Two page chunks whatever the page count of the PDF: the count the chunker is given must be the PDF's
+        // (TotalPages), not the number of page chunks the extractor happened to return.
+        SetupExtractorToReturn("chunk1. chunk2.", 2, structured: false, pagesAreEstimated: true, totalPages: pages);
+        SetupBlobStorageToReturn();
+        SetupHierarchicalChunking(out _);
+        SetupEmbeddingsToReturn(2);
+
+        await CreatePipelineService(languageCode: "en")
+            .ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        ChunkedDocument().Sections.Should().ContainSingle().Which.Page.Should().Be(expectedPage);
+    }
+
     [Fact]
     public async Task ProcessAsync_ReprocessingARow_ReplacesTheOldPageMap_NotKeepsIt()
     {
@@ -253,7 +275,6 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
             _db,
             new Api.Tests.TestHelpers.InMemoryPdfClaimService(_db),
             _pdfTextExtractorMock.Object,
-            _tableExtractorMock.Object,
             _chunkingServiceMock.Object,
             _embeddingServiceMock.Object,
             _blobStorageServiceMock.Object,
@@ -293,7 +314,8 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
             .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 })); // %PDF header
     }
 
-    private void SetupExtractorToReturn(string fullText, int pageCount, bool structured = true, bool pagesAreEstimated = false)
+    private void SetupExtractorToReturn(
+        string fullText, int pageCount, bool structured = true, bool pagesAreEstimated = false, int? totalPages = null)
     {
         var pageChunks = Enumerable.Range(1, pageCount)
             .Select(p => new PageTextChunk(
@@ -314,7 +336,7 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
 
         var result = PagedTextExtractionResult.CreateSuccess(
             pageChunks: pageChunks,
-            totalPages: pageCount,
+            totalPages: totalPages ?? pageCount,
             totalCharacters: fullText.Length,
             ocrTriggered: false,
             structuredElements: structuredElements);
@@ -322,10 +344,6 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
         _pdfTextExtractorMock
             .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
-
-        _tableExtractorMock
-            .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(StructuredContentResult.CreateFailure("Not applicable"));
     }
 
     /// <summary>

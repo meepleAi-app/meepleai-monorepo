@@ -17,6 +17,7 @@
  */
 
 import { ApiError } from '../lib/api';
+import { PdfIngestResponseSchema } from '../lib/api/schemas/pdf.schemas';
 import { extractCorrelationId } from '../lib/errorUtils';
 import { logger } from '../lib/logger';
 import { isRetryableError, retryWithBackoff } from '../lib/retryUtils';
@@ -26,12 +27,7 @@ import { isRetryableError, retryWithBackoff } from '../lib/retryUtils';
 // ============================================================================
 
 export type UploadStatus =
-  | 'pending'
-  | 'uploading'
-  | 'processing'
-  | 'success'
-  | 'failed'
-  | 'cancelled';
+  'pending' | 'uploading' | 'processing' | 'success' | 'failed' | 'cancelled';
 
 export interface UploadQueueItem {
   id: string;
@@ -323,7 +319,13 @@ async function uploadFile(item: UploadQueueItem, fileData: ArrayBuffer): Promise
       }
     );
 
-    const data = (await response.json()) as { documentId: string };
+    // #4893: a PDF whose content is already stored answers 200 with `existingKb` and NO `documentId`;
+    // `data.documentId` is the new document or, in that case, the existing one.
+    const parsed = PdfIngestResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      throw new Error('Invalid response from the upload endpoint');
+    }
+    const data = parsed.data;
 
     // Update to processing status
     updateItemStatus(item.id, 'processing', 50, undefined, data.documentId);

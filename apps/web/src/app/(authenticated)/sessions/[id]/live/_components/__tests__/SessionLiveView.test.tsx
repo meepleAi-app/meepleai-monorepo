@@ -488,7 +488,12 @@ const MESSAGES: Record<string, string> = {
   // #2503
   'pages.sessionLive.endgameDialog.saveGameCta': 'Salva partita',
   'pages.sessionLive.endgameDialog.savingLabel': 'Salvataggio…',
-  'pages.sessionLive.endgameDialog.alreadyCompletedToast': 'Partita già conclusa',
+  // #4844: the 409s of a game that cannot be ended from its state, by code.
+  'pages.sessionLive.conflicts.notStarted':
+    'La partita non è ancora avviata: avviala prima di continuare.',
+  'pages.sessionLive.conflicts.completed': 'La partita è già conclusa.',
+  'pages.sessionLive.conflicts.generic':
+    'Operazione non consentita nello stato attuale della partita.',
   'pages.sessionLive.endgameConfirm.title': 'Terminare la partita?',
   'pages.sessionLive.endgameConfirm.body':
     "L'azione è irreversibile. I punteggi finali verranno registrati.",
@@ -1883,7 +1888,12 @@ describe('SessionLiveView — #2501 SP4 Task 3: recordId wire + 409 handler', ()
     const { ConflictError } = await import('@/lib/api/core/errors');
     completeMutate.mockImplementation(
       (_input: unknown, opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => {
-        opts?.onError?.(new ConflictError({ message: 'Session already completed' }));
+        opts?.onError?.(
+          new ConflictError({
+            message: 'Cannot complete session from Completed status. Must be InProgress or Paused.',
+            code: 'session_completed',
+          })
+        );
       }
     );
 
@@ -1910,6 +1920,41 @@ describe('SessionLiveView — #2501 SP4 Task 3: recordId wire + 409 handler', ()
     // Must NOT open the endgame dialog (no handleDialogChange('endgame') call).
     expect(document.querySelector('[data-slot="endgame-dialog"]')).not.toBeInTheDocument();
   });
+
+  // #4844: until then EVERY 409 here said «Partita già conclusa» — to a game nobody had started.
+  it.each([
+    ['session_not_started', 'La partita non è ancora avviata: avviala prima di continuare.'],
+    ['session_frozen', 'Operazione non consentita nello stato attuale della partita.'],
+  ])(
+    'a complete 409 with code %s reads by code, never as «già conclusa» nor as the server text',
+    async (code, expected) => {
+      const { ConflictError } = await import('@/lib/api/core/errors');
+      completeMutate.mockImplementation(
+        (_input: unknown, opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => {
+          opts?.onError?.(
+            new ConflictError({ message: 'Cannot complete session from Created status.', code })
+          );
+        }
+      );
+
+      const { container } = renderWithIntl(<SessionLiveView />);
+      await act(async () => {
+        fireEvent.click(container.querySelector('[data-slot="session-live-top-bar-endgame"]')!);
+      });
+      await act(async () => {
+        fireEvent.click(document.querySelector('[data-slot="endgame-confirm-cta"]')!);
+      });
+      await act(async () => {});
+
+      const { toast } = await import('sonner');
+      expect(toast.error).toHaveBeenCalledWith(expected, expect.anything());
+      expect(toast.error).not.toHaveBeenCalledWith(
+        expect.stringMatching(/già conclusa|Cannot complete/i),
+        expect.anything()
+      );
+      expect(document.querySelector('[data-slot="endgame-dialog"]')).not.toBeInTheDocument();
+    }
+  );
 });
 
 // ─── SP5-a Task 3 — finding #16: diary write response-ack (not fail-silently) ───

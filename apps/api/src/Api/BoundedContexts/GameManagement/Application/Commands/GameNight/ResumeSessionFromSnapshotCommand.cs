@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
@@ -107,6 +108,7 @@ internal sealed class ResumeSessionFromSnapshotCommandHandler
         if (session.Status != LiveSessionStatus.Paused)
         {
             throw new ConflictException(
+                LiveSessionConflictCodes.ForRejectedStatus(session.Status, LiveSessionConflictCodes.SessionNotPaused),
                 $"Cannot resume session in {session.Status} status. Session must be Paused.");
         }
 

@@ -3,7 +3,6 @@ using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Events;
-using Api.SharedKernel.Infrastructure.Persistence;
 using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -44,7 +43,6 @@ internal sealed class GameNightInvitationRespondedHandler
     private readonly IGameNightGuestEmailOptOutRepository _optOutRepository;
     private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly HybridCache _cache;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<GameNightInvitationRespondedHandler> _logger;
 
     public GameNightInvitationRespondedHandler(
@@ -55,7 +53,6 @@ internal sealed class GameNightInvitationRespondedHandler
         IGameNightGuestEmailOptOutRepository optOutRepository,
         IPublicBaseUrlProvider publicBaseUrl,
         HybridCache cache,
-        IUnitOfWork unitOfWork,
         ILogger<GameNightInvitationRespondedHandler> logger)
     {
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
@@ -65,7 +62,6 @@ internal sealed class GameNightInvitationRespondedHandler
         _optOutRepository = optOutRepository ?? throw new ArgumentNullException(nameof(optOutRepository));
         _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -164,6 +160,17 @@ internal sealed class GameNightInvitationRespondedHandler
             return;
         }
 
+        // #4856: the answer is refused once the night is cancelled, but this event reaches the handler seconds after
+        // it. A guest who accepted just before the cancellation must not be written «you're in» for a night that is
+        // off: the cancellation email is the one that tells them. Not marked: the mark says «written to».
+        if (gameNight.Status == Domain.Enums.GameNightStatus.Cancelled)
+        {
+            _logger.LogInformation(
+                "Skipping RSVP confirmation email for invitation {InvitationId}: game night {GameNightId} was cancelled",
+                invitation.Id, gameNight.Id);
+            return;
+        }
+
         // #4754: same language and zone as the invitation the guest answered — the organizer's. (The footer used
         // to carry an unsubscribe link built without the site's base URL, so it was relative and pointed
         // at no page; since #4846 it carries the one-tap opt-out, built on the public address.)
@@ -180,9 +187,11 @@ internal sealed class GameNightInvitationRespondedHandler
             locale: new GameNightEmailLocale(organizer?.Language, gameNight.TimeZoneId),
             ct: cancellationToken).ConfigureAwait(false);
 
-        // Mark and persist the confirmation-sent timestamp so a retried event short-circuits above.
-        invitation.MarkConfirmationSent(DateTimeOffset.UtcNow);
-        await _invitationRepository.UpdateAsync(invitation, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Mark the confirmation as sent so a retried event short-circuits above. Only the mark is written (#4744):
+        // `invitation` is a copy read before the email, and rewriting it whole would undo a withdrawal that arrived
+        // while the email went out (#4721).
+        await _invitationRepository
+            .MarkRsvpConfirmationSentAsync(invitation.Id, DateTimeOffset.UtcNow, cancellationToken)
+            .ConfigureAwait(false);
     }
 }

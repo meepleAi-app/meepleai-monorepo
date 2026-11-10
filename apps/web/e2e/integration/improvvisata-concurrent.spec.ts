@@ -8,7 +8,6 @@ import {
   getSession,
   getScores,
   cleanupSession,
-  parseUuid,
   TEST_PLAYERS,
   API_BASE,
   ADMIN_EMAIL,
@@ -136,46 +135,6 @@ test.describe('Improvvisata Concurrent Access — Integration', () => {
     const scores = await getScores(apiHost, sessionId);
     const confirmed = scores.find((s: any) => s.value === 20);
     expect(confirmed).toBeTruthy();
-  });
-
-  test('concurrent dispute voting', async () => {
-    sessionId = await createGenericSession(apiHost, 'Concurrent Vote Test');
-    const playerIds = await addPlayersToSession(apiHost, sessionId, TEST_PLAYERS);
-    await startSession(apiHost, sessionId);
-
-    // Open dispute
-    const openRes = await apiHost.post(`/api/v1/live-sessions/${sessionId}/disputes`, {
-      data: { initiatorPlayerId: playerIds[0], initiatorClaim: 'Concurrent vote test' },
-      headers: JSON_HEADERS,
-    });
-    expect(openRes.ok()).toBe(true);
-    const disputeId = parseUuid(await openRes.text());
-
-    // Respond
-    await apiHost.put(`/api/v1/live-sessions/${sessionId}/disputes/${disputeId}/respond`, {
-      data: { respondentPlayerId: playerIds[1], respondentClaim: 'Counter' },
-      headers: JSON_HEADERS,
-    });
-
-    // All 3 vote in parallel
-    const voteResults = await Promise.all(
-      playerIds.map(pid =>
-        apiHost.post(`/api/v1/live-sessions/${sessionId}/disputes/${disputeId}/vote`, {
-          data: { playerId: pid, acceptsVerdict: true },
-          headers: JSON_HEADERS,
-        })
-      )
-    );
-
-    for (const vr of voteResults) {
-      expect(vr.ok(), `Vote failed: ${vr.status()}`).toBe(true);
-    }
-
-    // Tally
-    const tallyRes = await apiHost.post(
-      `/api/v1/live-sessions/${sessionId}/disputes/${disputeId}/tally`
-    );
-    expect(tallyRes.ok()).toBe(true);
   });
 
   test('save while guest is scoring', async () => {

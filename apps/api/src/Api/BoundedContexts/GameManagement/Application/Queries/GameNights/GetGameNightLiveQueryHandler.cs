@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
@@ -31,9 +32,11 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
             ?? throw new NotFoundException("GameNightEvent", query.GameNightId.ToString());
 
         // Participant-only: the live read exposes per-session WinnerId (user GUIDs) + progression.
+        // The rule is written once, in GameNightParticipation (#4759).
         var isOrganizer = gameNight.OrganizerId == query.CallerUserId;
-        var isParticipant = isOrganizer
-            || gameNight.Rsvps.Any(r => r.UserId == query.CallerUserId);
+        var isParticipant = await GameNightParticipation
+            .IsParticipantAsync(gameNight, query.CallerUserId, _repository, cancellationToken)
+            .ConfigureAwait(false);
         if (!isParticipant)
             throw new ForbiddenException("Only the organizer or an invited player can view the night-live state.");
 

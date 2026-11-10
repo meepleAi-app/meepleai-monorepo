@@ -1,17 +1,20 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.SharedKernel.Application;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 
@@ -37,6 +40,7 @@ public sealed class GetGameNightInvitationByTokenQueryHandlerTests
     private readonly Mock<IUserRepository> _userRepoMock = new();
     private readonly Mock<IGameCoreDataProvider> _gameCoreDataMock = new();
     private readonly HybridCache _cache = CreateHybridCache();
+    private readonly FakeTimeProvider _timeProvider = new(UtcNow);
     private readonly GetGameNightInvitationByTokenQueryHandler _sut;
 
     public GetGameNightInvitationByTokenQueryHandlerTests()
@@ -46,7 +50,8 @@ public sealed class GetGameNightInvitationByTokenQueryHandlerTests
             _gameNightRepoMock.Object,
             _userRepoMock.Object,
             _gameCoreDataMock.Object,
-            _cache);
+            _cache,
+            _timeProvider);
     }
 
     private static HybridCache CreateHybridCache()
@@ -59,7 +64,7 @@ public sealed class GetGameNightInvitationByTokenQueryHandlerTests
         return services.BuildServiceProvider().GetRequiredService<HybridCache>();
     }
 
-    private static GameNightInvitation Reconstitute(GameNightInvitationStatus status)
+    private static GameNightInvitation Reconstitute(GameNightInvitationStatus status, DateTimeOffset? expiresAt = null)
     {
         return GameNightInvitation.Reconstitute(
             id: Guid.NewGuid(),
@@ -67,7 +72,7 @@ public sealed class GetGameNightInvitationByTokenQueryHandlerTests
             gameNightId: Guid.NewGuid(),
             email: "guest@example.com",
             status: status,
-            expiresAt: UtcNow.AddDays(7),
+            expiresAt: expiresAt ?? UtcNow.AddDays(7),
             respondedAt: status == GameNightInvitationStatus.Pending ? null : UtcNow,
             respondedByUserId: null,
             createdAt: UtcNow.AddDays(-1),
@@ -234,6 +239,177 @@ public sealed class GetGameNightInvitationByTokenQueryHandlerTests
         result!.PrimaryGameId.Should().Be(primaryGameId);
         result.PrimaryGameName.Should().Be("Catan");
         result.PrimaryGameImageUrl.Should().Be("https://cdn.example/catan.jpg");
+    }
+
+    // ── A link that is no longer alive shows nothing of the night (#4745, #4856) ────────────────────────────────
+
+    private void GivenTheNight(GameNightInvitation invitation, GameNightEvent night)
+    {
+        _invitationRepoMock
+            .Setup(r => r.GetByTokenAsync(Token, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(night);
+        _userRepoMock
+            .Setup(r => r.GetByIdAsync(night.OrganizerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserBuilder().WithDisplayName("Marta").Build());
+    }
+
+    private static GameNightEvent NightWithAGame(Guid primaryGameId) =>
+        CreateGameNight(Guid.NewGuid(), gameIds: new List<Guid> { primaryGameId });
+
+    private static void AssertNothingOfTheNightIsShown(PublicGameNightInvitationDto dto)
+    {
+        dto.Title.Should().BeEmpty();
+        dto.Location.Should().BeNull();
+        dto.ScheduledAt.Should().Be(default(DateTimeOffset), "the time of the night is not shown");
+        dto.DurationMinutes.Should().BeNull();
+        dto.ExpectedPlayers.Should().Be(0);
+        dto.AcceptedSoFar.Should().Be(0);
+        dto.PrimaryGameId.Should().BeNull();
+        dto.PrimaryGameName.Should().BeNull();
+        dto.PrimaryGameImageUrl.Should().BeNull();
+        dto.HostUserId.Should().Be(Guid.Empty);
+        dto.HostAvatarUrl.Should().BeNull();
+        dto.GameNightId.Should().Be(Guid.Empty);
+        dto.AlreadyRespondedAs.Should().BeNull();
+        dto.RespondedByName.Should().BeNull();
+        dto.RespondedAt.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(GameNightInvitationStatus.Cancelled)]
+    [InlineData(GameNightInvitationStatus.Expired)]
+    public async Task Handle_AnInvitationThatIsNoLongerAlive_ShowsOnlyItsStateAndTheHost(GameNightInvitationStatus status)
+    {
+        var invitation = Reconstitute(status);
+        GivenTheNight(invitation, NightWithAGame(Guid.NewGuid()));
+
+        var result = await _sut.Handle(new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(status.ToString());
+        result.HostDisplayName.Should().Be("Marta", "the page says «ask {host} to send it again»");
+        result.Token.Should().Be(Token);
+        result.ExpiresAt.Should().Be(invitation.ExpiresAt, "the invitation's own expiry is not about the night");
+        result.NightCancelled.Should().BeFalse("the night is on: it is the invitation that is not");
+        AssertNothingOfTheNightIsShown(result);
+    }
+
+    [Fact]
+    public async Task Handle_AnInvitationThatIsNoLongerAlive_DoesNotEvenLookTheGameOrTheCountUp()
+    {
+        var invitation = Reconstitute(GameNightInvitationStatus.Cancelled);
+        var primaryGameId = Guid.NewGuid();
+        GivenTheNight(invitation, NightWithAGame(primaryGameId));
+
+        await _sut.Handle(new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+
+        _gameCoreDataMock.Verify(
+            g => g.GetCoreDataAsync(It.IsAny<GameRef>(), It.IsAny<CancellationToken>()), Times.Never);
+        _invitationRepoMock.Verify(
+            r => r.CountAcceptedByGameNightIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_APendingInvitationPastItsCutoff_IsTreatedAsExpired_AndShowsNothingOfTheNight()
+    {
+        // The respond endpoint already answers 410 for it; the page must not be more generous than that.
+        var invitation = Reconstitute(GameNightInvitationStatus.Pending, expiresAt: UtcNow.AddMinutes(-1));
+        GivenTheNight(invitation, NightWithAGame(Guid.NewGuid()));
+
+        var result = await _sut.Handle(new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+
+        result!.Status.Should().Be("Expired");
+        AssertNothingOfTheNightIsShown(result);
+    }
+
+    [Fact]
+    public async Task Handle_APendingInvitationThatExpiresRightNow_IsAlreadyExpired()
+    {
+        var invitation = Reconstitute(GameNightInvitationStatus.Pending, expiresAt: UtcNow);
+        GivenTheNight(invitation, NightWithAGame(Guid.NewGuid()));
+
+        var result = await _sut.Handle(new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+
+        result!.Status.Should().Be("Expired");
+    }
+
+    [Theory]
+    [InlineData(GameNightInvitationStatus.Pending)]
+    [InlineData(GameNightInvitationStatus.Accepted)]
+    [InlineData(GameNightInvitationStatus.Declined)]
+    public async Task Handle_AnInvitationOfACancelledNight_SaysSo_AndShowsNothingOfTheNight(GameNightInvitationStatus status)
+    {
+        var invitation = Reconstitute(status);
+        var night = NightWithAGame(Guid.NewGuid());
+        night.Cancel();
+        GivenTheNight(invitation, night);
+
+        var result = await _sut.Handle(new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+
+        result!.NightCancelled.Should().BeTrue();
+        result.Status.Should().Be(status.ToString(), "the invitation keeps its own state: it is the night that was cancelled");
+        result.HostDisplayName.Should().Be("Marta");
+        AssertNothingOfTheNightIsShown(result);
+    }
+
+    [Fact]
+    public async Task Handle_ALiveInvitationOfAPublishedNight_IsShownAsBefore_AndTheNightIsNotCancelled()
+    {
+        var invitation = Reconstitute(GameNightInvitationStatus.Pending);
+        var night = CreateGameNight(Guid.NewGuid());
+        night.Publish([]);
+        GivenTheNight(invitation, night);
+
+        var result = await _sut.Handle(new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+
+        result!.NightCancelled.Should().BeFalse();
+        result.Title.Should().Be("Friday Night Catan");
+        result.Location.Should().Be("My place");
+        result.ScheduledAt.Should().Be(night.ScheduledAt);
+        result.GameNightId.Should().Be(night.Id);
+        result.HostUserId.Should().Be(night.OrganizerId);
+    }
+
+    [Fact]
+    public async Task Handle_ALivePageIsCached_UntilItsTagIsDropped_Then_TheLinkSaysTheNightIsCancelled()
+    {
+        // The contract between the query and whoever cancels a night (#4856): the page is cached under
+        // CacheTagPrefix + token; dropping that tag is what turns a live page into the cancelled one. Real
+        // HybridCache, so the tag itself is exercised and not a mock of it.
+        var invitation = Reconstitute(GameNightInvitationStatus.Accepted);
+        var night = NightWithAGame(Guid.NewGuid());
+        GivenTheNight(invitation, night);
+
+        var live = await _sut.Handle(new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+        night.Cancel();
+        var stillCached = await _sut.Handle(new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+        await _cache.RemoveByTagAsync(
+            GetGameNightInvitationByTokenQueryHandler.CacheTagPrefix + Token, CancellationToken.None);
+        var afterTheDrop = await _sut.Handle(new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+
+        live!.NightCancelled.Should().BeFalse();
+        live.Title.Should().Be("Friday Night Catan");
+        stillCached!.NightCancelled.Should().BeFalse("the page is cached until its tag is dropped");
+        afterTheDrop!.NightCancelled.Should().BeTrue();
+        afterTheDrop.Title.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_AWithdrawnInvitationOnACancelledNight_IsStillJustWithdrawn_AndShowsNothing()
+    {
+        var invitation = Reconstitute(GameNightInvitationStatus.Cancelled);
+        var night = NightWithAGame(Guid.NewGuid());
+        night.Cancel();
+        GivenTheNight(invitation, night);
+
+        var result = await _sut.Handle(new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+
+        result!.Status.Should().Be("Cancelled");
+        result.NightCancelled.Should().BeTrue("both are true: the page says the night is off");
+        AssertNothingOfTheNightIsShown(result);
     }
 
     [Fact]

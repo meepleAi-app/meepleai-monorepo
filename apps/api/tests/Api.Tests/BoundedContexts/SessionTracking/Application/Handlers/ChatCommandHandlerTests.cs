@@ -1003,6 +1003,60 @@ public class AskSessionAgentCommandHandlerTests
         VerifyNoRetrieval(rig);
     }
 
+    [Fact]
+    public async Task Handle_FlagOn_GateFailureThatIsNotADenial_LeavesNoQuestionInTheChat()
+    {
+        // Arrange — #4881: the gate used to run AFTER the player's question was saved, so a gate that could
+        // not be consulted (a fault, not a denial) failed the request with the question already in the chat
+        // the whole table reads, and no answer under it.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
+            .Setup(g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("access store unavailable")));
+
+        // Act
+        var act = () => AskAs(rig, Guid.NewGuid());
+
+        // Assert — nothing was written, so there is nothing for the table to read and nothing to repeat.
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        rig.Chat.Verify(
+            r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+        rig.Chat.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        rig.Mediator.Verify(
+            m => m.Publish(It.IsAny<SessionChatMessageSentEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        // The gate comes before the chat is even consulted for the next sequence number: the invariant is
+        // "nothing of the conversation is touched until the gate has answered".
+        rig.Chat.Verify(
+            r => r.GetNextSequenceNumberAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_RetryAfterAGateFault_SavesTheQuestionOnce()
+    {
+        // Arrange — the first attempt meets a gate that cannot answer, the second finds it back. A retry used to
+        // save the question twice (the failed attempt had already stored it).
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
+            .SetupSequence(g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("access store unavailable"))
+            .Returns(Task.CompletedTask));
+        var saved = new List<SessionChatMessage>();
+        rig.Chat
+            .Setup(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SessionChatMessage, CancellationToken>((m, _) => saved.Add(m));
+        var caller = Guid.NewGuid();
+
+        // Act
+        var first = () => AskAs(rig, caller);
+        await first.Should().ThrowAsync<InvalidOperationException>();
+        await AskAs(rig, caller);
+
+        // Assert — one question and one answer in the chat, not two questions.
+        saved.Should().HaveCount(2);
+        saved.Count(m => m.MessageType == SessionChatMessageType.Text).Should().Be(1);
+        saved.Count(m => m.MessageType == SessionChatMessageType.AgentResponse).Should().Be(1);
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // #3390 Slice 3: vision-derived retrieval query for empty-text turns
     // ──────────────────────────────────────────────────────────────────────────
@@ -1239,6 +1293,139 @@ public class DeleteChatMessageCommandHandlerTests
         var act7 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act7.Should().ThrowAsync<ConflictException>()
             .WithMessage("*text messages*");
+    }
+
+    // === #4883: the host moderates what no registered user owns ===
+    // A guest's message (a participant with no user behind it) and the agent's reply could be deleted by
+    // nobody — the sender check never matched, the host included.
+
+    private static Session CreateSessionHostedBy(Guid sessionId, Guid hostUserId, params Participant[] seated)
+    {
+        var session = Session.Create(
+            userId: hostUserId,
+            gameId: Guid.NewGuid(),
+            sessionType: SessionType.GameSpecific);
+
+        typeof(Session).GetProperty("Id")!.SetValue(session, sessionId);
+
+        var participantsField = typeof(Session).GetField("_participants",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        ((List<Participant>)participantsField!.GetValue(session)!).AddRange(seated);
+
+        return session;
+    }
+
+    private void GivenMessageAndSession(SessionChatMessage message, Session session)
+    {
+        _mockChatRepo.Setup(r => r.GetByIdAsync(message.Id, It.IsAny<CancellationToken>())).ReturnsAsync(message);
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(message.SessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+    }
+
+    [Fact]
+    public async Task Handle_HostDeletesTheAgentReply_SoftDeletesIt()
+    {
+        var sessionId = Guid.NewGuid();
+        var hostId = Guid.NewGuid();
+        var message = SessionChatMessage.CreateAgentResponse(sessionId, "The rule says...", 1, "rules");
+        GivenMessageAndSession(message, CreateSessionHostedBy(sessionId, hostId));
+
+        await _handler.Handle(new DeleteChatMessageCommand(message.Id, hostId), TestContext.Current.CancellationToken);
+
+        message.IsDeleted.Should().BeTrue();
+        _mockChatRepo.Verify(r => r.UpdateAsync(message, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_HostDeletesAGuestsMessage_SoftDeletesIt()
+    {
+        var sessionId = Guid.NewGuid();
+        var hostId = Guid.NewGuid();
+        var guestParticipantId = Guid.NewGuid();
+        var guest = new Participant { Id = guestParticipantId, SessionId = sessionId, UserId = null, DisplayName = "Guest" };
+        var message = SessionChatMessage.CreateTextMessage(sessionId, guestParticipantId, "spam", 1);
+        GivenMessageAndSession(message, CreateSessionHostedBy(sessionId, hostId, guest));
+
+        await _handler.Handle(new DeleteChatMessageCommand(message.Id, hostId), TestContext.Current.CancellationToken);
+
+        message.IsDeleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_HostDeletesAMessageWhoseSenderHasLeftTheTable_SoftDeletesIt()
+    {
+        // A kicked participant's message points at a participant row that is gone: it would be orphaned.
+        var sessionId = Guid.NewGuid();
+        var hostId = Guid.NewGuid();
+        var message = SessionChatMessage.CreateTextMessage(sessionId, Guid.NewGuid(), "from someone removed", 1);
+        GivenMessageAndSession(message, CreateSessionHostedBy(sessionId, hostId));
+
+        await _handler.Handle(new DeleteChatMessageCommand(message.Id, hostId), TestContext.Current.CancellationToken);
+
+        message.IsDeleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_HostCannotDeleteARegisteredParticipantsMessage_ThrowsForbidden()
+    {
+        // The scope stays narrow: the host takes over what has no registered owner, not the other
+        // players' own messages.
+        var sessionId = Guid.NewGuid();
+        var hostId = Guid.NewGuid();
+        var playerUserId = Guid.NewGuid();
+        var playerParticipantId = Guid.NewGuid();
+        var player = new Participant { Id = playerParticipantId, SessionId = sessionId, UserId = playerUserId, DisplayName = "Player" };
+        var message = SessionChatMessage.CreateTextMessage(sessionId, playerParticipantId, "mine", 1);
+        GivenMessageAndSession(message, CreateSessionHostedBy(sessionId, hostId, player));
+
+        var act = () => _handler.Handle(new DeleteChatMessageCommand(message.Id, hostId), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        message.IsDeleted.Should().BeFalse();
+        _mockChatRepo.Verify(r => r.UpdateAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_NonHostParticipantCannotDeleteTheAgentReply_ThrowsForbidden()
+    {
+        var sessionId = Guid.NewGuid();
+        var hostId = Guid.NewGuid();
+        var playerUserId = Guid.NewGuid();
+        var player = new Participant { Id = Guid.NewGuid(), SessionId = sessionId, UserId = playerUserId, DisplayName = "Player" };
+        var message = SessionChatMessage.CreateAgentResponse(sessionId, "The rule says...", 1, "rules");
+        GivenMessageAndSession(message, CreateSessionHostedBy(sessionId, hostId, player));
+
+        var act = () => _handler.Handle(new DeleteChatMessageCommand(message.Id, playerUserId), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        _mockChatRepo.Verify(r => r.UpdateAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_StrangerCannotDeleteAGuestsMessage_ThrowsForbidden()
+    {
+        var sessionId = Guid.NewGuid();
+        var hostId = Guid.NewGuid();
+        var guestParticipantId = Guid.NewGuid();
+        var guest = new Participant { Id = guestParticipantId, SessionId = sessionId, UserId = null, DisplayName = "Guest" };
+        var message = SessionChatMessage.CreateTextMessage(sessionId, guestParticipantId, "hello", 1);
+        GivenMessageAndSession(message, CreateSessionHostedBy(sessionId, hostId, guest));
+
+        var act = () => _handler.Handle(new DeleteChatMessageCommand(message.Id, Guid.NewGuid()), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        message.IsDeleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_EmptyRequester_ThrowsForbidden()
+    {
+        var sessionId = Guid.NewGuid();
+        var message = SessionChatMessage.CreateAgentResponse(sessionId, "The rule says...", 1, "rules");
+        GivenMessageAndSession(message, CreateSessionHostedBy(sessionId, Guid.NewGuid()));
+
+        var act = () => _handler.Handle(new DeleteChatMessageCommand(message.Id, Guid.Empty), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 }
 

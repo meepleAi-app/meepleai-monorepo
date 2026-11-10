@@ -56,31 +56,46 @@ const ACCEPTED_INVITATION = {
   acceptedSoFar: 3,
 };
 
+type StubbedResponse = { status: number; body?: unknown; headers?: Record<string, string> };
+
 /**
  * Pin every public RSVP route to the supplied handlers. Reused per-test
  * to keep mocks isolated and explicit per FSM state.
+ *
+ * The GET is stateful when `getResponseAfterPost` is given: it answers `getResponse` until a POST has been served and
+ * `getResponseAfterPost` from then on. The page re-reads the invitation after a successful POST, so a GET that never
+ * changes can never show the answer the guest just gave (#4915). The bodies of the POSTs served are returned, for the
+ * test to assert on.
  */
 async function stubInvitationRoutes(
   page: Page,
   opts: {
-    getResponse?: { status: number; body?: unknown; headers?: Record<string, string> };
-    postResponse?: { status: number; body?: unknown; headers?: Record<string, string> };
+    getResponse?: StubbedResponse;
+    getResponseAfterPost?: StubbedResponse;
+    postResponse?: StubbedResponse;
   }
-) {
+): Promise<{ postedBodies: unknown[] }> {
+  const postedBodies: unknown[] = [];
+  let posted = false;
+
   if (opts.getResponse) {
     await page.route(`**/api/v1/game-nights/invitations/${TOKEN}`, route => {
       if (route.request().method() !== 'GET') return route.continue();
+      const stub =
+        posted && opts.getResponseAfterPost ? opts.getResponseAfterPost : opts.getResponse!;
       return route.fulfill({
-        status: opts.getResponse!.status,
+        status: stub.status,
         contentType: 'application/json',
-        headers: opts.getResponse!.headers ?? {},
-        body: opts.getResponse!.body !== undefined ? JSON.stringify(opts.getResponse!.body) : '',
+        headers: stub.headers ?? {},
+        body: stub.body !== undefined ? JSON.stringify(stub.body) : '',
       });
     });
   }
   if (opts.postResponse) {
     await page.route(`**/api/v1/game-nights/invitations/${TOKEN}/respond`, route => {
       if (route.request().method() !== 'POST') return route.continue();
+      posted = true;
+      postedBodies.push(route.request().postDataJSON());
       return route.fulfill({
         status: opts.postResponse!.status,
         contentType: 'application/json',
@@ -89,12 +104,16 @@ async function stubInvitationRoutes(
       });
     });
   }
+
+  return { postedBodies };
 }
 
 test.describe('Public Game Night RSVP — /join/event/[code]', () => {
   test('pending invitation renders RSVP form and accepts via Accept CTA', async ({ page }) => {
-    await stubInvitationRoutes(page, {
+    const { postedBodies } = await stubInvitationRoutes(page, {
       getResponse: { status: 200, body: PENDING_INVITATION },
+      // What the page reads back once the answer has been recorded (#4915).
+      getResponseAfterPost: { status: 200, body: ACCEPTED_INVITATION },
       postResponse: { status: 200, body: ACCEPTED_INVITATION },
     });
 
@@ -105,7 +124,9 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
       timeout: 8000,
     });
     // Surface is "rsvp" (not loading/error).
-    await expect(page.locator('main[data-surface="rsvp"]')).toBeVisible();
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="rsvp"]')
+    ).toBeVisible();
 
     // Accept CTA visible + clickable.
     const acceptBtn = page.locator('[data-slot="public-rsvp-accept"]');
@@ -116,6 +137,8 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
     await expect(page.getByRole('heading', { name: /already responded/i }).first()).toBeVisible({
       timeout: 8000,
     });
+    // ...and it is the answer the guest gave that was sent, once.
+    expect(postedBodies).toEqual([{ response: 'Accepted' }]);
   });
 
   test('already-responded invitation renders the named confirmation panel', async ({ page }) => {
@@ -143,7 +166,9 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
 
     await page.goto(`/join/event/${TOKEN}`, { waitUntil: 'domcontentloaded' });
 
-    await expect(page.locator('main[data-surface="token-expired"]')).toBeVisible({
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="token-expired"]')
+    ).toBeVisible({
       timeout: 8000,
     });
     await expect(
@@ -163,11 +188,15 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
     await page.goto(`/join/event/${TOKEN}`, { waitUntil: 'domcontentloaded' });
 
     // Form first.
-    await expect(page.locator('main[data-surface="rsvp"]')).toBeVisible({ timeout: 8000 });
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="rsvp"]')
+    ).toBeVisible({ timeout: 8000 });
 
     // Submit triggers the 410 path, surface flips to token-cancelled.
     await page.locator('[data-slot="public-rsvp-accept"]').click();
-    await expect(page.locator('main[data-surface="token-cancelled"]')).toBeVisible({
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="token-cancelled"]')
+    ).toBeVisible({
       timeout: 8000,
     });
     await expect(
@@ -182,7 +211,9 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
 
     await page.goto(`/join/event/${TOKEN}`, { waitUntil: 'domcontentloaded' });
 
-    await expect(page.locator('main[data-surface="token-invalid"]')).toBeVisible({
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="token-invalid"]')
+    ).toBeVisible({
       timeout: 8000,
     });
     await expect(page.locator('[data-slot="public-join-event-invalid-token"]')).toBeVisible();
@@ -199,7 +230,9 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
 
     await page.goto(`/join/event/${TOKEN}`, { waitUntil: 'domcontentloaded' });
 
-    await expect(page.locator('main[data-surface="rate-limited"]')).toBeVisible({
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="rate-limited"]')
+    ).toBeVisible({
       timeout: 8000,
     });
     // Countdown shown when retry-after > 0 (the live countdown means we just

@@ -7,16 +7,19 @@
  * Pure presentational. The mockup uses inline HSL background derived from a
  * per-player hue (`player.color`); we expose `hue` as a prop and pipe the
  * computed `hsl(...)` value through a CSS custom property (`--avatar-bg`) so
- * the static class `bg-[var(--avatar-bg)]` can be paired with `text-white` in
- * the same className — required by the CLAUDE.md DS-15 exemption (Tailwind
- * JIT cannot extract `bg-[hsl(${hue}_...)]` templated literals, so a literal
- * class string is necessary regardless). The inline body comment details the
- * full rationale. #1171 review followup.
+ * the static class `bg-[var(--avatar-bg)]` works (Tailwind JIT cannot extract
+ * `bg-[hsl(${hue}_...)]` templated literals, so a literal class string is
+ * necessary regardless). The initials take their colour the same way, from
+ * `--avatar-fg` (#4910): white or black per hue, whichever reaches 4.5:1 on
+ * the background. The inline body comment details the rationale. #1171 review
+ * followup.
  *
  * AC: T V
  */
 
 import clsx from 'clsx';
+
+import { avatarForeground } from '@/lib/avatar-colors';
 
 export interface GameNightAvatarProps {
   /** 2-letter uppercase initials (callers compute from displayName). */
@@ -56,10 +59,9 @@ export function GameNightAvatar({
   // be expressed as a literal Tailwind class — the JIT extractor only sees
   // class strings statically. We pipe the value through a CSS custom property
   // and reference it via the literal arbitrary `bg-[var(--avatar-bg)]` class
-  // in the same className as `text-white`. This satisfies the CLAUDE.md DS-15
-  // exemption ("text-white IS allowed when the same className declares a
-  // colored bg [...] arbitrary `bg-[hsl(…)]`") while keeping the hue dynamic.
-  // Issue caught in #1171 review followup.
+  // while keeping the hue dynamic. The text colour follows the same route
+  // (`--avatar-fg`): it depends on the hue, so it cannot be a fixed utility
+  // either. Issue caught in #1171 review followup.
   const avatarBg = `hsl(${hue}, 60%, 55%)`;
   return (
     <span
@@ -68,8 +70,8 @@ export function GameNightAvatar({
       className={clsx(
         'inline-flex shrink-0 items-center justify-center rounded-full font-display font-extrabold',
         'bg-[var(--avatar-bg)]',
-        // eslint-disable-next-line local/no-hardcoded-color-utility -- white text on per-player HSL background; mockup .e-bg pattern. Exemption satisfied by bg-[var(--avatar-bg)] declared on the same className.
-        'text-white',
+        // White or black, whichever reaches 4.5:1 on this hue (#4910); a fixed white measured 2.52 on one real host.
+        'text-[var(--avatar-fg)]',
         // 2px border preserves card-background separation in roster grids; ring color flips for "me".
         highlightSelf
           ? 'border-2 border-entity-player/40 ring-2 ring-entity-player/30'
@@ -77,7 +79,12 @@ export function GameNightAvatar({
         SIZE_TO_CLASS[size],
         className
       )}
-      style={{ ['--avatar-bg' as string]: avatarBg } as React.CSSProperties}
+      style={
+        {
+          ['--avatar-bg' as string]: avatarBg,
+          ['--avatar-fg' as string]: avatarForeground(hue),
+        } as React.CSSProperties
+      }
     >
       {initials}
     </span>

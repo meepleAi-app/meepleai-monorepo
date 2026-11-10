@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { CitationBlock } from './CitationBlock';
 import { ContinueButton } from './ContinueButton';
 import { InlineCitationText } from './InlineCitationText';
+import { persistAssistantAnswer } from './persistAssistantAnswer';
 import { QaTooManyRequestsError, qaRequestFailureMessage } from './qaStreamErrors';
 import { QuickPromptChips } from './QuickPromptChips';
 import {
@@ -180,6 +181,10 @@ function StreamingLoadingDots({ message }: { message: string }) {
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────
+
+/** #4838: la coda della bolla quando la risposta è arrivata ma il thread non l'ha accettata. */
+export const ANSWER_NOT_SAVED_MESSAGE =
+  'Risposta non salvata nella conversazione: ricaricando la pagina non ci sarà. Riprova a fare la domanda.';
 
 export function ChatMobile({ threadId }: ChatMobileProps) {
   const router = useRouter();
@@ -380,6 +385,9 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         void (async () => {
           let finalAnswer = '';
           let followUps: string[] = [];
+          // #4838: la versione del profilo e la lingua della risposta, salvate col messaggio come sul desktop
+          let profileVersionId: string | null = null;
+          let answerLanguage: string | null = null;
           try {
             await api.chat.addMessage(threadId, { content: text, role: 'user' });
 
@@ -451,9 +459,14 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                   const data = event.data as {
                     answer?: string;
                     followUpQuestions?: string[];
+                    profileVersionId?: string | null;
+                    language?: string | null;
                   };
                   if (data.answer) finalAnswer = data.answer;
                   if (data.followUpQuestions) followUps = data.followUpQuestions;
+                  // Come gli altri campi: un frame di coda senza non azzera ciò che il primo ha dato.
+                  if (data.profileVersionId) profileVersionId = data.profileVersionId;
+                  if (data.language) answerLanguage = data.language;
                   break;
                 }
                 case 6: {
@@ -508,6 +521,36 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                   : m
               )
             );
+
+            // #4838: la risposta si salva nel thread, come fa il desktop. Prima non si salvava: su telefono
+            // si vedeva mentre arrivava e ricaricando il thread restava solo la domanda. Si arriva qui solo
+            // a stream concluso: su un errore del backend si è usciti prima, e il testo parziale non diventa
+            // un messaggio del thread.
+            if (finalAnswer) {
+              try {
+                await persistAssistantAnswer(threadId, {
+                  content: finalAnswer,
+                  profileVersionId,
+                  language: answerLanguage,
+                });
+              } catch {
+                // Un salvataggio rifiutato (rete, sessione scaduta, 5xx) non deve lasciare la bolla
+                // identica a un successo: sarebbe il sintomo di #4838 su un'altra causa. La risposta
+                // resta leggibile — buttarla su telefono sarebbe peggio — ma la bolla dice che nel
+                // thread non c'è.
+                setMessages(prev =>
+                  prev.map(m =>
+                    m.id === assistantMsgId
+                      ? {
+                          ...m,
+                          content: `${finalAnswer}\n\n${ANSWER_NOT_SAVED_MESSAGE}`,
+                          isError: true,
+                        }
+                      : m
+                  )
+                );
+              }
+            }
           } catch (err) {
             if (!abortController.signal.aborted) {
               // #4388: due risposte già aperte, la terza è rifiutata con 429: la bolla dice di aspettare.

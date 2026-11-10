@@ -42,8 +42,11 @@
 
 version: 1
 
-# Last refreshed: 2026-05-22 (snapshot from PRs #1353, #1359, #1361, #1375)
-# Refresh policy: after every 5 release PRs OR when bot reports "🆕 N new checks" for 2+ runs.
+# Last refreshed: 2026-11-09 (#4937: check-runs on the heads of release PRs #4892 and #4897,
+#   `gh api repos/meepleAi-app/meepleai-monorepo/commits/<sha>/check-runs`)
+# Refresh policy: when the bot comment reports "🆕 N new checks". Since #4937 the bot re-runs when CI
+#   finishes on a release head (workflow_run), so the footer reflects the checks that actually ran.
+#   The old "every 5 release PRs" rule was never applied: nothing measured it.
 
 checks:
   # ─── Backend (apps/api) ─────────────────────────────────────────────────────
@@ -59,21 +62,28 @@ checks:
     owner: backend-dev
     override_path: fix-forward
     pre_existing_in_main_dev: false
-    notes: "Testcontainers + EF Core. Failure indicates DB/migration regression."
+    notes: "Testcontainers + EF Core. Red on the heads of #4892 and #4897: before calling it a regression, compare the failing test NAMES with a control run on main-dev (Dev Async baseline, see #4961)."
 
-  - check_name: "Backend - Integration (Games)"
+  - check_name: "Backend - Integration (CoreEndpoints)"
     severity: blocker
     owner: backend-dev
     override_path: fix-forward
     pre_existing_in_main_dev: false
-    notes: "GameManagement BC integration. SharedGameId/PdfDocument fixture-sensitive (see #1422)."
+    notes: "Staccato da Core con #4880: Integration.Routing, Integration.Testing, Integration.Events."
+
+  - check_name: "Backend - Integration (Games)"
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "GameManagement BC integration. On release PRs the shard hits the 75-minute limit and the run is Aborted with part of the tests never executed (#4329): it measures nothing until #4329 splits it. Read the log for 'test run timeout' before treating it as a failure; back to blocker when #4329 closes."
 
   - check_name: "Backend - Integration (KnowledgeBase)"
     severity: blocker
     owner: backend-dev
     override_path: fix-forward
     pre_existing_in_main_dev: false
-    notes: "KB + RAG integration. pgvector + embedding service dependency."
+    notes: "KB + RAG integration. pgvector + embedding service dependency. Red on the heads of #4892 and #4897: compare the failing test NAMES with a control run on main-dev before calling it a regression."
 
   - check_name: "Backend Integration (Testcontainers)"
     severity: blocker
@@ -87,21 +97,10 @@ checks:
     owner: backend-dev
     override_path: exception-comment
     pre_existing_in_main_dev: true
-    notes: "Documented flaky baseline ~3 failures (see CLAUDE.md Known Flaky Tests). Non-required."
+    notes: "Non-required. Known red tests are listed by name in CLAUDE.md § Known Flaky Tests (baseline): compare names, not counts."
 
   # ─── Frontend (apps/web) ────────────────────────────────────────────────────
-  # DEPRECATED 2026-05-25 (PR #1530): the monolithic 'frontend' job was split
-  # into frontend-lint + frontend-typecheck + frontend-test (3-shard matrix).
-  # Per AC-9, this entry is kept for ≥2 release cycles as a grace period for
-  # in-flight PRs whose check_runs still reference the old name. Remove after
-  # the grace window. The replacements are listed immediately below.
-  - check_name: "Frontend - Build & Test"
-    severity: blocker
-    owner: frontend-dev
-    override_path: fix-forward
-    pre_existing_in_main_dev: false
-    notes: "DEPRECATED (split into Lint/Typecheck/Unit Tests by #1530). Grace period until ~2026-07."
-
+  # 'Frontend - Build & Test' (split by #1530 on 2026-05-25) removed by #4937: its grace period ended in 2026-07.
   - check_name: "Frontend - Lint"
     severity: blocker
     owner: frontend-dev
@@ -142,7 +141,7 @@ checks:
     owner: qa
     override_path: baseline-update
     pre_existing_in_main_dev: true
-    notes: "~159 known violations tracked in #1094 (Phase A→D plan). Advisory until Phase D ships."
+    notes: "Known violations tracked in #1094 (Phase A→D plan); the current list is the accepted baseline, not a count. Advisory until Phase D ships."
 
   - check_name: "A11y unit smoke (Vitest accessibility specs)"
     severity: warning
@@ -182,11 +181,11 @@ checks:
 
   # ─── DevOps / Infrastructure ────────────────────────────────────────────────
   - check_name: "validate-source-branch"
-    severity: blocker
+    severity: warning
     owner: devops
-    override_path: fix-forward
-    pre_existing_in_main_dev: false
-    notes: "Enforces feature branches target their parent (main-dev / main-staging / main)."
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "Branch Policy (auto-branch-policy.yml) accepts only main-dev → main-staging and main-staging → main, but release PRs use a release/<date>-*-promote head, so it is red by construction on every release PR (#4892, #4897). Check by hand that the head is the branch it promotes: `git merge-base --is-ancestor <head> origin/main-dev` (or origin/main-staging for the prod hop)."
 
   - check_name: "State Matrix Sync + Enforcement"
     severity: warning
@@ -217,19 +216,50 @@ checks:
     pre_existing_in_main_dev: true
     notes: "External link rot. Non-blocking unless docs-critical (see #1014)."
 
-  - check_name: "Conformity gate"
-    severity: informational
-    owner: qa
-    override_path: exception-comment
-    pre_existing_in_main_dev: true
-    notes: "Removed 2026-05-20 (#1066/#1069 closure). Kept here for stale PR coverage; remove after 2026-06-30."
+  # 'Conformity gate' (workflow removed 2026-05-20, #1066/#1069) removed by #4937: its grace period ended 2026-06-30.
 
-  - check_name: "api-smoke"
+  - check_name: "smoke (ubuntu-latest)"
     severity: warning
     owner: backend-dev
     override_path: exception-comment
     pre_existing_in_main_dev: false
-    notes: "#943 Phase B — draft, awaiting next release PR. Currently non-required (gating flip pending)."
+    notes: "API Smoke (Bruno), api-smoke.yml, on PRs to main only (#943; job renamed from 'api-smoke'). Red on the head of #4897 without a triage: read the job log before the next prod promotion."
+
+  - check_name: "smoke (windows-latest)"
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: false
+    notes: "Windows leg of 'smoke (ubuntu-latest)'; same workflow, same note."
+
+  # ─── End-to-end suites (separate workflows, run on release PRs only) ────────
+  - check_name: "Backend E2E Tests"
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "backend-e2e-tests.yml runs on PRs to main / main-staging, never on PRs to main-dev (#4032), and carries pre-existing failures. Compare the failing test NAMES with a control run: `gh workflow run backend-e2e-tests.yml --ref main-dev`, then `comm` on the two name sets. Only names missing from the control run are the release's."
+
+  - check_name: "Backend E2E Test Results"
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "Report job of 'Backend E2E Tests'; same comparison by name."
+
+  - check_name: "Backend E2E Quality Gate"
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: true
+    notes: "Aggregate of 'Backend E2E Tests'; red whenever it is."
+
+  - check_name: "E2E Quality Gate"
+    severity: warning
+    owner: frontend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: false
+    notes: "Aggregate of the Playwright shards of test-e2e.yml ('E2E Tests (Shard N)'); red whenever a shard is."
 
 # ─── Fallback regex patterns (AC-9) ──────────────────────────────────────────
 # Applied when `check_name` is not found in the `checks:` list above.
@@ -260,6 +290,12 @@ fallback_patterns:
     owner: frontend-dev
     override_path: exception-comment
     notes: "Catch-all for non-gate frontend jobs."
+
+  - pattern: "^E2E Tests \\(Shard [0-9]+\\)$"
+    severity: warning
+    owner: frontend-dev
+    override_path: exception-comment
+    notes: "Playwright shard of test-e2e.yml, on PRs to main. The matrix is fail-fast: false, so a cancelled shard did not stop because another one failed (shards 2-6 were cancelled on the head of #4897): read the run to see why before reading it as pass or fail. Compare failing spec names with a run on main-dev before calling it a regression."
 
   - pattern: "^A11y"
     severity: warning

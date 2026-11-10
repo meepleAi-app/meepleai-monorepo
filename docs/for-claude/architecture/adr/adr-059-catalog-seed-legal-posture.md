@@ -258,6 +258,33 @@ The `source` field is the audit primitive: any future Wikidata enrichment or com
 
 Translation rows are stored entirely in our DB (no upstream sync to BGG). They are not subject to the BGG user-side asset ban (§ 5). The 2 seed translations originate from IT publisher catalogs, not BGG version pages.
 
+## 7. Amendment 2026-11-05 — One-time local re-host of BGG covers (owner decision)
+
+### 7.1 What was done
+
+On 2026-11-05 the owner ran the existing admin re-host path (`POST /api/v1/admin/shared-games/{id}/bgg-cover`, #3590, `ReuploadBggCoverCommand`) once for every catalog game that had a BggId, on a **local development stack**. The `Bgg` cover source was then assigned to the `Card` and `Hero` contexts (`PUT /api/v1/admin/shared-games/{id}/cover-assignments/{context}`) so that, for those games, it outranks the PDF-derived cover (L4). `Social` was deliberately left out: it is the preview image shared outside the app.
+
+### 7.2 Reading of § 2 and § 5
+
+- The § 2 `ForbiddenFields` filter governs the catalog-seed **import** pipeline and is unchanged. The re-host endpoint is the server-to-server admin path that § 2 and § 5 already leave open; it takes no URL, the source is the image BGG exposes for the game's BggId.
+- No gate changed. `shared_games.image_url` and `thumbnail_url` stay null (what `BggToSComplianceIntegrationTests` asserts), no BGG host enters the paths `pnpm lint:bgg` scans, and the browser only requests the cover from our own storage (the § 5.3 SLO stays at 0).
+- The resolver priority is unchanged (L3 → L4 → L2.5 → L2). Preferring BGG is a per-game assignment, not a global reorder.
+
+### 7.3 Scope and limits
+
+- Local development stack only. Not for staging, not for production, not for any published image.
+- The images were packaged in a directory **outside the repository**: a manifest with a sha256 per file, an idempotent `restore.sql`, and a README. The package must never be committed, copied into a Docker build context or published: git history is permanent and GHCR images are public.
+- Rights in each image stay with their holders; this amendment does not settle them.
+- The legal checklist in Decision 5 is **unchanged and still open**. This run satisfies none of its items, and a public rollout stays blocked on them. BGG's terms were **not** re-read for this amendment (last verified 2026-06-02, see References).
+
+### 7.4 Exit procedure
+
+Delete the `bgg-covers/` prefix from the uploads bucket, then `UPDATE shared_games SET bgg_cover_r2_key = NULL` and `DELETE FROM game_cover_assignments WHERE source = 1` (`Bgg` = 1).
+
+### 7.5 Not verified
+
+That `restore.sql` works on a fresh database (idempotent by construction, never exercised), and that the package still matches the bucket after a volume wipe.
+
 ---
 
 ## References

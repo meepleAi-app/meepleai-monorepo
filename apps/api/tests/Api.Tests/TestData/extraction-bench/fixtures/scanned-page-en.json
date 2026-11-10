@@ -1,0 +1,24 @@
+{
+  "id": "scanned-page-en",
+  "language": "en",
+  "description": "Una pagina di testo seguita da una pagina solo immagine (scansione): un estrattore senza OCR non trova nulla sulla seconda.",
+  "pages": [
+    {
+      "number": 1,
+      "kind": "text",
+      "columns": 1,
+      "blocks": [
+        { "type": "heading", "level": 1, "text": "Endgame Scoring" },
+        { "type": "paragraph", "text": "Count the points on each lighthouse and add the crates that remain on your dock." }
+      ]
+    },
+    {
+      "number": 2,
+      "kind": "scan",
+      "blocks": [
+        { "type": "heading", "level": 1, "text": "Bonus Points" },
+        { "type": "paragraph", "text": "The player holding the most lanterns receives the harbor bonus and scores four additional points." }
+      ]
+    }
+  ]
+}

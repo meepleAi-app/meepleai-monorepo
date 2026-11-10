@@ -72,7 +72,10 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
 
     // Performance constants (generous thresholds for CI runners — ARM64 with limited resources)
     private const int CachedResponseTargetMs = 5000;
-    private const int UncachedResponseTargetMs = 15000;
+    // #4954: the epic's criterion (< 2 s uncached), restored. It had been raised to 15000 because the measured set
+    // contained the host's first request, which costs 5-6 s on a development machine and 8-17 s on a CI runner; the
+    // uncached requests after it take 4-139 ms. The first request is now sent before the clock starts.
+    private const int UncachedResponseTargetMs = 2000;
     private const double CacheHitRateTargetPercent = 80.0;
     private const int WarmupIterations = 5;
     private const int MeasurementIterations = 10;
@@ -237,7 +240,19 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
     [Fact]
     public async Task DashboardAPI_UncachedResponse_Under2s()
     {
-        // Arrange: Clear cache before each request
+        // Arrange: the host's first request pays its own start-up (#4954) — not the endpoint. It goes before the clock,
+        // as the cached test does with its warm-up. It is uncached too (nothing has filled the cache yet), so what the
+        // loop below measures is the same code path, warm.
+        _output.WriteLine("🔥 Warming up the host (first request, outside the measure)...");
+        var warmup = new HttpRequestMessage(HttpMethod.Get, "/api/v1/dashboard");
+        warmup.Headers.Add("Cookie", _authCookie);
+        var warmupClock = Stopwatch.StartNew();
+        var warmupResponse = await _client!.SendAsync(warmup);
+        warmupClock.Stop();
+        warmupResponse.EnsureSuccessStatusCode();
+        _output.WriteLine($"   Warm-up: {warmupClock.ElapsedMilliseconds}ms");
+
+        // Clear cache before each request
         _output.WriteLine("🔄 Testing uncached responses (cache cleared each time)...");
         var measurements = new List<long>();
 

@@ -11,14 +11,9 @@
  * Requires: @microsoft/signalr
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
-import {
-  HubConnectionBuilder,
-  HubConnection,
-  HubConnectionState,
-  LogLevel,
-} from '@microsoft/signalr';
+import { HubConnectionBuilder, HubConnection, LogLevel } from '@microsoft/signalr';
 
 import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
 import { getHubBase } from '@/lib/api/core/httpClient';
@@ -61,10 +56,6 @@ export interface UseSignalRSessionReturn {
   connection: HubConnection | null;
   /** Whether the hub is currently connected */
   isConnected: boolean;
-  /** Propose a score delta that the host must confirm */
-  proposeScore: (playerName: string, delta: number) => Promise<void>;
-  /** Signal that this client went to the background (mobile PWA pause) */
-  appBackgrounded: () => Promise<void>;
 }
 
 /**
@@ -81,7 +72,6 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
 
   // Keep stable references to store actions so the effect closure stays current
   const store = useLiveSessionStore;
-  const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -201,37 +191,23 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
       store.getState().setConnected(false);
     });
 
-    connectionRef.current = conn;
     setConnection(conn);
 
     return () => {
       conn.stop().catch((err: unknown) => {
         logger.error('[useSignalRSession] Stop failed:', err);
       });
-      connectionRef.current = null;
       setConnection(null);
       setIsConnected(false);
     };
   }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ---- Outbound methods ----
-
-  const proposeScore = async (playerName: string, delta: number): Promise<void> => {
-    const conn = connectionRef.current;
-    if (!conn || conn.state !== HubConnectionState.Connected) return;
-    await conn.invoke('ProposeScore', sessionId, { playerName, delta });
-  };
-
-  const appBackgrounded = async (): Promise<void> => {
-    const conn = connectionRef.current;
-    if (!conn || conn.state !== HubConnectionState.Connected) return;
-    await conn.invoke('AppBackgrounded', sessionId);
-  };
+  // #4962: the hub's ProposeScore and AppBackgrounded are gone. Nothing called them from here, and they let
+  // any connection write into any session; score proposals go through the REST command, which checks the
+  // proposer. The only hub method this hook invokes is JoinSession, which admits session participants only.
 
   return {
     connection,
     isConnected,
-    proposeScore,
-    appBackgrounded,
   };
 }

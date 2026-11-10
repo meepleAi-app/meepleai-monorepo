@@ -217,9 +217,6 @@ public abstract class CompleteChunkedUploadIntegrationTestsBase : IAsyncLifetime
                     ocrTriggered: false,
                     structuredElements: [new ExtractedElement("Setup", 1, "Title"), new ExtractedElement("Place the tiles.", 1, "NarrativeText")]);
             });
-        var tables = new Mock<IPdfTableExtractor>();
-        tables.Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(StructuredContentResult.CreateFailure("Not applicable"));
         var parent = HierarchicalChunk.CreateParent("Setup section content",
             new ChunkMetadata { Page = 1, Heading = "Setup", ElementType = "Title", DocumentId = documentId });
         var child = HierarchicalChunk.CreateChild("Place the tiles.", level: 2,
@@ -243,7 +240,6 @@ public abstract class CompleteChunkedUploadIntegrationTestsBase : IAsyncLifetime
             db,
             new RelationalPdfClaimService(db),
             extractor.Object,
-            tables.Object,
             Mock.Of<ITextChunkingService>(),
             embeddings.Object,
             Storage!,
@@ -281,7 +277,6 @@ public abstract class CompleteChunkedUploadIntegrationTestsBase : IAsyncLifetime
             db,
             new RelationalPdfClaimService(db),
             Mock.Of<IPdfTextExtractor>(),
-            Mock.Of<IPdfTableExtractor>(),
             Mock.Of<ITextChunkingService>(),
             Mock.Of<IEmbeddingService>(),
             Storage,

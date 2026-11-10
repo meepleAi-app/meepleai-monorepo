@@ -267,7 +267,7 @@ public class LiveSessionQueryHandlerTests
             .ReturnsAsync(session);
 
         var handler = new GetLiveSessionByCodeQueryHandler(_sessionRepositoryMock.Object);
-        var query = new GetLiveSessionByCodeQuery(sessionCode);
+        var query = new GetLiveSessionByCodeQuery(sessionCode, session.CreatedByUserId);
 
         // Act
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
@@ -295,7 +295,7 @@ public class LiveSessionQueryHandlerTests
             .ReturnsAsync((LiveGameSession?)null);
 
         var handler = new GetLiveSessionByCodeQueryHandler(_sessionRepositoryMock.Object);
-        var query = new GetLiveSessionByCodeQuery(sessionCode);
+        var query = new GetLiveSessionByCodeQuery(sessionCode, Guid.NewGuid());
 
         // Act & Assert
         var act =
@@ -304,6 +304,60 @@ public class LiveSessionQueryHandlerTests
 
         exception.ResourceType.Should().Be("LiveGameSession");
         exception.ResourceId.Should().Be($"code:{sessionCode}");
+    }
+
+    // #4939: knowing the code is not being at the table. The full DTO (creator, players' user ids, notes,
+    // score history) is for the creator or an active player; a stranger holding the code gets the SAME 404 as
+    // an unknown code, so the route does not confirm that the code is live.
+
+    [Fact]
+    public async Task GetLiveSessionByCode_AStrangerHoldingTheCode_GetsTheSame404AsAnUnknownCode()
+    {
+        var session = CreateSessionWithPlayers(playerCount: 2);
+        _sessionRepositoryMock
+            .Setup(r => r.GetByCodeAsync(session.SessionCode, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var handler = new GetLiveSessionByCodeQueryHandler(_sessionRepositoryMock.Object);
+
+        var act = () => handler.Handle(
+            new GetLiveSessionByCodeQuery(session.SessionCode, Guid.NewGuid()), TestContext.Current.CancellationToken);
+
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
+        exception.ResourceType.Should().Be("LiveGameSession");
+        exception.ResourceId.Should().Be($"code:{session.SessionCode}", "indistinguishable from a code nobody has");
+    }
+
+    [Fact]
+    public async Task GetLiveSessionByCode_AnActivePlayer_ReadsTheFullSession()
+    {
+        var session = CreateTestSession();
+        var playerUser = Guid.NewGuid();
+        session.AddPlayer(playerUser, "Giulia", PlayerColor.Red, TimeProvider.System);
+        _sessionRepositoryMock
+            .Setup(r => r.GetByCodeAsync(session.SessionCode, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var handler = new GetLiveSessionByCodeQueryHandler(_sessionRepositoryMock.Object);
+
+        var result = await handler.Handle(
+            new GetLiveSessionByCodeQuery(session.SessionCode, playerUser), TestContext.Current.CancellationToken);
+
+        result.Id.Should().Be(session.Id);
+    }
+
+    [Fact]
+    public async Task GetLiveSessionByCode_AnEmptyCaller_IsNobody()
+    {
+        // An endpoint that forgot to derive the caller from the principal would pass Guid.Empty: fail-closed.
+        var session = CreateTestSession();
+        _sessionRepositoryMock
+            .Setup(r => r.GetByCodeAsync(session.SessionCode, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var handler = new GetLiveSessionByCodeQueryHandler(_sessionRepositoryMock.Object);
+
+        var act = () => handler.Handle(
+            new GetLiveSessionByCodeQuery(session.SessionCode, Guid.Empty), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -331,7 +385,7 @@ public class LiveSessionQueryHandlerTests
             .ReturnsAsync(session);
 
         var handler = new GetLiveSessionByCodeQueryHandler(_sessionRepositoryMock.Object);
-        var query = new GetLiveSessionByCodeQuery(sessionCode);
+        var query = new GetLiveSessionByCodeQuery(sessionCode, session.CreatedByUserId);
 
         // Act
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);

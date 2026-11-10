@@ -149,24 +149,18 @@ public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
             throw new InvalidOperationException($"Persisted OAuth account {entity.Id} is missing an access token.");
         }
 
-        var account = new OAuthAccount(
+        // Reconstitute, non il costruttore pubblico (#4613): quello è di un collegamento nuovo, e solleva
+        // OAuthAccountLinkedEvent a ogni lettura.
+        return OAuthAccount.Reconstitute(
             id: entity.Id,
             userId: entity.UserId,
             provider: entity.Provider,
             providerUserId: entity.ProviderUserId,
             accessTokenEncrypted: entity.AccessTokenEncrypted,
             refreshTokenEncrypted: entity.RefreshTokenEncrypted,
-            tokenExpiresAt: entity.TokenExpiresAt
-        );
-
-        // Use reflection to set CreatedAt and UpdatedAt (they're set in constructor but we need persistence values)
-        var createdAtProperty = typeof(OAuthAccount).GetProperty(nameof(OAuthAccount.CreatedAt));
-        var updatedAtProperty = typeof(OAuthAccount).GetProperty(nameof(OAuthAccount.UpdatedAt));
-
-        createdAtProperty?.SetValue(account, entity.CreatedAt);
-        updatedAtProperty?.SetValue(account, entity.UpdatedAt);
-
-        return account;
+            tokenExpiresAt: entity.TokenExpiresAt,
+            createdAt: entity.CreatedAt,
+            updatedAt: entity.UpdatedAt);
     }
 
     /// <summary>

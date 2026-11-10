@@ -9,7 +9,7 @@
  * exercise the FSM in isolation without spinning up TanStack Query.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ReactNode } from 'react';
 
@@ -75,6 +75,13 @@ function renderWithIntl(ui: React.ReactElement) {
     </QueryClientProvider>
   );
   return render(ui, { wrapper: Wrapper });
+}
+
+/** The view's root: a named region since #4910 (it used to be a <main>, which the public layout already provides). */
+function pageRoot(): HTMLElement {
+  const root = document.querySelector<HTMLElement>('[data-slot="public-join-event-page"]');
+  if (!root) throw new Error('public-join-event-page is not rendered');
+  return root;
 }
 
 const FIXTURE: PublicGameNightInvitation = {
@@ -145,7 +152,7 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'loading');
     });
 
@@ -161,7 +168,7 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'token-invalid');
       expect(screen.getByText(/Invitation not found/i)).toBeInTheDocument();
     });
@@ -178,7 +185,7 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'token-expired');
       expect(screen.getByText(/Invitation expired/i)).toBeInTheDocument();
     });
@@ -195,7 +202,7 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'rate-limited');
       expect(screen.getByText(/Too many requests/i)).toBeInTheDocument();
     });
@@ -212,7 +219,7 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'generic-error');
       expect(screen.getByText(/Something went wrong/i)).toBeInTheDocument();
     });
@@ -223,7 +230,7 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'rsvp');
       // Hero rendered with title from invitation.
       expect(screen.getByRole('heading', { name: FIXTURE.title })).toBeInTheDocument();
@@ -266,10 +273,34 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'token-cancelled');
       expect(screen.getByText(/Game night cancelled/i)).toBeInTheDocument();
     });
+
+    // #4856: the NIGHT was cancelled; the invitation keeps its own state, which may be Pending or Accepted.
+    it.each(['Pending', 'Accepted'])(
+      'routes to token-cancelled when the night was cancelled, whatever the invitation says (%s)',
+      status => {
+        vi.mocked(useGameNightInvitation).mockReturnValue(
+          mockInvitationHook({
+            data: {
+              ...FIXTURE,
+              status,
+              alreadyRespondedAs: status === 'Accepted' ? 'Accepted' : null,
+              nightCancelled: true,
+            },
+          })
+        );
+        vi.mocked(useRespondToInvitation).mockReturnValue(mockRespondHook());
+
+        renderWithIntl(<PublicJoinEventView code="tok-1169" />);
+
+        const main = pageRoot();
+        expect(main).toHaveAttribute('data-surface', 'token-cancelled');
+        expect(screen.getByText(/Game night cancelled/i)).toBeInTheDocument();
+      }
+    );
 
     it('routes to token-expired when invitation.status === "Expired"', () => {
       vi.mocked(useGameNightInvitation).mockReturnValue(
@@ -279,7 +310,7 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'token-expired');
     });
   });
@@ -296,7 +327,7 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'rate-limited');
     });
 
@@ -311,7 +342,7 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'token-cancelled');
     });
 
@@ -326,8 +357,37 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
-      const main = screen.getByRole('main');
+      const main = pageRoot();
       expect(main).toHaveAttribute('data-surface', 'token-expired');
+    });
+  });
+
+  describe('a 410 after the guest pressed the button (#4856)', () => {
+    it('says the night is cancelled when the invitation read again after the 410 says so', () => {
+      // The 410 carries no reason: the page refetches, and the fresh invitation says whether the NIGHT was cancelled.
+      vi.mocked(useGameNightInvitation).mockReturnValue(
+        mockInvitationHook({ data: { ...FIXTURE, status: 'Pending', nightCancelled: true } })
+      );
+      vi.mocked(useRespondToInvitation).mockReturnValue(
+        mockRespondHook({ state: 'gone', result: { kind: 'gone', reason: 'expired' } })
+      );
+
+      renderWithIntl(<PublicJoinEventView code="tok-1169" />);
+
+      expect(pageRoot()).toHaveAttribute('data-surface', 'token-cancelled');
+    });
+
+    it('reads the invitation again after a 410, to learn why the link is gone', async () => {
+      const refetch = vi.fn().mockResolvedValue(undefined);
+      const submit = vi.fn().mockResolvedValue({ kind: 'gone', reason: 'expired' });
+      vi.mocked(useGameNightInvitation).mockReturnValue(mockInvitationHook({ refetch }));
+      vi.mocked(useRespondToInvitation).mockReturnValue(mockRespondHook({ submit }));
+
+      renderWithIntl(<PublicJoinEventView code="tok-1169" />);
+      fireEvent.click(screen.getByRole('button', { name: /I'm in/i }));
+
+      await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1));
+      expect(submit).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -379,6 +439,45 @@ describe('PublicJoinEventView (issue #1169)', () => {
       renderWithIntl(<PublicJoinEventView code="tok-1169" />);
 
       expect(screen.getByText(/You're viewing a public invitation/i)).toBeInTheDocument();
+    });
+  });
+
+  // #4910: the public layout already provides the page's <main>. A second one is what axe reported as «Document has
+  // more than one main landmark»; the view is a named region inside it instead.
+  describe('landmarks (#4910)', () => {
+    it.each([
+      ['rsvp', mockInvitationHook()],
+      ['loading', mockInvitationHook({ data: undefined, isLoading: true })],
+      [
+        'token-invalid',
+        mockInvitationHook({
+          data: undefined,
+          isError: true,
+          error: new InvitationNotFoundError('tok-1169'),
+        }),
+      ],
+      ['token-cancelled', mockInvitationHook({ data: { ...FIXTURE, status: 'Cancelled' } })],
+    ])('does not open a <main> of its own on the %s surface', (surface, hook) => {
+      vi.mocked(useGameNightInvitation).mockReturnValue(hook);
+      vi.mocked(useRespondToInvitation).mockReturnValue(mockRespondHook());
+
+      const { container } = renderWithIntl(<PublicJoinEventView code="tok-1169" />);
+
+      expect(container.querySelector('[data-slot="public-join-event-page"]')).toHaveAttribute(
+        'data-surface',
+        surface
+      );
+      expect(container.querySelector('main')).toBeNull();
+    });
+
+    it('is still a named region, so a screen reader can find it', () => {
+      vi.mocked(useGameNightInvitation).mockReturnValue(mockInvitationHook());
+      vi.mocked(useRespondToInvitation).mockReturnValue(mockRespondHook());
+
+      const { container } = renderWithIntl(<PublicJoinEventView code="tok-1169" />);
+
+      const root = container.querySelector('[data-slot="public-join-event-page"]');
+      expect(screen.getAllByRole('region')).toContain(root);
     });
   });
 });

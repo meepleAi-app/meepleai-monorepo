@@ -1,13 +1,17 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Docnet.Core;
+using Docnet.Core.Models;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using QuestPDF.Fluent;
 using Xunit;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
@@ -18,6 +22,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
+[Collection(QuestPdfRenderingCollection.Name)]
 public sealed class DocnetPdfValidatorTests : IDisposable
 {
     private readonly Mock<ILogger<DocnetPdfValidator>> _mockLogger;
@@ -236,6 +241,59 @@ public sealed class DocnetPdfValidatorTests : IDisposable
         // Assert: Should return null for invalid PDF (Docnet parsing fails)
         metadata.Should().BeNull();
     }
+
+    /// <summary>
+    /// #4929: both entry points that open a PDF with Docnet must leave pdfium alive. Disposing <c>DocLib.Instance</c>
+    /// calls <c>FPDF_DestroyLibrary</c>, so a document another caller (the extraction of a PDF) has open is then read
+    /// from a destroyed library, and the process dies with an access violation (0xC0000005 in <c>FPDF_LoadPage</c>):
+    /// not a failed test but a crashed test host, which is what this test used to do before the fix. The document is
+    /// opened BEFORE the call and read AFTER it, so no timing is involved.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OpeningAPdf_LeavesADocumentAnotherCallerHasOpenReadable(bool throughExtractMetadata)
+    {
+        var heldPdf = CreateTextPdf(pages: 4, token: "held");
+        var otherPdf = CreateTextPdf(pages: 1, token: "other");
+        using var heldReader = DocLib.Instance.GetDocReader(heldPdf, new PageDimensions(1080, 1920));
+        using (var firstPage = heldReader.GetPageReader(0))
+        {
+            firstPage.GetText().Should().Contain("held0", "the document must read before the validation, or the test says nothing");
+        }
+
+        if (throughExtractMetadata)
+        {
+            using var otherStream = new MemoryStream(otherPdf);
+            (await _validator.ExtractMetadataAsync(otherStream, TestCancellationToken)).Should().NotBeNull();
+        }
+        else
+        {
+            using var otherStream = new MemoryStream(otherPdf);
+            (await _validator.ValidateAsync(otherStream, "other.pdf", TestCancellationToken)).IsValid.Should().BeTrue();
+        }
+
+        for (var page = 1; page < heldReader.GetPageCount(); page++)
+        {
+            using var reader = heldReader.GetPageReader(page);
+            reader.GetText().Should().Contain($"held{page}", "page {0} of the document opened before the call", page);
+        }
+    }
+
+    private static byte[] CreateTextPdf(int pages, string token) =>
+        Document.Create(container =>
+        {
+            for (var page = 0; page < pages; page++)
+            {
+                var number = page;
+                container.Page(p =>
+                {
+                    p.Margin(30);
+                    p.Content().Text($"{token}{number} " + string.Join(' ', Enumerable.Range(0, 80).Select(i => $"word{i}")));
+                });
+            }
+        }).GeneratePdf();
+
     /// <summary>
     /// Creates a byte array with PDF magic bytes followed by zeros.
     /// Note: This is NOT a valid PDF, just has correct magic bytes for testing.

@@ -22,9 +22,13 @@ public class ListSessionCheckpointsQueryHandler
     public async Task<ListSessionCheckpointsResult> Handle(
         ListSessionCheckpointsQuery request, CancellationToken cancellationToken)
     {
-        _ = await _sessionRepository
+        var session = await _sessionRepository
             .GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
+
+        // #4883: the query carried the caller and the handler ignored it. Owner/participant-only (#3119 predicate).
+        if (!session.IsAccessibleBy(request.RequesterId))
+            throw new ForbiddenException("You do not have access to this session.");
 
         var checkpoints = await _checkpointRepository
             .GetBySessionIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);

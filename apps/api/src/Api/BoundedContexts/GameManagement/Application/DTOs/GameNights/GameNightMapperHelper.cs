@@ -12,11 +12,14 @@ internal static class GameNightMapperHelper
 {
     // #4706: `guests` are the guests invited by email, added to the member counts. Omitted (zeros) only
     // where the caller has no guest data to give; every read that shows the counts passes it.
+    // #4921: `viewerRsvpStatus` is the state already derived for the viewer (GameNightParticipation
+    // .ViewerRsvpStatusAsync, which also knows the email guests); without it the RSVP row decides.
     public static GameNightDto MapToDto(
         GameNightEvent gameNight,
         string organizerName,
         Guid? viewerId = null,
-        GuestInvitationCounts guests = default)
+        GuestInvitationCounts guests = default,
+        RsvpStatus? viewerRsvpStatus = null)
     {
         ArgumentNullException.ThrowIfNull(gameNight);
 
@@ -39,7 +42,7 @@ internal static class GameNightMapperHelper
             SessionCount: gameNight.Sessions.Count,
             CreatedAt: gameNight.CreatedAt,
             UpdatedAt: gameNight.UpdatedAt,
-            ViewerRsvpStatus: viewerId.HasValue ? gameNight.GetRsvp(viewerId.Value)?.Status : null);
+            ViewerRsvpStatus: viewerRsvpStatus ?? (viewerId.HasValue ? gameNight.GetRsvp(viewerId.Value)?.Status : null));
     }
 
     public static GameNightRsvpDto MapToRsvpDto(GameNightRsvp rsvp, string userName)

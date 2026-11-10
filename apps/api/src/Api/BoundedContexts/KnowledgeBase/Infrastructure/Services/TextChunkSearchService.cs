@@ -37,12 +37,20 @@ internal sealed class TextChunkSearchService : ITextChunkSearchService
                 return [];
 
             // Raw SQL for PostgreSQL full-text search using tsvector
+            // #4955: un chunk che ha figli non è un candidato. Con un'estrazione senza titoli è il
+            // documento intero, e qui vinceva sempre: plainto_tsquery chiede TUTTE le parole, che il
+            // documento intero contiene quasi sempre e un chunk vero raramente, e ts_rank non divide
+            // per la lunghezza. Misurato su Ark Nova: primo con 0,9999 contro 0,91 del miglior chunk.
+            // Stesso filtro di KeywordSearchService e PgVectorStoreAdapter.
             var results = await _dbContext.TextChunks
                 .FromSqlInterpolated($@"
                     SELECT tc.*
                     FROM text_chunks tc
                     WHERE (tc.""GameId"" = {gameId} OR tc.""SharedGameId"" = {gameId})
                       AND tc.search_vector @@ plainto_tsquery('english', {sanitizedQuery})
+                      AND NOT EXISTS (
+                          SELECT 1 FROM text_chunks child
+                          WHERE child.""ParentChunkId"" = tc.""Id"")
                     ORDER BY ts_rank(tc.search_vector, plainto_tsquery('english', {sanitizedQuery})) DESC
                     LIMIT {limit}")
                 .AsNoTracking()

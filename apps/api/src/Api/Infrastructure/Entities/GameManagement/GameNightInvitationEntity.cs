@@ -97,4 +97,10 @@ public class GameNightInvitationEntity
     /// </summary>
     [Column("reminder_24h_sent_at")]
     public DateTimeOffset? Reminder24hSentAt { get; set; }
+
+    /// <summary>
+    /// #4744: optimistic concurrency through PostgreSQL's <c>xmin</c> system column (ADR-060). Server-owned: it changes
+    /// with every <c>UPDATE</c> of the row, so two writers that overlap cannot both win.
+    /// </summary>
+    public uint Xmin { get; set; }
 }

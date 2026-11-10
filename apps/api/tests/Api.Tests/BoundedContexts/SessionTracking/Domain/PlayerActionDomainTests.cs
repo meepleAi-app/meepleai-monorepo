@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
+using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -114,6 +115,77 @@ public class PlayerActionDomainTests
         // Assert
         act.Should().Throw<ConflictException>()
             .WithMessage("*finalized*");
+    }
+
+    // === Entry credentials after a removal (#4883) ===
+    // Joining is open to whoever holds the session code or the invite token. A kick that left both
+    // untouched let the removed participant walk back in at once.
+
+    [Fact]
+    public void RemoveParticipant_RotatesTheSessionCode()
+    {
+        var session = CreateSessionWithParticipants(out _, out var playerId, out _);
+        var oldCode = session.SessionCode;
+
+        session.RemoveParticipant(playerId);
+
+        session.SessionCode.Should().NotBe(oldCode);
+        session.SessionCode.Should().MatchRegex("^[A-HJ-NP-Z2-9]{6}$");
+    }
+
+    [Fact]
+    public void RemoveParticipant_RevokesTheInviteToken()
+    {
+        var session = CreateSessionWithParticipants(out _, out var playerId, out _);
+        var token = session.GenerateInviteToken(24);
+        session.IsInviteTokenValid(token).Should().BeTrue("the precondition: the link works before the kick");
+
+        session.RemoveParticipant(playerId);
+
+        session.InviteToken.Should().BeNull();
+        session.IsInviteTokenValid(token).Should().BeFalse();
+    }
+
+    [Fact]
+    public void RemoveParticipant_Refused_LeavesCodeAndInviteUntouched()
+    {
+        // A refused removal (the host cannot be kicked) must not burn the code for everybody else.
+        var session = CreateSessionWithParticipants(out var ownerId, out _, out _);
+        var oldCode = session.SessionCode;
+        var token = session.GenerateInviteToken(24);
+
+        var act = () => session.RemoveParticipant(ownerId);
+
+        act.Should().Throw<ConflictException>();
+        session.SessionCode.Should().Be(oldCode);
+        session.IsInviteTokenValid(token).Should().BeTrue();
+    }
+
+    [Fact]
+    public void RotateSessionCode_NeverReturnsTheCodeItReplaces()
+    {
+        var session = CreateSessionWithParticipants(out _, out _, out _);
+
+        for (var i = 0; i < 200; i++)
+        {
+            var before = session.SessionCode;
+            session.RotateSessionCode();
+            session.SessionCode.Should().NotBe(before);
+        }
+    }
+
+    [Fact]
+    public void IsAccessibleBy_OwnerAndRegisteredParticipant_True_StrangerAndEmptyId_False()
+    {
+        var ownerUserId = Guid.NewGuid();
+        var playerUserId = Guid.NewGuid();
+        var session = Session.Create(ownerUserId, Guid.NewGuid(), SessionType.GameSpecific);
+        session.AddParticipant(ParticipantInfo.Create("Player", isOwner: false, joinOrder: 2), playerUserId);
+
+        session.IsAccessibleBy(ownerUserId).Should().BeTrue();
+        session.IsAccessibleBy(playerUserId).Should().BeTrue();
+        session.IsAccessibleBy(Guid.NewGuid()).Should().BeFalse();
+        session.IsAccessibleBy(Guid.Empty).Should().BeFalse("an empty id is not an identity");
     }
 
     // === MarkParticipantReady Tests ===

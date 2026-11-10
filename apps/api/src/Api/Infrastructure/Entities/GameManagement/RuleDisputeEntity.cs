@@ -1,8 +1,8 @@
 namespace Api.Infrastructure.Entities.GameManagement;
 
 /// <summary>
-/// Infrastructure entity for RuleDispute aggregate.
-/// Maps domain RuleDispute to database table for structured rule dispute persistence.
+/// Table of the structured rule dispute v2, whose code was retired by #4936. Nothing reads or writes it;
+/// it stays mapped only so that the drop happens in its own delivery (#4960, expand/contract).
 /// </summary>
 public class RuleDisputeEntity
 {

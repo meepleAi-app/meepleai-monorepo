@@ -256,7 +256,8 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         string name = "Test.pdf",
         string? extractedText = "This is test extracted text.\n\nIt has multiple paragraphs.\n\nEach paragraph will become a chunk during indexing.",
         string status = "completed",
-        bool withVectorDoc = false)
+        bool withVectorDoc = false,
+        int pageCount = 10)
     {
         var gameId = (await _dbContext!.SharedGames.FirstAsync()).Id;
         var userId = (await _dbContext.Users.FirstAsync()).Id;
@@ -270,7 +271,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             FilePath = $"/test/{name}",
             FileSizeBytes = 1024,
             UploadedAt = DateTime.UtcNow,
-            PageCount = 10,
+            PageCount = pageCount,
             // Note: the default value lives on the parameter (not via `?? fallback` in the
             // initializer) so callers can pass extractedText: null and actually get a null
             // ExtractedText — previously `extractedText ?? "default text"` silently replaced
@@ -347,6 +348,63 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         vectorDoc.Should().NotBeNull();
         vectorDoc!.IndexingStatus.Should().Be("completed");
         vectorDoc.ChunkCount.Should().BeGreaterThan(0);
+    }
+
+    /// <summary>
+    /// #4782: un documento PIATTO (testo senza elementi strutturati e senza mappa delle pagine) di più pagine non ha una
+    /// pagina per i suoi passaggi. Prima li salvava tutti a pagina 1, e «p. 1» usciva per qualunque domanda. Ora
+    /// <c>text_chunks.PageNumber</c> è NULL (non 0: il contratto di #4827), mentre le righe vettoriali, che non
+    /// hanno «ignota», restano a 1 come sono sempre state.
+    /// </summary>
+    [Fact]
+    public async Task IndexPdf_OfAFlatDocumentOfManyPagesWithNoPageMap_StoresNoPage_AndTheVectorRowsStayOnPageOne()
+    {
+        await ResetDatabaseAsync();
+        var text = "Game setup instructions.\n\nPlace components on board.\n\nEach player takes 5 cards.";
+        var pdfId = await CreateTestPdfAsync("FlatManyPages.pdf", text, "completed", withVectorDoc: false, pageCount: 12);
+        var handler = _serviceProvider!.GetRequiredService<IndexPdfCommandHandler>();
+
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        var pages = await _dbContext!.TextChunks
+            .AsNoTracking()
+            .Where(c => c.PdfDocumentId == pdfId)
+            .Select(c => c.PageNumber)
+            .ToListAsync(TestCancellationToken);
+        pages.Should().NotBeEmpty();
+        pages.Should().OnlyContain(p => p == null, "nobody measured the page of a flat document of twelve pages");
+
+        var vectorDoc = await _dbContext.Set<VectorDocumentEntity>()
+            .AsNoTracking()
+            .FirstAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+        var vectorPages = await _dbContext.PgVectorEmbeddings
+            .AsNoTracking()
+            .Where(e => e.VectorDocumentId == vectorDoc.Id)
+            .Select(e => e.PageNumber)
+            .ToListAsync(TestCancellationToken);
+        vectorPages.Should().NotBeEmpty();
+        vectorPages.Should().OnlyContain(p => p == 1, "the vector rows cannot say «unknown»: they are clamped to 1");
+    }
+
+    [Fact]
+    public async Task IndexPdf_OfAFlatDocumentOfOnePage_StoresPageOne_BecauseThereIsNoOtherPage()
+    {
+        await ResetDatabaseAsync();
+        var text = "Game setup instructions.\n\nPlace components on board.\n\nEach player takes 5 cards.";
+        var pdfId = await CreateTestPdfAsync("FlatOnePage.pdf", text, "completed", withVectorDoc: false, pageCount: 1);
+        var handler = _serviceProvider!.GetRequiredService<IndexPdfCommandHandler>();
+
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        var pages = await _dbContext!.TextChunks
+            .AsNoTracking()
+            .Where(c => c.PdfDocumentId == pdfId)
+            .Select(c => c.PageNumber)
+            .ToListAsync(TestCancellationToken);
+        pages.Should().NotBeEmpty();
+        pages.Should().OnlyContain(p => p == 1);
     }
 
     /// <summary>

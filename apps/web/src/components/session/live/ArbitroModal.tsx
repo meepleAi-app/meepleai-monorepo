@@ -21,8 +21,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import type { RuleDisputeResponse } from '@/lib/api/schemas/improvvisata.schemas';
+import { liveSessionConflictKey } from '@/lib/session-live/live-session-conflicts';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
 import { ArbitroVerdictCard } from './ArbitroVerdictCard';
@@ -44,6 +46,7 @@ export function ArbitroModal({ sessionId, players, onVerdictReceived }: ArbitroM
   const [isLoading, setIsLoading] = useState(false);
   const [verdict, setVerdict] = useState<RuleDisputeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const addDispute = useLiveSessionStore(s => s.addDispute);
 
@@ -84,7 +87,15 @@ export function ArbitroModal({ sessionId, players, onVerdictReceived }: ArbitroM
         timestamp: new Date().toISOString(),
       });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Errore durante la richiesta.';
+      // #4844: a 409 (the game is paused, not started, or over) reads by code, in the user's language.
+      // Until then this showed the server's English sentence as it came.
+      const conflictKey = liveSessionConflictKey(err);
+      const message =
+        conflictKey != null
+          ? t(conflictKey)
+          : err instanceof Error
+            ? err.message
+            : 'Errore durante la richiesta.';
       setError(message);
     } finally {
       setIsLoading(false);

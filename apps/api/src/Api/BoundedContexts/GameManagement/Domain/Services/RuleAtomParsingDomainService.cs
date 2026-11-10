@@ -1,45 +1,13 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Services;
 
 /// <summary>
-/// Domain service for parsing atomic rules from various formats.
-/// Handles JSON parsing and plain text extraction.
+/// Domain service for turning a PDF's extracted text into rule atoms.
 /// </summary>
 internal partial class RuleAtomParsingDomainService
 {
-    /// <summary>
-    /// Parses atomic rules from JSON format.
-    /// Expected format: array of strings representing individual rules.
-    /// </summary>
-    public IReadOnlyList<string> ParseAtomicRulesFromJson(string? atomicRulesJson)
-    {
-        if (string.IsNullOrWhiteSpace(atomicRulesJson))
-        {
-            return Array.Empty<string>();
-        }
-
-        try
-        {
-            var rules = JsonSerializer.Deserialize<List<string>>(atomicRulesJson);
-            if (rules == null)
-            {
-                return Array.Empty<string>();
-            }
-
-            return rules
-                .Where(r => !string.IsNullOrWhiteSpace(r))
-                .Select(r => r.Trim())
-                .ToList();
-        }
-        catch (JsonException)
-        {
-            return Array.Empty<string>();
-        }
-    }
-
     private static readonly char[] NewLineSeparators = { '\r', '\n' };
 
     /// <summary>

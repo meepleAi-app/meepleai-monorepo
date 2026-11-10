@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 /**
  * InviteHostCard — host avatar + welcome message panel.
  *
@@ -12,7 +11,8 @@
  *  - Round (50%), inline-flex centered, `aria-hidden="true"` (initials are
  *    decorative — the next sibling shows the host name in plain text)
  *  - 44px default, 38px when `compact`
- *  - White text on saturated HSL bg (60% sat, 55% lightness)
+ *  - Initials on saturated HSL bg (60% sat, 55% lightness), in white or black
+ *    per hue, whichever reaches 4.5:1 (#4910)
  *
  * The "Online" dot is decorative; the spec deliberately does NOT expose any
  * presence/online state on the public RSVP DTO. Future PR: optional prop.
@@ -21,6 +21,8 @@
 import type { JSX } from 'react';
 
 import clsx from 'clsx';
+
+import { avatarForeground } from '@/lib/avatar-colors';
 
 export interface InviteHostCardProps {
   /** Display name shown to recipient (denormalized backend column). */
@@ -71,11 +73,13 @@ export function InviteHostCard({
       <span
         role="img"
         aria-label={avatarAriaLabel}
-        className="inline-flex flex-shrink-0 select-none items-center justify-center rounded-full font-display font-extrabold text-white"
+        className="inline-flex flex-shrink-0 select-none items-center justify-center rounded-full font-display font-extrabold"
         style={{
           width: avatarSize,
           height: avatarSize,
           background: `hsl(${hostHue} 60% 55%)`,
+          // White or black, whichever reaches 4.5:1 on this hue (#4910); a fixed white measured 2.52 on one real host.
+          color: avatarForeground(hostHue),
           fontSize,
         }}
       >

@@ -13,7 +13,8 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <summary>
 /// #4782 — the page rule of <see cref="GetDocumentsWithUnreliablePageNumbersQueryHandler"/> against a real PostgreSQL
 /// database (Testcontainers). The unit tests use the in-memory provider, which accepts any LINQ shape; the handler's
-/// value is its two EF queries (a <c>GROUP BY (document, page)</c> with a count, and a lifted <c>int? &gt; 1</c>), so the
+/// value is its EF queries (a <c>GROUP BY (document, page)</c> with a count, a <c>GROUP BY document</c> with the total of the
+/// passages, and a lifted <c>int? &gt; 1</c>), so the
 /// translation is asserted here, end to end.
 /// </summary>
 [Collection("Integration-GroupA")]
@@ -85,6 +86,11 @@ public sealed class GetDocumentsWithUnreliablePageNumbersQueryHandlerIntegration
         var unknownCount = SeedPdf(pageCount: null, chunkPages: [1, 1, 1]);
         // Several pages, nothing that carries one.
         var noPages = SeedPdf(pageCount: 8, chunkPages: [null, null]);
+        // #4782: a body with no page next to a few tables on true pages is not believed, and neither is a document of
+        // which exactly half of the passages carry a page; more than half is.
+        var unpagedBody = SeedPdf(pageCount: 12, chunkPages: [.. Enumerable.Repeat<int?>(null, 40), 3, 7, 9]);
+        var half = SeedPdf(pageCount: 12, chunkPages: [null, null, 1, 3]);
+        var mostlyPaged = SeedPdf(pageCount: 12, chunkPages: [null, 1, 3, 3, 7]);
         // Never asked about.
         var notAsked = SeedPdf(pageCount: 12, chunkPages: [1, 1, 1]);
         await _dbContext.SaveChangesAsync(Token);
@@ -92,10 +98,11 @@ public sealed class GetDocumentsWithUnreliablePageNumbersQueryHandlerIntegration
         var sut = new GetDocumentsWithUnreliablePageNumbersQueryHandler(_dbContext);
 
         var result = await sut.Handle(
-            new GetDocumentsWithUnreliablePageNumbersQuery([flat, zeros, withPages, onePage, unknownCount, noPages]),
+            new GetDocumentsWithUnreliablePageNumbersQuery(
+                [flat, zeros, withPages, onePage, unknownCount, noPages, unpagedBody, half, mostlyPaged]),
             Token);
 
-        result.Should().BeEquivalentTo(new[] { flat, zeros, noPages });
+        result.Should().BeEquivalentTo(new[] { flat, zeros, noPages, unpagedBody, half });
         result.Should().NotContain(notAsked);
     }
 

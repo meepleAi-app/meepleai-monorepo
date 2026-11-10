@@ -36,8 +36,6 @@ internal static class FeatureFlagSeeder
         // Game Night v2 feature flags
         new("Features:SetupWizard.Enabled", "Enable Setup Wizard for live sessions", true, true, true, true),
         new("Features:SetupWizard.BggFallback", "Enable BGG data fallback in setup checklist cascade", false, false, false, false),
-        new("Features:Arbitro.StructuredDisputes", "Enable v2 structured dispute system", true, true, true, true),
-        new("Features:Arbitro.DemocraticOverride", "Enable democratic override voting on dispute verdicts", true, true, true, true),
         new("Features:AgentMemory.Enabled", "Enable persistent agent memory system", true, true, true, true),
         new("Features:AgentMemory.GuestClaim", "Enable guest account claiming for player history", true, true, true, true),
 

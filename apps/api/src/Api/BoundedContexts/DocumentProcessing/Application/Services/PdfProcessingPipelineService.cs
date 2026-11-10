@@ -7,6 +7,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
@@ -37,7 +38,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly MeepleAiDbContext _db;
     private readonly IPdfClaimService _pdfClaimService;
     private readonly IPdfTextExtractor _pdfTextExtractor;
-    private readonly IPdfTableExtractor _tableExtractor;
     private readonly ITextChunkingService _chunkingService;
     private readonly IEmbeddingService _embeddingService;
     private readonly IBlobStorageService _blobStorageService;
@@ -86,7 +86,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         MeepleAiDbContext db,
         IPdfClaimService pdfClaimService,
         IPdfTextExtractor pdfTextExtractor,
-        IPdfTableExtractor tableExtractor,
         ITextChunkingService chunkingService,
         IEmbeddingService embeddingService,
         IBlobStorageService blobStorageService,
@@ -110,7 +109,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
-        _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
@@ -178,10 +176,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogInformation("[PdfPipeline] Step 1/4: Extracting text from {PdfId}", pdfId);
             var (fullText, extractResult) = await ExtractTextAsync(pdfDoc, filePath, cancellationToken).ConfigureAwait(false);
 
-            // Step 2: Extract structured content (tables)
-            _logger.LogInformation("[PdfPipeline] Step 2/4: Extracting structured content from {PdfId}", pdfId);
-            await ExtractStructuredContentAsync(pdfDoc, filePath, cancellationToken).ConfigureAwait(false);
-
             // Detect document language (Issue: RAG retrieval quality)
             var langResult = _languageDetector.Detect(fullText);
             pdfDoc.Language = langResult.DetectedLanguage;
@@ -213,8 +207,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 return PdfPipelineOutcome.AbortedConcurrency;
             }
 
-            // Step 3: Chunk text
-            _logger.LogInformation("[PdfPipeline] Step 3/4: Chunking text for {PdfId} ({CharCount} chars)", pdfId, fullText.Length);
+            // Step 2: Chunk text
+            _logger.LogInformation("[PdfPipeline] Step 2/4: Chunking text for {PdfId} ({CharCount} chars)", pdfId, fullText.Length);
             var chunks = await ChunkTextAsync(
                 fullText,
                 extractResult,
@@ -224,6 +218,18 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
             if (chunks.Count == 0)
             {
+                // #4437: «no chunks» has two very different causes. A scan has pages and not one of them has text:
+                // the row says so, and is not retried (a scan does not grow text on the next attempt). Text that the
+                // chunker turned into nothing is a different failure and keeps the generic text and no category.
+                if (NearlyEmptyPages.NoTextAnywhere(extractResult))
+                {
+                    _logger.LogWarning(
+                        "[PdfPipeline] PDF {PdfId} has no extractable text on any of its {Pages} pages (extractor {Extractor}): probably a scanned PDF, marking as failed",
+                        pdfId, extractResult.PageChunks.Count, _pdfTextExtractor.GetType().Name);
+                    await MarkFailedAsync(pdfDoc, PdfFailureText.NoExtractableText, ErrorCategory.Parsing).ConfigureAwait(false);
+                    return PdfPipelineOutcome.Failed;
+                }
+
                 _logger.LogWarning("[PdfPipeline] No chunks produced for {PdfId}, marking as failed", pdfId);
                 await MarkFailedAsync(pdfDoc, "Text extraction produced no usable chunks").ConfigureAwait(false);
                 return PdfPipelineOutcome.Failed;
@@ -425,9 +431,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 return PdfPipelineOutcome.AbortedConcurrency;
             }
 
-            // Step 4a: Generate embeddings (for all chunks: original + translated)
+            // Step 3: Generate embeddings (for all chunks: original + translated)
             var allChunkInputs = translatedChunks.Select(t => t.chunk).ToList();
-            _logger.LogInformation("[PdfPipeline] Step 4a/5: Generating embeddings for {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
+            _logger.LogInformation("[PdfPipeline] Step 3/4: Generating embeddings for {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
             var embeddings = await GenerateEmbeddingsAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Transition to Indexing state
@@ -449,7 +455,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 return PdfPipelineOutcome.AbortedConcurrency;
             }
 
-            // Step 4b: Index in pgvector.
+            // Step 4: Index in pgvector.
             // Order matters: SaveTextChunksAsync MUST run BEFORE IndexInVectorStoreAsync.
             // IndexInVectorStoreAsync denormalizes role_tags + source_chunk_id onto the pgvector
             // rows by reading the freshly-saved (and freshly-classified) text_chunks keyed by
@@ -457,7 +463,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             // join by ChunkIndex is stable. If indexing ran first the lookup would be empty and every
             // pgvector row would be born with role_tags=0 / source_chunk_id=null (silent corpus-wide
             // role-boost loss — see FusionSignals.ComputeRoleMatchBoost).
-            _logger.LogInformation("[PdfPipeline] Step 4b/5: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
+            _logger.LogInformation("[PdfPipeline] Step 4/4: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
             await SaveTextChunksAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
             await IndexInVectorStoreAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
 
@@ -635,6 +641,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     extractResult.IsPermanentFailure);
             }
 
+            // #4437: Docnet reads the text layer and does not OCR. A scanned page comes back empty and the document can
+            // still reach Ready with holes in it. The Warning and the counter are for the documents the rule of
+            // NearlyEmptyPages.Assess flags (#4931); a lone cover is a Debug line.
+            NearlyEmptyPagesReport.Record(_logger, pdfDoc.Id.ToString(), extractResult);
+
             var joinedText = PageTextJoiner.Join(extractResult.PageChunks);
             var fullText = joinedText.Text;
 
@@ -770,73 +781,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
     }
 
-    private async Task ExtractStructuredContentAsync(
-        PdfDocumentEntity pdfDoc,
-        string filePath,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            // #3846: same as the upload path — the extractor takes a FILE, and under S3 `filePath` is
-            // a bucket key. Materialize the object, and log the failure instead of dropping it.
-            using var localFile = await PdfLocalFile
-                .AcquireAsync(_blobStorageService, pdfDoc.Id, filePath, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (localFile is null)
-            {
-                _logger.LogWarning(
-                    "[PdfPipeline] Structured content skipped for PDF {PdfId}: object not available in storage ({FilePath})",
-                    pdfDoc.Id, filePath);
-                return;
-            }
-
-            var structuredResult = await _tableExtractor
-                .ExtractStructuredContentAsync(localFile.Path, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (!structuredResult.Success)
-            {
-                _logger.LogWarning(
-                    "[PdfPipeline] Structured content extraction failed for PDF {PdfId}: {Error}",
-                    pdfDoc.Id, structuredResult.ErrorMessage);
-                return;
-            }
-
-            pdfDoc.ExtractedTables = JsonSerializer.Serialize(structuredResult.Tables);
-            pdfDoc.ExtractedDiagrams = JsonSerializer.Serialize(
-                structuredResult.Diagrams.Select(d => new
-                {
-                    d.PageNumber,
-                    d.DiagramType,
-                    d.Description,
-                    d.Width,
-                    d.Height
-                }));
-            pdfDoc.AtomicRules = JsonSerializer.Serialize(structuredResult.AtomicRules);
-            pdfDoc.TableCount = structuredResult.TableCount;
-            pdfDoc.DiagramCount = structuredResult.DiagramCount;
-            pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(PdfProcessingPipelineService),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfDoc.Id, nameof(PdfProcessingPipelineService));
-        }
-#pragma warning disable CA1031 // Structured extraction is optional, don't fail the pipeline
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[PdfPipeline] Structured content extraction failed for PDF {PdfId}, continuing",
-                pdfDoc.Id);
-        }
-#pragma warning restore CA1031
-    }
-
     private async Task<List<DocumentChunkInput>> ChunkTextAsync(
         string fullText,
         PagedTextExtractionResult extractResult,
@@ -855,7 +799,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _advancedChunking,
                 cancellationToken,
                 // #4782: the pages of a flat document (no structured elements) come from here.
-                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans).ConfigureAwait(false);
+                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans,
+                documentPageCount: extractResult.TotalPages).ConfigureAwait(false);
             return HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
         }
 
@@ -1171,7 +1116,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 PdfDocumentId = pdfDoc.Id,
                 Content = chunk.Text,
                 ChunkIndex = index,
-                PageNumber = chunk.Page,
+                PageNumber = ChunkPage.ForStorage(chunk.Page),
                 CharacterCount = chunk.Text.Length,
                 CreatedAt = now,
                 // Issue #730: persist chunk hierarchy fields from chunking pipeline
@@ -1369,12 +1314,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
     }
 
-    private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage)
+    private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage, ErrorCategory? category = null)
     {
         RecordFailedAtState(pdfDoc);
         // Issue #4215: Use Failed state
         pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
         pdfDoc.ProcessingError = errorMessage;
+        // #4437: a null category is retried by RetryFailedPdfsJob; the callers that know the failure is permanent say so.
+        if (category is not null)
+        {
+            pdfDoc.ErrorCategory = category.Value.ToString();
+        }
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         try
         {

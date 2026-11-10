@@ -103,8 +103,7 @@ The DocumentProcessing bounded context manages the complete lifecycle of PDF rul
 **Domain Services**:
 - `PdfValidationDomainService` - PDF integrity and compliance validation
 - `PdfQualityValidationDomainService` - 4-metric quality scoring
-- `PdfTextProcessingDomainService` - Text normalization and preprocessing
-- `TableToAtomicRuleConverter` - Converts table data to atomic rules
+- `PdfTextProcessingDomainService` - Text normalization and quality assessment (static; no longer decides on OCR, #4437)
 
 **Repositories (Interfaces)**:
 - `IPdfDocumentRepository` - PDF document persistence
@@ -142,7 +141,7 @@ The DocumentProcessing bounded context manages the complete lifecycle of PDF rul
 **External Adapters (Extractors)**:
 - `UnstructuredPdfTextExtractor` - Stage 1 (Apache 2.0, RAG-optimized, 1.3s avg)
 - `SmolDoclingPdfTextExtractor` - Stage 2 (VLM 256M, complex layouts, 3-5s avg)
-- `DocnetPdfTextExtractor` - Stage 3 (Local fallback, fast)
+- `DocnetPdfTextExtractor` - Stage 3 (Local fallback, fast). Reads the PDF text layer only: **it does not perform OCR** (#4437). A scanned page comes back empty; a PDF with no text on any page ends `Failed` with the cause in `ProcessingError` and category `Parsing` (not retried), and a PDF with at least half its pages (and at least two) under 100 characters is flagged (#4931, `NearlyEmptyPages.Assess`): a structured `Warning` with the PDF id and the counts, and the counter `meepleai.pdf.extraction.nearly_empty{outcome=flagged|partial|clean}` (one count per text-layer extraction, no per-PDF label). A lone cover is `partial`, a `Debug` line. The rule comes from a measurement on the local corpus; to repeat it: `NEARLY_EMPTY_CORPUS_DIR=<folder with the PDFs> dotnet test tests/Api.Tests/Api.Tests.csproj -c Release --filter "FullyQualifiedName~NearlyEmptyPagesCorpusMeasurement"` (writes `nearly-empty-pages.json`). Scans need an extractor that OCRs (Unstructured, #4436)
 - `OrchestratedPdfTextExtractor` - Adapter wrapping orchestrator as `IPdfTextExtractor`
 
 **Interfaces**:
@@ -151,7 +150,6 @@ The DocumentProcessing bounded context manages the complete lifecycle of PDF rul
   - `Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream, bool enableOcr, CancellationToken)`
 
 - `IPdfValidator` - PDF integrity validation
-- `IPdfTableExtractor` - Table structure extraction
 
 **External Models**:
 - `UnstructuredModels.cs` - Unstructured API request/response schemas

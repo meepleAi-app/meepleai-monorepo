@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -50,6 +51,7 @@ internal sealed class UploadSessionAttachmentCommandHandler
         if (session.Status is not (LiveSessionStatus.Setup or LiveSessionStatus.InProgress or LiveSessionStatus.Paused))
         {
             throw new ConflictException(
+                LiveSessionConflictCodes.ForRejectedStatus(session.Status, LiveSessionConflictCodes.SessionAlreadyStarted),
                 $"Cannot upload attachments to a session with status '{session.Status}'. Session must be Setup, InProgress, or Paused.");
         }
 

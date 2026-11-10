@@ -13,8 +13,34 @@ on:
       - main-staging
       - main
     types: [opened, synchronize, reopened]
-  check_suite:
+  # #4937: re-classify when CI finishes on a release head. `check_suite` (used before) never fires
+  # for check suites created by GitHub Actions — i.e. for all of our CI — so the bot only ran at PR
+  # open/push, before any job had finished, and posted "✅ No failed checks" on a red head.
+  # The list is every workflow seen on the heads of release PRs #4892 and #4897
+  # (`gh run list --commit <sha> --json workflowName`); names must match `name:` exactly.
+  workflow_run:
+    workflows:
+      - "CI"
+      - "Backend E2E Tests"
+      - "E2E Tests"
+      - "Branch Policy"
+      - "Staging Gate"
+      - "Prod Gate"
+      - "API Smoke (Bruno) — PR main-staging → main (prod promotion)"
+      - "Security Scan"
+      - "Performance Tests"
+      - "Security Penetration Tests"
+      - "Docs Link Check"
+      - "E2E Cover R2-strict"
+      - "E2E PDF upload su S3"
+      - "Prometheus Rules Gate"
+      - "Backend Missing Gate"
+      - "Validate Workflows"
+      - "Validate Workflow Cache Patterns"
+      - "Seed Snapshot Bake (CI smoke — ci.yml manifest)"
     types: [completed]
+    branches:
+      - "release/**"
   workflow_dispatch:
     inputs:
       pr_number:
@@ -22,13 +48,13 @@ on:
         required: true
         type: string
 
-# Concurrency: key on PR number (when available) OR on the head SHA (check_suite).
-# Using head_sha (not head_branch) is critical: two concurrent check_suite.completed
-# events on the same commit (e.g. CodeQL + GitGuardian apps finishing within ms of
-# each other) must share the same concurrency slot, so `cancel-in-progress: true`
-# eliminates the TOCTOU race before two `createComment` calls can fire.
+# Concurrency: key on the head SHA, for pull_request and workflow_run alike. Several workflows
+# finish within seconds of each other on the same commit, and the PR-open run may still be going:
+# they must share one slot, so `cancel-in-progress: true` eliminates the TOCTOU race before two
+# `createComment` calls can fire. The last run reads every check-run, so cancelling earlier ones
+# loses nothing.
 concurrency:
-  group: release-gate-comment-${{ github.event.pull_request.number || github.event.check_suite.head_sha || github.event.inputs.pr_number || github.ref }}
+  group: release-gate-comment-${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.event.inputs.pr_number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -44,12 +70,19 @@ jobs:
   classify:
     name: Classify release-PR failures
     runs-on: ubuntu-latest
-    # Restrict to release PRs (main-staging target) + manual dispatch.
-    # check_suite events fire on every push; filter to release branches only.
+    # Restrict to release PRs (main-staging / main target) + manual dispatch. workflow_run is already
+    # filtered to `release/**` heads by `on.workflow_run.branches`.
+    #
+    # #4969: on workflow_run, only heads of THIS repository. The `release/**` filter matches a branch
+    # NAME, which a fork PR chooses freely, and workflow_run runs with this workflow's write token
+    # (pull-requests, issues, checks) even when the triggering run came from a fork, whose PR can
+    # also redefine the "CI" workflow and so pick the check-runs this bot reads. Real release PRs
+    # are branches of this repository. Guarded for every workflow_run trigger by
+    # infra/scripts/tests/workflow-run-trust-boundary.bats.
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && (github.base_ref == 'main-staging' || github.base_ref == 'main')) ||
-      (github.event_name == 'check_suite' && (github.event.check_suite.head_branch == 'main-staging' || startsWith(github.event.check_suite.head_branch, 'release/')))
+      (github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name == github.repository) ||
+      (github.event_name == 'pull_request' && (github.base_ref == 'main-staging' || github.base_ref == 'main'))
     timeout-minutes: 5
 
     steps:
@@ -83,7 +116,7 @@ jobs:
           PR_NUMBER_PR_EVENT: ${{ github.event.pull_request.number }}
           PR_HEAD_SHA_PR_EVENT: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER_DISPATCH: ${{ github.event.inputs.pr_number }}
-          CHECK_SUITE_HEAD_SHA: ${{ github.event.check_suite.head_sha }}
+          WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO_SLUG: ${{ github.repository }}
         run: |
@@ -107,18 +140,26 @@ jobs:
               SHA=$(gh api "repos/$REPO_SLUG/pulls/$PR_NUMBER_DISPATCH" --jq '.head.sha')
               echo "head_sha=$SHA" >> "$GITHUB_OUTPUT"
               ;;
-            check_suite)
-              # Look up the PR(s) associated with this check_suite's head SHA.
-              # If none, skip gracefully (check_suite ran on a non-PR commit).
-              PR_NUM=$(gh api "repos/$REPO_SLUG/commits/$CHECK_SUITE_HEAD_SHA/pulls" \
-                --jq '.[] | select(.base.ref == "main-staging" or .base.ref == "main") | .number' \
+            workflow_run)
+              # Look up the open release PR whose head is the commit this workflow ran on.
+              # If none, skip gracefully (a release/** branch without a release PR).
+              PR_NUM=$(gh api "repos/$REPO_SLUG/commits/$WORKFLOW_RUN_HEAD_SHA/pulls" \
+                --jq '.[] | select(.state == "open" and (.base.ref == "main-staging" or .base.ref == "main")) | .number' \
                 | head -n1 || echo "")
               if [ -z "$PR_NUM" ]; then
-                echo "No release PR associated with $CHECK_SUITE_HEAD_SHA — skipping."
+                echo "No open release PR associated with $WORKFLOW_RUN_HEAD_SHA — skipping."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              # A workflow that finished on an older commit must not overwrite the comment of the
+              # current head with stale check-runs.
+              CURRENT=$(gh api "repos/$REPO_SLUG/pulls/$PR_NUM" --jq '.head.sha')
+              if [ "$CURRENT" != "$WORKFLOW_RUN_HEAD_SHA" ]; then
+                echo "PR #$PR_NUM head is $CURRENT, not $WORKFLOW_RUN_HEAD_SHA — skipping."
                 echo "skip=true" >> "$GITHUB_OUTPUT"
               else
                 echo "pr_number=$PR_NUM" >> "$GITHUB_OUTPUT"
-                echo "head_sha=$CHECK_SUITE_HEAD_SHA" >> "$GITHUB_OUTPUT"
+                echo "head_sha=$WORKFLOW_RUN_HEAD_SHA" >> "$GITHUB_OUTPUT"
               fi
               ;;
           esac
@@ -130,7 +171,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_SHA: ${{ steps.pr.outputs.head_sha }}
+          # Not GITHUB_SHA: GITHUB_* variables cannot be overwritten, so the script used to read the
+          # check-runs of the commit this workflow runs on instead of the release head (#4937).
+          RELEASE_HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
           # GITHUB_STEP_SUMMARY is set by GH Actions automatically.
         run: node comment.mjs

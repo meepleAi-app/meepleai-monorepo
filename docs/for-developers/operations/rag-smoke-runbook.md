@@ -134,6 +134,18 @@ python infra/scripts/rag-fusion-bench.py --reference /tmp/tuning-off --compare /
 
 Storia: quattro configurazioni provate contro il gate fra il 17 e il 22 agosto (10/11 → 8/11 → 5/11 → 7/11), tutte a scommessa. Lo script ha ripagato il costo di scriverlo alla prima domanda a cui ha risposto — se la correzione per lingua funzionasse ora che `lang` arriva davvero alla fusione.
 
+**Valutare un altro peso.** `--keyword-weight W` (ripetibile) valuta la fusione globale con peso lessicale `W` e vettoriale `1 - W`. La validazione resta fatta con il peso con cui la run di riferimento **ha girato**: `--as-run-keyword-weight`, di default quello di oggi. Per un dump di prima del #4955, che aveva i pesi `0.7/0.3` e i genitori a documento intero fra i candidati, si aggiunge `--without-chunk0`, che toglie i chunk 0 come fa oggi la ricerca. Vale per il corpus del gate (Docnet), dove il chunk 0 è proprio quel genitore. È così che è stato scelto `0.15`:
+
+```bash
+git show dbf6431ebb:infra/fixtures/rag-golden-baseline.json > /tmp/fx/rag-golden-baseline.json
+git show dbf6431ebb:infra/fixtures/rag-canonical-queries.json > /tmp/fx/rag-canonical-queries.json
+python infra/scripts/rag-fusion-bench.py --reference /tmp/tuning-42499639933 --fixtures /tmp/fx \
+  --as-run-keyword-weight 0.3 --without-chunk0 \
+  --keyword-weight 0.3 --keyword-weight 0.2 --keyword-weight 0.15 --keyword-weight 0.1 --keyword-weight 0.05 --keyword-weight 0
+```
+
+**Dare un nome ai candidati.** `aggregate.log` identifica il documento con il suo id, che cambia a ogni bake, e il gioco con il suo id. Dal 2026-11 l'artifact porta anche `doc-names.json` (`pdf_documents.Id → FileName`) e `game-titles.json` (`shared_games.id → title`), nel formato di `--doc-names` e `--game-titles`. Senza, il candidato che in #4955 portava Maracaibo al secondo posto di una domanda su Ark Nova si nominava solo per inferenza: l'id del gioco (`g`) è stabile fra un bake e l'altro, quello del documento (`d`) no.
+
 ⚠️ **Se `FuseGlobally` cambia, questo script va cambiato con essa.** La validazione lo scopre, ma solo quando qualcuno lo esegue — ed è già successo: dopo il merge della correzione per lingua (#3740) la replica ha riportato **8 conflitti**, perché validava ancora col comportamento precedente. Il segnale è arrivato al primo utilizzo utile e il fix è stato una riga (il default di `language_correction`). Un banco senza quella validazione avrebbe continuato a stampare numeri, semplicemente sbagliati.
 
 ### La chiave della baseline: il documento, non il suo id (v2, #3666)
@@ -194,6 +206,8 @@ The baseline must be captured against a **fresh, compatible snapshot** (`snapsho
    ```
    This writes `infra/fixtures/rag-golden-baseline.json` (`baseline`, `snapshot`, `embeddingModel`, `capturedAt`).
 4. Review the diff and commit it.
+
+🔴 **Anche la cattura conta il criterio semantico, e sotto il pavimento non scrive la baseline** (#4965). Fino a #4965 lo script usciva con `exit 0` subito dopo aver scritto la baseline, prima del riepilogo semantico: un dispatch con `update_baseline=true` era verde a qualunque conteggio, e i due di #4959 non avevano una riga `semantico:` nel log. Ora la riga c'è in entrambe le modalità. In cattura, sotto il pavimento, il run esce con 1 e `baseline NOT written`, come quando una query non ha citazioni. Se il calo è voluto, `semanticFloor` si abbassa nello stesso commit, con il motivo.
 
 **Con la baseline v2 un semplice re-bake NON richiede più una rigenerazione** (#3666): la chiave è il nome del documento, che il re-bake conserva. Rigenera solo quando cambia davvero ciò che il gate misura — modello di embedding, chunker, o un bump di `seed-schema.version` che sposta il retrieval — e solo dopo aver stabilito che lo scostamento è **voluto**. Un drift non intenzionale è esattamente ciò che questo gate esiste per segnalare: indagalo prima di rigenerare, altrimenti la nuova baseline lo certifica come normale.
 

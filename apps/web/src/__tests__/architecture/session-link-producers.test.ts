@@ -69,7 +69,9 @@ const PRODUCERS: Readonly<Record<string, readonly Site[]>> = {
   'app/(authenticated)/sessions/new/session-wizard-mobile.tsx': [
     { live: 'api.liveSessions.createSession' },
   ],
-  'app/(authenticated)/sessions/join/page.tsx': [{ live: 'api.liveSessions.getByCode' }],
+  'app/(authenticated)/sessions/join/page.tsx': [
+    { live: 'api.liveSessions.getPublicByCode, la lobby pubblica della live (#2590, #4939)' },
+  ],
   'components/dashboard/SessionPanel.tsx': [
     { live: 'store di sessione, che legge api.liveSessions' },
   ],

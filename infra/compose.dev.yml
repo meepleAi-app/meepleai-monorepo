@@ -113,6 +113,11 @@ services:
         # Issue #3878: build arg, non `environment` — il valore è congelato da
         # `next build` e a runtime arriverebbe troppo tardi.
         NEXT_PUBLIC_ENABLE_PROGRESS_UI: "true"
+        # #3498: le copertine dello stack locale sono URL presignati su MinIO (http://localhost:9000).
+        # Senza questa opt-in la CSP `img-src` del web le blocca e ogni scheda resta sul segnaposto,
+        # con la risposta dell'API corretta e l'oggetto presente in MinIO. Build arg, non `environment`:
+        # `headers()` di next.config.js è valutata durante `next build`.
+        NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB: "true"
     environment:
       API_BASE_URL: http://api:8080
       NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: "true"

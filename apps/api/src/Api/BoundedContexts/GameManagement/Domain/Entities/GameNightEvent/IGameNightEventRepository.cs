@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
@@ -31,6 +32,33 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     /// Gets game nights where the user is organizer or invited.
     /// </summary>
     Task<IReadOnlyList<GameNightEvent>> GetByUserAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #4759: whether <paramref name="userId"/> accepted an email invitation to this night while logged in.
+    /// Such a guest has no RSVP row on the aggregate (the invitations are another aggregate), so the
+    /// aggregate alone cannot say they sit at the table. The same rule filters the lists above. An empty
+    /// id is nobody.
+    /// </summary>
+    Task<bool> HasAcceptedEmailInvitationAsync(Guid gameNightId, Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #4921: the RSVP state an email guest reads as, per night, derived from the invitation they answered
+    /// while logged in (same binding as <see cref="HasAcceptedEmailInvitationAsync"/>): <c>Accepted</c> or
+    /// <c>Declined</c>. A night where the user answered none, or answered a link sent to another address,
+    /// is absent. No RSVP row is written on that path, so the aggregate cannot say it; the lists ask once
+    /// for all their nights.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, RsvpStatus>> GetEmailGuestRsvpStatusesAsync(
+        IReadOnlyCollection<Guid> gameNightIds, Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #4947: serializes the seat decisions on one night. Takes a PostgreSQL transaction-scoped advisory lock keyed
+    /// by the night, held until the surrounding transaction ends, so that «count who sits, then write an answer»
+    /// cannot overlap another such decision on the same night. Callers run inside
+    /// <c>IUnitOfWork.ExecuteInTransactionAsync</c>; outside a transaction the lock would be released at once, so the
+    /// implementation refuses to take it. A no-op on a provider that is not PostgreSQL.
+    /// </summary>
+    Task LockSeatsAsync(Guid gameNightId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets published events with ScheduledAt between from and to, for reminder scheduling.

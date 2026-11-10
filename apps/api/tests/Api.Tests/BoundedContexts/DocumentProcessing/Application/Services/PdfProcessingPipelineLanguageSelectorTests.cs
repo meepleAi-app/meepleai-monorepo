@@ -100,7 +100,6 @@ public sealed class PdfProcessingPipelineLanguageSelectorTests : IDisposable
             _db,
             new Api.Tests.TestHelpers.InMemoryPdfClaimService(_db),
             _pdfTextExtractorMock.Object,
-            Mock.Of<IPdfTableExtractor>(),
             Mock.Of<ITextChunkingService>(),
             Mock.Of<IEmbeddingService>(),
             _blobStorageServiceMock.Object,

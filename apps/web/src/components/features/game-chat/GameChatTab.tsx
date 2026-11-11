@@ -246,10 +246,13 @@ export function GameChatTab({
                         msg.isLowQuality ? (
                           ''
                         ) : (
+                          // The prose-* classes of MarkdownRenderBlock need @tailwindcss/typography,
+                          // which the app does not load: the preflight reset leaves lists with
+                          // no markers and no indent, so the chat states them explicitly.
                           <MarkdownRenderBlock
                             content={msg.content}
                             components={AGENT_ANSWER_COMPONENTS}
-                            className="text-base leading-relaxed [&>:first-child]:mt-0 [&>:last-child]:mb-0"
+                            className="text-base leading-relaxed [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&>:first-child]:mt-0 [&>:last-child]:mb-0"
                           />
                         )
                       }

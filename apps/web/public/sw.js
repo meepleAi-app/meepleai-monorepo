@@ -341,6 +341,12 @@ function isStaticAsset(url) {
     '.ttf',
     '.ico',
   ];
+  // #4987: only this origin's assets. A cross-origin image (a cover on MinIO/R2) refetched from
+  // here is subject to connect-src, which does not list the image hosts: the fetch failed and the
+  // catch below answered 503 «Offline». Left to the browser, it loads under img-src.
+  if (url.origin !== self.location.origin) {
+    return false;
+  }
   return (
     staticExtensions.some(ext => url.pathname.endsWith(ext)) ||
     url.pathname.startsWith('/_next/static/')

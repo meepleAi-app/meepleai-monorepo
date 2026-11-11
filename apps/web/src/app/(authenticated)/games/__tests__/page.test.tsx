@@ -63,6 +63,12 @@ vi.mock('@/components/features/games/TrendingTabContent', () => ({
   TrendingTabContent: () => <div data-testid="games-tab-trending">TrendingTabContent mock</div>,
 }));
 
+// #4990: the Catalogo tab renders the live catalog; the component is covered by
+// CatalogTabContent.test.tsx.
+vi.mock('@/components/features/games/CatalogTabContent', () => ({
+  CatalogTabContent: () => <div data-testid="games-tab-catalogo">CatalogTabContent mock</div>,
+}));
+
 // ─── Import under test (after mocks) ──────────────────────────────────────
 
 import GamesHubPage from '../page';
@@ -135,14 +141,14 @@ describe('/games hub multi-tab page (Asse D P2)', () => {
   });
 
   describe('coming-soon tab placeholders', () => {
-    it('renders Catalogo placeholder when ?tab=catalogo', () => {
+    it('renders the live catalog when ?tab=catalogo (#4990)', () => {
       setQueryParam('tab', 'catalogo');
       render(<GamesHubPage />);
 
       const hub = screen.getByTestId('games-hub');
       expect(hub).toHaveAttribute('data-active-tab', 'catalogo');
-      expect(screen.getByTestId('games-tab-catalogo-coming-soon')).toBeInTheDocument();
-      expect(screen.getByText('Catalogo')).toBeInTheDocument();
+      expect(screen.getByTestId('games-tab-catalogo')).toBeInTheDocument();
+      expect(screen.queryByTestId('games-tab-catalogo-coming-soon')).not.toBeInTheDocument();
       expect(screen.queryByTestId('discover-hub-mock')).not.toBeInTheDocument();
     });
 

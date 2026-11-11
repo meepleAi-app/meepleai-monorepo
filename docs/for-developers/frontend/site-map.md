@@ -947,7 +947,7 @@ _Route-group: `(authenticated)` · 9 pagine_
   - `/discover -> /library` (FooterCTA primaria; sempre in fondo alle righe below-fold)
   - `/discover -> /players` (FooterCTA secondaria; sempre in fondo alle righe below-fold)
   - `/discover -> ?entity=` (EntityFilterPillBar onChange → `router.replace` scroll:false; sempre, "all" rimuove il param; telemetry `discover_filter_pill_clicked`)
-  - `/discover -> ?q=` (DiscoverSearchBox onCommit; non attivabile: `SEARCH_ENDPOINT_AVAILABLE=false` → searchbox disabled)
+  - `/discover -> /games?tab=catalogo&q=` (DiscoverSearchBox, commit solo con Invio: la ricerca va al Catalogo, #4990)
 - **`/onboarding`**
   - `/onboarding -> /library` (`router.replace` on onComplete → `api.auth.completeOnboarding(false)` + refreshUser + toast; al termine del wizard)
   - `/onboarding -> /library` (`router.replace` on onCancel dopo conferma "Cancel Wizard"; utente conferma)
@@ -986,7 +986,7 @@ _Route-group: `(authenticated)` · 9 pagine_
 - **count pill / viewAll (DashboardSection)**: count pill solo se `count!==undefined && count>0`; link viewAll solo se `viewAllHref && viewAllLabel` entrambi presenti; `headerExtra` opzionale tra titolo e spacer — `apps/web/src/app/(authenticated)/dashboard/_components/sections/DashboardSection.tsx`
 
 ##### `/discover`
-- **DiscoverSearchBox**: disabled quando `SEARCH_ENDPOINT_AVAILABLE===false` (hardcoded, endpoint `/catalog/search` non implementato #728): shell disabilitato + tooltip; focus emette telemetry `discover_search_attempted_unavailable` — `apps/web/src/components/features/discover/DiscoverHub.tsx`
+- **DiscoverSearchBox**: cerca nel catalogo dei giochi; con Invio porta a `/games?tab=catalogo&q=…` (#4990). La ricerca su tutte le entità resta in attesa di `/catalog/search` (#728) — `apps/web/src/components/features/discover/DiscoverHub.tsx`
 - **HorizontalRow "trending" (Row 1, eager)**: visible solo se `entity==='all' || entity==='games'` (trendingVisible); adapter passa `hasKnowledgeBase` per badge KB — `apps/web/src/components/features/discover/DiscoverHub.tsx`
 - **HorizontalRow stati (tutte le righe)**: isLoading→skeleton row; isError→retry (`onRetry=hook.refetch`); empty→emptyLabel; visibilità per riga da `rowVisible(entity)` — `apps/web/src/components/features/discover/DiscoverHub.tsx`
 - **DiscoverBelowFoldRows (Rows 2-7 + FooterCTA)**: caricato lazy via `next/dynamic ssr:false`; durante il load mostra BelowFoldSkeleton (~6 righe placeholder anti-CLS) — `apps/web/src/components/features/discover/DiscoverHub.tsx`
@@ -1066,7 +1066,7 @@ _Route-group: `(authenticated)` · 9 pagine_
 | CascadeDrawerHost | `apps/web/src/components/dashboard/CascadeDrawerHost.tsx` | Monta ExtraMeepleCardDrawer via cascade-navigation-store |
 | DiscoverHub | `apps/web/src/components/features/discover/DiscoverHub.tsx` | Surface render-only Discover: URL state (q+entity) SSOT, HubLayout + hero + Row1 eager + below-fold lazy |
 | DiscoverHero | `apps/web/src/components/features/discover/DiscoverHero.tsx` | Hero con searchSlot + filterSlot + pathLabel |
-| DiscoverSearchBox | `apps/web/src/components/features/discover/DiscoverSearchBox.tsx` | Casella ricerca (disabled finché `SEARCH_ENDPOINT_AVAILABLE=false`) |
+| DiscoverSearchBox | `apps/web/src/components/features/discover/DiscoverSearchBox.tsx` | Casella ricerca; `commitOnIdle={false}` per confermare solo con Invio (#4990) |
 | EntityFilterPillBar | `apps/web/src/components/features/discover/EntityFilterPillBar.tsx` | Pill filtro entità → `?entity=` |
 | HorizontalRow | `apps/web/src/components/features/discover/HorizontalRow.tsx` | Riga orizzontale card con stati loading/error/empty/disabled |
 | DiscoverBelowFoldRows | `apps/web/src/app/(authenticated)/discover/_DiscoverBelowFoldRows.tsx` | Chunk lazy Rows 2-7 (Row7 events disabled) + FooterCTA |
@@ -1437,7 +1437,7 @@ _Route-group: `(authenticated)` · 11 pagine_
   - `/games -> /games?tab=catalogo` (MiniNav tab click)
   - `/games -> /games?tab=trending` (MiniNav tab click)
   - `/games -> /games?tab=community` (MiniNav tab click)
-  - `/games -> /library` (`ComingSoonTab` fallback Link 'Vai alla tua libreria'; solo tab catalogo/community — #2192 dead-end fix)
+  - `/games -> /library` (`ComingSoonTab` fallback Link 'Vai alla tua libreria'; solo tab community — #2192 dead-end fix)
   - `/games -> /games/{id}` (`DiscoverHub` card Row1 trending / Row2 new-games → `resolveCardHref('trending'|'games')` → `router.push`; discover tab, `item.id` presente)
   - `/games -> /agents/{id}` (`DiscoverHub` Row3 popular-agents → `resolveCardHref('agents')`; discover tab, entity ∈ {all,agents})
   - `/games -> /toolkits/{id}` (`DiscoverHub` Row4 recommended-toolkits; discover tab, entity ∈ {all,toolkits})
@@ -1446,7 +1446,7 @@ _Route-group: `(authenticated)` · 11 pagine_
   - `/games -> /game-nights/{id}` (`resolveCardHref('events')`; events row è disabled-shell `EVENTS_ENDPOINT_AVAILABLE=false` → `items=[]` → in pratica nessuna card cliccabile)
   - `/games -> /library` (`DiscoverBelowFoldRows` FooterCTA primaryCta; discover below-the-fold)
   - `/games -> /players` (`DiscoverBelowFoldRows` FooterCTA secondaryCta; discover below-the-fold)
-  - `/games -> /games` URL replace (`DiscoverSearchBox` onCommit / `EntityFilterPillBar` onChange → `router.replace('/games'?q&entity, {scroll:false})`; NON un route change — scrive solo query state; search commit irraggiungibile finché la search shell è disabled)
+  - `/games -> /games` URL replace (`EntityFilterPillBar` onChange → `router.replace('/games'?entity, {scroll:false})`; NON un route change — scrive solo query state). La ricerca invece porta a `/games?tab=catalogo&q=` (#4990)
 - **`/games/[id]`**
   - `/games/[id] -> /games` (Hero Back button → `router.push('/games')`; onBack sempre presente)
   - `/games/[id] -> /games` (`NotFoundShell` CTA `<Link>`; effectiveKind==='not-found')
@@ -1489,12 +1489,12 @@ _Route-group: `(authenticated)` · 11 pagine_
 ##### `/games`
 - **activeTab (GamesTab)**: `parseTab(searchParams.get('tab'))`: valido ∈ {discover,catalogo,trending,community}; assente OR invalido → `'discover'` (default); `data-active-tab` lo riflette — `apps/web/src/app/(authenticated)/games/page.tsx`
 - **DiscoverHub**: montato solo quando `activeTab==='discover'`; riceve `pathnameOverride='/games'` così i `router.replace` restano su `/games` (no leak `?tab`) — `apps/web/src/app/(authenticated)/games/page.tsx`
-- **ComingSoonTab (Catalogo)**: renderizzato solo quando `activeTab==='catalogo'` — placeholder 'Funzionalità in arrivo' + fallback CTA — `apps/web/src/app/(authenticated)/games/page.tsx`
+- **CatalogTabContent (Catalogo)**: renderizzato quando `activeTab==='catalogo'` — catalogo condiviso con ricerca (`?q=`) e paginazione, schede `MeepleCard` verso `/games/<id>` (#4990) — `apps/web/src/components/features/games/CatalogTabContent.tsx`
 - **TrendingTabContent**: renderizzato solo quando `activeTab==='trending'`; wired a `useCatalogTrending(20)` via `HorizontalRow variant='grid'` (#2191), NON placeholder — `apps/web/src/app/(authenticated)/games/page.tsx`
 - **ComingSoonTab (Community)**: renderizzato solo quando `activeTab==='community'` — placeholder + fallback CTA — `apps/web/src/app/(authenticated)/games/page.tsx`
-- **ComingSoon fallback CTA block**: mostrato in ogni `ComingSoonTab` (catalogo/community) per evitare dead-end (#2192): `Link→/games?tab=discover` + `Link→/library` — `apps/web/src/app/(authenticated)/games/page.tsx`
+- **ComingSoon fallback CTA block**: mostrato nel `ComingSoonTab` (community) per evitare dead-end (#2192): `Link→/games?tab=discover` + `Link→/library` — `apps/web/src/app/(authenticated)/games/page.tsx`
 - **MiniNavSlot tab strip**: registrato via `useMiniNavConfig({breadcrumb:'Games', tabs:[discover,catalogo,trending,community], activeTabId:activeTab})` — strip tab contestuale in DesktopShell — `apps/web/src/app/(authenticated)/games/page.tsx`
-- **DiscoverSearchBox**: disabled shell — `SEARCH_ENDPOINT_AVAILABLE=false` → input disabled + tooltip + telemetry `discover_search_attempted_unavailable` su focus (endpoint pending #728) — `apps/web/src/components/features/discover/DiscoverHub.tsx`
+- **DiscoverSearchBox**: cerca nel catalogo dei giochi e con Invio porta a `/games?tab=catalogo&q=…` (#4990) — `apps/web/src/components/features/discover/DiscoverHub.tsx`
 - **EntityFilterPillBar**: 7 pills (all/games/agents/toolkits/kbs/people/events); onChange → `entity` state → `updateUrl(router.replace)` + telemetry `discover_filter_pill_clicked`; `entity` guida `rowVisible()` su TUTTE le row (all→ogni row; games→games+trending; altro→match esatto) — `apps/web/src/components/features/discover/DiscoverHub.tsx`
 - **HorizontalRow Row1 'trending' (featured, eager)**: visibile solo quando entity ∈ {all,games}; loading/error/empty interni; badge KB su card se `item.hasKnowledgeBase` (#2290) — `apps/web/src/components/features/discover/DiscoverHub.tsx`
 - **DiscoverBelowFoldRows (Rows 2-7 + FooterCTA)**: lazy `dynamic import ssr:false` con `BelowFoldSkeleton` fallback (client-only TanStack, bundle budget); ogni row visibile per `rowVisible(entity)`; varianti: Row2 games=featured, Row3 agents=compact, Row4 toolkits=grid, Row5 kbs=list-row, Row6 people=list-row, Row7 events=list-row — `apps/web/src/components/features/discover/DiscoverHub.tsx`

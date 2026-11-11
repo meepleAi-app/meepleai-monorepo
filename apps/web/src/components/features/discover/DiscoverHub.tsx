@@ -38,11 +38,6 @@ const DiscoverBelowFoldRows = dynamic(
   }
 );
 
-// Search is currently not implemented backend-side (GET /api/v1/catalog/search).
-// Setting this flag flips the SearchBox into disabled-shell mode + telemetry
-// per spec AC4. Flip to `true` when the endpoint lands (#728).
-const SEARCH_ENDPOINT_AVAILABLE = false;
-
 const VALID_FILTERS: ReadonlyArray<EntityFilter> = [
   'all',
   'games',
@@ -161,18 +156,22 @@ export function DiscoverHub({ pathnameOverride }: DiscoverHubProps = {}) {
   );
 
   // ── Search handlers ───────────────────────────────────────────────────────
+  // #4990: the box was a disabled shell waiting for a cross-entity search endpoint (#728) that
+  // does not exist. It searches the games catalog: Enter takes the query to the Catalogo tab,
+  // which owns it in `?q=`. An empty commit clears the hub's own `q`.
   const handleSearchCommit = useCallback(
     (value: string) => {
-      setQ(value);
-      updateUrl({ q: value });
-      trackEvent('discover_search_committed', { q: value, entityFilter: entity });
+      const next = value.trim();
+      trackEvent('discover_search_committed', { q: next, entityFilter: entity });
+      if (!next) {
+        setQ('');
+        updateUrl({ q: '' });
+        return;
+      }
+      router.push(`/games?tab=catalogo&q=${encodeURIComponent(next)}`);
     },
-    [entity, updateUrl]
+    [entity, router, updateUrl]
   );
-
-  const handleDisabledSearchFocus = useCallback(() => {
-    trackEvent('discover_search_attempted_unavailable', { rowId: 'search' });
-  }, []);
 
   // ── Filter pill handler ───────────────────────────────────────────────────
   const handleFilterChange = useCallback(
@@ -235,9 +234,7 @@ export function DiscoverHub({ pathnameOverride }: DiscoverHubProps = {}) {
             value={q}
             onCommit={handleSearchCommit}
             placeholder={t('pages.discover.search.placeholder')}
-            disabled={!SEARCH_ENDPOINT_AVAILABLE}
-            disabledTooltip={t('pages.discover.search.disabledTooltip')}
-            onDisabledFocus={handleDisabledSearchFocus}
+            commitOnIdle={false}
           />
         }
         filterSlot={

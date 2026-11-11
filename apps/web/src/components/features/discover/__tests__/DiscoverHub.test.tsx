@@ -12,7 +12,7 @@
  * narrow — its purpose is to guard the extraction boundary.
  */
 
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { Suspense } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -169,5 +169,31 @@ describe('DiscoverHub navigation (#2085 F2/F3)', () => {
     trendingState.data = [];
     renderHub();
     expect(pushSpy).not.toHaveBeenCalled();
+  });
+});
+
+// #4990: the hub search box was a disabled shell waiting for a cross-entity search endpoint
+// (#728). It searches the games catalog: Enter takes the query to the Catalogo tab.
+describe('DiscoverHub search → Catalogo (#4990)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetParams();
+  });
+
+  it('offers a usable search box, not a disabled shell', () => {
+    renderHub();
+    const box = screen.getByRole('searchbox');
+    expect(box).not.toHaveAttribute('aria-disabled', 'true');
+    expect(box).not.toHaveAttribute('readonly');
+  });
+
+  it('takes the search to the Catalogo tab on Enter', () => {
+    renderHub({ pathnameOverride: '/games' });
+    const box = screen.getByRole('searchbox');
+
+    fireEvent.change(box, { target: { value: 'Jaipur' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+
+    expect(pushSpy).toHaveBeenCalledWith('/games?tab=catalogo&q=Jaipur');
   });
 });

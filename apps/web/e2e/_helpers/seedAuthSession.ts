@@ -4,7 +4,7 @@
  * **Why this helper exists** (Wave B.1 lesson learned, Issue #633):
  *   The `proxy.ts` middleware redirects unauthenticated users away from `PROTECTED_ROUTES`
  *   (which includes `/games`, `/library`, `/admin`, etc.) to `/login`. The
- *   `PLAYWRIGHT_AUTH_BYPASS=true` env var (set in `playwright.config.ts:434`)
+ *   `PLAYWRIGHT_AUTH_BYPASS=true` env var (set by the `webServer` env in `playwright.config.ts`)
  *   short-circuits the BACKEND validation step but still requires a session cookie
  *   to be PRESENT on the request — otherwise the proxy treats the user as
  *   unauthenticated and emits a 307 to `/login`, breaking visual regression specs
@@ -16,7 +16,9 @@
  *
  * **Contract** (must match `proxy.ts` exactly):
  *   - `meepleai_session` cookie — opaque token, validated server-side normally,
- *     but trusted as-is when `PLAYWRIGHT_AUTH_BYPASS=true && NODE_ENV !== 'production'`
+ *     but trusted as-is when `PLAYWRIGHT_AUTH_BYPASS=true` AND the bypass is allowed:
+ *     `NODE_ENV !== 'production'`, or `PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION=true`
+ *     under `next start` (#4980). See `isAuthBypassAllowed` in `proxy.ts`.
  *   - `meepleai_user_role` cookie — drives admin redirects (default `'user'`)
  *
  * **Defaults**: role `'user'` (non-admin) — admin redirects (`/admin → /` for non-admins)
@@ -98,7 +100,8 @@ export async function seedAuthSession(
  * redirecting away. Call BEFORE the first page.goto in a mock-auth helper.
  *
  * The meepleai_user_role cookie is honored by proxy.ts ONLY while the bypass is
- * engaged (dev/CI); production ignores it, so it cannot escalate privileges.
+ * engaged (a Playwright-managed server); a deploy, whose environment sets no
+ * bypass variable, ignores it, so it cannot escalate privileges.
  */
 export async function seedMockRoleCookies(page: Page, role: MockAuthRole): Promise<void> {
   await page.context().addCookies(buildBypassAuthCookies(role.toLowerCase()));

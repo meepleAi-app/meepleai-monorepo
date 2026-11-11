@@ -8,8 +8,9 @@
  *
  * These tests pin the fix: when the bypass is engaged, the role is resolved from
  * the plaintext meepleai_user_role cookie seeded by the E2E auth helpers — AND
- * that this bypass path is unreachable in production, so the cookie can never
- * escalate a real user to admin.
+ * that under NODE_ENV=production this path stays closed unless an allow variable
+ * is set (see the #4980 block below), so the cookie can never escalate a real
+ * user to admin.
  */
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -47,6 +48,8 @@ describe('proxy() admin-role resolution under the E2E auth bypass (#2784)', () =
     vi.stubEnv('NODE_ENV', 'development');
     vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', 'true');
     vi.stubEnv('NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED', '');
+    const mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
 
     const { proxy } = await import('@/proxy');
     const res = await proxy(
@@ -55,6 +58,8 @@ describe('proxy() admin-role resolution under the E2E auth bypass (#2784)', () =
 
     expect(wasAllowed(res)).toBe(true);
     expect(res.status).toBe(200);
+    // The seeded role cookie answers the question: no backend round-trip.
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('redirects /admin away when the bypass is engaged but the role cookie is user', async () => {
@@ -75,18 +80,24 @@ describe('proxy() admin-role resolution under the E2E auth bypass (#2784)', () =
     vi.stubEnv('NODE_ENV', 'development');
     vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', 'true');
     vi.stubEnv('NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED', '');
+    vi.stubEnv('API_BASE_URL', 'http://api:8080');
+    // No role cookie → the role is asked to /auth/me (#4980), which rejects a fake token.
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) });
+    vi.stubGlobal('fetch', mockFetch);
 
     const { proxy } = await import('@/proxy');
     const res = await proxy(makeRequest({ meepleai_session: 'fixture-token' }));
 
     // Never elevate by guessing: default role 'user' → redirected away.
     expect(res.headers.get('location')).toBe('http://localhost/');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it('does NOT trust the role cookie in production — role is sourced only from /auth/me', async () => {
     vi.stubEnv('NODE_ENV', 'production');
-    // Bypass flag is set but MUST be ignored: production build, visual flag off.
+    // Bypass flag is set but MUST be ignored: production server, no allow variable.
     vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', 'true');
+    vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION', '');
     vi.stubEnv('NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED', '');
     vi.stubEnv('API_BASE_URL', 'http://api:8080');
 
@@ -220,21 +231,44 @@ describe('proxy() — what allows the E2E auth bypass under NODE_ENV=production 
     }
   );
 
-  it.each(['1', 'TRUE', 'yes'])(
-    'treats PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION=%s as off: only the literal "true" allows it',
-    async value => {
-      productionServer({ PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION: value });
-      vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', 'true');
-      backendRejectsFakeCookie();
+  it('with the bypass open, still asks /auth/me for the role of a real login (no role cookie)', async () => {
+    // Specs that log in for real get only the HMAC v2 role cookie from the backend: the role
+    // must come from /auth/me, or an admin who logged in for real is sent away from /admin.
+    productionServer({ PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION: 'true' });
+    vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', 'true');
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ user: { role: 'Admin' } }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
 
-      const { proxy } = await import('@/proxy');
-      const res = await proxy(
-        makeRequest({ meepleai_session: 'fixture-token', meepleai_user_role: 'admin' })
-      );
+    const { proxy } = await import('@/proxy');
+    const res = await proxy(
+      makeRequest({ meepleai_session: 'real-token', meepleai_user_role_v2: 'opaque-hmac' })
+    );
 
-      expect(res.headers.get('location')).toBe('http://localhost/login?from=%2Fadmin');
-    }
-  );
+    expect(wasAllowed(res)).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION', '1'],
+    ['PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION', 'TRUE'],
+    ['PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION', 'yes'],
+    ['NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED', 'true'],
+  ])('treats %s=%s as off: only the documented literal allows the bypass', async (name, value) => {
+    productionServer({ [name]: value });
+    vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', 'true');
+    backendRejectsFakeCookie();
+
+    const { proxy } = await import('@/proxy');
+    const res = await proxy(
+      makeRequest({ meepleai_session: 'fixture-token', meepleai_user_role: 'admin' })
+    );
+
+    expect(res.headers.get('location')).toBe('http://localhost/login?from=%2Fadmin');
+  });
 });
 
 /**

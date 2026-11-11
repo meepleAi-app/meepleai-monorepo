@@ -447,11 +447,17 @@ export async function proxy(request: NextRequest) {
       // NODE_ENV!=='production' or one of the two allow variables above (never
       // set in a deploy environment), so a client-set role cookie can never
       // escalate a real user. Restores admin E2E coverage after the v1
-      // role-cookie sunset
-      // (2026-05-13). See issue #2784.
+      // role-cookie sunset (2026-05-13). See issue #2784.
+      //
+      // Without that cookie the session may be a REAL one (specs that log in
+      // for real): the backend writes only the HMAC v2 role cookie, so ask
+      // /auth/me for the role, exactly as without the bypass. A fake token is
+      // rejected there and keeps the default 'user'. #4980.
       const bypassRole = request.cookies.get(USER_ROLE_COOKIE_V1)?.value;
       if (bypassRole) {
         userRole = bypassRole;
+      } else if (sessionCookieValue && (await isSessionCookieValid(request, sessionCookieValue))) {
+        userRole = getCachedRole(sessionCookieValue) ?? userRole;
       }
     } else if (Date.now() < USER_ROLE_COOKIE_V1_SUNSET) {
       const v1 = request.cookies.get(USER_ROLE_COOKIE_V1)?.value;

@@ -202,7 +202,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/library   # 307 -
 
 Rimedio: liberare la 3000 (`docker stop meepleai-web`) e lasciare che Playwright avvii il suo
 server. In alternativa, aggiungere all'env del container `PLAYWRIGHT_AUTH_BYPASS=true` **e**
-`PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION=true`, poi riavviarlo. La seconda serve perché il container
+`PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION=true`, poi ricrearlo (`docker compose … up -d --force-recreate web`:
+un `docker restart` non rilegge l'env). La seconda serve perché il container
 serve un build di produzione: il controllo su `NODE_ENV` è stato risolto durante il build, e il
 `development` dichiarato a runtime (vedi la nota sopra) non lo riapre. **Non** serve un rebuild: il
 proxy legge entrambe le variabili a runtime.

@@ -161,7 +161,10 @@ export default function LibraryGameDetailPage() {
 
       {/* Mobile layout — replaced by S5 */}
       <div className="lg:hidden">
-        <GameDetailMobile gameId={gameId} />
+        <GameDetailMobile
+          gameId={gameId}
+          deepLinkTab={isGameTabId(tabParam) ? tabParam : undefined}
+        />
       </div>
 
       {/* Desktop layout — S4: GameDetailDesktop with 5 tabs */}

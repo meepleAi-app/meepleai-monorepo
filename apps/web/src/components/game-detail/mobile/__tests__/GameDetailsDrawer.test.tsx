@@ -56,4 +56,30 @@ describe('GameDetailsDrawer', () => {
     );
     expect(screen.getByRole('tab', { name: /partite/i })).toHaveAttribute('aria-selected', 'true');
   });
+
+  // #4992: the drawer stays mounted while closed, and read initialTab only at its first mount, so
+  // reopening it on another tab (the mobile «Chat» button → Agente) still showed the old one.
+  it('reopens on the tab it is given, not on the last one shown', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = (open: boolean, initialTab: 'info' | 'aiChat') => (
+      <QueryClientProvider client={queryClient}>
+        <GameDetailsDrawer
+          open={open}
+          onOpenChange={() => {}}
+          gameId="game-1"
+          initialTab={initialTab}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = rtlRender(ui(true, 'info'));
+    fireEvent.click(screen.getByRole('tab', { name: /partite/i }));
+
+    rerender(ui(false, 'info'));
+    rerender(ui(true, 'aiChat'));
+    expect(screen.getByRole('tab', { name: /agente/i })).toHaveAttribute('aria-selected', 'true');
+
+    rerender(ui(false, 'aiChat'));
+    rerender(ui(true, 'info'));
+    expect(screen.getByRole('tab', { name: /info/i })).toHaveAttribute('aria-selected', 'true');
+  });
 });

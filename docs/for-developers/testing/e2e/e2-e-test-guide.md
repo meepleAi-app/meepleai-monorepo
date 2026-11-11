@@ -201,8 +201,11 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/library   # 307 -
 ```
 
 Rimedio: liberare la 3000 (`docker stop meepleai-web`) e lasciare che Playwright avvii il suo
-server. In alternativa, aggiungere `PLAYWRIGHT_AUTH_BYPASS=true` all'env del container e
-riavviarlo — **non** serve un rebuild, perche' non e' una variabile `NEXT_PUBLIC_*` inlineata.
+server. In alternativa, aggiungere all'env del container `PLAYWRIGHT_AUTH_BYPASS=true` **e**
+`PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION=true`, poi riavviarlo. La seconda serve perché il container
+serve un build di produzione: il controllo su `NODE_ENV` è stato risolto durante il build, e il
+`development` dichiarato a runtime (vedi la nota sopra) non lo riapre. **Non** serve un rebuild: il
+proxy legge entrambe le variabili a runtime.
 
 **(c) `next dev` compila su richiesta e sfonda il timeout dei test.**
 Il timeout locale e' 60 s (`playwright.config.ts`); la prima visita a una rotta in dev mode puo'
@@ -211,43 +214,45 @@ aver renderizzato correttamente la pagina, e sembra un problema a11y o di selett
 
 ```bash
 cd apps/web
-NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1 pnpm build     # una volta
-FORCE_PRODUCTION_SERVER=true npx playwright test <spec> --project=desktop-chrome
+pnpm build     # una volta
+FORCE_PRODUCTION_SERVER=true pnpm exec dotenv -e .env.test -- playwright test <spec> --project=desktop-chrome
 ```
 
-🔴 **E qui c'e' la trappola peggiore: con `FORCE_PRODUCTION_SERVER=true` il bypass di auth e' MORTO,
-e Playwright non te lo dice.**
+🔴 **Con `next start` il bypass di auth vuole una variabile in più.** Fino a #4980 mancava, ed era
+spento in silenzio **anche in CI**: `test-e2e.yml` serve la suite con `next start`, e nello shard 3
+della PR #4897 263 dei 267 rossi erano sul form di login.
 
-`proxy.ts` ammette il bypass se `NODE_ENV !== 'production'` **oppure** se
-`NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1'`. Con `next start` `NODE_ENV` e' `production`,
-quindi il primo ramo si piega a `false` e il bundler lo elimina: nel chunk compilato resta
+`proxy.ts` ammette il bypass se `NODE_ENV !== 'production'`, **oppure** se
+`PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION === 'true'`, **oppure** se
+`NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1'`. Con `next start` `NODE_ENV` è `production`,
+quindi il primo ramo viene eliminato. Nel chunk compilato resta:
 
 ```js
-o = "1" === process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED
+s = ("true" === process.env.PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION || o)
  && "true" === process.env.PLAYWRIGHT_AUTH_BYPASS && !!a;
 ```
 
-Ma il blocco `webServer` di `playwright.config.ts` imposta **solo** `PLAYWRIGHT_AUTH_BYPASS` (e
-`NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED`): **non** il flag visual-test. Quindi la prima condizione
-e' falsa, il bypass non si innesca, e ogni rotta `(authenticated)` redirige — su TUTTA la suite,
-con fallimenti che somigliano a selettori invecchiati.
+Il blocco `webServer` di `playwright.config.ts` imposta `PLAYWRIGHT_AUTH_BYPASS` e
+`PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION`. Quindi un `next start` avviato da Playwright ha il bypass
+come `next dev`, e le pagine non cambiano: il flag visivo, che sostituisce anche i dati con le fixture,
+non serve più a questo scopo.
 
-Il flag va passato **a runtime** al server (nel chunk e' una lettura a runtime, non un valore
-inlineato), quindi basta averlo nell'ambiente da cui lanci Playwright:
-
-```bash
-NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1 FORCE_PRODUCTION_SERVER=true \
-  pnpm exec dotenv -e .env.test -- playwright test <spec> --project=desktop-chrome
-```
+⚠️ **Quando una `NEXT_PUBLIC_*` viene inlineata.** Misurato il 2026-11-11 su questa versione di Next:
+una variabile **definita** durante `next build` diventa una costante. Vale anche quando la definisce
+`.env.local`: per esempio `NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=true` sparisce dal build. Una
+variabile **non definita** resta `process.env.…` e viene letta a runtime. Due conseguenze:
+- il flag passato dal `webServer` a un server già costruito vale solo se il build non l'aveva definito;
+- un build di deploy non elimina il ramo del bypass. Ciò che lo tiene spento è che l'ambiente del
+  deploy non imposta né `PLAYWRIGHT_AUTH_BYPASS` né una delle due variabili che lo ammettono.
 
 Verifica in un colpo, senza passare da Playwright:
 
 ```bash
-# server avviato con ENTRAMBE le variabili
+# server avviato con PLAYWRIGHT_AUTH_BYPASS=true e PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION=true
 curl -s -o /dev/null -w '%{http_code}\n' \
   -H 'Cookie: meepleai_session=playwright-fixture-session-token; meepleai_user_role=admin' \
   http://localhost:3000/library
-# 200 = bypass attivo | 307 = bypass morto
+# 200 = bypass attivo | 307 = bypass spento
 ```
 
 ⚠️ Quando ripeti questa sonda, **accertati che il server vecchio sia morto**: `pkill` puo' non

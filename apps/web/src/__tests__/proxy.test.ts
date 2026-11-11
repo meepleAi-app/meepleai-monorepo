@@ -133,6 +133,111 @@ describe('proxy() admin-role resolution under the E2E auth bypass (#2784)', () =
 });
 
 /**
+ * #4980 — `test-e2e.yml` serves the suite with `next start`, where NODE_ENV is 'production', so
+ * the bypass stayed off and every spec that seeds a fake session cookie landed on /login (263 of
+ * the 267 failures in shard 3 of PR #4897). Under NODE_ENV=production the bypass is allowed only
+ * when an allow variable says so — read at runtime, see the comment in proxy.ts. These tests pin
+ * both directions for each allow variable: it opens the bypass, and nothing else does.
+ */
+describe('proxy() — what allows the E2E auth bypass under NODE_ENV=production (#4980)', () => {
+  const ALLOW_VARS = [
+    ['PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION', 'true'],
+    ['NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED (#960)', '1'],
+  ] as const;
+  const allowVarName = (label: string) => label.split(' ')[0];
+
+  /** /auth/me as a real backend answers a fake cookie: 401. */
+  function backendRejectsFakeCookie() {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) });
+    vi.stubGlobal('fetch', mockFetch);
+    return mockFetch;
+  }
+
+  /** A `next start` server: NODE_ENV=production, and only the given allow variable set. */
+  function productionServer(allow: Record<string, string> = {}) {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('API_BASE_URL', 'http://api:8080');
+    for (const [label] of ALLOW_VARS) vi.stubEnv(allowVarName(label), '');
+    for (const [name, value] of Object.entries(allow)) vi.stubEnv(name, value);
+  }
+
+  beforeEach(() => {
+    vi.resetModules();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it.each(ALLOW_VARS)(
+    'with %s=%s, trusts the fake cookie and its admin role without asking the backend',
+    async (label, value) => {
+      productionServer({ [allowVarName(label)]: value });
+      vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', 'true');
+      const mockFetch = backendRejectsFakeCookie();
+
+      const { proxy } = await import('@/proxy');
+      const res = await proxy(
+        makeRequest({ meepleai_session: 'fixture-token', meepleai_user_role: 'admin' })
+      );
+
+      expect(wasAllowed(res)).toBe(true);
+      expect(mockFetch).not.toHaveBeenCalled();
+    }
+  );
+
+  it('without an allow variable, sends the fake cookie to the backend and redirects to /login', async () => {
+    productionServer();
+    vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', 'true');
+    const mockFetch = backendRejectsFakeCookie();
+
+    const { proxy } = await import('@/proxy');
+    const res = await proxy(
+      makeRequest({ meepleai_session: 'fixture-token', meepleai_user_role: 'admin' })
+    );
+
+    expect(res.headers.get('location')).toBe('http://localhost/login?from=%2Fadmin');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(ALLOW_VARS)(
+    'with %s=%s but without PLAYWRIGHT_AUTH_BYPASS, still validates against the backend',
+    async (label, value) => {
+      productionServer({ [allowVarName(label)]: value });
+      vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', '');
+      const mockFetch = backendRejectsFakeCookie();
+
+      const { proxy } = await import('@/proxy');
+      const res = await proxy(
+        makeRequest({ meepleai_session: 'fixture-token', meepleai_user_role: 'admin' })
+      );
+
+      expect(res.headers.get('location')).toBe('http://localhost/login?from=%2Fadmin');
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(['1', 'TRUE', 'yes'])(
+    'treats PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION=%s as off: only the literal "true" allows it',
+    async value => {
+      productionServer({ PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION: value });
+      vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', 'true');
+      backendRejectsFakeCookie();
+
+      const { proxy } = await import('@/proxy');
+      const res = await proxy(
+        makeRequest({ meepleai_session: 'fixture-token', meepleai_user_role: 'admin' })
+      );
+
+      expect(res.headers.get('location')).toBe('http://localhost/login?from=%2Fadmin');
+    }
+  );
+});
+
+/**
  * #3498 — this middleware emits its own CSP alongside the one from next.config.js, and a browser
  * enforces the INTERSECTION of every policy it receives. The cover R2-strict E2E burned a full CI
  * run on exactly that: next.config.js had already been widened, this header had not, so the MinIO

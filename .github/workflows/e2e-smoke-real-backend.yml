@@ -45,12 +45,11 @@ jobs:
           NEXT_PUBLIC_HYPERDX_API_KEY=demo
           # #960 H4 step 4 (true root cause): smoke specs hit `(authenticated)`
           # routes (/agents/[id], /games/[id], /players/[id], /library/games/[id]).
-          # apps/web/src/proxy.ts:386 trusts session cookies WITHOUT backend
-          # validation only when PLAYWRIGHT_AUTH_BYPASS=true AND the bypass is
-          # ALLOWED. The allow flag is `NODE_ENV !== 'production' || isVisualTestBuild`.
-          # Since NODE_ENV=production above, we need NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1
-          # so the bypass branch is alive in the production build (NEXT_PUBLIC_*
-          # is inlined at build time and would otherwise be dead-code-eliminated).
+          # `isAuthBypassAllowed` in apps/web/src/proxy.ts trusts session cookies
+          # WITHOUT backend validation only when PLAYWRIGHT_AUTH_BYPASS=true AND the
+          # bypass is ALLOWED. Since NODE_ENV=production above, the allow comes from
+          # NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1. The image is built without it,
+          # so the compiled proxy reads it at RUNTIME from this env file (#4980).
           # Without this, the 6 detail-page specs that DON'T call smokeLogin
           # never reach their not-found shell — the proxy redirects to /login.
           PLAYWRIGHT_AUTH_BYPASS=true

@@ -320,3 +320,93 @@ describe('proxy() CSP img-src — MinIO presign opt-in (#3498)', () => {
     expect(await imgSrcDirective(value)).toBe("img-src 'self' data: https:");
   });
 });
+
+// #4985: an unverified user past the grace period logged in (200), /auth/me answered 403 with the
+// reason, and the proxy read it as "no session": back to /login with no message. The login button
+// looked dead.
+describe('proxy() — session blocked by email verification (#4985)', () => {
+  const LIBRARY_URL = 'http://localhost/library';
+  const EMAIL = 'test@meepleai.com';
+
+  function libraryRequest(): NextRequest {
+    return new NextRequest(LIBRARY_URL, { headers: { cookie: 'meepleai_session=real-token' } });
+  }
+
+  function meAnswers(...responses: Array<{ status: number; body: unknown }>) {
+    const mockFetch = vi.fn();
+    for (const { status, body } of responses) {
+      mockFetch.mockResolvedValueOnce({
+        ok: status >= 200 && status < 300,
+        status,
+        json: async () => body,
+      });
+    }
+    vi.stubGlobal('fetch', mockFetch);
+    return mockFetch;
+  }
+
+  const verificationRequired = {
+    status: 403,
+    body: {
+      error: 'Email verification required',
+      message: 'Please verify your email address to access this feature.',
+      verificationStatus: {
+        isVerified: false,
+        emailAddress: EMAIL,
+        gracePeriodEnded: null,
+        resendEndpoint: '/api/v1/auth/email/resend',
+      },
+    },
+  };
+
+  beforeEach(() => {
+    vi.resetModules();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', '');
+    vi.stubEnv('NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED', '');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('sends the user to /verification-pending with their email, not to /login', async () => {
+    meAnswers(verificationRequired);
+
+    const { proxy } = await import('@/proxy');
+    const res = await proxy(libraryRequest());
+
+    expect(res.headers.get('location')).toBe(
+      `http://localhost/verification-pending?email=${encodeURIComponent(EMAIL)}`
+    );
+  });
+
+  it('does not cache the blocked state: once verified, the next request goes through', async () => {
+    const mockFetch = meAnswers(verificationRequired, {
+      status: 200,
+      body: { user: { id: 'u1', email: EMAIL, role: 'user' } },
+    });
+
+    const { proxy } = await import('@/proxy');
+    await proxy(libraryRequest());
+    const res = await proxy(libraryRequest());
+
+    expect(res.headers.get('location')).toBeNull();
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['a 401', { status: 401, body: {} }],
+    ['a 403 without verificationStatus', { status: 403, body: { error: 'Forbidden' } }],
+  ])('keeps sending %s to /login', async (_label, response) => {
+    meAnswers(response);
+
+    const { proxy } = await import('@/proxy');
+    const res = await proxy(libraryRequest());
+
+    expect(res.headers.get('location')).toBe('http://localhost/login?from=%2Flibrary');
+  });
+});

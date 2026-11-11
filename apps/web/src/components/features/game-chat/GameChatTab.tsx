@@ -40,8 +40,11 @@ import {
   type SuggestedPrompt,
 } from '@/components/features/game-chat/SuggestedPrompts';
 import { TypingIndicator } from '@/components/features/game-chat/TypingIndicator';
+import { MarkdownRenderBlock } from '@/components/features/knowledge-base/MarkdownRenderBlock';
 import { useGameChat, type ChatMessage } from '@/hooks/queries/useGameChat';
 import type { Citation } from '@/types';
+
+import type { Components } from 'react-markdown';
 
 export interface GameChatTabProps {
   readonly gameId: string;
@@ -67,6 +70,20 @@ function AnswerNotice({
     </div>
   );
 }
+
+/**
+ * #4988: the answer is model output, fed by user-uploaded rulebooks. A Markdown image would make the
+ * browser request any https URL the text names, with no click (img-src allows https:): it shows its
+ * alt text instead. Links open in a new tab without referrer or opener.
+ */
+const AGENT_ANSWER_COMPONENTS: Components = {
+  img: ({ alt }) => <span>{alt}</span>,
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer nofollow">
+      {children}
+    </a>
+  ),
+};
 
 const AGENT_AVATAR: Record<AgentKind, string> = { tutor: '🧙', arbitro: '⚖️' };
 const AGENT_NAME: Record<AgentKind, string> = { tutor: 'Tutor', arbitro: 'Arbitro' };
@@ -222,7 +239,23 @@ export function GameChatTab({
                       // Quando isLowQuality === true, il content della risposta è
                       // mostrato dentro il LowConfidenceDisclaimer come summary —
                       // sopprimiamo qui per evitare duplicazione UX.
-                      content={msg.isLowQuality ? '' : msg.content}
+                      // #4988: il Tutor risponde in Markdown (grassetto, elenchi); senza rendering
+                      // si vedevano gli asterischi e l'elenco schiacciato in un paragrafo. Il testo
+                      // dell'utente resta testo semplice.
+                      content={
+                        msg.isLowQuality ? (
+                          ''
+                        ) : (
+                          // The prose-* classes of MarkdownRenderBlock need @tailwindcss/typography,
+                          // which the app does not load: the preflight reset leaves lists with
+                          // no markers and no indent, so the chat states them explicitly.
+                          <MarkdownRenderBlock
+                            content={msg.content}
+                            components={AGENT_ANSWER_COMPONENTS}
+                            className="text-base leading-relaxed [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&>:first-child]:mt-0 [&>:last-child]:mb-0"
+                          />
+                        )
+                      }
                       agentName={AGENT_NAME[chat.currentAgent]}
                       avatar={AGENT_AVATAR[chat.currentAgent]}
                       isHistorical={msg.isHistorical}

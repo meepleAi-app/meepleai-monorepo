@@ -40,6 +40,7 @@ import {
   type SuggestedPrompt,
 } from '@/components/features/game-chat/SuggestedPrompts';
 import { TypingIndicator } from '@/components/features/game-chat/TypingIndicator';
+import { MarkdownRenderBlock } from '@/components/features/knowledge-base/MarkdownRenderBlock';
 import { useGameChat, type ChatMessage } from '@/hooks/queries/useGameChat';
 import type { Citation } from '@/types';
 
@@ -222,7 +223,19 @@ export function GameChatTab({
                       // Quando isLowQuality === true, il content della risposta è
                       // mostrato dentro il LowConfidenceDisclaimer come summary —
                       // sopprimiamo qui per evitare duplicazione UX.
-                      content={msg.isLowQuality ? '' : msg.content}
+                      // #4988: il Tutor risponde in Markdown (grassetto, elenchi); senza rendering
+                      // si vedevano gli asterischi e l'elenco schiacciato in un paragrafo. Il testo
+                      // dell'utente resta testo semplice.
+                      content={
+                        msg.isLowQuality ? (
+                          ''
+                        ) : (
+                          <MarkdownRenderBlock
+                            content={msg.content}
+                            className="text-base leading-relaxed [&>:first-child]:mt-0 [&>:last-child]:mb-0"
+                          />
+                        )
+                      }
                       agentName={AGENT_NAME[chat.currentAgent]}
                       avatar={AGENT_AVATAR[chat.currentAgent]}
                       isHistorical={msg.isHistorical}

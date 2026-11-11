@@ -379,4 +379,64 @@ describe('GameChatTab', () => {
       }
     });
   });
+
+  // #4988: il Tutor risponde in Markdown, e la bolla lo mostrava come testo (asterischi letterali,
+  // elenco schiacciato in un paragrafo).
+  describe('Markdown nelle risposte', () => {
+    function answer(text: string) {
+      return mockStream([
+        { type: 7, data: text },
+        { type: 4, data: { confidence: 0.92, Citations: [sampleCitation] } },
+      ]);
+    }
+
+    function send(question: string) {
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: question } });
+      fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+    }
+
+    function agentBubble(): HTMLElement {
+      const bubble = screen
+        .getAllByTestId('chat-bubble')
+        .find(b => b.getAttribute('data-role') === 'agent');
+      if (!bubble) throw new Error('no agent bubble');
+      return bubble;
+    }
+
+    it('rende grassetto ed elenco nella risposta del Tutor', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        answer(
+          '- Prendi **tutti** i cammelli.\n- Non puoi prendere merci e cammelli insieme.'
+        ) as any
+      );
+      render(<GameChatTab gameId="jaipur" />);
+      send('quanti cammelli?');
+
+      await waitFor(() => expect(agentBubble().querySelector('strong')).not.toBeNull());
+      const bubble = agentBubble();
+      expect(bubble.querySelector('strong')).toHaveTextContent('tutti');
+      expect(bubble.querySelectorAll('li')).toHaveLength(2);
+      expect(bubble).not.toHaveTextContent('**');
+    });
+
+    it('lascia il messaggio dell’utente come testo semplice', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(answer('ok') as any);
+      render(<GameChatTab gameId="jaipur" />);
+      send('posso **pescare** due volte?');
+
+      const userBubble = await screen.findByText('posso **pescare** due volte?');
+      expect(userBubble.closest('[data-role="user"]')?.querySelector('strong')).toBeNull();
+    });
+
+    it('non interpreta l’HTML nella risposta del Tutor', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        answer('Vedi <img src="x" alt="iniettata"> la pagina 3.') as any
+      );
+      render(<GameChatTab gameId="jaipur" />);
+      send('pagina?');
+
+      await waitFor(() => expect(agentBubble()).toHaveTextContent(/la pagina 3/));
+      expect(agentBubble().querySelector('img')).toBeNull();
+    });
+  });
 });

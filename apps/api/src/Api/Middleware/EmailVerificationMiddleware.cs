@@ -29,6 +29,7 @@ internal class EmailVerificationMiddleware
     private static readonly HashSet<string> ExemptPaths = new(StringComparer.OrdinalIgnoreCase)
     {
         "/api/v1/auth/login",
+        "/api/v1/auth/logout",             // #4985: a blocked user must be able to end their session
         "/api/v1/auth/register",
         "/api/v1/auth/verify-email",
         "/api/v1/auth/resend-verification",

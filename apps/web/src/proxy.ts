@@ -119,13 +119,44 @@ function getCachedRole(cookieValue: string | undefined | null): string | null {
   return null;
 }
 
+/**
+ * #4985: the email to send the user to /verification-pending with, when /auth/me refused the
+ * session only because the email is not verified (403 with `verificationStatus`). Any other refusal
+ * yields null and keeps meaning "no session".
+ */
+async function readVerificationEmail(response: Response): Promise<string | null> {
+  if (response.status !== 403) return null;
+  try {
+    const payload = (await response.json()) as {
+      verificationStatus?: { emailAddress?: unknown };
+    };
+    const email = payload?.verificationStatus?.emailAddress;
+    return typeof email === 'string' && email.length > 0 ? email : null;
+  } catch {
+    return null;
+  }
+}
+
+type SessionValidation = {
+  valid: boolean;
+  /** Set when the session is real but blocked by email verification (#4985). */
+  verificationEmail: string | null;
+};
+
 async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
+  return (await validateSessionCookie(request, cookieValue)).valid;
+}
+
+async function validateSessionCookie(
+  request: NextRequest,
+  cookieValue: string
+): Promise<SessionValidation> {
   const cached = sessionValidationCache.get(cookieValue);
   if (cached && cached.expiresAt > Date.now()) {
     // Metrics: Cache hit
     metrics.recordCacheHit();
 
-    return cached.valid;
+    return { valid: cached.valid, verificationEmail: null };
   }
 
   // Metrics: Cache miss
@@ -134,7 +165,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) {
     cacheSessionValidation(cookieValue, false);
-    return false;
+    return { valid: false, verificationEmail: null };
   }
 
   try {
@@ -181,8 +212,15 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
         }
       }
 
+      // #4985: a session blocked only by email verification is not cached. The user is about to
+      // verify; a cached "invalid" would keep sending them back for the cache lifetime.
+      const verificationEmail = response.ok ? null : await readVerificationEmail(response);
+      if (verificationEmail) {
+        return { valid: false, verificationEmail };
+      }
+
       cacheSessionValidation(cookieValue, response.ok, role);
-      return response.ok;
+      return { valid: response.ok, verificationEmail: null };
     } catch (fetchError) {
       clearTimeout(timeoutId);
 
@@ -196,12 +234,12 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
       }
 
       cacheSessionValidation(cookieValue, false);
-      return false;
+      return { valid: false, verificationEmail: null };
     }
   } catch (error) {
     console.error('[proxy] Failed to validate session cookie:', error);
     cacheSessionValidation(cookieValue, false);
-    return false;
+    return { valid: false, verificationEmail: null };
   }
 }
 
@@ -419,10 +457,13 @@ export async function proxy(request: NextRequest) {
     isAuthBypassAllowed &&
     process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' &&
     Boolean(sessionCookieValue);
+  let verificationEmail: string | null = null;
   if (isAuthBypassEngaged) {
     isAuthenticated = true;
   } else if (sessionCookieValue) {
-    isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
+    const validation = await validateSessionCookie(request, sessionCookieValue);
+    isAuthenticated = validation.valid;
+    verificationEmail = validation.verificationEmail;
   }
 
   // Check user role (only trusted when we know the session is valid).
@@ -485,6 +526,15 @@ export async function proxy(request: NextRequest) {
   const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some(route => pathname === route);
   const isAdminRoute = isAdminPath(pathname);
   const isHomePage = pathname === '/';
+
+  // #4985: a real session refused only for the unverified email goes to the page that explains it
+  // and resends the mail, not back to an empty login form.
+  if (isProtectedRoute && !isAuthenticated && verificationEmail) {
+    const pendingUrl = new URL('/verification-pending', request.url);
+    pendingUrl.searchParams.set('email', verificationEmail);
+    const response = NextResponse.redirect(pendingUrl);
+    return addSecurityHeaders(response, requestOrigin);
+  }
 
   // Redirect unauthenticated users from protected routes to login
   if (isProtectedRoute && !isAuthenticated) {

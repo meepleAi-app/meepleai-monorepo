@@ -301,7 +301,6 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameNightPhotoEntity> GameNightPhotos => Set<GameNightPhotoEntity>(); // ISSUE-2724: Recap photo gallery
     public DbSet<GameNightInvitationEntity> GameNightInvitations => Set<GameNightInvitationEntity>(); // ISSUE-607: Token-based public RSVP invitations
     public DbSet<GameNightGuestEmailOptOutEntity> GameNightGuestEmailOptOuts => Set<GameNightGuestEmailOptOutEntity>(); // #4846: guest addresses that asked to stop game night emails
-    public DbSet<RuleDisputeEntity> RuleDisputes => Set<RuleDisputeEntity>(); // Retired dispute v2 (#4936): kept mapped until DROP TABLE (#4960)
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity> GameMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity>(); // AgentMemory: per-game memory
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity> GroupMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity>(); // AgentMemory: play group memory
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity> PlayerMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity>(); // AgentMemory: player statistics

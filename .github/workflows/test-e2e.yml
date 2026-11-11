@@ -209,7 +209,9 @@ jobs:
         working-directory: apps/web
         run: pnpm test:e2e:shard${{ matrix.shard }}
         env:
-          # Let Playwright manage the Next.js server (uses next start in CI)
+          # Let Playwright manage the Next.js server (uses next start in CI).
+          # Under next start the auth bypass needs PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION,
+          # set by the webServer env in playwright.config.ts (#4980).
           FORCE_PRODUCTION_SERVER: 'true'
 
       # ===== Cleanup =====
@@ -549,7 +551,9 @@ jobs:
         working-directory: apps/web
         run: pnpm test:e2e --project=${{ matrix.project }}
         env:
-          # Let Playwright manage the Next.js server (uses next start in CI)
+          # Let Playwright manage the Next.js server (uses next start in CI).
+          # Under next start the auth bypass needs PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION,
+          # set by the webServer env in playwright.config.ts (#4980).
           FORCE_PRODUCTION_SERVER: 'true'
 
       # ===== Cleanup =====

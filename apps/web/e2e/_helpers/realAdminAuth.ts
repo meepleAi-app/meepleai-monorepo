@@ -4,7 +4,7 @@
  * **Perché esiste, accanto a `seedAuthSession` e a `fixtures/auth.ts`.**
  * `proxy.ts` rimanda al login chi non ha una sessione valida. Le due strade esistenti per
  * aggirarlo nei test dipendono entrambe da `PLAYWRIGHT_AUTH_BYPASS=true`, che **solo il
- * webServer di `playwright.config.ts` imposta** (riga 368): `seedAuthSession` mette cookie
+ * webServer di `playwright.config.ts` imposta** (blocco `env`): `seedAuthSession` mette cookie
  * finti che il proxy accetta *soltanto* sotto bypass, e `loginAsAdmin` di `fixtures/auth.ts`
  * è un mock di `page.route()` con lo stesso vincolo. Contro un server avviato in altro modo
  * — un container locale, `next start` a mano — il bypass non c'è, il token finto viene

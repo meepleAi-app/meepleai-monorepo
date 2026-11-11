@@ -383,28 +383,38 @@ export async function proxy(request: NextRequest) {
   let isAuthenticated = false;
 
   // ============================================================================
-  // E2E Test Auth Bypass (development + visual-regression CI builds)
+  // E2E Test Auth Bypass
   // ============================================================================
   // When PLAYWRIGHT_AUTH_BYPASS=true, trust session cookies without server-side
   // backend validation. Allows Playwright E2E tests to mock auth at the browser
   // level via page.route() without needing a running backend.
   //
-  // Safety guards (any one MUST pass to engage the bypass):
-  //   1. NODE_ENV !== 'production' — local dev / CI verify against dev server.
-  //   2. NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1' — set by the
-  //      `visual-regression-migrated.yml` workflow before `pnpm build`. This
-  //      env var is inlined at build time; production deploys never set it,
-  //      so the bypass branch is dead-code-eliminated by the bundler in real
-  //      production builds. (Wave B.1 lesson learned, Issue #633: brownfield
-  //      `(authenticated)` routes need the bypass to engage even in prod-mode
-  //      visual regression builds.)
+  // Any one of these allows it. Under `next start` and the Docker images NODE_ENV
+  // is 'production', so there only guard 2 or 3 can:
+  //   1. NODE_ENV !== 'production' — `next dev`, the server of local E2E runs.
+  //   2. PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION === 'true' — set next to
+  //      PLAYWRIGHT_AUTH_BYPASS by the `webServer` env in playwright.config.ts, so
+  //      a Playwright-managed `next start` (test-e2e.yml, FORCE_PRODUCTION_SERVER)
+  //      sees the same pages as `next dev` (#4980).
+  //   3. NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1' — used for this purpose by
+  //      `e2e-smoke-real-backend.yml` (#960) and `e2e-cover-r2-strict.yml`. It ALSO
+  //      swaps page data for visual fixtures. (Wave B.1, Issue #633.)
   //
-  // The bypass also requires PLAYWRIGHT_AUTH_BYPASS=true (set by playwright.config.ts
-  // webServer at line 434) AND a session cookie present (seeded by spec helper
-  // `seedAuthSession.ts`). Cannot activate in real production deploys because
-  // PLAYWRIGHT_AUTH_BYPASS is never set there.
+  // ⚠️ Guards 2 and 3 are read at RUNTIME, not inlined. A NEXT_PUBLIC_* value is
+  // constant-folded only when it is defined during `next build`; deploy builds do
+  // not define it, so the compiled proxy keeps `process.env.…` and reads it from the
+  // server's environment (checked in the built chunk, #4980).
+  // `e2e-smoke-real-backend.yml` relies on exactly that: its image is built without
+  // the flag and gets it from the container env. What keeps the bypass off in a deploy is
+  // that its environment sets neither PLAYWRIGHT_AUTH_BYPASS nor guard 2 or 3 — it
+  // takes TWO stray variables to open it, never one.
+  //
+  // The bypass also requires a session cookie (seeded by the E2E auth helpers, e.g.
+  // `seedMockRoleCookies`).
   const isVisualTestBuild = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1';
-  const isAuthBypassAllowed = process.env.NODE_ENV !== 'production' || isVisualTestBuild;
+  const isProductionBypassAllowed = process.env.PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION === 'true';
+  const isAuthBypassAllowed =
+    process.env.NODE_ENV !== 'production' || isProductionBypassAllowed || isVisualTestBuild;
   const isAuthBypassEngaged =
     isAuthBypassAllowed &&
     process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' &&
@@ -434,13 +444,20 @@ export async function proxy(request: NextRequest) {
       // Resolve the role from the plaintext meepleai_user_role cookie seeded by
       // the E2E auth helpers instead. Unreachable in production: the bypass
       // requires PLAYWRIGHT_AUTH_BYPASS (never set in prod) AND either
-      // NODE_ENV!=='production' or the visual-test flag (dead-code-eliminated in
-      // real prod builds), so a client-set role cookie can never escalate a real
-      // user. Restores admin E2E coverage after the v1 role-cookie sunset
-      // (2026-05-13). See issue #2784.
+      // NODE_ENV!=='production' or one of the two allow variables above (never
+      // set in a deploy environment), so a client-set role cookie can never
+      // escalate a real user. Restores admin E2E coverage after the v1
+      // role-cookie sunset (2026-05-13). See issue #2784.
+      //
+      // Without that cookie the session may be a REAL one (specs that log in
+      // for real): the backend writes only the HMAC v2 role cookie, so ask
+      // /auth/me for the role, exactly as without the bypass. A fake token is
+      // rejected there and keeps the default 'user'. #4980.
       const bypassRole = request.cookies.get(USER_ROLE_COOKIE_V1)?.value;
       if (bypassRole) {
         userRole = bypassRole;
+      } else if (sessionCookieValue && (await isSessionCookieValid(request, sessionCookieValue))) {
+        userRole = getCachedRole(sessionCookieValue) ?? userRole;
       }
     } else if (Date.now() < USER_ROLE_COOKIE_V1_SUNSET) {
       const v1 = request.cookies.get(USER_ROLE_COOKIE_V1)?.value;

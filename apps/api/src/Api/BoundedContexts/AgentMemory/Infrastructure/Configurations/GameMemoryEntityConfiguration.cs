@@ -36,13 +36,6 @@ internal sealed class GameMemoryEntityConfiguration : IEntityTypeConfiguration<G
         builder.Property(e => e.UpdatedAt)
             .HasColumnName("updated_at");
 
-        // Issue #1939 / CF-3 — idempotency guard of the dispute-override handler, retired with the structured
-        // dispute v2 (#4936). Out of the aggregate and the entity since #4960, kept here as a nullable shadow
-        // property so that the schema does not change: the release before it still maps the column, and dropping
-        // it now would break every read of that release on the new schema. The DROP COLUMN is #4973.
-        builder.Property<Guid?>("LastProcessedEventId")
-            .HasColumnName("last_processed_event_id");
-
         // --- JSON Columns ---
 
         builder.Property(e => e.HouseRulesJson)

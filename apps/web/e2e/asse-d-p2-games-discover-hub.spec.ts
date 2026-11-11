@@ -49,11 +49,13 @@ test.describe('Asse D P2 /games hub multi-tab', () => {
     await expect(hub).toHaveAttribute('data-active-tab', 'discover');
   });
 
-  test('/games?tab=catalogo renders Catalogo placeholder', async ({ page }) => {
+  // #4990: the Catalogo tab is the live shared catalog, no longer a placeholder.
+  test('/games?tab=catalogo renders the catalog', async ({ page }) => {
     await page.goto('/games?tab=catalogo');
 
-    const placeholder = page.locator('[data-testid="games-tab-catalogo-coming-soon"]');
-    await expect(placeholder).toBeVisible({ timeout: 10_000 });
+    const catalog = page.locator('[data-testid="games-tab-catalogo"]');
+    await expect(catalog).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="games-tab-catalogo-coming-soon"]')).toHaveCount(0);
   });
 
   test('/games?tab=trending renders Trending placeholder', async ({ page }) => {

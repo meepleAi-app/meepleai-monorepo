@@ -17,6 +17,7 @@ import { Divider } from '@/components/ui/divider';
 import { OAuthButton } from '@/components/ui/oauth-buttons';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
+import { loginErrorKey } from '@/lib/auth/login-errors';
 import { logger } from '@/lib/logger';
 import { assertSafeRelativeOrFallback } from '@/lib/url-safety';
 
@@ -126,8 +127,8 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
       } catch (err) {
         // #4134: un errore che arriva a pagina smontata non ha più nessuno a cui mostrarsi.
         if (isMountedRef.current) {
-          const errorMessage = err instanceof Error ? err.message : t('auth.login.genericError');
-          setError(errorMessage);
+          // #4991: the message comes from the response code, never from the server's sentence.
+          setError(t(loginErrorKey(err)));
         }
         // Issue #2171: HttpClient already calls logApiError on failed responses
         // (apps/web/src/lib/api/core/httpClient.ts) → re-logging here produced

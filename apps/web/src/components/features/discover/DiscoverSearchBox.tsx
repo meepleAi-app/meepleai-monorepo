@@ -19,6 +19,11 @@ export interface DiscoverSearchBoxProps {
   readonly disabledTooltip?: string;
   /** Called when disabled input receives focus (telemetry hook). */
   readonly onDisabledFocus?: () => void;
+  /**
+   * #4990: when false, only Enter commits. For a commit that leaves the page (the Games hub sends
+   * the query to the Catalogo tab), where a pause mid-word must not navigate away. Default true.
+   */
+  readonly commitOnIdle?: boolean;
 }
 
 const DEBOUNCE_MS = 300;
@@ -37,6 +42,7 @@ export function DiscoverSearchBox({
   disabled = false,
   disabledTooltip,
   onDisabledFocus,
+  commitOnIdle = true,
 }: DiscoverSearchBoxProps) {
   const [draft, setDraft] = useState(value);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,9 +74,9 @@ export function DiscoverSearchBox({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const next = event.target.value;
       setDraft(next);
-      if (!disabled) scheduleCommit(next);
+      if (!disabled && commitOnIdle) scheduleCommit(next);
     },
-    [disabled, scheduleCommit]
+    [commitOnIdle, disabled, scheduleCommit]
   );
 
   const handleKeyDown = useCallback(

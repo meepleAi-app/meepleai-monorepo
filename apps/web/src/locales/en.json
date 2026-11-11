@@ -125,6 +125,11 @@
     "login": {
       "emailLabel": "Email",
       "emailPlaceholder": "you@example.com",
+      "errors": {
+        "invalidCredentials": "Incorrect email or password.",
+        "accountLocked": "Too many failed attempts: the account is locked for a few minutes. Try again later.",
+        "accountUnavailable": "This account is not active. If you think this is a mistake, contact support."
+      },
       "forgotPassword": "Forgot password?",
       "genericError": "Login failed. Please try again.",
       "loadingMessage": "Loading...",
@@ -1764,6 +1769,12 @@
       }
     },
     "games": {
+      "catalog": {
+        "error": "Could not load the catalog.",
+        "loading": "Loading the catalog…",
+        "noResults": "No games found for “{query}”.",
+        "searchPlaceholder": "Search a game…"
+      },
       "library": {
         "metadata": {
           "title": "My games — MeepleAI",
@@ -2438,8 +2449,7 @@
         "subtitle": "Explore games, agents, toolkits, KBs, and contributors. Filter by entity or search the catalog."
       },
       "search": {
-        "placeholder": "Search games, agents, toolkits…",
-        "disabledTooltip": "Search is not available yet"
+        "placeholder": "Search a game in the catalog…"
       },
       "filters": {
         "ariaLabel": "Filter by entity",

@@ -10,7 +10,7 @@
  *
  * Tabs:
  *  - `discover` (default) — Discover surface (`DiscoverHub` component).
- *  - `catalogo` — Catalog browser (placeholder MVP — Coming Soon).
+ *  - `catalogo` — Catalog browser: the shared catalog, searchable and paginated (#4990).
  *  - `trending` — Trending games (placeholder MVP — Coming Soon).
  *  - `community` — Community games (placeholder MVP — Coming Soon).
  *
@@ -34,6 +34,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 import { DiscoverHub } from '@/components/features/discover/DiscoverHub';
+import { CatalogTabContent } from '@/components/features/games/CatalogTabContent';
 import { TrendingTabContent } from '@/components/features/games/TrendingTabContent';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
@@ -110,11 +111,12 @@ function GamesHubContent() {
   return (
     <div data-testid="games-hub" data-slot="games-hub" data-active-tab={activeTab}>
       {activeTab === 'discover' && <DiscoverHub pathnameOverride="/games" />}
-      {activeTab === 'catalogo' && <ComingSoonTab label={TAB_LABEL.catalogo} />}
+      {/* #4990: the shared catalog, searchable (?q=) and paginated. */}
+      {activeTab === 'catalogo' && <CatalogTabContent />}
       {/* Issue #2191: Trending tab is now wired to the live
           /api/v1/catalog/trending endpoint (BE already shipped — the Discover
           hub Row 1 has been consuming it since Asse D follow-up P2). The
-          Catalogo/Community placeholders remain ComingSoonTab. */}
+          Community placeholder remains ComingSoonTab. */}
       {activeTab === 'trending' && <TrendingTabContent />}
       {activeTab === 'community' && <ComingSoonTab label={TAB_LABEL.community} />}
     </div>

@@ -51,6 +51,32 @@ describe('DiscoverSearchBox', () => {
     expect(screen.getByRole('searchbox')).toHaveValue('Wingspan');
   });
 
+  // #4990: in the Games hub a commit leaves the page for the Catalogo tab, so it must wait for
+  // Enter — a pause mid-word must not navigate away.
+  it('with commitOnIdle={false} commits on Enter only, never on a pause', () => {
+    vi.useFakeTimers();
+    try {
+      const onCommit = vi.fn();
+      render(
+        <DiscoverSearchBox
+          value=""
+          onCommit={onCommit}
+          placeholder="Cerca..."
+          commitOnIdle={false}
+        />
+      );
+      const input = screen.getByRole('searchbox');
+      fireEvent.change(input, { target: { value: 'Jai' } });
+      vi.advanceTimersByTime(1000);
+      expect(onCommit).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(onCommit).toHaveBeenCalledWith('Jai');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('calls onCommit immediately when Enter is pressed (enabled)', () => {
     const onCommit = vi.fn();
     render(<DiscoverSearchBox value="" onCommit={onCommit} placeholder="Cerca..." />);

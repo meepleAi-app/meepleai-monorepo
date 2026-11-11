@@ -10,7 +10,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -27,9 +27,22 @@ import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 
 export interface GameDetailMobileProps {
   gameId: string;
+  /**
+   * #4992: the tab of a `?tab=` deep link (the /agent redirect and chat notifications point at
+   * `?tab=aiChat`). Opens the drawer on it once, at mount, and only below lg.
+   */
+  deepLinkTab?: GameTabId;
 }
 
-export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
+// Both layouts are mounted and CSS hides one, but the drawer renders in a portal: opened at
+// desktop width it would cover the desktop page.
+const DESKTOP_QUERY = '(min-width: 1024px)';
+
+function isDesktopViewport(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia(DESKTOP_QUERY).matches;
+}
+
+export default function GameDetailMobile({ gameId, deepLinkTab }: GameDetailMobileProps) {
   const router = useRouter();
   const { data: game, isLoading, error } = useLibraryGameDetail(gameId);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -37,10 +50,19 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
   const [sessionSheetOpen, setSessionSheetOpen] = useState(false);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
 
-  const handleOpenDrawer = () => {
-    setInitialTab('info');
+  const openDrawerOn = (tab: GameTabId) => {
+    setInitialTab(tab);
     setDrawerOpen(true);
   };
+
+  // Mount only: on desktop the page rewrites `?tab=` at every tab click, and that must not open
+  // the mobile drawer.
+  useEffect(() => {
+    if (deepLinkTab && !isDesktopViewport()) {
+      openDrawerOn(deepLinkTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (isLoading) {
     return (
@@ -94,7 +116,8 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
       <div className="group relative flex-1">
         <FocusedGameCard
           game={game}
-          onOpenDrawer={handleOpenDrawer}
+          onOpenDrawer={() => openDrawerOn('info')}
+          onOpenChat={() => openDrawerOn('aiChat')}
           onStartSession={() => setSessionSheetOpen(true)}
         />
         <EditCoverOverlay

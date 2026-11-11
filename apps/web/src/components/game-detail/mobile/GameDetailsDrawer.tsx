@@ -42,6 +42,15 @@ export function GameDetailsDrawer({
 }: GameDetailsDrawerProps) {
   const [activeTab, setActiveTab] = useState<GameTabId>(initialTab);
 
+  // #4992: the drawer stays mounted while closed, so useState(initialTab) alone kept the last tab
+  // shown: reopened from the «Chat» button it still showed Info. Each opening starts on the tab it is
+  // given; adjusted during render, so the old tab never flashes.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setActiveTab(initialTab);
+  }
+
   const tabProps = {
     gameId,
     variant: 'mobile' as const,

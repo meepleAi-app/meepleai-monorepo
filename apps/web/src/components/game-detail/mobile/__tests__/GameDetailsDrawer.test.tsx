@@ -1,4 +1,4 @@
-import { render as rtlRender, screen, fireEvent } from '@testing-library/react';
+import { render as rtlRender, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -55,5 +55,49 @@ describe('GameDetailsDrawer', () => {
       <GameDetailsDrawer open={true} onOpenChange={() => {}} gameId="game-1" initialTab="partite" />
     );
     expect(screen.getByRole('tab', { name: /partite/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('closes on Escape when its parent controls it', async () => {
+    const { useState } = await import('react');
+    function Host() {
+      const [open, setOpen] = useState(true);
+      return (
+        <GameDetailsDrawer open={open} onOpenChange={setOpen} gameId="game-1" initialTab="aiChat" />
+      );
+    }
+    render(<Host />);
+    expect(screen.getByTestId('game-details-drawer')).toBeInTheDocument();
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+
+    await waitFor(() =>
+      expect(screen.queryByTestId('game-details-drawer')).not.toBeInTheDocument()
+    );
+  });
+
+  // #4992: the drawer stays mounted while closed, and read initialTab only at its first mount, so
+  // reopening it on another tab (the mobile «Chat» button → Agente) still showed the old one.
+  it('reopens on the tab it is given, not on the last one shown', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = (open: boolean, initialTab: 'info' | 'aiChat') => (
+      <QueryClientProvider client={queryClient}>
+        <GameDetailsDrawer
+          open={open}
+          onOpenChange={() => {}}
+          gameId="game-1"
+          initialTab={initialTab}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = rtlRender(ui(true, 'info'));
+    fireEvent.click(screen.getByRole('tab', { name: /partite/i }));
+
+    rerender(ui(false, 'info'));
+    rerender(ui(true, 'aiChat'));
+    expect(screen.getByRole('tab', { name: /agente/i })).toHaveAttribute('aria-selected', 'true');
+
+    rerender(ui(false, 'aiChat'));
+    rerender(ui(true, 'info'));
+    expect(screen.getByRole('tab', { name: /info/i })).toHaveAttribute('aria-selected', 'true');
   });
 });

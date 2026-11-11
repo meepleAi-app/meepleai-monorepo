@@ -58,7 +58,7 @@ async function setupAccountLockoutMocks(
   };
 
   // Mock login endpoint with lockout logic
-  await page.route(`${API_BASE}/api/v1/auth/login`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/login`, async route => {
     const request = route.request();
     const body = await request.postDataJSON();
 
@@ -69,14 +69,13 @@ async function setupAccountLockoutMocks(
 
       if (now < lockoutEnd) {
         const minutesRemaining = Math.ceil((lockoutEnd.getTime() - now.getTime()) / 60000);
+        // #4991: the real contract — 400 with a code; the sentence is for the logs, never shown.
         await route.fulfill({
-          status: 423,
+          status: 400,
           contentType: 'application/json',
           body: JSON.stringify({
-            error: 'Account locked',
-            message: `Account temporarily locked. Please try again in ${minutesRemaining} minutes.`,
-            lockedUntil: currentState.lockedUntil,
-            minutesRemaining,
+            error: 'account_locked',
+            message: `Account is locked. Please try again in ${minutesRemaining} minute(s).`,
           }),
         });
         return;
@@ -111,23 +110,21 @@ async function setupAccountLockoutMocks(
         currentState.lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
         await route.fulfill({
-          status: 423,
+          status: 400,
           contentType: 'application/json',
           body: JSON.stringify({
-            error: 'Account locked',
-            message: 'Too many failed attempts. Account locked for 15 minutes.',
-            lockedUntil: currentState.lockedUntil,
-            minutesRemaining: 15,
+            error: 'account_locked',
+            message:
+              'Account has been locked due to too many failed login attempts. Please try again in 15 minutes.',
           }),
         });
       } else {
         await route.fulfill({
-          status: 401,
+          status: 400,
           contentType: 'application/json',
           body: JSON.stringify({
-            error: 'Invalid credentials',
-            message: 'Invalid email or password.',
-            attemptsRemaining: 5 - currentState.failedAttempts,
+            error: 'invalid_credentials',
+            message: 'Invalid email or password',
           }),
         });
       }
@@ -135,7 +132,7 @@ async function setupAccountLockoutMocks(
   });
 
   // Mock admin unlock endpoint
-  await page.route(`${API_BASE}/api/v1/admin/users/*/unlock`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/users/*/unlock`, async route => {
     if (adminUnlock) {
       currentState.isLocked = false;
       currentState.lockedUntil = null;
@@ -161,7 +158,7 @@ async function setupAccountLockoutMocks(
   });
 
   // Mock lockout status endpoint
-  await page.route(`${API_BASE}/api/v1/auth/lockout-status*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/lockout-status*`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -193,8 +190,8 @@ test.describe('AUTH-10: Account Lockout', () => {
       await loginPage.fillPassword('wrong-password');
       await loginPage.submit();
 
-      // Should show error with attempts remaining
-      await expect(page.getByText(/invalid|incorrect|wrong/i)).toBeVisible();
+      // Should show the translated wrong-credentials message (#4991)
+      await expect(page.getByText(/email o password non corretti/i)).toBeVisible();
     });
 
     test('should show remaining attempts count', async ({ page }) => {
@@ -217,9 +214,9 @@ test.describe('AUTH-10: Account Lockout', () => {
       await loginPage.fillPassword('wrong-password');
       await loginPage.submit();
 
-      // Should show lockout message
-      await expect(page.getByText(/locked|too.*many.*attempts/i)).toBeVisible();
-      await expect(page.getByText(/15.*minute|wait/i)).toBeVisible();
+      // Should show the translated lockout message (#4991)
+      await expect(page.getByText(/troppi tentativi.*bloccato/i)).toBeVisible();
+      await expect(page.getByText(/riprova più tardi/i)).toBeVisible();
     });
   });
 
@@ -232,8 +229,8 @@ test.describe('AUTH-10: Account Lockout', () => {
       await loginPage.fillPassword('correct-password');
       await loginPage.submit();
 
-      // Should show locked message
-      await expect(page.getByText(/locked|temporarily/i)).toBeVisible();
+      // Should show the translated lockout message (#4991)
+      await expect(page.getByText(/bloccato/i)).toBeVisible();
     });
 
     test('should show countdown timer during lockout', async ({ page }) => {
@@ -244,8 +241,8 @@ test.describe('AUTH-10: Account Lockout', () => {
       await loginPage.fillPassword('correct-password');
       await loginPage.submit();
 
-      // Should show time remaining
-      await expect(page.getByText(/\d+.*minute|wait|try.*again/i)).toBeVisible();
+      // Should tell the user to come back later (#4991: the translated message has no minute count)
+      await expect(page.getByText(/riprova più tardi/i)).toBeVisible();
     });
 
     test('should allow login after lockout expires', async ({ page }) => {
@@ -269,7 +266,7 @@ test.describe('AUTH-10: Account Lockout', () => {
       await setupAccountLockoutMocks(page, { isLocked: true, lockoutMinutesRemaining: 10 });
 
       // Mock password reset endpoint
-      await page.route(`${API_BASE}/api/v1/auth/request-password-reset`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/request-password-reset`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -280,7 +277,9 @@ test.describe('AUTH-10: Account Lockout', () => {
       await loginPage.navigate();
 
       // Click forgot password link
-      const forgotPasswordLink = page.getByRole('link', { name: /forgot.*password|reset.*password/i });
+      const forgotPasswordLink = page.getByRole('link', {
+        name: /forgot.*password|reset.*password/i,
+      });
       if (await forgotPasswordLink.isVisible()) {
         await forgotPasswordLink.click();
         await page.waitForLoadState('networkidle');

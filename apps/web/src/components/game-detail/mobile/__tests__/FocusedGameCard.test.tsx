@@ -56,4 +56,23 @@ describe('FocusedGameCard', () => {
     fireEvent.click(button);
     expect(onOpenDrawer).toHaveBeenCalledOnce();
   });
+
+  // #4992: below lg this card is the whole page, and it had no way into the chat.
+  it('renders a Chat button that calls onOpenChat, not onOpenDrawer', () => {
+    const onOpenDrawer = vi.fn();
+    const onOpenChat = vi.fn();
+    render(
+      <FocusedGameCard
+        game={mockGame}
+        onOpenDrawer={onOpenDrawer}
+        onOpenChat={onOpenChat}
+        onStartSession={() => {}}
+      />
+    );
+    const button = screen.getByTestId('focused-game-chat-button');
+    expect(button).toHaveTextContent(/chat/i);
+    fireEvent.click(button);
+    expect(onOpenChat).toHaveBeenCalledOnce();
+    expect(onOpenDrawer).not.toHaveBeenCalled();
+  });
 });

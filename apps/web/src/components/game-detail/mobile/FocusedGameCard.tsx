@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, Play } from 'lucide-react';
+import { FileText, MessageCircle, Play } from 'lucide-react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
@@ -10,6 +10,8 @@ import type { LibraryGameDetail } from '@/hooks/queries/useLibrary';
 interface FocusedGameCardProps {
   game: LibraryGameDetail;
   onOpenDrawer: () => void;
+  /** #4992: opens the drawer on the Agente tab — the only way into the chat below lg. */
+  onOpenChat: () => void;
   onStartSession: () => void;
 }
 
@@ -22,7 +24,12 @@ interface FocusedGameCardProps {
  *
  * Reference: docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.5
  */
-export function FocusedGameCard({ game, onOpenDrawer, onStartSession }: FocusedGameCardProps) {
+export function FocusedGameCard({
+  game,
+  onOpenDrawer,
+  onOpenChat,
+  onStartSession,
+}: FocusedGameCardProps) {
   const metadata: MeepleCardMetadata[] = [];
   if (game.gameYearPublished) {
     metadata.push({ label: String(game.gameYearPublished) });
@@ -64,6 +71,17 @@ export function FocusedGameCard({ game, onOpenDrawer, onStartSession }: FocusedG
         >
           <Play className="h-4 w-4" />
           Avvia Partita
+        </Button>
+        <Button
+          type="button"
+          onClick={onOpenChat}
+          size="lg"
+          variant="outline"
+          className="gap-2"
+          data-testid="focused-game-chat-button"
+        >
+          <MessageCircle className="h-4 w-4" />
+          Chat
         </Button>
         <Button
           type="button"

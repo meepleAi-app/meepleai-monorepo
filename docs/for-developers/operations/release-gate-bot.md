@@ -2,7 +2,7 @@
 
 > **Status**: Phase 1 MVP (issue [#1016](https://github.com/meepleAi-app/meepleai-monorepo/issues/1016))
 > **Design doc**: [`docs/for-developers/specs/2026-05-22-release-gate-spreadsheet.md`](../specs/2026-05-22-release-gate-spreadsheet.md)
-> **Last updated**: 2026-11-09 (#4937: trigger on CI completion, pending checks, own check-runs excluded; #4969: workflow_run only from heads of this repository)
+> **Last updated**: 2026-11-10 (#4937: trigger on CI completion, pending checks, own check-runs excluded; #4969: workflow_run only from heads of this repository; #4974: on workflow_run the release PR is found by branch, not by commit)
 
 ## What it does
 
@@ -16,9 +16,11 @@ When a release PR (`main-dev → main-staging` or `main-staging → main`) is op
 
 > **Why `workflow_run` and not `check_suite`** (#4937): GitHub does not emit `check_suite` for check suites created by GitHub Actions, i.e. for all of our CI. Until 2026-11-09 the bot therefore ran only when the PR was opened, before any job had finished, and posted «✅ No failed checks» on release heads that were red (#4892, #4897). The list of workflows in `on.workflow_run.workflows` must name each workflow by its exact `name:`; add a new one there when it starts running on release PRs.
 
+> **The release PR is found by branch, not by commit** (#4974): on `workflow_run` the bot looks for the open PR whose head is the branch the workflow ran on (`GET /repos/{repo}/pulls?state=open&head=<owner>:<branch>`), then checks that the commit is still that PR's head. It used to look it up by commit (`GET /repos/{repo}/commits/{sha}/pulls`), but for a commit already on the default branch that endpoint lists only the merged PR that introduced it. The head of a `main-dev → main-staging` promotion always is such a commit, so on that hop the bot never commented (first seen on #4972).
+
 > **Only heads of this repository** (#4969): on `workflow_run` the job runs only if `github.event.workflow_run.head_repository.full_name == github.repository`. `workflow_run` runs with this workflow's write token (`pull-requests`, `issues`, `checks`) even when the triggering run came from a fork. The `release/**` filter matches only a branch **name**, which a fork chooses freely, and a fork PR can redefine in its own branch the workflows that trigger the bot, and so the check-runs the bot reads. Real release PRs are branches of this repository. `infra/scripts/tests/workflow-run-trust-boundary.bats` requires the same guard in every workflow triggered by `workflow_run`.
 
-The comment is an index for the release round, not its verdict: pre-existing reds are told apart by comparing failing test **names** with a control run on `main-dev` (see the notes in `.github/release-gates.yml` and #4961).
+The comment is an index for the release round, not its verdict: pre-existing reds are told apart by comparing failing test **names** with a control run on `main-dev` (see the notes in `.github/release-gates.yml` and [release-promotion.md § 2](../workflows/release-promotion.md#2-leggere-la-ci-di-una-pr-di-rilascio), #4961).
 
 Triage decision happens in < 1 min instead of manual classification per release.
 

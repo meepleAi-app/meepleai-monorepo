@@ -54,38 +54,9 @@ git branch -D feature/issue-123-search && git push origin --delete feature/issue
 
 **Shortcuts**: For trivial changes, direct commit to `main-dev` is allowed. For all other work, use a `feature/issue-{n}-{desc}` branch.
 
-### Release to Staging
+### Release to Staging and Production
 
-```bash
-# 1. Test locally
-cd apps/api/src/Api && dotnet test && cd apps/web && pnpm test && pnpm test:e2e
-
-# 2. Merge to staging (triggers CI/CD)
-git checkout main-staging && git pull && git merge main-dev --no-ff -m "chore: promote to staging"
-git push origin main-staging
-
-# 3. Validate staging environment (smoke tests, feature checks)
-```
-
-**Cherry-pick** (if `main-dev` has experimental code):
-```bash
-git checkout main-staging && git cherry-pick abc123f def456a && git push
-```
-
-### Production Release
-
-```bash
-# 1. Create PR: main-staging → main
-gh pr create --base main --head main-staging --title "Release v1.2.0" --body "Summary + Checklist + Coverage"
-
-# 2. Merge PR (GitHub UI) → auto-deploys
-
-# 3. Tag release
-git checkout main && git pull && git tag -a v1.2.0 -m "Release v1.2.0" && git push origin v1.2.0
-
-# 4. Sync main-dev
-git checkout main-dev && git merge main --no-ff -m "chore: sync with production v1.2.0" && git push
-```
+The release round (`main-dev → main-staging → main`, two PRs from `release/<date>-*` branches, merge commits, CI read by test names against a control run) is described in **[release-promotion.md](release-promotion.md)** (#4961). It replaces the direct `git merge main-dev` + push to `main-staging` that this section used to show: nothing is pushed to `main-staging` or `main` without a PR, and no merge deploys anything today (#4428).
 
 ### Hotfix
 

@@ -358,7 +358,9 @@ export default defineConfig({
           // Dev server crashes after ~48 minutes under sustained test load.
           // Production build is already created by CI workflow (pnpm build).
           // Issue #2247: Heap increase LOCAL ONLY (dev server memory leak mitigation).
-          // Issue #2261: Force production server for error state tests (FORCE_PRODUCTION_SERVER=true).
+          // FORCE_PRODUCTION_SERVER=true forces `next start` outside CI too: the error-state a11y
+          // tests overflowed the dev server's heap (commit f98860a1c4, 2025-12-21; the issue
+          // number it cites, #2261, now points to an unrelated PR in this repository).
           command:
             process.env.CI === 'true' || process.env.FORCE_PRODUCTION_SERVER === 'true'
               ? 'node ./node_modules/next/dist/bin/next start -p 3000'
@@ -368,9 +370,16 @@ export default defineConfig({
           timeout: 180 * 1000, // 3min for server startup
           // E2E test auth bypass: allows Playwright tests to mock auth via page.route()
           // without needing a running backend for session validation.
-          // Only active in development (guarded by NODE_ENV !== 'production' in proxy).
+          // `next dev` allows it by NODE_ENV. Under `next start` (CI, FORCE_PRODUCTION_SERVER)
+          // NODE_ENV is 'production' and proxy.ts refuses it unless
+          // PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION says otherwise: without it every spec that
+          // seeds a fake session cookie lands on /login (#4980). Both are read at runtime,
+          // so they apply to the server Playwright starts and to nothing else.
+          // ⚠️ A NEXT_PUBLIC_* value here reaches `next start` only if the build did not
+          // define it: a value defined during `next build` (e.g. in .env.local) is inlined.
           env: {
             PLAYWRIGHT_AUTH_BYPASS: 'true',
+            PLAYWRIGHT_AUTH_BYPASS_ALLOW_PRODUCTION: 'true',
             // ADR-051 M2.1 — Mechanic Extractor AI Validation surfaces are gated
             // by this Next.js public flag and 404 via `notFound()` when off.
             NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: 'true',

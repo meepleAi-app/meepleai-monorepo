@@ -7024,81 +7024,6 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("record_scores", (string)null);
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RuleDisputeEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("FinalOutcome")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("final_outcome");
-
-                    b.Property<Guid>("GameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("game_id");
-
-                    b.Property<string>("InitiatorClaim")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("initiator_claim");
-
-                    b.Property<Guid>("InitiatorPlayerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("initiator_player_id");
-
-                    b.Property<string>("OverrideRule")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("override_rule");
-
-                    b.Property<string>("RelatedDisputeIdsJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("related_dispute_ids_json");
-
-                    b.Property<string>("RespondentClaim")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("respondent_claim");
-
-                    b.Property<Guid?>("RespondentPlayerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("respondent_player_id");
-
-                    b.Property<Guid>("SessionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("session_id");
-
-                    b.Property<string>("VerdictJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("verdict_json");
-
-                    b.Property<string>("VotesJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("votes_json");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GameId")
-                        .HasDatabaseName("ix_rule_disputes_game_id");
-
-                    b.HasIndex("SessionId")
-                        .HasDatabaseName("ix_rule_disputes_session_id");
-
-                    b.HasIndex("GameId", "CreatedAt")
-                        .HasDatabaseName("ix_rule_disputes_game_id_created_at");
-
-                    b.ToTable("rule_disputes", (string)null);
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionAttachmentEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -18014,17 +17939,6 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("RecordPlayer");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RuleDisputeEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", "Session")
-                        .WithMany()
-                        .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionInviteEntity", b =>

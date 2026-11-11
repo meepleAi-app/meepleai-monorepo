@@ -15,17 +15,23 @@
 import { type ReactElement } from 'react';
 
 import clsx from 'clsx';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 export interface MarkdownRenderBlockProps {
   readonly content: string;
   readonly className?: string;
+  /**
+   * Element overrides, for callers rendering text they do not trust (model output: #4988 keeps
+   * Markdown images from fetching arbitrary URLs in the game chat).
+   */
+  readonly components?: Components;
 }
 
 export function MarkdownRenderBlock({
   content,
   className,
+  components,
 }: MarkdownRenderBlockProps): ReactElement {
   return (
     <div
@@ -44,7 +50,9 @@ export function MarkdownRenderBlock({
         className
       )}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        {content}
+      </ReactMarkdown>
     </div>
   );
 }

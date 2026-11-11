@@ -68,14 +68,14 @@ Ed è il secondo che `DegradedAgentService` interroga per risalire dall'agente a
 
 ## Conseguenze operative
 
-### Ogni colonna esce in due consegne, non una
+### Ogni colonna esce in più consegne, non una
 
 `AgentDefinition.Type` lo ha dimostrato: il primo tentativo droppava le colonne nella stessa consegna che smetteva di leggerle, e il **Migration Safety Gate** l'ha bloccato correttamente (runbook §8.2). La direttiva `-- safe:` esiste ma chiede una motivazione, e lì sarebbe stata falsa.
 
 Il pattern da seguire per `GameId`, `KbCardIds`, `Strategy` e i due `AgentDefinitionId`:
 
-1. **expand** — la colonna resta come **shadow property nullable**: nel modello, assente dall'aggregato, scritta a `NULL`, letta da nessuno. Se era `NOT NULL` senza default, questo passo è obbligatorio: smettere di mapparla farebbe fallire ogni `INSERT` con `23502`. Gli **indici** invece escono subito: un indice non fa parte di nessun contratto di codice.
-2. **contract** — `DROP COLUMN`, con la direttiva e l'evidenza che nessuno legge più.
+1. **expand** — la colonna resta come **shadow property nullable**: nel modello, assente dall'aggregato, scritta a `NULL` dagli `INSERT`. Nessun codice la legge, ma EF la mette ancora in ogni SELECT dell'entità (misurato in #4973), quindi per un rollback conta come letta. Se era `NOT NULL` senza default, questo passo è obbligatorio: smettere di mapparla farebbe fallire ogni `INSERT` con `23502`. Gli **indici** invece escono subito: un indice non fa parte di nessun contratto di codice.
+2. **contract** — `DROP COLUMN`, con la direttiva e l'evidenza che la versione su `main` non la mappa più, nemmeno come shadow property. Con un ambiente deployato serve quindi un rilascio in più fra i due passi, che tolga la shadow property. Senza (#4428), shadow property e colonna possono uscire insieme, come in #4973.
 
 ### L'assenza di un produttore non è l'assenza di dati
 

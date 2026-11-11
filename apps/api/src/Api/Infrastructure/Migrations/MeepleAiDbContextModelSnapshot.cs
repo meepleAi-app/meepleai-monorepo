@@ -754,10 +754,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("house_rules_json");
 
-                    b.Property<Guid?>("LastProcessedEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("last_processed_event_id");
-
                     b.Property<string>("NotesJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("notes_json");

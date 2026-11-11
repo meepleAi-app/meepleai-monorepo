@@ -11,15 +11,16 @@ using Xunit;
 namespace Api.Tests.Integration.AgentMemory;
 
 /// <summary>
-/// #4960 on a real PostgreSQL: the contract of the structured dispute v2 (#4936) drops <c>rule_disputes</c>, and
-/// only expands <c>game_memories.last_processed_event_id</c>. That column left the aggregate and the entity but stays
-/// in the schema, because the release before #4960 still maps it and would fail every read of a game memory without
-/// it. Its DROP COLUMN is #4973; until then the model reads and writes the table with the column still there.
+/// The contract of the structured dispute v2 (#4936) on a real PostgreSQL. #4960 drops <c>rule_disputes</c>; #4973
+/// drops <c>game_memories.last_processed_event_id</c> and the shadow property that still put it in every SELECT of the
+/// table. The same column on <c>player_memories</c> and <c>group_memories</c> stays:
+/// <c>OnSessionCompletedUpdateStatsHandler</c> reads and writes it.
 /// </summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "AgentMemory")]
 [Trait("Issue", "4960")]
+[Trait("Issue", "4973")]
 public sealed class RetiredDisputeSchemaIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
@@ -62,37 +63,36 @@ public sealed class RetiredDisputeSchemaIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Migrations_KeepTheGameMemoryColumn_UntilItsOwnContract()
+    public async Task Migrations_DropTheGameMemoryColumn_AndKeepItOnPlayerAndGroupMemories()
     {
         await using var db = _fixture.CreateDbContext(_connectionString);
 
-        var columns = await db.Database
+        var tables = await db.Database
             .SqlQuery<string>($"""
-                SELECT data_type || ':' || is_nullable AS "Value" FROM information_schema.columns
-                WHERE table_name = 'game_memories' AND column_name = 'last_processed_event_id'
+                SELECT table_name AS "Value" FROM information_schema.columns
+                WHERE table_schema = 'public' AND column_name = 'last_processed_event_id'
+                  AND table_name IN ('game_memories', 'player_memories', 'group_memories')
+                ORDER BY table_name
                 """)
             .ToListAsync(Ct);
 
-        columns.Should().Equal(["uuid:YES"], "the release before #4960 still selects it; it goes in #4973");
+        tables.Should().Equal(["group_memories", "player_memories"],
+            "#4973 drops the column from game_memories only; the session-stats handler still uses the other two");
     }
 
     [Fact]
-    public async Task GameMemory_RoundTripsThroughPostgres_OnARowTheEarlierReleaseWrote()
+    public async Task GameMemory_RoundTripsThroughPostgres_OnTheMigratedSchema()
     {
         var gameId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         var memory = GameMemory.Create(gameId, ownerId);
         memory.AddHouseRule("Si pesca una carta in più al primo turno", HouseRuleSource.UserAdded);
 
+        // A model that still maps a dropped column fails here, on the INSERT and on every read, with 42703.
         await using (var db = _fixture.CreateDbContext(_connectionString))
         {
             await new GameMemoryRepository(db, new DomainEventCollector()).AddAsync(memory, Ct);
             await db.SaveChangesAsync(Ct);
-
-            // A row as the dispute-override handler left it, before #4936 retired it.
-            var processed = Guid.NewGuid();
-            await db.Database.ExecuteSqlAsync(
-                $"UPDATE game_memories SET last_processed_event_id = {processed} WHERE id = {memory.Id}", Ct);
         }
 
         await using (var db = _fixture.CreateDbContext(_connectionString))

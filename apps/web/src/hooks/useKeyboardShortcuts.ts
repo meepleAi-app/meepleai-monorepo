@@ -177,9 +177,10 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[], enabled = tr
         // Check if shortcut matches
         if (matchesShortcut(event, shortcut)) {
           // Special handling for input fields
-          // Allow Escape and search shortcuts (Cmd+/) even in input fields
-          const allowInInputField =
-            shortcut.key === 'Escape' || shortcut.key === '/' || shortcut.key === '?';
+          // Allow Escape and search shortcuts (Cmd+/) even in input fields.
+          // Not «?»: it is a character people type (every question to the Tutor ends with one),
+          // and the help shortcut prevents its default, so it never reached the field (#4986).
+          const allowInInputField = shortcut.key === 'Escape' || shortcut.key === '/';
 
           if (isInputField && !allowInInputField) {
             continue;

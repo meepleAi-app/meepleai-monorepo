@@ -73,6 +73,7 @@ vi.mock('@/components/auth/oauth-url', () => ({
 
 // Import AFTER mocks
 import { LoginPageContent } from '../_content';
+import { ApiError } from '@/lib/api/core/errors';
 import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
@@ -324,12 +325,34 @@ describe('LoginPageContent — error logging dedup (#2171)', () => {
     render(<LoginPageContent />);
     fillAndSubmit();
 
-    // Wait until error path settles (setError → re-render)
+    // Wait until error path settles (setError → re-render). #4991: the server's sentence is never
+    // shown; an error without a known code gets the generic message.
     await waitFor(() => {
-      expect(screen.getByText('Invalid email or password')).toBeInTheDocument();
+      expect(screen.getByText('auth.login.genericError')).toBeInTheDocument();
     });
 
     expect(logger.error).not.toHaveBeenCalled();
+  });
+});
+
+// #4991: «Invalid email or password» in English on the Italian login page.
+describe('LoginPageContent — error message by code (#4991)', () => {
+  it('shows the translated message for the code of the response, not its sentence', async () => {
+    loginMock.mockRejectedValueOnce(
+      new ApiError({
+        message: 'Invalid email or password',
+        statusCode: 400,
+        code: 'invalid_credentials',
+      })
+    );
+
+    render(<LoginPageContent />);
+    fillAndSubmit();
+
+    await waitFor(() => {
+      expect(screen.getByText('auth.login.errors.invalidCredentials')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Invalid email or password')).not.toBeInTheDocument();
   });
 });
 
@@ -568,7 +591,8 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
     render(<LoginPageContent />);
     fillAndSubmit();
 
-    expect(await screen.findByText('Credenziali non valide')).toBeInTheDocument();
+    // #4991: an error without a known code shows the generic message, not its own text.
+    expect(await screen.findByText('auth.login.genericError')).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByLabelText(/auth\.login\.emailLabel/i)).not.toBeDisabled()
     );

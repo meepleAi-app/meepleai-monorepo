@@ -154,9 +154,9 @@ test.describe('Authentication Flow', () => {
     // Backend may return 400 (Bad Request) or 401 (Unauthorized) for invalid credentials
     expect([400, 401]).toContain(response.status());
 
-    // Verify error message displayed
+    // Verify the translated error message is displayed (#4991: never the server's English sentence)
     await expect(
-      page.locator('text=/Invalid credentials|Invalid email or password|Login failed/i')
+      page.locator('text=/Email o password non corretti|Incorrect email or password/i')
     ).toBeVisible({ timeout: 5000 });
 
     // Verify still on login page

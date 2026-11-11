@@ -5,7 +5,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
-using Api.SharedKernel.Domain.Exceptions;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
@@ -56,7 +56,7 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
                 userAgent: command.UserAgent,
                 metadata: $"{{\"emailMasked\":\"{MaskEmail(command.Email)}\",\"reason\":\"unknown_email\"}}",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
-            throw new DomainException("Invalid email or password");
+            throw LoginRefused(LoginErrorCodes.InvalidCredentials, "Invalid email or password");
         }
 
         // Issue #2886 + C2: gate the entire login flow on the account status BEFORE
@@ -67,14 +67,14 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
         // "Invalid email or password" branch, (b) increment the failed-login counter
         // for accounts that must never authenticate, or (c) NRE on null PasswordHash.
         if (!user.CanAuthenticate())
-            throw new DomainException("Account is not available");
+            throw LoginRefused(LoginErrorCodes.AccountUnavailable, "Account is not available");
 
         // Issue #3339: Check if account is locked out
         if (user.IsLockedOut())
         {
             var remainingTime = user.GetRemainingLockoutDuration();
             var remainingMinutes = (int)Math.Ceiling(remainingTime.TotalMinutes);
-            throw new DomainException($"Account is locked. Please try again in {remainingMinutes} minute(s).");
+            throw LoginRefused(LoginErrorCodes.AccountLocked, $"Account is locked. Please try again in {remainingMinutes} minute(s).");
         }
 
         // Verify password
@@ -108,10 +108,10 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
                     metadata: $"{{\"attemptCount\":{user.FailedLoginAttempts},\"lockoutUntilUtc\":\"{user.LockedUntil:O}\"}}",
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                throw new DomainException("Account has been locked due to too many failed login attempts. Please try again in 15 minutes.");
+                throw LoginRefused(LoginErrorCodes.AccountLocked, "Account has been locked due to too many failed login attempts. Please try again in 15 minutes.");
             }
 
-            throw new DomainException("Invalid email or password");
+            throw LoginRefused(LoginErrorCodes.InvalidCredentials, "Invalid email or password");
         }
 
         // C6: do NOT reset the failed-login counter here. If 2FA is required
@@ -241,6 +241,13 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
     /// I10: mask the email so audit logs don't carry the raw value (PII).
     /// "alice@example.com" → "al***@example.com".
     /// </summary>
+    /// <summary>
+    /// #4991: a refused login, still 400 with the same sentence for the logs, but with a code the
+    /// client can translate instead of showing the English sentence.
+    /// </summary>
+    private static HttpException LoginRefused(string code, string message) =>
+        new(StatusCodes.Status400BadRequest, code, message);
+
     private static string MaskEmail(string email)
     {
         if (string.IsNullOrWhiteSpace(email)) return "***";

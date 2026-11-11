@@ -42,6 +42,11 @@ public sealed class LoginAccountStatusEndpointTests : IAsyncLifetime
     private const string Endpoint = "/api/v1/auth/login";
     private const string AccountUnavailableMessage = "Account is not available";
 
+    // A fresh value per call, generated at run time: the GitGuardian app flags any string literal
+    // assigned to a password-named member, on every commit of a PR. Two calls never match, so a
+    // second call is always a wrong credential for a user seeded with the first.
+    private static string FreshValue() => $"x{Guid.NewGuid():N}!A1";
+
     private readonly SharedTestcontainersFixture _fixture;
     private readonly string _testDbName;
     private WebApplicationFactory<Program> _factory = null!;
@@ -160,6 +165,88 @@ public sealed class LoginAccountStatusEndpointTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.OK,
             "Active users must still log in after the CanAuthenticate gate is wired in.");
+    }
+
+    // #4991: every login failure arrived as 400 "domain_error", so the client could not tell a wrong
+    // password from a locked account except by reading the English sentence — and showed it. Each
+    // case now has a stable code; status and message (for the logs) stay what they were.
+    private static async Task<(string? Code, string? Message)> ErrorOfAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        return (body.GetProperty("error").GetString(), body.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Login_WrongPassword_ReturnsInvalidCredentialsCode()
+    {
+        var email = $"wrongpwd-{Guid.NewGuid():N}@test.local";
+        await SeedActiveUserAsync(email, FreshValue());
+
+        var response = await _client.PostAsJsonAsync(Endpoint, new { Email = email, Password = FreshValue() });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ErrorOfAsync(response)).Should().Be(("invalid_credentials", "Invalid email or password"));
+    }
+
+    [Fact]
+    public async Task Login_UnknownEmail_ReturnsInvalidCredentialsCode()
+    {
+        var response = await _client.PostAsJsonAsync(Endpoint, new
+        {
+            Email = $"nobody-{Guid.NewGuid():N}@test.local",
+            Password = FreshValue()
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ErrorOfAsync(response)).Should().Be(("invalid_credentials", "Invalid email or password"));
+    }
+
+    [Fact]
+    public async Task Login_AlreadyLockedUser_ReturnsAccountLockedCode()
+    {
+        var email = $"locked-{Guid.NewGuid():N}@test.local";
+        var password = FreshValue();
+        await SeedActiveUserAsync(email, password, applyStatus: u =>
+        {
+            for (var i = 0; i < User.DefaultMaxFailedAttempts; i++) u.RecordFailedLogin();
+        });
+
+        var response = await _client.PostAsJsonAsync(Endpoint, new { Email = email, Password = password });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var (code, message) = await ErrorOfAsync(response);
+        code.Should().Be("account_locked");
+        message.Should().StartWith("Account is locked. Please try again in ");
+    }
+
+    [Fact]
+    public async Task Login_AttemptThatLocksTheAccount_ReturnsAccountLockedCode()
+    {
+        var email = $"locking-{Guid.NewGuid():N}@test.local";
+        await SeedActiveUserAsync(email, FreshValue(), applyStatus: u =>
+        {
+            for (var i = 0; i < User.DefaultMaxFailedAttempts - 1; i++) u.RecordFailedLogin();
+        });
+
+        var response = await _client.PostAsJsonAsync(Endpoint, new { Email = email, Password = FreshValue() });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var (code, message) = await ErrorOfAsync(response);
+        code.Should().Be("account_locked");
+        message.Should().StartWith("Account has been locked due to too many failed login attempts.");
+    }
+
+    [Fact]
+    public async Task Login_SuspendedUser_ReturnsAccountUnavailableCode()
+    {
+        var email = $"suspended-code-{Guid.NewGuid():N}@test.local";
+        var password = FreshValue();
+        await SeedActiveUserAsync(email, password, applyStatus: u => u.Suspend("test"));
+
+        var response = await _client.PostAsJsonAsync(Endpoint, new { Email = email, Password = password });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ErrorOfAsync(response)).Should().Be(("account_unavailable", AccountUnavailableMessage));
     }
 
     private async Task SeedPendingUserAsync(string email)

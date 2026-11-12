@@ -131,12 +131,6 @@ internal class SyncTableDataHandler : ICommandHandler<SyncTableDataCommand, Sync
 
                         foreach (var row in sourceRows)
                         {
-                            // #4994: la riga riservata di system_configurations non si scrive mai sulla destinazione.
-                            if (DataDiffEngine.IsExcludedRow(command.TableName, allCols, row))
-                            {
-                                continue;
-                            }
-
                             var pkValue = BuildPkValue(row, pkColumns);
                             var isInsert = sourceOnlyPks.Contains(pkValue, StringComparer.Ordinal);
 

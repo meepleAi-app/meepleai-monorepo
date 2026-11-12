@@ -188,7 +188,7 @@ public sealed class SyncTableDataReservedRowIntegrationTests : IClassFixture<Dat
     }
 
     /// <summary>
-    /// Il diff e il percorso di scrittura usano lo stesso criterio, <see cref="ReservedConfigurationKeys.IsReserved"/>.
+    /// Il diff usa lo stesso criterio del resto del prodotto, <see cref="ReservedConfigurationKeys.IsReserved"/>.
     /// Le varianti con tab, a capo e spazio non separabile sono quelle che <c>btrim</c> di Postgres non toglie e
     /// <c>Trim</c> di C# sì: con un filtro SQL <c>lower(btrim(...))</c> restavano nel diff.
     /// </summary>
@@ -215,7 +215,7 @@ public sealed class SyncTableDataReservedRowIntegrationTests : IClassFixture<Dat
         var hashes = await DataDiffEngine.FetchRowHashesAsync(connection, "public", Table, pk, safe);
 
         hashes.ContainsKey(rowId.ToString()).Should().Be(
-            !reserved, "the diff leaves out exactly the rows the write path refuses to write");
+            !reserved, "the diff leaves out exactly the rows IsReserved recognises, and the sync writes only what the diff yields");
     }
 
     // ----- Aiuti -----

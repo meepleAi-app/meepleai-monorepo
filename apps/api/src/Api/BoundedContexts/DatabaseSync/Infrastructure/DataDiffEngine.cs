@@ -53,8 +53,14 @@ internal static class DataDiffEngine
     /// <para>
     /// Il confronto si fa in C# con <see cref="ReservedConfigurationKeys.IsReserved"/>, non nel SQL: <c>btrim</c>
     /// senza argomenti toglie solo lo spazio, mentre <c>Trim</c> toglie ogni spazio bianco Unicode (tab, a capo,
-    /// spazio non separabile), e <c>lower</c> segue la collation del database, non <c>OrdinalIgnoreCase</c>. Due
-    /// criteri diversi lascerebbero nel diff righe che il percorso di scrittura considera riservate.
+    /// spazio non separabile), e <c>lower</c> segue la collation del database, non <c>OrdinalIgnoreCase</c>. Un
+    /// criterio diverso lascerebbe nel diff righe che l'API admin, l'export e l'import considerano riservate.
+    /// </para>
+    /// <para>
+    /// È l'unica difesa del sync, ed è sufficiente: <c>SyncTableDataHandler</c> scrive solo le righe che rilegge dalla
+    /// sorgente per le chiavi primarie uscite dal diff. Un controllo in più sulla riga riletta agirebbe solo se la
+    /// chiave cambiasse fra le due letture della sorgente, una finestra che nessun test riproduce, e non
+    /// coprirebbe la destinazione.
     /// </para>
     /// </remarks>
     private static string? DiffExclusionKeyColumn(string table) =>
@@ -62,38 +68,7 @@ internal static class DataDiffEngine
             ? SystemConfigurationsKeyColumn
             : null;
 
-    /// <summary>
-    /// <c>true</c> se la riga letta dalla sorgente non va scritta sulla destinazione (#4994): seconda difesa dopo
-    /// <see cref="DiffExclusionKeyColumn"/>, sul percorso di scrittura. <paramref name="columns"/> e <paramref name="values"/>
-    /// sono le colonne e i valori della riga così come il sync li ha letti. Se la tabella è
-    /// <c>system_configurations</c> e la colonna della chiave non c'è, la riga non si può riconoscere e non si scrive.
-    /// </summary>
-    public static bool IsExcludedRow(string table, IReadOnlyList<string> columns, object?[] values)
-    {
-        if (!string.Equals(table, SystemConfigurationsTable, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        var keyIndex = -1;
-        for (var i = 0; i < columns.Count; i++)
-        {
-            if (string.Equals(columns[i], SystemConfigurationsKeyColumn, StringComparison.Ordinal))
-            {
-                keyIndex = i;
-                break;
-            }
-        }
-
-        if (keyIndex < 0 || keyIndex >= values.Length)
-        {
-            return true;
-        }
-
-        return IsExcludedKey(values[keyIndex]);
-    }
-
-    // Lo stesso criterio per il diff e per la scrittura: una chiave NULL non è riservata.
+    // Una chiave NULL non è riservata.
     private static bool IsExcludedKey(object? key) => key is string text && ReservedConfigurationKeys.IsReserved(text);
 
     public static List<string> FilterSafeColumns(IReadOnlyList<(string name, string type)> columns)

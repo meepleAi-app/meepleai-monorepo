@@ -333,6 +333,32 @@ public sealed class ConfigurationRepositoryTests : IDisposable
         NotOwnedByTheAggregate.Should().OnlyContain(name => columns.Contains(name));
     }
 
+    // ----- Round-trip in scrittura -----
+
+    [Fact]
+    public async Task UpdateAsync_WithNoChange_WritesBackEveryColumnTheAggregateOwns()
+    {
+        // La lettura (EveryReadPath_...) prende le colonne dal modello; questo è il suo specchio in scrittura.
+        // Una colonna che MapToDomain legge ma MapToPersistence dimentica arriva al database al valore di default,
+        // e un update che non cambia niente la azzera.
+        var seeded = await SeedClaimedBootstrapRowAsync();
+        var (repository, _) = CreateRepository();
+        var config = await repository.GetByIdAsync(seeded.Id);
+
+        await repository.UpdateAsync(config!);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var after = await _db.Set<SystemConfigurationEntity>().AsNoTracking().SingleAsync(c => c.Id == seeded.Id);
+        var changed = OwnedColumns()
+            .Select(c => (Column: c.Name, Expected: c.PropertyInfo!.GetValue(seeded), Actual: c.PropertyInfo!.GetValue(after)))
+            .Where(x => !Equals(x.Expected, x.Actual))
+            .Select(x => $"{x.Column}: «{x.Expected}» → «{x.Actual}»");
+        string.Join(Environment.NewLine, changed).Should().BeEmpty(
+            "an update that changes nothing must change nothing; a column MapToDomain reads but MapToPersistence " +
+            "forgets would be written back at its default");
+    }
+
     private static object? Column(SystemConfigurationEntity entity, string name) =>
         typeof(SystemConfigurationEntity).GetProperty(name)!.GetValue(entity);
 

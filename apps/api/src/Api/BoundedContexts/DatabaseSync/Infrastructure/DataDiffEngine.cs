@@ -1,3 +1,4 @@
+using Api.SharedKernel.Constants;
 using Npgsql;
 
 namespace Api.BoundedContexts.DatabaseSync.Infrastructure;
@@ -36,6 +37,64 @@ internal static class DataDiffEngine
                 $"Invalid PostgreSQL identifier '{identifier}'. Only letters, digits, underscores, and dollar signs are allowed.",
                 paramName);
     }
+
+    private const string SystemConfigurationsTable = "system_configurations";
+    private const string SystemConfigurationsKeyColumn = "Key";
+
+    /// <summary>
+    /// Colonna della chiave su cui si riconoscono le righe di <paramref name="table"/> che non prendono parte al
+    /// diff, o <c>null</c> se ci entrano tutte (#4994, seguito di #4612). In <c>system_configurations</c> la riga
+    /// riservata del bootstrap admin non ne fa parte: nel diff non compare né come differente né come mancante, su
+    /// nessuno dei due lati, quindi il sync non la vede.
+    /// </summary>
+    /// <remarks>
+    /// La riga è per ambiente: il suo flag dice «qui il claim del primo admin è stato consumato». Copiarla fra
+    /// database trasporta quel fatto dove non è vero, o riapre il claim dove lo era.
+    /// <para>
+    /// Il confronto si fa in C# con <see cref="ReservedConfigurationKeys.IsReserved"/>, non nel SQL: <c>btrim</c>
+    /// senza argomenti toglie solo lo spazio, mentre <c>Trim</c> toglie ogni spazio bianco Unicode (tab, a capo,
+    /// spazio non separabile), e <c>lower</c> segue la collation del database, non <c>OrdinalIgnoreCase</c>. Due
+    /// criteri diversi lascerebbero nel diff righe che il percorso di scrittura considera riservate.
+    /// </para>
+    /// </remarks>
+    private static string? DiffExclusionKeyColumn(string table) =>
+        string.Equals(table, SystemConfigurationsTable, StringComparison.Ordinal)
+            ? SystemConfigurationsKeyColumn
+            : null;
+
+    /// <summary>
+    /// <c>true</c> se la riga letta dalla sorgente non va scritta sulla destinazione (#4994): seconda difesa dopo
+    /// <see cref="DiffExclusionKeyColumn"/>, sul percorso di scrittura. <paramref name="columns"/> e <paramref name="values"/>
+    /// sono le colonne e i valori della riga così come il sync li ha letti. Se la tabella è
+    /// <c>system_configurations</c> e la colonna della chiave non c'è, la riga non si può riconoscere e non si scrive.
+    /// </summary>
+    public static bool IsExcludedRow(string table, IReadOnlyList<string> columns, object?[] values)
+    {
+        if (!string.Equals(table, SystemConfigurationsTable, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var keyIndex = -1;
+        for (var i = 0; i < columns.Count; i++)
+        {
+            if (string.Equals(columns[i], SystemConfigurationsKeyColumn, StringComparison.Ordinal))
+            {
+                keyIndex = i;
+                break;
+            }
+        }
+
+        if (keyIndex < 0 || keyIndex >= values.Length)
+        {
+            return true;
+        }
+
+        return IsExcludedKey(values[keyIndex]);
+    }
+
+    // Lo stesso criterio per il diff e per la scrittura: una chiave NULL non è riservata.
+    private static bool IsExcludedKey(object? key) => key is string text && ReservedConfigurationKeys.IsReserved(text);
 
     public static List<string> FilterSafeColumns(IReadOnlyList<(string name, string type)> columns)
     {
@@ -109,7 +168,9 @@ internal static class DataDiffEngine
 
         var pkExpr = string.Join(" || '::' || ", pkColumns.Select(c => $"\"{c}\"::text"));
         var colList = string.Join(", ", safeColumns.Select(c => $"\"{c}\""));
-        var sql = $"SELECT {pkExpr} as pk, md5(ROW({colList})::text) as row_hash FROM \"{schema}\".\"{table}\"";
+        var exclusionKeyColumn = DiffExclusionKeyColumn(table);
+        var exclusionKey = exclusionKeyColumn is null ? string.Empty : $", \"{exclusionKeyColumn}\"::text as row_key";
+        var sql = $"SELECT {pkExpr} as pk, md5(ROW({colList})::text) as row_hash{exclusionKey} FROM \"{schema}\".\"{table}\"";
         var hashes = new Dictionary<string, string>(StringComparer.Ordinal);
         var cmd = new NpgsqlCommand(sql, conn);
         await using (cmd.ConfigureAwait(false))
@@ -118,7 +179,15 @@ internal static class DataDiffEngine
             await using (reader.ConfigureAwait(false))
             {
                 while (await reader.ReadAsync(ct).ConfigureAwait(false))
+                {
+                    if (exclusionKeyColumn is not null
+                        && IsExcludedKey(await reader.IsDBNullAsync(2, ct).ConfigureAwait(false) ? null : reader.GetString(2)))
+                    {
+                        continue;
+                    }
+
                     hashes[reader.GetString(0)] = reader.GetString(1);
+                }
             }
         }
         return hashes;

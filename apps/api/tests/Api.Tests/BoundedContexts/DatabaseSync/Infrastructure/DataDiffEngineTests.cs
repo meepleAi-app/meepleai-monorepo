@@ -73,4 +73,42 @@ public class DataDiffEngineTests
         localOnly.Should().BeEmpty();
         stagingOnly.Should().BeEmpty();
     }
+
+    // ----- #4994: la riga riservata di system_configurations non partecipa al sync -----
+
+    private static readonly string[] SystemConfigurationColumns = ["Id", "Key", "Value", "BootstrapAdminCreated"];
+
+    [Theory]
+    [InlineData("system_configurations", "Authentication:BootstrapAdmin", true)]
+    [InlineData("system_configurations", "authentication:bootstrapadmin", true)]
+    [InlineData("system_configurations", "  Authentication:BootstrapAdmin ", true)]
+    // Spazi bianchi che btrim di Postgres non toglie: il criterio è quello di ReservedConfigurationKeys.IsReserved.
+    [InlineData("system_configurations", "\tAuthentication:BootstrapAdmin\n", true)]
+    [InlineData("system_configurations", "Authentication:BootstrapAdminToken", false)]
+    [InlineData("system_configurations", "Registration:PublicEnabled", false)]
+    // La stessa stringa in un'altra tabella è un dato qualunque.
+    [InlineData("games", "Authentication:BootstrapAdmin", false)]
+    public void IsExcludedRow_ExcludesOnlyTheReservedKeyOfSystemConfigurations(string table, string key, bool expected)
+    {
+        object?[] row = [Guid.NewGuid(), key, "true", true];
+
+        DataDiffEngine.IsExcludedRow(table, SystemConfigurationColumns, row).Should().Be(expected);
+    }
+
+    [Fact]
+    public void IsExcludedRow_WhenTheKeyColumnIsNotSynced_FailsClosedForSystemConfigurations()
+    {
+        // Una riga di system_configurations senza la colonna Key tra quelle lette non si può riconoscere: non si scrive.
+        object?[] row = [Guid.NewGuid(), "true"];
+
+        DataDiffEngine.IsExcludedRow("system_configurations", ["Id", "Value"], row).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsExcludedRow_ForAnotherTable_NeverExcludes()
+    {
+        object?[] row = [Guid.NewGuid(), "x"];
+
+        DataDiffEngine.IsExcludedRow("games", ["Id", "Name"], row).Should().BeFalse();
+    }
 }

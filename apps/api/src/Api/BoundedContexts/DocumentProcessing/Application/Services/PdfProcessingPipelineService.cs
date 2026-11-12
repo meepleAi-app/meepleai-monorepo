@@ -1214,9 +1214,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// <summary>
     /// An earlier attempt of the transaction may have left the chunks in the tracker: the new ones <c>Added</c> and the
     /// old ones <c>Deleted</c> when its save failed, or the new ones <c>Unchanged</c> when the save went through and the
-    /// transaction was rolled back after. None of that is true of the database. The old chunks are read again, and as
-    /// a second instance of an already tracked key they would be an identity conflict; the new ones have to be
-    /// inserts, whatever state they were left in.
+    /// transaction was rolled back after. None of that is true of the database, so the attempt that runs again starts
+    /// from a tracker without them: it deletes the old chunks it reads now and inserts the new ones, whatever state
+    /// they were left in.
+    /// <para>
+    /// Measured (#4660): in the two retries the tests reproduce (a failed chunk save; a failure after the
+    /// replacement) EF copes with the leftovers on its own — re-reading the old chunks next to their <c>Deleted</c>
+    /// entries raises no identity conflict, and <c>AddRange</c> turns <c>Unchanged</c> entries back into inserts. The
+    /// call at the head of the delegate is therefore not proved by a test; the one in the catch is.
+    /// </para>
     /// </summary>
     private void ForgetTrackedTextChunks()
     {

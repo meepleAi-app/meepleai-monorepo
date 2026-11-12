@@ -161,7 +161,7 @@ public sealed class BulkReindexReadyCommandHandlerTests : IAsyncLifetime
         // #3425 (code review): demo-mock dogfood placeholders (SeedBadswormPersonaCommandHandler)
         // are seeded Ready with IndexerVersion=null and FilePath="seed/badsworm/.../rulebook.pdf"
         // — a NON-empty prefix but with NO real blob. They must NOT be bulk-reindexed:
-        // ReindexDocumentCommand would delete their chunks, reset Ready->Pending, and the extraction
+        // ReindexDocumentCommand would reset Ready->Pending, and the extraction
         // would then fail on the missing blob (Failed), destroying active fixtures. Mirrors the
         // sibling guard used by ProcessPendingPdfs / StalePdfRecovery / SeedStateHealthCheck.
         await SeedPdfAsync(

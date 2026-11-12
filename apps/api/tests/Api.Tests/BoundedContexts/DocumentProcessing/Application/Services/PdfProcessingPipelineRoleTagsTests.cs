@@ -669,8 +669,9 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
     /// <summary>
     /// #4660. The execution strategy re-runs the delegate after a transient failure. The first attempt leaves the old
     /// chunks marked deleted and the new ones added in the tracker, and the database (rolled back) has the old ones:
-    /// the second attempt reads them again, and the tracker still holds them — without forgetting the first attempt's
-    /// entities that is an identity conflict, and the run fails for a failure that was already survived.
+    /// the second attempt has to replace them, once, and the run must not fail for a failure that was already
+    /// survived. Measured: with the forgetting at the head of the delegate switched off this test stays green (EF
+    /// raises no identity conflict here), so it proves the outcome of the retry, not that call.
     /// </summary>
     [Fact]
     public async Task ProcessAsync_WhenTheUnitOfWorkRunsTheWorkAgainAfterATransientFailure_TheSecondAttemptSucceeds()

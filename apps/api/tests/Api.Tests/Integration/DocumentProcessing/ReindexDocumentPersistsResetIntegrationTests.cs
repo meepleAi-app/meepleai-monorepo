@@ -38,7 +38,10 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// implicitly attaches untracked entities before marking them Deleted — a different code path than
 /// plain property mutation on a query result. Net effect: chunks are deleted but the document's
 /// ProcessingState never resets — a phantom success that leaves the document stuck (broken),
-/// exactly the scenario the SP3 <c>BulkReindexReadyCommandHandler</c> fan-out was built to fix.</para>
+/// exactly the scenario the SP3 <c>BulkReindexReadyCommandHandler</c> fan-out was built to fix.
+/// Since #4660 the handler no longer deletes the chunks (the queue pipeline replaces them with the
+/// embeddings, in one transaction): the state reset is what this test still guards, and it also
+/// checks that the chunks stay.</para>
 ///
 /// <para><b>Why a NEW test file instead of extending <see cref="ReindexDocumentVersionIntegrationTests"/>:</b>
 /// that sibling suite's DbContext (built via <see cref="IntegrationServiceCollectionBuilder.CreateBase"/>
@@ -150,14 +153,12 @@ public sealed class ReindexDocumentPersistsResetIntegrationTests : IAsyncLifetim
     /// the one the mediator call will use later. Reusing the same <see cref="MeepleAiDbContext"/>
     /// instance for both seeding (via <c>Add()</c>, which always tracks regardless of the
     /// NoTracking default) and the handler's later query would leave the seeded entities tracked
-    /// (Unchanged) in that same context's change tracker. The handler's own NoTracking query then
-    /// materializes SEPARATE, untracked instances for the same rows — and
-    /// <c>TextChunks.RemoveRange(...)</c> on those detached duplicates throws
-    /// <see cref="InvalidOperationException"/> ("already being tracked") because EF Core refuses
-    /// to attach a second instance under the same key. That collision is a test-harness artifact,
-    /// not the production bug: in production the row was written in a wholly separate prior
-    /// request with its own scoped DbContext, long disposed by the time reindex runs. Using an
-    /// isolated seeding scope here reproduces that same isolation.
+    /// (Unchanged) in that same context's change tracker, and the handler would then work against
+    /// a tracker production never has: in production the rows were written in a wholly separate
+    /// prior request with its own scoped DbContext, long disposed by the time reindex runs. (Until
+    /// #4660 the handler also deleted the chunks, and <c>RemoveRange</c> on the untracked duplicates
+    /// its NoTracking query materialized threw «already being tracked».) Using an isolated seeding
+    /// scope here reproduces that same isolation.
     /// </summary>
     private async Task<Guid> SeedReadyPdfWithChunksAsync()
     {
@@ -206,9 +207,20 @@ public sealed class ReindexDocumentPersistsResetIntegrationTests : IAsyncLifetim
     }
 
     [Fact]
-    public async Task Reindex_UnderProductionNoTrackingDefault_PersistsStateResetAndDeletesChunks()
+    public async Task Reindex_UnderProductionNoTrackingDefault_PersistsStateResetAndKeepsTheChunks()
     {
         var pdfId = await SeedReadyPdfWithChunksAsync();
+        List<Guid> chunkIdsBefore;
+        using (var beforeScope = _serviceProvider!.CreateScope())
+        {
+            chunkIdsBefore = await beforeScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>().TextChunks
+                .AsNoTracking()
+                .Where(tc => tc.PdfDocumentId == pdfId)
+                .Select(tc => tc.Id)
+                .ToListAsync(TestCancellationToken);
+        }
+
+        chunkIdsBefore.Should().HaveCount(2, "the seed has to give the reindex chunks to keep, or the assertion below proves nothing");
 
         await _mediator!.Send(
             new ReindexDocumentCommand(pdfId, IndexerVersionRegistry.Current.Version),
@@ -238,11 +250,16 @@ public sealed class ReindexDocumentPersistsResetIntegrationTests : IAsyncLifetim
             IndexerVersionRegistry.Current.Version,
             "IndexerVersion must be stamped with the resolved version on reindex");
 
-        var remainingChunks = await verifyDb.TextChunks
+        var remainingChunkIds = await verifyDb.TextChunks
             .AsNoTracking()
             .Where(tc => tc.PdfDocumentId == pdfId)
+            .Select(tc => tc.Id)
             .ToListAsync(TestCancellationToken);
-        remainingChunks.Should().BeEmpty("all TextChunks for the document must be deleted on reindex");
+        remainingChunkIds.Should().BeEquivalentTo(
+            chunkIdsBefore,
+            "#4660: the reindex leaves the chunks to the queue pipeline, which replaces them in the same "
+            + "transaction as the embeddings; deleted here, the old embeddings would point at chunks that "
+            + "are gone for the whole wait in the queue, and for good if the run fails");
     }
 
     /// <summary>
@@ -320,7 +337,7 @@ public sealed class ReindexDocumentPersistsResetIntegrationTests : IAsyncLifetim
             .AsNoTracking()
             .Where(tc => tc.PdfDocumentId == pdfId)
             .ToListAsync(TestCancellationToken);
-        chunks.Should().HaveCount(2, "the chunk delete must roll back with the reset — no data loss");
+        chunks.Should().HaveCount(2, "the chunks stay — the reindex does not touch them (#4660), and the reset rolled back");
 
         // (c) No ProcessingJob was created for the target PDF (the fan-out left no strand).
         var jobForPdf = await verifyDb.Set<ProcessingJobEntity>()

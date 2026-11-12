@@ -230,8 +230,8 @@ public sealed class SyncTableDataReservedRowIntegrationTests : IClassFixture<Dat
     /// con <c>Set&lt;AuditLog&gt;()</c>, un tipo di dominio che non è nel modello EF, quindi l'audit lancia
     /// «Cannot create a DbSet for 'AuditLog'» e il suo <c>catch</c> prova un rollback sulla transazione già
     /// chiusa. Il dato è già scritto, ed è quello che questi test guardano; la riga di controllo (le altre righe
-    /// sincronizzate) prova che il commit c'è stato. Difetto preesistente, non di #4612: lo si accetta qui per nome
-    /// e non si accetta altro.
+    /// sincronizzate) prova che il commit c'è stato. Difetto preesistente, non di #4612, tracciato in #5002: lo si
+    /// accetta qui per nome e non si accetta altro.
     /// </summary>
     private async Task RunSyncAsync(SyncDirection direction)
     {
@@ -257,7 +257,7 @@ public sealed class SyncTableDataReservedRowIntegrationTests : IClassFixture<Dat
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("Transaction has completed", StringComparison.Ordinal))
         {
-            // Vedi il commento del metodo.
+            // Vedi il commento del metodo (#5002).
         }
     }
 

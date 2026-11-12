@@ -65,6 +65,15 @@ export interface ConfigurationImportRequest {
 }
 
 /**
+ * Esito di `POST /api/v1/admin/configurations/import`.
+ * `skippedKeys` elenca le chiavi riservate che il server non importa mai (#4612): non è un errore.
+ */
+export interface ConfigurationImportResult {
+  importedCount: number;
+  skippedKeys: string[];
+}
+
+/**
  * Configuration API client with Zod validation
  */
 export function createConfigClient({ httpClient }: CreateConfigClientParams) {
@@ -250,8 +259,10 @@ export function createConfigClient({ httpClient }: CreateConfigClientParams) {
      * Import configurations from export file
      * @param request Import request with configurations
      */
-    async importConfigurations(request: ConfigurationImportRequest): Promise<number> {
-      const response = await httpClient.post<number>(
+    async importConfigurations(
+      request: ConfigurationImportRequest
+    ): Promise<ConfigurationImportResult> {
+      const response = await httpClient.post<ConfigurationImportResult>(
         '/api/v1/admin/configurations/import',
         request
       );

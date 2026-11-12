@@ -266,7 +266,7 @@ describe('ConfigClient - Issue #2340', () => {
 
   describe('importConfigurations', () => {
     it('should import configurations from request', async () => {
-      vi.mocked(mockHttpClient.post).mockResolvedValue(5);
+      vi.mocked(mockHttpClient.post).mockResolvedValue({ importedCount: 5, skippedKeys: [] });
 
       const client = createConfigClient({ httpClient: mockHttpClient });
       const result = await client.importConfigurations({
@@ -281,11 +281,38 @@ describe('ConfigClient - Issue #2340', () => {
         ],
       });
 
-      expect(result).toBe(5);
+      expect(result.importedCount).toBe(5);
+      expect(result.skippedKeys).toEqual([]);
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/api/v1/admin/configurations/import',
         expect.objectContaining({ configurations: expect.any(Array) })
       );
+    });
+
+    it('should return the reserved keys the server skipped (#4612)', async () => {
+      vi.mocked(mockHttpClient.post).mockResolvedValue({
+        importedCount: 1,
+        skippedKeys: ['Authentication:BootstrapAdmin'],
+      });
+
+      const client = createConfigClient({ httpClient: mockHttpClient });
+      const result = await client.importConfigurations({
+        configurations: [
+          {
+            key: 'Authentication:BootstrapAdmin',
+            value: 'true',
+            valueType: 'bool',
+            category: 'Authentication',
+            environment: 'All',
+          },
+        ],
+        overwriteExisting: true,
+      });
+
+      expect(result).toEqual({
+        importedCount: 1,
+        skippedKeys: ['Authentication:BootstrapAdmin'],
+      });
     });
   });
 

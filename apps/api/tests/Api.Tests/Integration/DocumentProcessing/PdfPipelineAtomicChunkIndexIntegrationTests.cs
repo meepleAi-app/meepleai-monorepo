@@ -304,10 +304,6 @@ public sealed class PdfPipelineAtomicChunkIndexIntegrationTests : IAsyncLifetime
                 totalCharacters: 36,
                 ocrTriggered: false,
                 structuredElements: [new ExtractedElement("Setup", 1, "Title"), new ExtractedElement("Place the tiles.", 1, "NarrativeText")]));
-        var tables = new Mock<IPdfTableExtractor>();
-        tables
-            .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(StructuredContentResult.CreateFailure("Not applicable"));
         var blobs = new Mock<IBlobStorageService>();
         blobs
             .Setup(b => b.RetrieveAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -356,7 +352,6 @@ public sealed class PdfPipelineAtomicChunkIndexIntegrationTests : IAsyncLifetime
             db,
             new RelationalPdfClaimService(db),
             extractor.Object,
-            tables.Object,
             Mock.Of<ITextChunkingService>(),
             embeddings.Object,
             blobs.Object,

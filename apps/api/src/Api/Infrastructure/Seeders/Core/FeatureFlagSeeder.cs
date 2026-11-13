@@ -37,7 +37,8 @@ internal static class FeatureFlagSeeder
         new("Features:SetupWizard.Enabled", "Enable Setup Wizard for live sessions", true, true, true, true),
         new("Features:SetupWizard.BggFallback", "Enable BGG data fallback in setup checklist cascade", false, false, false, false),
         new("Features:AgentMemory.Enabled", "Enable persistent agent memory system", true, true, true, true),
-        new("Features:AgentMemory.GuestClaim", "Enable guest account claiming for player history", true, true, true, true),
+        // #4995: the claim has no access check (any authenticated user can take a guest's memory by name). Default OFF (all tiers).
+        new("Features:AgentMemory.GuestClaim", "Enable guest account claiming for player history", false, false, false, false),
 
         // Admin tools
         new("Features.DatabaseSync", "Enable Database Sync admin tool", false, false, false, false),

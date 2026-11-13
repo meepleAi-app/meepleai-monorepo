@@ -62,7 +62,7 @@ jobs:
           echo "next_review_month=$NEXT_MONTH" >> $GITHUB_OUTPUT
 
       - name: Create Security Review Issue
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           QUARTER: ${{ steps.quarter.outputs.quarter }}
           YEAR: ${{ steps.quarter.outputs.year }}

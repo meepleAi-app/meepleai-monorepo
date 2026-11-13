@@ -1,0 +1,67 @@
+{
+  "jobs": [
+    {
+      "id": 130425139929,
+      "name": "Detect Changes",
+      "conclusion": "success",
+      "started_at": "2026-11-11T09:00:03Z",
+      "completed_at": "2026-11-11T09:00:36Z"
+    },
+    {
+      "id": 130425417433,
+      "name": "E2E Tests (Shard 4)",
+      "conclusion": "cancelled",
+      "started_at": "2026-11-11T09:00:51Z",
+      "completed_at": "2026-11-11T10:38:56Z"
+    },
+    {
+      "id": 130425417466,
+      "name": "E2E Tests (Shard 3)",
+      "conclusion": "cancelled",
+      "started_at": "2026-11-11T09:00:56Z",
+      "completed_at": "2026-11-11T10:38:40Z"
+    },
+    {
+      "id": 130425417481,
+      "name": "E2E Tests (Shard 2)",
+      "conclusion": "cancelled",
+      "started_at": "2026-11-11T09:01:21Z",
+      "completed_at": "2026-11-11T10:38:25Z"
+    },
+    {
+      "id": 130425417506,
+      "name": "E2E Tests (Shard 5)",
+      "conclusion": "cancelled",
+      "started_at": "2026-11-11T09:00:39Z",
+      "completed_at": "2026-11-11T10:38:33Z"
+    },
+    {
+      "id": 130425417531,
+      "name": "E2E Tests (Shard 1)",
+      "conclusion": "cancelled",
+      "started_at": "2026-11-11T09:01:02Z",
+      "completed_at": "2026-11-11T10:38:22Z"
+    },
+    {
+      "id": 130425417542,
+      "name": "E2E Tests (Shard 6)",
+      "conclusion": "cancelled",
+      "started_at": "2026-11-11T09:00:40Z",
+      "completed_at": "2026-11-11T10:39:10Z"
+    },
+    {
+      "id": 130425419163,
+      "name": "E2E Full Suite (All Browsers)",
+      "conclusion": "skipped",
+      "started_at": "2026-11-11T09:00:37Z",
+      "completed_at": "2026-11-11T09:00:37Z"
+    },
+    {
+      "id": 130471528732,
+      "name": "E2E Quality Gate",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T10:39:12Z",
+      "completed_at": "2026-11-11T10:39:18Z"
+    }
+  ]
+}

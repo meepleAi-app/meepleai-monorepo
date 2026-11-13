@@ -287,7 +287,7 @@ checks:
     owner: frontend-dev
     override_path: exception-comment
     pre_existing_in_main_dev: false
-    notes: "Aggregate of the Playwright shards of test-e2e.yml ('E2E Tests (Shard N)'); red whenever a shard is."
+    notes: "Aggregate of the Playwright shards of test-e2e.yml ('E2E Tests (Shard N)'); red whenever a shard is not green. Since #4123 its log names why for each shard (FALLITO, TIMEOUT, annullato a mano, sostituito): a TIMEOUT is the 6-hour cap, not a failing test. It does not run on a run cancelled by hand or by concurrency."
 
 # ─── Fallback regex patterns (AC-9) ──────────────────────────────────────────
 # Applied when `check_name` is not found in the `checks:` list above.

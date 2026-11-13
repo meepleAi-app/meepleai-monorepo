@@ -24,22 +24,32 @@ on:
           - mobile-chrome
           - mobile-safari
           - tablet-chrome
+      job_timeout_minutes:
+        # #4123 — il budget dei job di test (shard e suite intera). Il default e' il tetto di GitHub;
+        # un valore basso serve a provare che il Quality Gate nomina un timeout come tale.
+        description: 'timeout-minutes of the test jobs (default: 360, the GitHub cap)'
+        required: false
+        default: 360
+        type: number
 
 # Cancel in-progress runs for same PR/branch
 concurrency:
   group: e2e-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Minimal required permissions
+# Minimal required permissions. `pull-requests: write` serviva al commento con la soglia del 90%,
+# tolto con #4123. Il Quality Gate dichiara i suoi permessi.
 permissions:
   contents: read
-  pull-requests: write
   checks: write
 
 jobs:
   changes:
     name: Detect Changes
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    # #4123: meno di un minuto nei run 41917389067, 42774776452 e 42991461066. Cinque lasciano piu'
+    # del quadruplo per un runner lento, e fermano in fretta un checkout o un'API che non risponde.
+    timeout-minutes: 5
     outputs:
       e2e-needed: ${{ steps.filter.outputs.e2e }}
     steps:
@@ -67,6 +77,15 @@ jobs:
     if: >-
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.project || 'all') == 'all')
       || (github.event_name != 'workflow_dispatch' && needs.changes.outputs.e2e-needed == 'true')
+    # #4123 — il budget e' il tetto di GitHub per un job (6 ore), e la suite oggi NON ci sta: nessuno
+    # shard ha mai finito in CI. Nel run 41917389067 cinque shard su sei sono arrivati al tetto
+    # (360-363 minuti); con `workers: 1` e `retries: 2` uno shard richiede circa 18 ore, stima
+    # di #4980. Non c'e' quindi un margine da scrivere: il valore esplicito dice qual e' il limite,
+    # e il Quality Gate nomina lo shard che lo raggiunge come TIMEOUT e non come test fallito. Il
+    # budget sulle PR verso main-dev si fissera' sulla durata misurata della porzione scelta (DoD
+    # di #4123). L'input `job_timeout_minutes` del dispatch lo abbassa per provare il gate.
+    # L'ancora passa lo stesso valore al riepilogo degli shard nel Quality Gate: cambialo solo qui.
+    timeout-minutes: &e2e-shard-budget ${{ inputs.job_timeout_minutes || 360 }}
 
     # Service containers for backend
     services:
@@ -269,20 +288,28 @@ jobs:
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: e2e-tests
     # Issue #4126 — il gate giudica gli shard. Un dispatch che chiede UN browser li salta di
-    # proposito, e con il solo `always()` il gate leggeva `needs.e2e-tests.result == 'skipped'`
-    # come un fallimento: il run diventava rosso nel primo minuto, prima che un solo test
-    # partisse (run 37735940694). Fuori da quel caso la condizione resta `always()`.
+    # proposito, e il gate leggeva `needs.e2e-tests.result == 'skipped'` come un fallimento: il run
+    # diventava rosso nel primo minuto, prima che un solo test partisse (run 37735940694).
+    #
+    # #4123 — `!cancelled()` e non `always()`, come il gate di dev-async.yml: su un run annullato a
+    # mano o sostituito da uno piu' recente non c'e' niente da giudicare. Con `always()` il gate
+    # girava e usciva rosso, e un run annullato sembrava un run con test rotti (42991461066: sei
+    # shard annullati a mano, gate `failure`). Un timeout di uno shard invece non annulla il run:
+    # il gate gira, e il riepilogo lo nomina come TIMEOUT.
     if: >-
-      always()
-      && !(github.event_name == 'workflow_dispatch' && (github.event.inputs.project || 'all') != 'all')
+      ${{ !cancelled()
+      && !(github.event_name == 'workflow_dispatch' && (github.event.inputs.project || 'all') != 'all') }}
+    # #4123: meno di un minuto nei run 41917389067, 42774776452 e 42991461066 (era il calcolo della
+    # soglia). Il riepilogo aggiunge una chiamata API per job annullato: dieci minuti bastano anche
+    # con l'API lenta, e fermano un download di artifact bloccato.
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      # L'elenco dei job del run e le loro annotazioni: l'unico posto in cui GitHub distingue un
+      # timeout da un annullamento a mano o da una sostituzione.
+      actions: read
+      checks: read
     steps:
-      - name: Download All Shard Reports
-        uses: actions/download-artifact@v8
-        with:
-          pattern: playwright-report-shard-*
-          path: reports/
-          merge-multiple: true
-
       - name: Merge Coverage Reports
         uses: actions/download-artifact@v8
         with:
@@ -290,71 +317,42 @@ jobs:
           path: coverage-merged/
           merge-multiple: true
 
-      - name: Calculate Pass Rate
-        id: metrics
+      # #4123 — la soglia del 90% di pass rate e' stata tolta: era codice morto. Cercava
+      # `reports/results*.json`, ma in CI il reporter di Playwright e' `dot` e un JSON non c'e' mai;
+      # il gate ricadeva sull'esito dei job ("No Playwright JSON reports found"). Il verdetto resta
+      # quello: tutti gli shard verdi. Cio' che si aggiunge e' il PERCHE' di uno shard non verde,
+      # con lo stesso riepilogo che fa Frontend Fast in dev-fast.yml (#4117): FALLITO, TIMEOUT,
+      # annullato a mano o sostituito, e la quota del budget usata da ogni shard.
+      - name: Shard report and verdict
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHARDS: ${{ needs.e2e-tests.result }}
+          BUDGET_MINUTES: *e2e-shard-budget
         run: |
-          TOTAL=0
-          PASSED=0
-          FAILED=0
-
-          # Parse Playwright JSON reports from all shards
-          for result_file in reports/results*.json reports/**/results*.json; do
-            if [ -f "$result_file" ]; then
-              FILE_TOTAL=$(jq '[.. | .status? // empty] | length' "$result_file" 2>/dev/null || echo 0)
-              FILE_PASSED=$(jq '[.. | select(.status? == "passed")] | length' "$result_file" 2>/dev/null || echo 0)
-              TOTAL=$((TOTAL + FILE_TOTAL))
-              PASSED=$((PASSED + FILE_PASSED))
-            fi
-          done
-
-          # Fallback: derive from job results if no JSON reports found
-          if [ "$TOTAL" -eq 0 ]; then
-            echo "::warning::No Playwright JSON reports found, deriving pass rate from job results"
-            if [ "${{ needs.e2e-tests.result }}" == "success" ]; then
-              PASS_RATE=100
-            else
-              PASS_RATE=0
-            fi
-            echo "pass_rate=$PASS_RATE" >> $GITHUB_OUTPUT
-            echo "total_tests=0" >> $GITHUB_OUTPUT
-            echo "passed_tests=0" >> $GITHUB_OUTPUT
-            echo "failed_tests=0" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          FAILED=$((TOTAL - PASSED))
-          if [ "$TOTAL" -gt 0 ]; then
-            PASS_RATE=$((PASSED * 100 / TOTAL))
-          else
-            PASS_RATE=0
-          fi
-          echo "pass_rate=$PASS_RATE" >> $GITHUB_OUTPUT
-          echo "total_tests=$TOTAL" >> $GITHUB_OUTPUT
-          echo "passed_tests=$PASSED" >> $GITHUB_OUTPUT
-          echo "failed_tests=$FAILED" >> $GITHUB_OUTPUT
-
-      - name: Enforce Quality Gate (≥90% Pass Rate)
-        run: |
-          PASS_RATE=${{ steps.metrics.outputs.pass_rate }}
-          TOTAL=${{ steps.metrics.outputs.total_tests }}
-
-          # If no test metrics, fall back to job result
-          if [ "$TOTAL" -eq 0 ]; then
-            echo "::warning::No test metrics available, quality gate based on job result"
-            if [ "${{ needs.e2e-tests.result }}" != "success" ]; then
-              echo "❌ E2E test shards failed"
-              exit 1
-            fi
-            echo "✅ All E2E test shards passed"
-            exit 0
-          fi
-
-          if [ "$PASS_RATE" -lt 90 ]; then
-            echo "❌ Quality gate failed: $PASS_RATE% < 90% threshold"
+          set -uo pipefail
+          shard_report() {
+            local dir id
+            dir=$(mktemp -d)
+            gh api "repos/$GITHUB_REPOSITORY/contents/infra/scripts/frontend-shard-report.sh?ref=$GITHUB_SHA" \
+              -H "Accept: application/vnd.github.raw" > "$dir/report.sh" || return 1
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" \
+              > "$dir/jobs.json" || return 1
+            mkdir "$dir/annotations"
+            for id in $(jq -r '.jobs[] | select(.conclusion == "cancelled") | .id' "$dir/jobs.json"); do
+              gh api "repos/$GITHUB_REPOSITORY/check-runs/$id/annotations" > "$dir/annotations/$id.json" \
+                || rm -f "$dir/annotations/$id.json"
+            done
+            bash "$dir/report.sh" --jobs "$dir/jobs.json" --annotations "$dir/annotations" \
+              --budget-minutes "$BUDGET_MINUTES" \
+              --name-prefix 'E2E Tests (Shard ' \
+              --suite 'E2E Tests' --workflow test-e2e.yml
+          }
+          shard_report || echo "::warning::shard report unavailable (see the lines above); the verdict below does not depend on it"
+          if [[ "$SHARDS" != "success" ]]; then
+            echo "E2E Tests did not succeed across all shards (result=$SHARDS) — which shard, and whether it was a failure or a timeout, is in the shard report above"
             exit 1
-          else
-            echo "✅ Quality gate passed: $PASS_RATE% ≥ 90% threshold"
           fi
+          echo "All E2E shards passed."
 
       - name: Upload Merged Coverage
         if: always()
@@ -365,49 +363,15 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 
-      - name: Comment PR with Results
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const passRate = ${{ steps.metrics.outputs.pass_rate }};
-            const total = ${{ steps.metrics.outputs.total_tests }};
-            const passed = ${{ steps.metrics.outputs.passed_tests }};
-            const failed = ${{ steps.metrics.outputs.failed_tests }};
-
-            const emoji = passRate >= 90 ? '✅' : '❌';
-            const status = passRate >= 90 ? 'PASSED' : 'FAILED';
-
-            const body = `## ${emoji} E2E Test Results: ${status}
-
-            **Pass Rate**: ${passRate}% (${passed}/${total} tests)
-            **Quality Gate**: ${passRate >= 90 ? '✅ PASSED' : '❌ FAILED'} (≥90% required)
-
-            **Details**:
-            - Passed: ${passed}
-            - Failed: ${failed}
-            - Total: ${total}
-
-            **Artifacts**:
-            - Test reports available in workflow artifacts
-            - Screenshots/traces uploaded for failures
-            - E2E coverage report uploaded to Codecov
-
-            Issue #2542: E2E Test Suite with Robust Selectors`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
-
   # Manual trigger for full suite (all browsers)
   e2e-full-suite:
     name: E2E Full Suite (All Browsers)
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     if: github.event_name == 'workflow_dispatch'
     needs: changes
+    # #4123 — lo stesso budget degli shard, per lo stesso motivo: un progetto intero in un job solo
+    # non e' piu' piccolo di uno shard, e nessun run lo ha misurato fino in fondo.
+    timeout-minutes: *e2e-shard-budget
 
     # Service containers for backend
     services:

@@ -1,0 +1,22 @@
+[
+  {
+    "annotation_level": "failure",
+    "message": "The job has exceeded the maximum execution time of 6h0m0s"
+  },
+  {
+    "annotation_level": "warning",
+    "message": "No files were found with the provided path: apps/web/coverage-e2e/. No artifacts will be uploaded."
+  },
+  {
+    "annotation_level": "warning",
+    "message": "No files were found with the provided path: apps/web/playwright-report/. No artifacts will be uploaded."
+  },
+  {
+    "annotation_level": "failure",
+    "message": "The operation was canceled."
+  },
+  {
+    "annotation_level": "notice",
+    "message": "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748\""
+  }
+]

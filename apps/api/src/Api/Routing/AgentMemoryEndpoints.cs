@@ -116,20 +116,6 @@ internal static class AgentMemoryEndpoints
             .Produces(401)
             .WithSummary("Get my player stats across all games");
 
-        agentMemory.MapGet("/players/me/claimable-guests", HandleGetClaimableGuests)
-            .RequireAuthenticatedUser()
-            .Produces<List<ClaimableGuestDto>>(200)
-            .Produces(400)
-            .Produces(401)
-            .WithSummary("Find claimable guest identities");
-
-        agentMemory.MapPost("/players/me/claim-guest", HandleClaimGuest)
-            .RequireAuthenticatedUser()
-            .Produces(204)
-            .Produces(400)
-            .Produces(401)
-            .WithSummary("Claim a guest player identity");
-
         return group;
     }
 
@@ -309,30 +295,6 @@ internal static class AgentMemoryEndpoints
         return Results.Ok(result);
     }
 
-    private static async Task<IResult> HandleGetClaimableGuests(
-        [FromQuery] string guestName,
-        [FromServices] IMediator mediator,
-        HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
-        var userId = httpContext.User.GetUserId();
-        var result = await mediator.Send(new GetClaimableGuestsQuery(userId, guestName), cancellationToken).ConfigureAwait(false);
-        return Results.Ok(result);
-    }
-
-    private static async Task<IResult> HandleClaimGuest(
-        [FromBody] ClaimGuestRequest request,
-        [FromServices] IMediator mediator,
-        HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
-        var userId = httpContext.User.GetUserId();
-        var command = new ClaimGuestPlayerCommand(userId, request.PlayerMemoryId);
-
-        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
-        return Results.NoContent();
-    }
-
     // === Request DTOs ===
 
     internal record CreateGroupRequest(
@@ -352,6 +314,4 @@ internal static class AgentMemoryEndpoints
     internal record AddNoteRequest(string Content);
 
     internal record AddGlossaryEntryRequest(string Term, string Definition, string Language = "en");
-
-    internal record ClaimGuestRequest(Guid PlayerMemoryId);
 }

@@ -10,7 +10,6 @@ Gestisce la memoria persistente degli agenti AI relativa ai giochi, ai gruppi di
 - **Group Memory**: Memoria collettiva di un gruppo di gioco con membri (registrati o guest), preferenze e statistiche aggregate
 - **Player Memory**: Statistiche individuali per giocatore (vittorie, sconfitte, punteggi migliori) per ogni gioco
 - **House Rules**: Regole della casa aggiunte manualmente o generate automaticamente dalla risoluzione di dispute
-- **Guest Claim**: Possibilita per un utente registrato di reclamare un'identita guest e unificarne le statistiche
 - **Event-Driven Stats**: Aggiornamento automatico delle statistiche alla conclusione di sessioni di gioco live
 - **Feature Flag**: Il contesto e protetto dal feature flag `Features:AgentMemory.Enabled`
 
@@ -23,7 +22,7 @@ Logica di business pura e modelli di dominio:
 - **Entities/**: Aggregate roots principali
   - `GameMemory`: Memoria per-gioco e per-owner con house rules, setup personalizzato e note
   - `GroupMemory`: Memoria collettiva di un gruppo con membri, preferenze e statistiche
-  - `PlayerMemory`: Statistiche di un giocatore (utente registrato o guest), con supporto claim guest-to-user
+  - `PlayerMemory`: Statistiche di un giocatore (utente registrato o guest)
 - **Models/**: Modelli di dominio (owned types)
   - `HouseRule`: Regola della casa con descrizione, data e sorgente (UserAdded | DisputeOverride)
   - `MemoryNote`: Nota testuale con data e autore opzionale
@@ -48,16 +47,14 @@ Orchestrazione e casi d'uso (CQRS pattern con MediatR):
   - `AddMemoryNoteCommand`: Aggiunge una nota alla memoria di un gioco
   - `CreateGroupMemoryCommand`: Crea un gruppo di gioco con membri iniziali (utenti e/o guest)
   - `UpdateGroupPreferencesCommand`: Aggiorna le preferenze di un gruppo
-  - `ClaimGuestPlayerCommand`: Reclama un'identita guest per un utente registrato
 - **Queries/**: Operazioni di lettura
   - `GetGameMemoryQuery`: Recupera la memoria di un gioco per un owner specifico
   - `GetGroupMemoryQuery`: Recupera i dettagli di un gruppo
   - `GetPlayerStatsQuery`: Recupera le statistiche di un giocatore su tutti i giochi
-  - `GetClaimableGuestsQuery`: Trova le identita guest reclamabili da un utente
 - **DTOs/**: Data Transfer Objects per le risposte API
   - `GameMemoryDto`, `HouseRuleDto`, `MemoryNoteDto`
   - `GroupMemoryDto`, `GroupMemberDto`, `GroupPreferencesDto`, `GroupStatsDto`
-  - `PlayerMemoryDto`, `PlayerGameStatsDto`, `ClaimableGuestDto`
+  - `PlayerMemoryDto`, `PlayerGameStatsDto`
 - **Validators/**: FluentValidation per ogni command
 - **EventHandlers/**: Gestori di domain events cross-context
   - `OnSessionCompletedUpdateStatsHandler`: Alla conclusione di una sessione live, aggiorna statistiche giocatore e gruppo
@@ -94,8 +91,6 @@ GET    /api/v1/agent-memory/games/{gameId}/memory               → GetGameMemor
 POST   /api/v1/agent-memory/games/{gameId}/memory/house-rules   → AddHouseRuleCommand
 POST   /api/v1/agent-memory/games/{gameId}/memory/notes         → AddMemoryNoteCommand
 GET    /api/v1/agent-memory/players/me/stats                    → GetPlayerStatsQuery
-GET    /api/v1/agent-memory/players/me/claimable-guests         → GetClaimableGuestsQuery
-POST   /api/v1/agent-memory/players/me/claim-guest              → ClaimGuestPlayerCommand
 ```
 
 Tutti gli endpoint richiedono autenticazione (`RequireAuthenticatedUser`).
@@ -122,11 +117,10 @@ Tutti gli endpoint richiedono autenticazione (`RequireAuthenticatedUser`).
 ### PlayerMemory Aggregate
 
 - **Identita**: Id (GUID)
-- **Proprieta**: UserId (nullable), GuestName (nullable), GroupId (nullable), GameStats (collection), ClaimedAt, CreatedAt
+- **Proprieta**: UserId (nullable), GuestName (nullable), GroupId (nullable), GameStats (collection), ClaimedAt, CreatedAt. `ClaimedAt` è il residuo del reclamo degli ospiti, ritirato da #4995: nessun codice lo scrive più, e la colonna resta finché #4876 non toglie la tabella
 - **Invarianti**:
   - UserId non puo essere vuoto se presente
   - GuestName non puo essere vuoto per giocatori guest
-  - Claim possibile solo se non gia reclamato (`UserId == null`)
 
 ## Dipendenze
 

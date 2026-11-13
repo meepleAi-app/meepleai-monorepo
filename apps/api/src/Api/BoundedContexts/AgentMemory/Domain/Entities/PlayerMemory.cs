@@ -99,18 +99,6 @@ internal sealed class PlayerMemory : AggregateRoot<Guid>
         return memory;
     }
 
-    /// <summary>
-    /// Claims a guest player memory for a registered user.
-    /// </summary>
-    public void ClaimByUser(Guid userId)
-    {
-        if (userId == Guid.Empty) throw new ArgumentException("UserId cannot be empty.", nameof(userId));
-        if (UserId != null) throw new InvalidOperationException("Already claimed by a user.");
-
-        UserId = userId;
-        ClaimedAt = DateTime.UtcNow;
-    }
-
     public void UpdateGameStats(Guid gameId, bool won, int? score = null)
     {
         if (gameId == Guid.Empty)

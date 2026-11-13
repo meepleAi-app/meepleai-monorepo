@@ -189,25 +189,6 @@ public sealed class FeatureFlagSeederTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SeedFeatureFlagsAsync_AgentMemoryGuestClaimOffForAllTiers()
-    {
-        // #4995: the guest claim lets any authenticated user take a guest's memory by name, so it ships dark.
-        var logger = new Mock<Microsoft.Extensions.Logging.ILogger>();
-
-        await FeatureFlagSeeder.SeedFeatureFlagsAsync(
-            _dbContext!, TestUserId, logger.Object, TestCancellationToken);
-
-        const string key = "Features:AgentMemory.GuestClaim";
-        var flags = await _dbContext!.Set<SystemConfigurationEntity>()
-            .Where(c => c.Category == "FeatureFlags" && c.Key.StartsWith(key))
-            .ToListAsync(TestCancellationToken);
-
-        flags.Select(f => f.Key).Should().BeEquivalentTo(
-            key, $"{key}.Tier.free", $"{key}.Tier.normal", $"{key}.Tier.premium");
-        flags.Should().OnlyContain(f => f.Value == "false");
-    }
-
-    [Fact]
     public async Task SeedFeatureFlagsAsync_AllFlagsHaveCorrectCategory()
     {
         // Arrange

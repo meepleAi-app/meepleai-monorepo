@@ -339,7 +339,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           let appendedContent = lastAssistant.content;
 
           for await (const event of qaStream(
-            { gameId: thread.gameId, query: '', continuationToken },
+            // #4998: the server reads the thread's intent and history from chatId, as for a question.
+            { gameId: thread.gameId, query: '', continuationToken, chatId: threadId },
             abortController.signal
           )) {
             if (event.type === QA_EVENT_TYPES.TOKEN) {
@@ -367,7 +368,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         }
       })();
     },
-    [messages, thread?.gameId, beginAbort, patchMessageById]
+    [messages, thread?.gameId, threadId, beginAbort, patchMessageById]
   );
 
   // QA stream path (#415): a question on the thread's game, answered via RAG QA streaming.

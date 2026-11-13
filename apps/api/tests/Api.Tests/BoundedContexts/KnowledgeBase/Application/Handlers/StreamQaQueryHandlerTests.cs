@@ -1160,9 +1160,18 @@ public partial class StreamQaQueryHandlerTests
     /// returns that carry the intent, with and without history, and the mock of the history policy answers «no»
     /// unless told otherwise, so without it only the second is ever reached.
     /// </summary>
-    private async Task<string> SystemPromptOfAnAnswerInAsync(ChatThread thread, string gameId, bool withHistory = false)
+    private async Task<string> SystemPromptOfAnAnswerInAsync(ChatThread thread, string gameId, bool withHistory = false) =>
+        (await ModelRequestOfAsync(
+            new StreamQaQuery(gameId, "Quante carte si pescano?", TestUserId, "User", ThreadId: thread.Id),
+            thread,
+            withHistory)).SystemPrompt;
+
+    /// <summary>
+    /// The request of the one model call <paramref name="query"/> makes, with <paramref name="thread"/> as the
+    /// thread the repository returns. See <see cref="SystemPromptOfAnAnswerInAsync"/> for <paramref name="withHistory"/>.
+    /// </summary>
+    private async Task<LlmAnswerRequest> ModelRequestOfAsync(StreamQaQuery query, ChatThread thread, bool withHistory)
     {
-        var query = new StreamQaQuery(gameId, "Quante carte si pescano?", TestUserId, "User", ThreadId: thread.Id);
         _chatThreadRepositoryMock
             .Setup(x => x.GetByIdAsync(thread.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(thread);
@@ -1175,7 +1184,7 @@ public partial class StreamQaQueryHandlerTests
                 .Returns<string, string>((prompt, history) => $"{history}\n{prompt}");
         }
 
-        SetupHappyPathMocks(gameId, query.Query);
+        SetupHappyPathMocks(query.GameId, query.Query);
 
         await foreach (var _ in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
@@ -1185,7 +1194,28 @@ public partial class StreamQaQueryHandlerTests
             .Where(i => i.Method.Name == nameof(ILlmService.GenerateAnswerStreamAsync))
             .Select(i => (LlmAnswerRequest)i.Arguments[0])
             .Should().ContainSingle("the question went all the way to the model").Subject;
-        return request.SystemPrompt;
+        return request;
+    }
+
+    /// <summary>
+    /// #4998: «Continua» asks for the second half of a truncated answer with the partial answer and an empty
+    /// question. When the request names the thread, the second half keeps the thread's intent and history, like
+    /// the first: before, the web did not send the thread, and a tutor answer went on as <c>auto</c>.
+    /// </summary>
+    [Fact]
+    public async Task Handle_AContinuationOnATutorThread_KeepsTheTutorShapeAndTheHistory()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var tutorThread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
+        tutorThread.SwitchAgent("tutor");
+        var continuation = new StreamQaQuery(
+            gameId, "", TestUserId, "User", ThreadId: tutorThread.Id,
+            ResponseStyle: "continuation", ContinuationContext: "Ogni giocatore pesca");
+
+        var request = await ModelRequestOfAsync(continuation, tutorThread, withHistory: true);
+
+        request.SystemPrompt.Should().Contain(AnswerIntent.DefaultInstructionFor("tutor")!);
+        request.UserPrompt.Should().Contain("Earlier in this chat").And.Contain("Ogni giocatore pesca");
     }
 
     [Theory]

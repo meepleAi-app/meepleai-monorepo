@@ -691,7 +691,8 @@ jobs:
         continue-on-error: true
 
   # Backend Integration Tests (requires service containers, runs in parallel with unit tests)
-  # Phase 2+3: 4 parallel threads per shard, one shard per matrix entry (four since #4880) for ~4-12x total speedup
+  # Phase 2+3: 4 parallel threads per shard, one shard per matrix entry (seven since #4329, the
+  # matrix of dev-async.yml) for ~4-12x total speedup
   #
   # Spec R1 — CI optimization (2026-04-09): backend-integration runs ONLY on
   # release-candidate PRs (target main-staging or main) and on workflow_dispatch
@@ -718,24 +719,38 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # KnowledgeBase cede a Games i test col nome di entrambi (#4488): le esclusioni sono
-        # precedenze, spiegate sopra la matrice di dev-async.yml, e infra/scripts/tests/
-        # integration-shard-matrix.bats verifica doppi e cicli in entrambi i workflow.
-        # CoreEndpoints (#4880) e' staccato da Core qui come in dev-async.yml: Core e' il resto, e il
-        # bats pretende che i due Core siano identici. Cede a KnowledgeBase e a Games.
+        # La matrice di backend-integration in dev-async.yml (#4329): stessi nomi, stesso ordine,
+        # stessi filter_extra. Perché ogni shard è diviso così, e perché le esclusioni sono
+        # precedenze (#4488), è spiegato sopra quella matrice. Qui c'è in più solo coverage_file, uno
+        # per shard e derivato dal nome. infra/scripts/tests/integration-shard-matrix.bats pretende
+        # l'uguaglianza voce per voce e i coverage_file unici, e verifica doppi e cicli in entrambi
+        # i workflow.
+        #
+        # Prima di #4329 qui c'erano quattro shard con la stessa selezione: `Games` e `KnowledgeBase`
+        # interi stavano sul bordo dei 75 minuti del TestSessionTimeout, e dal 2026-11-04 `Games` si è
+        # fermato in cinque PR di rilascio su sei (tabella nel commento di decisione di #4329).
         shard:
           - name: "KnowledgeBase"
-            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
-            coverage_file: "integration-coverage-shard1.xml"
-          - name: "Games"
-            filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"
-            coverage_file: "integration-coverage-shard2.xml"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~Authentication)&FullyQualifiedName!~Integration.Authentication&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            coverage_file: "integration-coverage-KnowledgeBase.xml"
+          - name: "DocProcessing"
+            filter_extra: "&(FullyQualifiedName~DocumentProcessing)&FullyQualifiedName!~Integration.Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            coverage_file: "integration-coverage-DocProcessing.xml"
+          - name: "AuthIntegration"
+            filter_extra: "&(FullyQualifiedName~Integration.Authentication)&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            coverage_file: "integration-coverage-AuthIntegration.xml"
+          - name: "Catalog"
+            filter_extra: "&(FullyQualifiedName~SharedGameCatalog)"
+            coverage_file: "integration-coverage-Catalog.xml"
+          - name: "GamesAdmin"
+            filter_extra: "&(FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)&FullyQualifiedName!~SharedGameCatalog"
+            coverage_file: "integration-coverage-GamesAdmin.xml"
           - name: "CoreEndpoints"
             filter_extra: "&(FullyQualifiedName~Integration.Routing|FullyQualifiedName~Integration.Testing|FullyQualifiedName~Integration.Events)&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
-            coverage_file: "integration-coverage-shard4.xml"
+            coverage_file: "integration-coverage-CoreEndpoints.xml"
           - name: "Core"
             filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration&FullyQualifiedName!~Integration.Routing&FullyQualifiedName!~Integration.Testing&FullyQualifiedName!~Integration.Events"
-            coverage_file: "integration-coverage-shard3.xml"
+            coverage_file: "integration-coverage-Core.xml"
 
     services:
       postgres:
@@ -972,6 +987,51 @@ jobs:
             exit 1
           fi
           echo "✅ Integration tests executed (${{ matrix.shard.name }}): $sum"
+
+      # #3742/#4329 — quanta parte del TestSessionTimeout ha usato la sessione, con lo stesso script
+      # e gli stessi argomenti di dev-async.yml. Riporta la quota e avvisa dall'80%; non decide il
+      # colore del job.
+      #
+      # `!cancelled()`: qui un passo dopo un `Run Integration Tests` fallito viene saltato (nel job
+      # 129695306408 il guard qui sopra è `skipped`), e gli shard con falliti di base, come
+      # DocProcessing (#4996), sono proprio quelli di cui non si saprebbe mai il margine. Lo script
+      # assente è un errore, come in dev-async.yml: un percorso sbagliato produrrebbe un log senza
+      # la riga, che si legge come «tutto a posto».
+      - name: 'Session budget: share of the TestSessionTimeout (#3742, #4329)'
+        if: ${{ !cancelled() }}
+        env:
+          SHARD: ${{ matrix.shard.name }}
+        run: |
+          set -euo pipefail
+          budget="${GITHUB_WORKSPACE}/infra/scripts/shard-session-budget.sh"
+          if [ ! -f "$budget" ]; then
+            echo "::error::script del margine non trovato in $budget — il percorso è sbagliato, non è un problema dei tempi"
+            exit 1
+          fi
+          mapfile -t trx_files < <(find . -name 'integration-test-results.trx' -print)
+          if [ ${#trx_files[@]} -eq 0 ]; then
+            echo "::warning::Shard ${SHARD}: nessun .trx, il margine sul TestSessionTimeout non è misurabile."
+            exit 0
+          fi
+          set +e
+          bash "$budget" \
+            --shard "${SHARD}" \
+            --trx "${trx_files[0]}" \
+            --runsettings "${GITHUB_WORKSPACE}/apps/api/tests/Api.Tests/integration.runsettings" > /tmp/shard-budget.out 2>&1
+          budget_rc=$?
+          set -e
+          cat /tmp/shard-budget.out
+          if [ "$budget_rc" -ne 0 ]; then
+            echo "::warning::Shard ${SHARD}: il margine sul TestSessionTimeout non è calcolabile (vedi la riga sopra)."
+          fi
+          {
+            echo
+            if [ "$budget_rc" -eq 0 ]; then
+              echo "**Margine (#3742):** $(grep -v '^::' /tmp/shard-budget.out | head -1)"
+            else
+              echo "**Margine (#3742):** non calcolabile."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Coverage
         if: always()

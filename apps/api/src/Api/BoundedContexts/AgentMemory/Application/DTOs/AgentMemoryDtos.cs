@@ -78,12 +78,3 @@ internal record PlayerGameStatsDto(
     int Losses,
     int TotalPlayed,
     int? BestScore);
-
-/// <summary>
-/// DTO representing a claimable guest player.
-/// </summary>
-internal record ClaimableGuestDto(
-    Guid PlayerMemoryId,
-    string GuestName,
-    Guid? GroupId,
-    string? GroupName);

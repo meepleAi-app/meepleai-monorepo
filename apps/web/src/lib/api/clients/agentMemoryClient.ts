@@ -74,13 +74,6 @@ export const PlayerMemoryDtoSchema = z.object({
   claimedAt: z.string().nullable(),
 });
 
-export const ClaimableGuestDtoSchema = z.object({
-  playerMemoryId: z.string(),
-  guestName: z.string(),
-  groupId: z.string().nullable(),
-  groupName: z.string().nullable(),
-});
-
 /**
  * Issue #2492: aggregated counts (agent · game · session · kb) for the SP6 §F
  * drawer ConnectionBar. Backend returns all four counts in a single GET.
@@ -103,7 +96,6 @@ export type GroupStatsDto = z.infer<typeof GroupStatsDtoSchema>;
 export type GroupMemoryDto = z.infer<typeof GroupMemoryDtoSchema>;
 export type PlayerGameStatsDto = z.infer<typeof PlayerGameStatsDtoSchema>;
 export type PlayerMemoryDto = z.infer<typeof PlayerMemoryDtoSchema>;
-export type ClaimableGuestDto = z.infer<typeof ClaimableGuestDtoSchema>;
 export type HouseRulesMetadataDto = z.infer<typeof HouseRulesMetadataDtoSchema>;
 
 // --- Client ---
@@ -175,18 +167,6 @@ export function createAgentMemoryClient({ httpClient }: CreateAgentMemoryClientP
         z.array(PlayerMemoryDtoSchema)
       );
       return result ?? [];
-    },
-
-    async getClaimableGuests(guestName: string): Promise<ClaimableGuestDto[]> {
-      const result = await httpClient.get(
-        `${BASE}/players/me/claimable-guests?guestName=${encodeURIComponent(guestName)}`,
-        z.array(ClaimableGuestDtoSchema)
-      );
-      return result ?? [];
-    },
-
-    async claimGuest(playerMemoryId: string): Promise<void> {
-      await httpClient.post(`${BASE}/players/me/claim-guest`, { playerMemoryId });
     },
   };
 }

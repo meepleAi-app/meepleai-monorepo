@@ -81,61 +81,6 @@ public class PlayerMemoryTests
 
     #endregion
 
-    #region ClaimByUser Tests
-
-    [Fact]
-    public void ClaimByUser_GuestPlayer_SetsUserIdAndClaimedAt()
-    {
-        // Arrange
-        var player = PlayerMemory.CreateForGuest("Alice");
-        var userId = Guid.NewGuid();
-
-        // Act
-        player.ClaimByUser(userId);
-
-        // Assert
-        player.UserId.Should().Be(userId);
-        player.ClaimedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
-    }
-
-    [Fact]
-    public void ClaimByUser_AlreadyClaimed_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var player = PlayerMemory.CreateForUser(Guid.NewGuid());
-
-        // Act
-        var act = () => player.ClaimByUser(Guid.NewGuid());
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Already claimed*");
-    }
-
-    [Fact]
-    public void ClaimByUser_GuestClaimedTwice_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var player = PlayerMemory.CreateForGuest("Alice");
-        player.ClaimByUser(Guid.NewGuid());
-
-        // Act
-        var act = () => player.ClaimByUser(Guid.NewGuid());
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>();
-    }
-
-    [Fact]
-    public void ClaimByUser_WithEmptyUserId_ThrowsArgumentException()
-    {
-        var player = PlayerMemory.CreateForGuest("Alice");
-        var act = () => player.ClaimByUser(Guid.Empty);
-        act.Should().Throw<ArgumentException>().WithParameterName("userId");
-    }
-
-    #endregion
-
     #region UpdateGameStats Tests
 
     [Fact]

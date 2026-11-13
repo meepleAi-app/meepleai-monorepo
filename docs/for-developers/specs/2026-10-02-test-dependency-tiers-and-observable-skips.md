@@ -276,7 +276,8 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
   seriale più lunga: `Integration-GroupC`, con le classi di `SharedGameCatalog` e di
   `GameManagement`, occupava il runner da sola dal ventesimo minuto alla fine. `dev-async.yml`
   divide ora `Games` in `Catalog` e `GamesAdmin` lungo quel confine, su due runner, senza spostare
-  alcuna classe di collection; `ci.yml` resta a tre shard con la stessa selezione (#4329).
+  alcuna classe di collection; `ci.yml` restava allora a tre shard con la stessa selezione. Da
+  #4329 ha la stessa matrice di `dev-async.yml`.
   Due cose restano dopo la correzione, perché il margine si consuma di nuovo con la crescita della
   suite: `shard-session-budget.sh` scrive a ogni run quanta parte del `TestSessionTimeout` ha usato
   la sessione e avvisa oltre l'80%, e `integration-shard-matrix.bats` verifica che la matrice non

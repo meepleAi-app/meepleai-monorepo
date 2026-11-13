@@ -83,7 +83,7 @@ Confronta anche **superati e saltati**, non solo i falliti: un `Passed` che scen
 
 Per le integrazioni di backend il controllo è il **Dev Async** di `main-dev` sullo stesso SHA. Gli shard hanno nomi quasi uguali (`Backend - Integration (Core)` in `ci.yml`, `Backend Integration (Core)` nel Dev Async), ma i due workflow trattano un test fallito in modo diverso: `ci.yml` fa fallire il job, il Dev Async lo lascia `success`. Quindi i nomi si leggono dal log, mai dall'esito del job. Giro del 2026-11-10: lo shard Core era rosso sulla PR e verde nel Dev Async, con gli stessi due test falliti e gli stessi totali da entrambe le parti (1122 test, 1074 superati, 2 falliti, 46 saltati). Nessuna regressione.
 
-Gli shard **non** si corrispondono uno a uno: confronta i filtri (`filter_extra` in `ci.yml` e in `dev-async.yml`) prima di confrontare i nomi. Lo shard `KnowledgeBase` di `ci.yml` contiene KnowledgeBase, DocumentProcessing e Authentication, che nel Dev Async sono tre shard (`KnowledgeBase`, `DocProcessing`, `AuthIntegration`): si confronta con l'**unione** dei tre. Giro del 2026-11-10: cinque falliti sulla PR, gli stessi cinque nello shard DocProcessing del controllo, e la somma dei tre shard del controllo uguale ai totali della PR (1434 test, 1416 superati, 5 falliti, 13 saltati).
+Da #4329 gli shard **si corrispondono uno a uno**. `ci.yml` e `dev-async.yml` hanno la stessa matrice: stessi nomi, stesso ordine, stessi `filter_extra`, e lo pretende `infra/scripts/tests/integration-shard-matrix.bats`. Quindi lo shard X della PR si confronta con lo shard X del controllo. Prima di #4329 non era così. Lo shard `KnowledgeBase` di `ci.yml` conteneva KnowledgeBase, DocumentProcessing e Authentication, che nel Dev Async erano già tre shard (`KnowledgeBase`, `DocProcessing`, `AuthIntegration`), e si confrontava con l'**unione** dei tre. Giro del 2026-11-10, con la matrice di allora: cinque falliti sulla PR, gli stessi cinque nello shard DocProcessing del controllo, e la somma dei tre shard del controllo uguale ai totali della PR (1434 test, 1416 superati, 5 falliti, 13 saltati).
 
 Finché il run è in corso, `gh run view --job <id> --log` restituisce un log **vuoto**, non un errore. Il log di un job già finito, dentro un run ancora in corso, si legge dall'API:
 
@@ -106,10 +106,12 @@ Questi sono rossi qualunque cosa contenga la PR. Verificali uno per uno con il l
 | check | perché | finché |
 |---|---|---|
 | `validate-source-branch` (Branch Policy) | pretende `main-dev` come unico source di `main-staging`, e il source è `release/*` | finché il workflow non ammette `release/*`; è advisory |
-| `Backend - Integration (Games)` di `ci.yml` | spesso supera il limite di 75 minuti del run (`Aborting test run: test run timeout`), con zero falliti ed esito `Aborted`. Giro del 2026-11-10: su #4972 si è fermato dopo 1141 test eseguiti, mentre il controllo (Catalog + GamesAdmin nel Dev Async, stesso filtro) ne ha eseguiti 1424 sullo stesso SHA, tutti verdi. Su #4977, con lo stesso contenuto, ha finito in 70 minuti | #4329, che divide lo shard. **La parte non eseguita è provata solo dal controllo**: scrivilo nella PR |
+| `Backend - Integration (DocProcessing)` di `ci.yml` | porta i test di DocumentProcessing rossi anche su `main-dev`: sono i falliti di base, che fino a #4329 stavano nello shard `KnowledgeBase` | #4996. **Confronta i NOMI** dei falliti con lo shard `DocProcessing` del controllo |
 | `A11y unit smoke` (Staging Gate) | lo step viene annullato dopo pochi minuti (timeout noto) | — |
 | `Frontend - Lint` | gate DS-17-1, copertura 0/3, rosso dichiarato dal commit #4048 | #4047 |
 | `CI Success`, `Backend E2E Quality Gate`, `E2E Quality Gate` | aggregati: rossi quando lo è un job a monte | — |
+
+Fino a #4329 la tabella aveva anche `Backend - Integration (Games)` di `ci.yml` (riferimento storico). Lo shard superava spesso il limite di 75 minuti del run (`Aborting test run: test run timeout`), con zero falliti ed esito `Aborted`, e la parte non eseguita la provava solo il controllo. #4329 l'ha diviso in `Catalog` e `GamesAdmin`, come nel Dev Async. Da allora ogni shard di `ci.yml` stampa nel log la quota del `TestSessionTimeout` che ha usato (riga `[<shard>] sessione: …`) e avvisa dall'80%.
 
 ## 3. Il secondo salto: `main-staging` → `main`
 

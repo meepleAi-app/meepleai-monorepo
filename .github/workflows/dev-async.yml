@@ -110,11 +110,13 @@ jobs:
     strategy:
       fail-fast: false  # uno shard rosso non deve nascondere l'esito degli altri
       matrix:
-        # Stessa SELEZIONE di ci.yml, deliberatamente: se i due gate misurassero insiemi diversi,
+        # Stessa MATRICE di ci.yml, deliberatamente: stessi nomi, stesso ordine, stessi filter_extra
+        # (#4329; ci.yml ha in piu' solo coverage_file). Se i due gate misurassero insiemi diversi,
         # un test potrebbe non essere eseguito da nessuno dei due — il difetto di #3622 su un altro
-        # asse. La ripartizione invece qui e' piu' fine (#3742): cio' che ci.yml chiama `Games` e'
-        # diviso in `Catalog` e `GamesAdmin`, e da `KnowledgeBase` sono staccati `AuthIntegration` e
-        # `DocProcessing`. `CoreEndpoints` invece e' staccato da `Core` in ENTRAMBI i workflow (#4880).
+        # asse. Fino a #4329 la ripartizione qui era piu' fine: le divisioni di #3742, #4484 e #4571
+        # descritte sotto erano solo in dev-async, e ci.yml teneva `Games` e `KnowledgeBase` interi,
+        # che sulle PR di rilascio sforavano il TestSessionTimeout. `CoreEndpoints` (#4880) era gia'
+        # in entrambi.
         #
         # Perche' divisa, e perche' li'. Uno shard dura quanto la sua catena seriale piu' lunga:
         # xUnit mette in parallelo le collection e in serie i test dentro una collection. In `Games`
@@ -154,9 +156,9 @@ jobs:
         # `Integration.Routing` (15,1 min), `Integration.Testing` (6,8), `Integration.Events` (4,3).
         # `CoreEndpoints` li prende e cede a tutti gli altri shard escludendone i token; sul run
         # lento GroupD diventa 29,3 minuti in `CoreEndpoints` e 29,1 in `Core`. I token hanno il
-        # punto, come `Integration.Authentication`: un nome di metodo non li contiene. A differenza
-        # delle divisioni sopra questa e' anche in ci.yml, perche' i due `Core` devono restare
-        # identici (integration-shard-matrix.bats).
+        # punto, come `Integration.Authentication`: un nome di metodo non li contiene. E' stata la
+        # prima divisione portata anche in ci.yml, perche' i due `Core` devono restare identici; con
+        # #4329 ci sono arrivate tutte (integration-shard-matrix.bats).
         #
         # Le esclusioni sono precedenze (#4488). Un test il cui nome contiene i token di due shard lo
         # selezionano tutti e due: le classi cross-context con `GameManagement` nel nome, i test di

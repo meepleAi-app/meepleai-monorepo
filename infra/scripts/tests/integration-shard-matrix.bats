@@ -23,6 +23,12 @@
 # quello che seleziona. Le regole qui sotto valgono per ogni coppia di shard, non per coppie nominate:
 # niente doppi, nessun token annullato dal proprio shard, e nessun ciclo di precedenze, che farebbe
 # sparire da ogni shard i nomi che contengono i token del ciclo.
+#
+# Da #4329 le due matrici sono UGUALI: stessi nomi, stesso ordine, stessi `filter_extra`. ci.yml ha in
+# piu' solo `coverage_file`, uno per shard. Prima ci.yml aveva una ripartizione piu' grossa con la
+# stessa selezione, e i suoi shard `Games` e `KnowledgeBase` interi sforavano il TestSessionTimeout
+# sulle PR di rilascio. L'uguaglianza voce per voce e' il test principale; quelli sull'unione, sui
+# doppi e sui cicli restano come seconda rete.
 
 setup() {
     ROOT="$BATS_TEST_DIRNAME/../../.."
@@ -41,6 +47,14 @@ shards() {
 }
 
 filter_of() { shards "$1" | awk -F'\t' -v n="$2" '$1 == n { print $2 }'; }
+
+# "nome<TAB>coverage_file" per ogni voce della matrice che lo dichiara (solo ci.yml).
+coverage_files() {
+    awk '
+      /^[[:space:]]*- name:[[:space:]]*"/          { name = $0; sub(/^[^"]*"/, "", name); sub(/".*$/, "", name); next }
+      /^[[:space:]]*coverage_file:[[:space:]]*"/   { f = $0; sub(/^[^"]*"/, "", f); sub(/"[^"]*$/, "", f); print name "\t" f }
+    ' "$1"
+}
 names_of() { shards "$1" | cut -f1 | LC_ALL=C sort; }
 
 # I token che un filtro SELEZIONA (FullyQualifiedName~X) e quelli che ESCLUDE (FullyQualifiedName!~X).
@@ -275,13 +289,35 @@ fake_matrix() {
     [ "$dev" = "$(base_filter "$CI")" ]
 }
 
+@test "dev-async e ci.yml hanno la stessa matrice: nomi, ordine e filtri (#4329)" {
+    # Voce per voce e nell'ordine: un nome diverso, uno shard in piu' o un filtro cambiato in un solo
+    # workflow fanno misurare ai due gate ripartizioni diverse. Un elenco vuoto renderebbe uguali i
+    # due workflow per niente, quindi si pretende anche che non lo sia.
+    dev="$(shards "$DEV_ASYNC")"
+    [ "$(printf '%s\n' "$dev" | wc -l)" -ge 3 ]
+    [ "$dev" = "$(shards "$CI")" ] || {
+        echo "dev-async.yml (<) e ci.yml (>) hanno matrici diverse:"
+        diff <(printf '%s\n' "$dev") <(shards "$CI")
+        return 1
+    }
+}
+
+@test "ci.yml: un coverage_file per shard, derivato dal nome e mai ripetuto (#4329)" {
+    # Due shard con lo stesso file si sovrascriverebbero la copertura a vicenda nell'upload.
+    names="$(shards "$CI" | cut -f1)"
+    cov="$(coverage_files "$CI")"
+    [ -n "$names" ]
+    [ "$(printf '%s\n' "$cov" | cut -f1)" = "$names" ]
+    [ "$(printf '%s\n' "$cov" | cut -f2 | LC_ALL=C sort -u | wc -l)" -eq "$(printf '%s\n' "$names" | wc -l)" ]
+    while IFS=$'\t' read -r name file; do
+        [ "$file" = "integration-coverage-${name}.xml" ] || { echo "$name: $file"; return 1; }
+    done <<< "$cov"
+}
+
 @test "dev-async e ci.yml selezionano gli stessi test: stessi token, stesso Core" {
-    # dev-async puo' avere una ripartizione piu' fine di ci.yml (#3742 divide Games in due, #4484 e
-    # #4571 staccano AuthIntegration e DocProcessing da KnowledgeBase; #4880 stacca CoreEndpoints da
-    # Core in entrambi, perche' Core dev'essere identico nei due), ma l'unione dev'essere la
-    # stessa: un test che un solo gate esegue e' il difetto di #3622. Le esclusioni possono
-    # differire fra i due: decidono quale shard tiene un test, non se qualcuno lo tiene, e quello lo
-    # verificano le regole qui sopra.
+    # Seconda rete sotto l'uguaglianza della matrice (#4329): l'unione dei token dev'essere la
+    # stessa, perche' un test che un solo gate esegue e' il difetto di #3622. Prima di #4329 era
+    # l'unico confronto, quando dev-async aveva una ripartizione piu' fine di ci.yml.
     dev="$(selected_outside_core "$DEV_ASYNC" | maximal)"
     [ -n "$dev" ]
     [ "$dev" = "$(selected_outside_core "$CI" | maximal)" ]

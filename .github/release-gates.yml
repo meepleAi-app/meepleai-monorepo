@@ -2,7 +2,7 @@
 #
 # Authoritative mapping of CI check names to severity + owner + override-path.
 # Bot script: scripts/release-gate-comment.mjs (auto-classifies failures on release PRs)
-# Validator:  scripts/release-gate-validate.mjs (CI lint, `pnpm release-gate:validate`)
+# Validator:  scripts/release-gate/validate.mjs (`cd scripts/release-gate && pnpm install --frozen-lockfile && pnpm validate`)
 #
 # Schema version: 1
 # Issue: https://github.com/meepleAi-app/meepleai-monorepo/issues/1016
@@ -76,14 +76,42 @@ checks:
     owner: backend-dev
     override_path: exception-comment
     pre_existing_in_main_dev: true
-    notes: "GameManagement BC integration. On release PRs the shard hits the 75-minute limit and the run is Aborted with part of the tests never executed (#4329): it measures nothing until #4329 splits it. Read the log for 'test run timeout' before treating it as a failure; back to blocker when #4329 closes."
+    notes: "Check rimosso da #4329: ci.yml ha diviso lo shard in Catalog e GamesAdmin, come dev-async.yml. La voce resta per due cicli di rilascio (policy AC-9, in testa al file) e poi si toglie. Su una PR aperta prima del merge di #4329 il job puo' ancora fermarsi al limite di 75 minuti (Aborted, zero falliti): leggi il log per 'test run timeout' prima di trattarlo come un fallimento."
 
   - check_name: "Backend - Integration (KnowledgeBase)"
     severity: blocker
     owner: backend-dev
     override_path: fix-forward
     pre_existing_in_main_dev: false
-    notes: "KB + RAG integration. pgvector + embedding service dependency. Red on the heads of #4892 and #4897: compare the failing test NAMES with a control run on main-dev before calling it a regression."
+    notes: "KB + RAG integration, pgvector. Da #4329 lo shard non contiene piu' DocumentProcessing ne' Integration.Authentication, che hanno shard propri: i falliti di base dei giri di rilascio (#4996) ora sono in DocProcessing. Prima di chiamare regressione un rosso, confronta i NOMI dei falliti con un run di controllo su main-dev."
+
+  - check_name: "Backend - Integration (DocProcessing)"
+    severity: blocker
+    owner: backend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: true
+    notes: "Shard nuovo con #4329 (DocumentProcessing, staccato da KnowledgeBase). Porta i falliti di base tracciati in #4996: confronta i NOMI dei falliti col controllo Dev Async su main-dev prima di chiamarla regressione."
+
+  - check_name: "Backend - Integration (AuthIntegration)"
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: false
+    notes: "Shard nuovo con #4329 (Integration.Authentication, staccato da KnowledgeBase). Parte warning perche' una voce mai vista verde parte warning (regola T3, commento di decisione di #4329); diventa blocker dopo due giri di rilascio verdi (#4329)."
+
+  - check_name: "Backend - Integration (Catalog)"
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: false
+    notes: "Shard nuovo con #4329 (SharedGameCatalog, staccato da Games). Parte warning perche' una voce mai vista verde parte warning (regola T3, commento di decisione di #4329); diventa blocker dopo due giri di rilascio verdi (#4329)."
+
+  - check_name: "Backend - Integration (GamesAdmin)"
+    severity: warning
+    owner: backend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: false
+    notes: "Shard nuovo con #4329 (GameManagement e Administration, staccato da Games). Parte warning perche' una voce mai vista verde parte warning (regola T3, commento di decisione di #4329); diventa blocker dopo due giri di rilascio verdi (#4329)."
 
   - check_name: "Backend Integration (Testcontainers)"
     severity: blocker

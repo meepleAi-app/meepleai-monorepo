@@ -377,6 +377,7 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
             language.Object,
             Mock.Of<IChunkTranslationService>(),
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.IPdfIndexingPipeline>(),
+            Api.Tests.TestHelpers.UnitOfWorkMockExtensions.PassThrough(),
             advancedChunking: _advancedChunking.Object);
     }
 

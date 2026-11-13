@@ -283,6 +283,7 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
             languageDetectorMock.Object,
             _chunkTranslationServiceMock.Object,
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.IPdfIndexingPipeline>(),
+            Api.Tests.TestHelpers.UnitOfWorkMockExtensions.PassThrough(),
             advancedChunking: _advancedChunkingMock.Object);
     }
 

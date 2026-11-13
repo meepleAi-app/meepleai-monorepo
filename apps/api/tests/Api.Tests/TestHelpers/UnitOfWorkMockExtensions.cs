@@ -36,6 +36,13 @@ internal static class UnitOfWorkMockExtensions
     }
 
     /// <summary>
+    /// A unit of work that runs the delegate it is given and commits, for code that takes one as a collaborator
+    /// while the test is about something else. A bare <c>Mock.Of&lt;IUnitOfWork&gt;()</c> would never run the work,
+    /// and a test that only checks the outcome would pass without the work having happened.
+    /// </summary>
+    public static IUnitOfWork PassThrough() => new Mock<IUnitOfWork>().SetupExecuteInTransaction().Object;
+
+    /// <summary>
     /// Void overload of <see cref="SetupExecuteInTransaction{T}"/>.
     /// </summary>
     public static Mock<IUnitOfWork> SetupExecuteInTransaction(this Mock<IUnitOfWork> mock)

@@ -116,6 +116,7 @@ public sealed class PdfProcessingPipelineStrategySelectorTests : IDisposable
             _languageDetectorMock.Object,
             _chunkTranslationServiceMock.Object,
             Mock.Of<IPdfIndexingPipeline>(),
+            Api.Tests.TestHelpers.UnitOfWorkMockExtensions.PassThrough(),
             extractionStrategySelector: _selector);
 
     private void SeedPdfDocument(string? priorStructuredElementsJson)

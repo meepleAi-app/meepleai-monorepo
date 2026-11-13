@@ -75,25 +75,20 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
             ?? pdf.IndexerVersion
             ?? IndexerVersionRegistry.Current.Version;
 
-        // Cancella chunks associati.
-        var chunks = await _dbContext.TextChunks
-            .Where(tc => tc.PdfDocumentId == command.PdfId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        // #4660: the text chunks are NOT deleted here. The queue pipeline replaces them together with the
+        // embeddings, in one transaction, and the embeddings carry the source_chunk_id of the chunk they come
+        // from. Deleted here, the chunks were gone from this commit on while the old embeddings stayed: for the
+        // whole wait in the queue, and for good if the run failed, the embeddings pointed at chunks that were
+        // not there, and the parent chunks counted as search candidates again (NotAParent finds no children).
+        // Kept, the old chunks and the old embeddings stay in step until the run replaces both, or neither.
 
-        if (chunks.Count > 0)
-        {
-            _dbContext.TextChunks.RemoveRange(chunks);
-        }
-
-        // Stage the destructive reset (chunk delete + field mutations) but DO NOT commit it on its
-        // own. The reset MUST commit atomically with the new ProcessingJob: the old code saved the
-        // reset first and then swallowed any enqueue failure (queue full / transient) in a broad
-        // catch — a phantom success that left the PDF reset-to-Pending with its chunks deleted but
-        // no job to reprocess it, stranding the document (bug-hunt B10, #3269; B4 amplifies it by
-        // stamping IndexerVersion=target so no recovery selector re-picks the strand). EnqueuePdfCommand
-        // shares this scoped DbContext, so wrapping both in one explicit transaction makes the reset
-        // + job commit together — or not at all.
+        // Stage the reset (field mutations) but DO NOT commit it on its own. The reset MUST commit
+        // atomically with the new ProcessingJob: the old code saved the reset first and then swallowed
+        // any enqueue failure (queue full / transient) in a broad catch — a phantom success that left
+        // the PDF reset-to-Pending with no job to reprocess it, stranding the document (bug-hunt B10,
+        // #3269; B4 amplifies it by stamping IndexerVersion=target so no recovery selector re-picks the
+        // strand). EnqueuePdfCommand shares this scoped DbContext, so wrapping both in one explicit
+        // transaction makes the reset + job commit together — or not at all.
         pdf.ProcessingState = nameof(PdfProcessingState.Pending);
         pdf.ProcessedAt = null;
         pdf.ProcessingError = null;
@@ -144,8 +139,8 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
             {
                 // Queue full (ProcessingQueueFullException, 429 since #4443), or an active job already
                 // exists for this PDF (ConflictException, 409). The transaction rolls
-                // back, so the destructive reset is undone — the document stays in its pre-reindex
-                // state with its chunks intact (no strand). Surface a retryable 409 instead of the
+                // back, so the reset is undone — the document stays in its pre-reindex
+                // state (no strand). Surface a retryable 409 instead of the
                 // old phantom success. In the BulkReindexReadyCommandHandler fan-out this is caught
                 // per-document and the batch continues with the remaining candidates.
                 await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);

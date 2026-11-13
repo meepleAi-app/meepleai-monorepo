@@ -308,7 +308,8 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
           let appendedContent = lastAssistant.content;
 
           for await (const event of qaStream(
-            { gameId: thread.gameId, query: '', continuationToken },
+            // #4998: the server reads the thread's intent and history from chatId, as for a question.
+            { gameId: thread.gameId, query: '', continuationToken, chatId: threadId },
             abortController.signal
           )) {
             if (event.type === QA_EVENT_TYPES.TOKEN) {
@@ -335,7 +336,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         }
       })();
     },
-    [messages, thread?.gameId]
+    [messages, thread?.gameId, threadId]
   );
 
   // Send message — SSE streaming when a game context is available, REST fallback otherwise

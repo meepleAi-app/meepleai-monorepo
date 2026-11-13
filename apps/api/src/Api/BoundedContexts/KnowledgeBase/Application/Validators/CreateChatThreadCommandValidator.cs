@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using FluentValidation;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Validators;
@@ -24,10 +25,11 @@ internal sealed class CreateChatThreadCommandValidator : AbstractValidator<Creat
             .When(x => x.InitialMessage != null)
             .WithMessage("InitialMessage cannot exceed 2000 characters");
 
+        // #4998: the rule of the switch (#4885). No intent stays allowed: the thread answers as auto.
         RuleFor(x => x.AgentType)
-            .MaximumLength(200)
-            .When(x => x.AgentType != null)
-            .WithMessage("AgentType cannot exceed 200 characters");
+            .Must(AnswerIntent.IsAcceptedWhenSwitching)
+            .When(x => !string.IsNullOrWhiteSpace(x.AgentType))
+            .WithMessage($"AgentType must be one of: {string.Join(", ", AnswerIntent.All)}");
 
         RuleFor(x => x.UserRole)
             .MaximumLength(50)

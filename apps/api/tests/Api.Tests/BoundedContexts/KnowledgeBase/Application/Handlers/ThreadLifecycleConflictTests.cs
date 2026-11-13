@@ -13,7 +13,8 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Issue #3224: closing an already-closed thread / reopening an already-active thread must map to
 /// 409 Conflict, not 500. Before the fix the handlers let the domain guard throw a bare
-/// InvalidOperationException which the middleware maps to 500.
+/// InvalidOperationException which the middleware maps to 500. Issue #4998: the same for switching the intent
+/// of a closed thread.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
@@ -48,6 +49,23 @@ public sealed class ThreadLifecycleConflictTests
         Func<Task> act = () => handler.Handle(new ReopenThreadCommand(thread.Id), CancellationToken.None);
 
         await act.Should().ThrowAsync<ConflictException>().WithMessage("*already active*");
+        _threadRepoMock.Verify(r => r.UpdateAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Never);
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SwitchIntent_OnAClosedThread_ThrowsConflictException()
+    {
+        // #4998: same shape as the two above. The domain guard threw a bare InvalidOperationException, a 500.
+        var thread = new ChatThread(Guid.NewGuid(), Guid.NewGuid());
+        thread.CloseThread();
+        _threadRepoMock.Setup(r => r.GetByIdAsync(thread.Id, It.IsAny<CancellationToken>())).ReturnsAsync(thread);
+
+        var handler = new SwitchThreadAgentCommandHandler(_threadRepoMock.Object, _uowMock.Object);
+        Func<Task> act = () => handler.Handle(new SwitchThreadAgentCommand(thread.Id, "tutor"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*closed*");
+        thread.AgentType.Should().BeNull("a refused switch leaves the intent as it was");
         _threadRepoMock.Verify(r => r.UpdateAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Never);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }

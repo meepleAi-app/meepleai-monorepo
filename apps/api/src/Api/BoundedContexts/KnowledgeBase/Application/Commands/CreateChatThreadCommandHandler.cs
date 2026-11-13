@@ -68,7 +68,7 @@ internal sealed class CreateChatThreadCommandHandler : ICommandHandler<CreateCha
             gameId: gameId,
             title: command.Title,
             agentId: command.AgentId,
-            agentType: command.AgentType,
+            agentType: NormalizedIntent(command.AgentType),
             gameIsPrivate: gameIsPrivate);
 
         if (command.SelectedKnowledgeBaseIds?.Count > 0)
@@ -107,6 +107,14 @@ internal sealed class CreateChatThreadCommandHandler : ICommandHandler<CreateCha
 
         throw new NotFoundException("Game", gameId.ToString());
     }
+
+    /// <summary>
+    /// The intent as the switch stores it (#4998): no spaces, lower case. The validator has already refused
+    /// anything outside the three intents. Done here and not in <see cref="ChatThread"/>: the session assistant
+    /// builds its threads with the same constructor and its own <c>agentType</c>.
+    /// </summary>
+    private static string? NormalizedIntent(string? agentType) =>
+        string.IsNullOrWhiteSpace(agentType) ? null : agentType.Trim().ToLowerInvariant();
 
     private static ChatThreadDto MapToDto(ChatThread thread)
     {

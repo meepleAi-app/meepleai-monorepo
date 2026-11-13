@@ -1,7 +1,7 @@
 # Release-gate Classification — main-dev → main-staging PRs
 #
 # Authoritative mapping of CI check names to severity + owner + override-path.
-# Bot script: scripts/release-gate-comment.mjs (auto-classifies failures on release PRs)
+# Bot script: scripts/release-gate/comment.mjs (auto-classifies failures on release PRs)
 # Validator:  scripts/release-gate/validate.mjs (`cd scripts/release-gate && pnpm install --frozen-lockfile && pnpm validate`)
 #
 # Schema version: 1
@@ -344,7 +344,7 @@ fallback_patterns:
     notes: "Catch-all for external link validators."
 
 # ─── Bot configuration ───────────────────────────────────────────────────────
-# Read by scripts/release-gate-comment.mjs at runtime.
+# Read by scripts/release-gate/comment.mjs at runtime.
 
 bot:
   signature_header: "<!-- release-gate-bot:v1 -->"

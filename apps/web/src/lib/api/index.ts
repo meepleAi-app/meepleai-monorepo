@@ -164,6 +164,7 @@ export type {
   UpdateConfigurationRequest,
   BulkConfigurationUpdateRequest,
   ConfigurationImportRequest,
+  ConfigurationImportResult,
 } from './clients/configClient';
 
 // Re-export core utilities for consumer convenience

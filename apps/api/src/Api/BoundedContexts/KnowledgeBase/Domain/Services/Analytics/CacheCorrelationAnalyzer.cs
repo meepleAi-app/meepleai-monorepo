@@ -47,8 +47,12 @@ internal class CacheCorrelationAnalyzer : ICacheCorrelationAnalyzer
         var costWithoutCache = totalRequests * AverageCostPerQuery;
         var savings = costWithoutCache - actualCost;
 
-        // Cache efficiency score (0-1.0)
-        var efficiencyScore = hitRate * (1.0 - ((double)actualCost / (double)costWithoutCache));
+        // Cache efficiency score (0-1.0). #4978: under one estimated query in the period, costWithoutCache is 0 and
+        // the ratio was NaN (0/0, or 0 times infinity), which System.Text.Json refuses to write: GET
+        // /admin/llm/monthly-report answered 400 for every month without LLM spend.
+        var efficiencyScore = costWithoutCache > 0
+            ? hitRate * (1.0 - ((double)actualCost / (double)costWithoutCache))
+            : 0;
 
         // Generate recommendations
         var recommendations = GenerateRecommendations(hitRate, savings, efficiencyScore);

@@ -29,6 +29,7 @@ import {
   standardThresholds,
   stressThresholds,
   scenarioConfigs,
+  thresholdsFor,
   standardSetup,
   standardTeardown,
   weightedRandom,
@@ -84,13 +85,13 @@ export const options = {
   scenarios: selectedScenarios,
 
   // Performance thresholds
-  thresholds: {
+  thresholds: thresholdsFor(TEST_TYPE, {
     ...standardThresholds,
     'dashboard_polling_latency': ['p(95)<500', 'p(99)<1000'],
     'profile_errors': ['count<5'],
     'notification_errors': ['count<10'],
     'activity_errors': ['count<10'],
-  },
+  }),
 
   // HTTP configuration
   httpDebug: __ENV.HTTP_DEBUG === 'true' ? 'full' : '',

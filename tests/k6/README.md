@@ -41,9 +41,8 @@ Simulates realistic admin dashboard usage with 100 concurrent administrators pol
 - `/api/v1/admin/llm/efficiency-report`
 - `/api/v1/admin/llm/monthly-report`
 - `/api/v1/admin/llm/model-recommendations`
-- `/api/v1/admin/reports`
-- `/api/v1/admin/reports/system-health`
-- `/api/v1/admin/reports/usage-stats`
+- `/api/v1/admin/reports/scheduled`
+- `/api/v1/admin/reports/executions?limit=20`
 - `/api/v1/admin/ai-models`
 - `/api/v1/admin/tier-routing`
 - `/api/v1/admin/alert-configuration`
@@ -64,13 +63,14 @@ Simulates realistic admin dashboard usage with 100 concurrent administrators pol
    # Windows (Manual)
    # Download from https://github.com/grafana/k6/releases
 
-   # Linux (Debian/Ubuntu)
-   sudo gpg -k
-   sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-   echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-   sudo apt-get update
-   sudo apt-get install k6
+   # Linux: the release tarball, as CI does (the version and sha256 are in the
+   # "Install k6" step of .github/workflows/test-performance.yml)
+   curl -fsSL -o k6.tar.gz https://github.com/grafana/k6/releases/download/v2.3.0/k6-v2.3.0-linux-amd64.tar.gz
+   echo "<sha256 from the workflow>  k6.tar.gz" | sha256sum -c -
+   tar xzf k6.tar.gz && sudo install -m 0755 k6-v2.3.0-linux-amd64/k6 /usr/local/bin/k6
    ```
+
+   Not the apt repository: its GPG key changed without notice between two nightly runs (#4978).
 
 2. **Install Node.js** (for report generation):
    ```bash
@@ -121,9 +121,12 @@ Override defaults with environment variables:
 # Custom API URL
 API_BASE_URL=http://localhost:5000 k6 run scenarios/admin-polling.js
 
-# Custom test user
-TEST_USER_EMAIL=admin@test.com \
-TEST_USER_PASSWORD=MyPassword123! \
+# The accounts: TEST_USER_* for the user scenarios, TEST_ADMIN_* for the admin ones
+# (admin-polling, admin-concurrent-actions). They must exist: the defaults of
+# utils/shared-config.js are not created by any seed. CI logs in with the API's initial
+# admin (INITIAL_ADMIN_EMAIL / INITIAL_ADMIN_PASSWORD) for both.
+TEST_ADMIN_EMAIL=admin@test.com \
+TEST_ADMIN_PASSWORD=MyPassword123! \
 k6 run scenarios/admin-polling.js
 
 # Specific scenario (bypassing TEST_TYPE)
@@ -136,7 +139,7 @@ After running tests, generate an HTML report:
 
 ```bash
 # Automatically generates reports/performance-report.html
-node utils/generate-report.js reports/summary.json
+node utils/generate-report.js reports/admin-polling-summary.json
 ```
 
 Open `reports/performance-report.html` in your browser to view:
@@ -149,42 +152,24 @@ Open `reports/performance-report.html` in your browser to view:
 
 ### GitHub Actions Workflow
 
-**File**: `.github/workflows/k6-performance.yml`
+**File**: `.github/workflows/test-performance.yml`, job `K6 Performance Tests`.
 
 **Triggers**:
-1. **Pull Request**: Smoke test on admin endpoint changes
-2. **Schedule**: Nightly smoke test at 2 AM UTC
-3. **Manual**: Workflow dispatch with test type selection
+1. **Pull Request** to `main` that touches the API or `tests/k6/`, and to `main-dev` that touches `tests/k6/` or the workflow itself
+2. **Schedule**: nightly at 2 AM UTC, on `main-dev`
+3. **Manual**: workflow dispatch, with `test_type`, `k6_scenario` and `notify_on_failure`
 
-**Execution**:
-```yaml
-# PR trigger (automatic)
-on:
-  pull_request:
-    paths:
-      - 'apps/api/src/Api/Routing/*AdminEndpoints.cs'
-      - 'tests/k6/**'
-
-# Scheduled trigger (nightly)
-on:
-  schedule:
-    - cron: '0 2 * * *'
-
-# Manual trigger
-on:
-  workflow_dispatch:
-    inputs:
-      test_type: [smoke, load, stress, spike]
-```
+**What it checks** (#4978): a smoke run is a correctness check, not a performance gate.
+- The API starts with a fresh database and seeds its initial admin; a preflight login with that account must answer 200.
+- `utils/run-scenarios.sh` runs the scenarios one by one and fails if any k6 run exits non-zero. With `TEST_TYPE=smoke` each file runs only its smoke scenario, and only `auth_errors` and `checks` are thresholds (`thresholdsFor` in `utils/shared-config.js`): latency stays in the summary, as information. The duration of each scenario goes to the step summary.
+- `all` leaves out the two RAG scenarios: they need an agent with indexed documents and an LLM, which the job does not have.
+- The baseline check fails when there is no `*-summary.json` to compare.
 
 **Artifacts**:
-- Performance reports (HTML + JSON): 30-day retention
-- Baseline reports (for trending): 90-day retention
+- Performance reports (JSON summaries): 30-day retention
 - API logs (debugging): 7-day retention
 
-**Notifications**:
-- Slack alerts on failure (nightly only)
-- GitHub issues for performance regressions
+**Notifications**: on a red nightly run, or a dispatch with `notify_on_failure`, the workflow opens the issue "Performance Tests Failed - Investigation Required", or comments on it if it is open. On PRs the job is `continue-on-error`, and `.github/release-gates.yml` classifies it.
 
 ## Performance Baselines
 
@@ -226,8 +211,9 @@ dotnet run --environment Development
 **Error**: `auth_errors > 0`
 
 **Solution**:
-- Verify test user exists in database
-- Check credentials match API configuration
+- Verify the test accounts exist in the database (`TEST_USER_*`, `TEST_ADMIN_*`)
+- The API authenticates with the `meepleai_session` cookie, not with a token: `/auth/login` answers `{ user, expiresAt }`, and an `Authorization: Bearer` header is ignored
+- A login for an unknown email answers 400
 - Review rate limiting settings (should be disabled for tests)
 
 #### 3. High Error Rates
@@ -242,15 +228,14 @@ dotnet run --environment Development
 
 #### 4. Report Generation Fails
 
-**Error**: `summary.json not found`
+**Error**: `<scenario>-summary.json not found`
 
 **Solution**:
 ```bash
-# Ensure reports directory exists
+# Ensure reports directory exists: each scenario's handleSummary writes
+# reports/<scenario>-summary.json there
 mkdir -p reports
-
-# Run test with explicit output
-k6 run --out json=reports/summary.json scenarios/admin-polling.js
+k6 run --env TEST_TYPE=smoke scenarios/admin-polling.js
 ```
 
 ### Debug Mode

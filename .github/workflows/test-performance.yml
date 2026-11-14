@@ -17,7 +17,11 @@ on:
     # post-step log-upload hung (split-brain GHA token expiry), it starved the
     # Deploy to Staging job that needed the same runner (incident 2026-05-26).
     # Perf on PRs to main (production release) is preserved.
-    branches: [main]
+    #
+    # #4978: PRs to main-dev run K6 too, but only when they change this workflow or tests/k6 (the `k6_self`
+    # filter of Detect Changes). Until then nothing ran this workflow when its own code changed, and it stayed
+    # red on the release PRs for causes that had nothing to do with the release.
+    branches: [main, main-dev]
     paths:
       - 'apps/web/**'
       - 'apps/api/src/Api/Routing/**'
@@ -52,12 +56,17 @@ on:
       run_lighthouse:
         description: 'Run Lighthouse CI'
         required: false
-        default: 'true'
+        default: true
         type: boolean
       run_k6:
         description: 'Run K6 tests'
         required: false
-        default: 'true'
+        default: true
+        type: boolean
+      notify_on_failure:
+        description: 'Open or comment the "Performance Tests Failed" issue if the run fails, as the nightly run does (#4978)'
+        required: false
+        default: false
         type: boolean
 
 permissions:
@@ -90,6 +99,7 @@ jobs:
       web: ${{ steps.filter.outputs.web || 'true' }}
       api: ${{ steps.filter.outputs.api || 'true' }}
       k6: ${{ steps.filter.outputs.k6 || 'true' }}
+      k6_self: ${{ steps.filter.outputs.k6_self || 'true' }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
@@ -104,6 +114,9 @@ jobs:
               - 'apps/api/**'
             k6:
               - 'tests/k6/**'
+            k6_self:
+              - 'tests/k6/**'
+              - '.github/workflows/test-performance.yml'
 
   # ============================================
   # K6 PERFORMANCE TESTS
@@ -113,11 +126,17 @@ jobs:
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: changes
     timeout-minutes: 45
-    continue-on-error: true
+    # #4978: only on PRs, where release-gates.yml classifies the check as a warning. On the nightly run and on a
+    # dispatch a red K6 now makes the run red, so notify-failure can fire: with `true` everywhere the run was
+    # `success` with K6 in `failure`, and the alert never went off.
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    # #4978: `inputs.run_k6` is a boolean; the old `!= 'false'` compared it with a string, which is never equal
+    # (false → 0, 'false' → NaN), so unticking the input did not skip the job.
     if: |
-      (github.event_name == 'workflow_dispatch' && inputs.run_k6 != 'false') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_k6) ||
       (github.event_name == 'schedule') ||
-      (github.event_name == 'pull_request' && (needs.changes.outputs.api == 'true' || needs.changes.outputs.k6 == 'true'))
+      (github.event_name == 'pull_request' && github.base_ref == 'main' && (needs.changes.outputs.api == 'true' || needs.changes.outputs.k6 == 'true')) ||
+      (github.event_name == 'pull_request' && github.base_ref == 'main-dev' && needs.changes.outputs.k6_self == 'true')
 
     services:
       postgres:
@@ -157,21 +176,28 @@ jobs:
           working-directory: apps/api
           cache-nuget: 'true'
 
+      # #4978: k6 from the release tarball, at a fixed version checked against its sha256, on amd64 and arm64
+      # alike. The apt repository needed a GPG key, which changed between the nightly runs of 2026-11-09 and
+      # 2026-11-10 (`NO_PUBKEY C780D0BDB1A69C86`, exit 100); the arm64 branch downloaded `latest`.
+      # To upgrade: the sha256 values are in k6-<version>-checksums.txt of the release.
       - name: Install k6 and Redis CLI
+        env:
+          K6_VERSION: v2.3.0
+          K6_SHA256_AMD64: 39c3117b6af817592dcd0ce4242105c0a7af10948c2a425306f0be8f7a8a8ab1
+          K6_SHA256_ARM64: 5ca3433e8201da72a284aaa241a1bb5fb47f4abb4e384d39410ddd8062f49b90
         run: |
-          ARCH=$(dpkg --print-architecture)
-          if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
-            # k6 deb repo doesn't support ARM64 — install from GitHub releases
-            K6_VERSION=$(curl -s https://api.github.com/repos/grafana/k6/releases/latest | grep tag_name | cut -d'"' -f4)
-            curl -sL "https://github.com/grafana/k6/releases/download/${K6_VERSION}/k6-${K6_VERSION}-linux-arm64.tar.gz" | tar xz
-            sudo mv k6-${K6_VERSION}-linux-arm64/k6 /usr/local/bin/k6
-          else
-            sudo gpg -k
-            sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-            echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-            sudo apt-get update
-            sudo apt-get install -y k6
-          fi
+          case "$(dpkg --print-architecture)" in
+            amd64) K6_ARCH=amd64; K6_SHA256="$K6_SHA256_AMD64" ;;
+            arm64) K6_ARCH=arm64; K6_SHA256="$K6_SHA256_ARM64" ;;
+            *) echo "::error::No k6 tarball for architecture $(dpkg --print-architecture)"; exit 1 ;;
+          esac
+          K6_DIR="k6-${K6_VERSION}-linux-${K6_ARCH}"
+          curl -fsSL --retry 3 -o k6.tar.gz "https://github.com/grafana/k6/releases/download/${K6_VERSION}/${K6_DIR}.tar.gz"
+          echo "${K6_SHA256}  k6.tar.gz" | sha256sum -c -
+          tar xzf k6.tar.gz
+          sudo install -m 0755 "${K6_DIR}/k6" /usr/local/bin/k6
+          rm -rf k6.tar.gz "${K6_DIR}"
+          k6 version
           sudo apt-get update && sudo apt-get install -y redis-tools postgresql-client
 
       - name: Clean API build outputs
@@ -206,12 +232,30 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet ef database update --configuration Release
 
+      # #4978: the load-test account. The API seeds it as its initial admin, and k6 logs in with it both as user
+      # and as admin. Before, k6 used the defaults of tests/k6/utils/shared-config.js, which no seed creates: on
+      # #4897 every login answered 400. The password is made here, since the database lives as long as the job.
+      - name: Generate load-test credentials
+        run: |
+          password="K6-$(openssl rand -hex 16)-Ci1"
+          echo "::add-mask::$password"
+          {
+            echo "K6_ADMIN_EMAIL=k6-admin@example.com"
+            echo "K6_ADMIN_PASSWORD=$password"
+          } >> "$GITHUB_ENV"
+
       - name: Start API server
         working-directory: apps/api/src/Api
         run: |
           nohup dotnet run --configuration Release --environment CI > ../../../../api.log 2>&1 &
           echo $! > ../../../../api.pid
         env:
+          # #4978: the Core seed layer creates the admin from these. SEED_PROFILE=Prod stops at that layer (admin
+          # and AI models): the default for the CI environment is Dev, whose MechanicGolden layer needs an
+          # embedding service the job does not have and fails after about 90 s of retries.
+          INITIAL_ADMIN_EMAIL: ${{ env.K6_ADMIN_EMAIL }}
+          INITIAL_ADMIN_PASSWORD: ${{ env.K6_ADMIN_PASSWORD }}
+          SEED_PROFILE: 'Prod'
           DISABLE_RATE_LIMITING: 'true'
           ASPNETCORE_ENVIRONMENT: CI
           RateLimiting__MaxTokens__user: '999999'
@@ -256,12 +300,34 @@ jobs:
           tail -n 100 api.log || echo "Could not read api.log"
           exit 1
 
+      # #4978: one login before the scenarios. A wrong account used to show only as auth_errors inside each
+      # scenario, swallowed by `|| true`; here it stops the job with the status the API returned.
+      - name: Preflight login of the load-test account
+        run: |
+          payload=$(jq -n --arg email "$K6_ADMIN_EMAIL" --arg password "$K6_ADMIN_PASSWORD" '{email: $email, password: $password}')
+          status=$(curl -s -o preflight-body.json -D preflight-headers.txt -w '%{http_code}' \
+            -X POST "${API_BASE_URL}/api/v1/auth/login" -H 'Content-Type: application/json' -d "$payload")
+          if [ "$status" != "200" ]; then
+            echo "::error::Preflight login of ${K6_ADMIN_EMAIL} answered ${status}, not 200: $(head -c 300 preflight-body.json)"
+            exit 1
+          fi
+          if ! grep -qi '^set-cookie: meepleai_session=' preflight-headers.txt; then
+            echo "::error::Preflight login answered 200 without the meepleai_session cookie"
+            exit 1
+          fi
+          rm -f preflight-body.json preflight-headers.txt
+          echo "Preflight login of ${K6_ADMIN_EMAIL}: 200, with a session cookie"
+
       - name: Run k6 performance tests
         working-directory: tests/k6
         timeout-minutes: 30
         env:
           K6_TEST_TYPE: ${{ inputs.test_type || 'smoke' }}
           K6_SCENARIO: ${{ inputs.k6_scenario || 'all' }}
+          TEST_USER_EMAIL: ${{ env.K6_ADMIN_EMAIL }}
+          TEST_USER_PASSWORD: ${{ env.K6_ADMIN_PASSWORD }}
+          TEST_ADMIN_EMAIL: ${{ env.K6_ADMIN_EMAIL }}
+          TEST_ADMIN_PASSWORD: ${{ env.K6_ADMIN_PASSWORD }}
         run: |
           # Determine test type
           if [ "${{ github.event_name }}" == "pull_request" ]; then
@@ -278,45 +344,10 @@ jobs:
             echo "Manual run - running ${TEST_TYPE} test for scenario: ${SCENARIO}"
           fi
 
-          mkdir -p reports
-
-          # Define scenario files
-          declare -A SCENARIOS=(
-            ["admin-polling"]="scenarios/admin-polling.js"
-            ["user-dashboard"]="scenarios/user-dashboard-polling.js"
-            ["library-browsing"]="scenarios/library-browsing.js"
-            ["catalog-search"]="scenarios/catalog-search.js"
-            ["admin-concurrent"]="scenarios/admin-concurrent-actions.js"
-            ["rag-isolated"]="scenarios/rag-pipeline-isolated.js"
-            ["rag-e2e"]="scenarios/rag-e2e-realistic.js"
-          )
-
-          # Run scenarios
-          if [ "$SCENARIO" == "all" ]; then
-            echo "Running all K6 scenarios..."
-            for scenario_name in "${!SCENARIOS[@]}"; do
-              scenario_file="${SCENARIOS[$scenario_name]}"
-              if [ -f "$scenario_file" ]; then
-                echo "========================================="
-                echo "Running: $scenario_name"
-                echo "========================================="
-                k6 run --env TEST_TYPE=${TEST_TYPE} "$scenario_file" || true
-              else
-                echo "Scenario file not found: $scenario_file"
-              fi
-            done
-          else
-            scenario_file="${SCENARIOS[$SCENARIO]}"
-            if [ -f "$scenario_file" ]; then
-              echo "Running scenario: $SCENARIO"
-              k6 run --env TEST_TYPE=${TEST_TYPE} "$scenario_file"
-            else
-              echo "ERROR: Scenario file not found: $scenario_file"
-              exit 1
-            fi
-          fi
-
-          echo "K6 tests completed"
+          # #4978: the script keeps every scenario's exit code (no more `|| true`), fails if one is not 0, and
+          # writes the duration of each scenario to the step summary. In smoke a scenario fails on auth_errors
+          # and checks only; latency stays informative (thresholdsFor in utils/shared-config.js).
+          bash utils/run-scenarios.sh "$TEST_TYPE" "$SCENARIO"
 
       # Issue #5542: Baseline regression gate
       - name: Run baseline regression check
@@ -324,7 +355,16 @@ jobs:
         working-directory: tests/k6
         run: |
           chmod +x utils/baseline-compare.sh
-          if utils/baseline-compare.sh reports; then
+          set +e
+          utils/baseline-compare.sh reports
+          rc=$?
+          set -e
+          # #4978: no summary means k6 produced nothing to compare, which used to pass as "no regression".
+          if [ "$rc" -eq 3 ]; then
+            echo "::error::No k6 summary in tests/k6/reports: the baseline check has nothing to compare"
+            exit 1
+          fi
+          if [ "$rc" -eq 0 ]; then
             echo "✅ Baseline regression check passed"
           else
             echo "❌ Baseline regression check failed — performance regression detected"
@@ -393,10 +433,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: changes
+    # #4978: `inputs.run_lighthouse` is a boolean, as for run_k6 above. PRs to main-dev do not build for
+    # Lighthouse yet: its artifact comes out empty, and the fix is the third PR of #4978.
     if: |
-      (github.event_name == 'workflow_dispatch' && inputs.run_lighthouse != 'false') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_lighthouse) ||
       (github.event_name == 'push') ||
-      (github.event_name == 'pull_request' && needs.changes.outputs.web == 'true')
+      (github.event_name == 'pull_request' && github.base_ref == 'main' && needs.changes.outputs.web == 'true')
     defaults:
       run:
         working-directory: apps/web
@@ -609,7 +651,9 @@ jobs:
     # Issue #1587: explicit timeout — completes the "every perf job" coverage.
     timeout-minutes: 10
     needs: [k6-tests, lighthouse-ci]
-    if: failure() && github.event_name == 'schedule'
+    # #4978: a dispatch with notify_on_failure fires it too, so the alert can be proved without waiting for a red
+    # nightly run. It never fired before: K6 had `continue-on-error: true`, so the run was never a failure.
+    if: failure() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.notify_on_failure))
     permissions:
       contents: read
       issues: write
@@ -622,9 +666,10 @@ jobs:
         env:
           RUN_ID: ${{ github.run_id }}
           REF: ${{ github.ref }}
+          TRIGGER: ${{ github.event_name == 'schedule' && 'Scheduled (nightly)' || 'Manual dispatch (notify_on_failure)' }}
         with:
           script: |
-            const { RUN_ID, REF } = process.env;
+            const { RUN_ID, REF, TRIGGER } = process.env;
 
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -646,10 +691,10 @@ jobs:
 
             **Run:** [#${RUN_ID}](${runUrl})
             **Branch:** ${branch}
-            **Trigger:** Scheduled (nightly)
+            **Trigger:** ${TRIGGER}
 
             ### Action Required
-            The nightly performance tests have failed. Please investigate the workflow run for details.
+            The performance tests have failed. Please investigate the workflow run for details.
 
             ### Common Issues to Check
             - [ ] API response times exceeding thresholds

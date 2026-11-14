@@ -9,9 +9,9 @@
 #   ./baseline-compare.sh <summary-json-dir> [--strict]
 #
 # Exit codes:
-#   0 = All checks passed
+#   0 = All checks passed (a warning above 85% of a limit too, unless --strict)
 #   1 = Regression detected (blocks PR)
-#   2 = Warning (does not block)
+#   3 = No *-summary.json in the reports directory: there is nothing to compare (#4978)
 
 set -euo pipefail
 
@@ -114,9 +114,11 @@ add_report "|--------|-------|-----|--------|"
 shopt -s nullglob
 SUMMARY_FILES=("$REPORTS_DIR"/*-summary.json)
 
+# #4978: an empty directory used to pass the gate, so a run where k6 never produced a summary (an install
+# that failed, every scenario aborted in setup) looked like a run without regressions.
 if [[ ${#SUMMARY_FILES[@]} -eq 0 ]]; then
   echo "No summary files found in $REPORTS_DIR"
-  exit 0
+  exit 3
 fi
 
 for summary_file in "${SUMMARY_FILES[@]}"; do

@@ -39,6 +39,9 @@ export const sharedMetrics = {
   // Performance tracking
   requestLatency: new Trend('request_latency'),
   cacheHitRate: new Rate('cache_hit_rate'),
+  // #4978: the response-time budget of a request. It used to be a check, which made `checks` a latency
+  // threshold as well; see recordLatency.
+  latencyWithinBudget: new Rate('latency_within_budget'),
 
   // Scenario-specific (created dynamically)
   createScenarioMetrics: (scenarioName) => ({
@@ -68,6 +71,9 @@ export const standardThresholds = {
 
   // Cache effectiveness
   'cache_hit_rate': ['rate>0.5'],
+
+  // Response-time budget per request (recordLatency)
+  'latency_within_budget': ['rate>0.95'],
 
   // Request success
   'checks': ['rate>0.95'],
@@ -127,16 +133,61 @@ export const scenarioConfigs = {
   },
 };
 
+/**
+ * Keep only the scenario of the requested test type (#4978). Declaring smoke, load and stress together runs
+ * them all at once, whatever TEST_TYPE says: a "smoke" run of a file used to take ten minutes.
+ * @param {string} testType - TEST_TYPE: smoke, load, stress, or 'all' for every scenario
+ * @param {object} scenarios - Scenario configurations keyed by test type
+ * @returns {object} The scenarios to put in options.scenarios
+ */
+export function scenariosFor(testType, scenarios) {
+  if (testType === 'all') {
+    return scenarios;
+  }
+  return { [testType]: scenarios[testType] || scenarios.smoke };
+}
+
+// A smoke run is a correctness check (#4978): it fails on authentication errors and on failed checks.
+const SMOKE_GATING_METRICS = ['auth_errors', 'checks'];
+
+/**
+ * Thresholds for the requested test type. In smoke only the correctness thresholds stay: on a runner that also
+ * hosts the API, latency thresholds would turn a slow runner into a red run. Their metrics still appear in the
+ * end-of-test summary.
+ * @param {string} testType - TEST_TYPE
+ * @param {object} thresholds - Every threshold of the scenario
+ * @returns {object} The thresholds to put in options.thresholds
+ */
+export function thresholdsFor(testType, thresholds) {
+  if (testType !== 'smoke') {
+    return thresholds;
+  }
+  return Object.fromEntries(
+    Object.entries(thresholds).filter(([metric]) => SMOKE_GATING_METRICS.includes(metric))
+  );
+}
+
 // ============================================
 // AUTHENTICATION HELPERS
 // ============================================
 
+// The API authenticates with the session cookie alone (#4978): /auth/login answers { user, expiresAt } and sets
+// this cookie, and it ignores an `Authorization: Bearer` header. The scenarios used to wait for a `token` field
+// that never comes, so no request of theirs was ever authenticated. The "token" these helpers pass around is the
+// cookie's value.
+export const SESSION_COOKIE = 'meepleai_session';
+
+function sessionCookieOf(response) {
+  const cookies = response.cookies[SESSION_COOKIE];
+  return cookies && cookies.length > 0 && cookies[0].value ? cookies[0].value : null;
+}
+
 /**
- * Authenticate a user and return JWT token.
+ * Authenticate a user and return the session cookie value.
  * @param {string} email - User email
  * @param {string} password - User password
  * @param {string} role - 'user' or 'admin' for logging
- * @returns {string|null} JWT token or null on failure
+ * @returns {string|null} Session cookie value or null on failure
  */
 export function authenticate(email, password, role = 'user') {
   const loginPayload = JSON.stringify({
@@ -159,13 +210,7 @@ export function authenticate(email, password, role = 'user') {
 
   const loginSuccess = check(response, {
     [`${role}: login successful`]: (r) => r.status === 200,
-    [`${role}: token received`]: (r) => {
-      try {
-        return r.json('token') !== undefined;
-      } catch {
-        return false;
-      }
-    },
+    [`${role}: session cookie received`]: (r) => sessionCookieOf(r) !== null,
   });
 
   if (!loginSuccess) {
@@ -174,12 +219,12 @@ export function authenticate(email, password, role = 'user') {
     return null;
   }
 
-  return response.json('token');
+  return sessionCookieOf(response);
 }
 
 /**
  * Authenticate as regular user using default credentials.
- * @returns {string|null} JWT token or null on failure
+ * @returns {string|null} Session cookie value or null on failure
  */
 export function authenticateUser() {
   return authenticate(config.testUserEmail, config.testUserPassword, 'user');
@@ -187,7 +232,7 @@ export function authenticateUser() {
 
 /**
  * Authenticate as admin user using default credentials.
- * @returns {string|null} JWT token or null on failure
+ * @returns {string|null} Session cookie value or null on failure
  */
 export function authenticateAdmin() {
   return authenticate(config.testAdminEmail, config.testAdminPassword, 'admin');
@@ -198,15 +243,41 @@ export function authenticateAdmin() {
 // ============================================
 
 /**
- * Create authorization headers with JWT token.
- * @param {string} token - JWT token
+ * Create the headers of an authenticated request. The session goes in an explicit Cookie header, so the
+ * request does not depend on the cookie jar keeping a `Secure` cookie over plain http.
+ * @param {string} token - Session cookie value
  * @returns {object} Headers object
  */
 export function authHeaders(token) {
   return {
-    'Authorization': `Bearer ${token}`,
+    'Cookie': `${SESSION_COOKIE}=${token}`,
     'Content-Type': 'application/json',
   };
+}
+
+/**
+ * Record whether a response came within its time budget (#4978). Not a check: `checks` gates correctness,
+ * and in smoke a slow runner must not turn it red. The rate shows in the summary, and gates load and stress
+ * runs through the `latency_within_budget` threshold.
+ * @param {object} response - HTTP response
+ * @param {number} budgetMs - Time budget in milliseconds
+ */
+export function recordLatency(response, budgetMs) {
+  sharedMetrics.latencyWithinBudget.add(response.timings.duration < budgetMs);
+}
+
+/**
+ * Encode query parameters (#4978). The k6 runtime has no URLSearchParams: every authenticated GET used to throw a
+ * ReferenceError there, and k6 ends an iteration that throws without failing the run, so the scenarios exited 0
+ * without calling a single endpoint. utils/run-scenarios.sh now fails a scenario that throws.
+ * @param {object} params - Query parameters; undefined and null values are left out
+ * @returns {string} The query string, without the leading '?'
+ */
+export function queryString(params = {}) {
+  return Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+    .join('&');
 }
 
 /**
@@ -218,7 +289,7 @@ export function authHeaders(token) {
  * @returns {object} HTTP response
  */
 export function authGet(token, endpoint, queryParams = {}, tags = {}) {
-  const query = new URLSearchParams(queryParams).toString();
+  const query = queryString(queryParams);
   const url = `${config.apiBaseUrl}${endpoint}${query ? '?' + query : ''}`;
 
   const params = {
@@ -312,8 +383,8 @@ export function validateResponse(response, description = 'request') {
         return false;
       }
     },
-    [`${description}: response time OK`]: (r) => r.timings.duration < 1000,
   });
+  recordLatency(response, 1000);
 
   if (!success) {
     sharedMetrics.endpointErrors.add(1);
@@ -339,8 +410,8 @@ export function validatePaginatedResponse(response, description = 'paginated') {
         return false;
       }
     },
-    [`${description}: response time OK`]: (r) => r.timings.duration < 1000,
   });
+  recordLatency(response, 1000);
 
   if (!success) {
     sharedMetrics.endpointErrors.add(1);

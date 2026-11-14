@@ -17,21 +17,28 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate, Trend, Counter } from 'k6/metrics';
+import {
+  config,
+  authenticateAdmin,
+  authHeaders,
+  queryString,
+  recordLatency,
+  scenariosFor,
+  thresholdsFor,
+} from '../utils/shared-config.js';
 
 // Environment variables
-const API_BASE_URL = __ENV.API_BASE_URL || 'http://localhost:8080';
-const TEST_USER_EMAIL = __ENV.TEST_USER_EMAIL || 'admin@example.com';
-const TEST_USER_PASSWORD = __ENV.TEST_USER_PASSWORD || 'AdminPassword123!';
+const API_BASE_URL = config.apiBaseUrl;
+const TEST_TYPE = __ENV.TEST_TYPE || 'smoke';
 
 // Custom metrics
 const cacheHitRate = new Rate('cache_hit_rate');
 const pollingLatency = new Trend('polling_latency');
-const authErrors = new Counter('auth_errors');
 const endpointErrors = new Counter('endpoint_errors');
 
 // Test configuration
 export const options = {
-  scenarios: {
+  scenarios: scenariosFor(TEST_TYPE, {
     // Smoke test: Quick validation (5 VUs, 1 minute)
     smoke: {
       executor: 'constant-vus',
@@ -63,10 +70,10 @@ export const options = {
       tags: { test_type: 'stress' },
       exec: 'adminPollingScenario',
     },
-  },
+  }),
 
   // Performance thresholds (ISSUE-2918 DoD)
-  thresholds: {
+  thresholds: thresholdsFor(TEST_TYPE, {
     // Response times
     'http_req_duration{test_type:load}': [
       'p(95)<500',    // p95 < 500ms
@@ -85,12 +92,15 @@ export const options = {
     // Cache effectiveness
     'cache_hit_rate': ['rate>0.7'],     // > 70% cache hit rate
 
+    // Response-time budget per request (recordLatency)
+    'latency_within_budget': ['rate>0.95'],
+
     // Request success
     'checks': ['rate>0.95'],            // > 95% check success rate
-  },
+  }),
 
   // HTTP configuration
-  httpDebug: 'full',
+  httpDebug: __ENV.HTTP_DEBUG === 'true' ? 'full' : '',
   insecureSkipTLSVerify: true,
   noConnectionReuse: false,
 
@@ -99,54 +109,18 @@ export const options = {
 };
 
 /**
- * Admin authentication - obtains JWT token
- * @returns {string|null} JWT token or null on failure
- */
-function authenticateAdmin() {
-  const loginPayload = JSON.stringify({
-    email: TEST_USER_EMAIL,
-    password: TEST_USER_PASSWORD,
-  });
-
-  const params = {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    tags: { endpoint: 'auth_login' },
-  };
-
-  const response = http.post(`${API_BASE_URL}/api/v1/auth/login`, loginPayload, params);
-
-  const loginSuccess = check(response, {
-    'auth: login successful': (r) => r.status === 200,
-    'auth: token received': (r) => r.json('token') !== undefined,
-  });
-
-  if (!loginSuccess) {
-    authErrors.add(1);
-    console.error(`Authentication failed: ${response.status} - ${response.body}`);
-    return null;
-  }
-
-  return response.json('token');
-}
-
-/**
  * Poll admin metrics endpoint
- * @param {string} token - JWT token
+ * @param {string} token - Session cookie value (shared-config authenticate)
  * @param {string} endpoint - Endpoint path
  * @param {object} queryParams - Query parameters
  * @returns {object} Response object
  */
 function pollMetrics(token, endpoint, queryParams = {}) {
-  const query = new URLSearchParams(queryParams).toString();
+  const query = queryString(queryParams);
   const url = `${API_BASE_URL}${endpoint}${query ? '?' + query : ''}`;
 
   const params = {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: authHeaders(token),
     tags: { endpoint: endpoint.split('/').pop() },
   };
 
@@ -172,8 +146,8 @@ function pollMetrics(token, endpoint, queryParams = {}) {
         return false;
       }
     },
-    'metrics: response time OK': (r) => latency < 1000,
   });
+  recordLatency(response, 1000);
 
   if (!success) {
     endpointErrors.add(1);
@@ -200,10 +174,10 @@ export function adminPollingScenario() {
     { path: '/api/v1/admin/llm/monthly-report', weight: 0.10, params: {} },
     { path: '/api/v1/admin/llm/model-recommendations', weight: 0.05, params: { useCase: 'qa' } },
 
-    // Reports (30% of requests)
-    { path: '/api/v1/admin/reports', weight: 0.15, params: {} },
-    { path: '/api/v1/admin/reports/system-health', weight: 0.10, params: {} },
-    { path: '/api/v1/admin/reports/usage-stats', weight: 0.05, params: {} },
+    // Reports (30% of requests). #4978: /admin/reports, /system-health and /usage-stats do not exist (404); these
+    // are the two GET routes of ReportingEndpoints, and `limit` is a required parameter of /executions.
+    { path: '/api/v1/admin/reports/scheduled', weight: 0.15, params: {} },
+    { path: '/api/v1/admin/reports/executions', weight: 0.15, params: { limit: 20 } },
 
     // AI Models & Tier Routing (20% of requests)
     { path: '/api/v1/admin/ai-models', weight: 0.10, params: {} },
@@ -262,7 +236,7 @@ export function setup() {
   console.log('K6 Admin Polling Load Test - ISSUE-2918');
   console.log('='.repeat(60));
   console.log(`API Base URL: ${API_BASE_URL}`);
-  console.log(`Test User: ${TEST_USER_EMAIL}`);
+  console.log(`Test User: ${config.testAdminEmail}`);
   console.log(`Scenarios: ${Object.keys(options.scenarios).join(', ')}`);
   console.log('='.repeat(60));
 
@@ -291,7 +265,8 @@ export function teardown(data) {
 export function handleSummary(data) {
   const summary = {
     stdout: textSummary(data, { indent: ' ', enableColors: true }),
-    'reports/summary.json': JSON.stringify(data, null, 2),
+    // `-summary.json`, like the other scenarios: utils/baseline-compare.sh reads only that pattern (#4978).
+    'reports/admin-polling-summary.json': JSON.stringify(data, null, 2),
   };
 
   return summary;

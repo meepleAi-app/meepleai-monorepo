@@ -28,6 +28,9 @@ import {
   validatePaginatedResponse,
   standardThresholds,
   scenarioConfigs,
+  scenariosFor,
+  thresholdsFor,
+  recordLatency,
   standardSetup,
   standardTeardown,
   randomPage,
@@ -51,7 +54,7 @@ const paginationErrors = new Counter('pagination_errors');
 const TEST_TYPE = __ENV.TEST_TYPE || 'smoke';
 
 export const options = {
-  scenarios: {
+  scenarios: scenariosFor(TEST_TYPE, {
     // Smoke test: Quick validation
     smoke: {
       ...scenarioConfigs.smoke,
@@ -72,17 +75,17 @@ export const options = {
       tags: { test_type: 'stress', scenario: 'library-browsing' },
       exec: 'libraryBrowsingScenario',
     },
-  },
+  }),
 
   // Performance thresholds
-  thresholds: {
+  thresholds: thresholdsFor(TEST_TYPE, {
     ...standardThresholds,
     'library_browsing_latency': ['p(95)<500', 'p(99)<1000'],
     'pagination_latency': ['p(95)<500', 'p(99)<1000'],
     'detail_view_latency': ['p(95)<750', 'p(99)<1500'],
     'library_errors': ['count<10'],
     'pagination_errors': ['count<20'],
-  },
+  }),
 
   // HTTP configuration
   httpDebug: __ENV.HTTP_DEBUG === 'true' ? 'full' : '',
@@ -241,8 +244,8 @@ function detailViewPattern(token) {
 
     const detailSuccess = check(detailResponse, {
       'detail: status 200': (r) => r.status === 200 || r.status === 404,
-      'detail: response time OK': (r) => r.timings.duration < 1500,
     });
+    recordLatency(detailResponse, 1500);
 
     if (!detailSuccess) {
       libraryErrors.add(1);

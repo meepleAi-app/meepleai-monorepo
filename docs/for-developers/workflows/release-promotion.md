@@ -135,12 +135,12 @@ git log -1 --format='%h parents=%p %s' origin/main
 
 ### I workflow che girano solo sulle PR verso `main`
 
-`api-smoke.yml`, `test-performance.yml` (Lighthouse, K6), `test-e2e.yml` (Playwright) e `security-pentest.yml` hanno `pull_request` solo verso `main`. Su `main-dev` ne girano due, e solo per una parte:
+`api-smoke.yml`, `test-performance.yml` (Lighthouse, K6), `test-e2e.yml` (Playwright) e `security-pentest.yml` hanno `pull_request` verso `main`. Su `main-dev` ne girano due, e solo per una parte:
 
-- K6 (`test-performance.yml`) con un cron notturno, mentre Lighthouse lì viene saltato;
+- K6 (`test-performance.yml`) con un cron notturno, mentre Lighthouse lì viene saltato. Da #4978 K6 gira anche sulle PR verso `main-dev` che toccano `test-performance.yml` o `tests/k6/`;
 - `security-pentest.yml` con un cron settimanale.
 
-Smoke e Playwright non hanno un controllo su `main-dev`. Il confronto si fa con **la PR verso `main` del giro precedente**, e dove c'è con il run notturno, sulla causa del rosso (la riga di errore del log), non sul solo esito. Il run notturno di `test-performance.yml` risulta `success` anche con il job K6 rosso, quindi si legge il job, non il run:
+Smoke e Playwright non hanno un controllo su `main-dev`. Il confronto si fa con **la PR verso `main` del giro precedente**, e dove c'è con il run notturno, sulla causa del rosso (la riga di errore del log), non sul solo esito. Per K6 si legge comunque il job, non il run: fino a #4978 il run notturno risultava `success` anche con il job K6 rosso.
 
 ```bash
 gh run list --workflow test-performance.yml --event schedule --limit 3
@@ -154,11 +154,11 @@ Giro del 2026-11-10, contro #4897:
 | `smoke (ubuntu-latest)` | `make dev-core`: `infra/env/web.env.dev not found` | #4978 |
 | `smoke (windows-latest)` | Bruno: `You can run only at the root of a collection` | #4978 |
 | `Lighthouse CI` | l'artefatto di build è vuoto (`No files were found with the provided path: apps/web/.next/`), quindi `Artifact not found` | #4978 |
-| `K6 Performance Tests` | **diversa**: su #4977 l'installazione di k6 si ferma su `NO_PUBKEY C780D0BDB1A69C86`, su #4897 era fallito dopo, sul login dell'utente di carico. Lo stesso `NO_PUBKEY` compare nel run notturno su `main-dev` dello stesso giorno, quindi non dipende dal contenuto | #4978 |
-| `E2E Tests (Shard N)` | uno shard cade sulla build (`next/font/google` non scarica i font), gli altri eseguono 3015 test a testa con un worker e GitHub li annulla a 360 minuti | #4123, #4978 |
+| `K6 Performance Tests` | **diversa**: su #4977 l'installazione di k6 si ferma su `NO_PUBKEY C780D0BDB1A69C86`; su #4897 lo step dei test era scaduto (`The action 'Run k6 performance tests' has timed out after 30 minutes`). Nello stesso run di #4897 ogni login dell'utente di carico rispondeva 400, un difetto concomitante che `\|\| true` nascondeva. Lo stesso `NO_PUBKEY` compare nel run notturno su `main-dev` dello stesso giorno, quindi non dipende dal contenuto | #4978 |
+| `E2E Tests (Shard N)` | uno shard cade sulla build con `Can't resolve '@vercel/turbopack-next/internal/font/google/font'`: non dipende dal diff, e che la causa sia il download dei font non è dimostrato (#4997 §1). Gli altri girano con un worker e non arrivano in fondo: su #4897 GitHub li annulla a 360 minuti, il run di #4977 (42774776452) è stato annullato dopo circa 3 h 25 min. Quanti test esegue uno shard si legge nel suo log: `gh run view --job <job_id> --log \| grep -m1 'Running .* tests using'` | #4123, #4997 |
 | `2FA Security Penetration Tests (OWASP)` | verde | — |
 
-Un rosso intermittente può comparire anche su un workflow che gira su ogni PR. `cover-r2-strict` era verde su #4972, è caduto su #4977 sullo stesso errore dei font ed è tornato verde al rilancio sullo stesso SHA (#4978).
+Un rosso intermittente può comparire anche su un workflow che gira su ogni PR. `cover-r2-strict` era verde su #4972, è caduto su #4977 sullo stesso errore della build dei font ed è tornato verde al rilancio sullo stesso SHA (#4997, voce del registro da #4978).
 
 Non aspettare la fine degli shard di `test-e2e.yml`: non arrivano in fondo. Classificati gli altri check, unisci e annulla quel run (`gh run cancel <run>`), che altrimenti tiene occupati i runner degli shard fino alle 6 ore. Un rosso con una causa diversa da quella del giro precedente si legge fino in fondo, come K6 qui. Se la nuova causa sta prima del codice (installazione, rete, artefatti), non è una regressione del rilascio, ma va scritta nella issue che segue quel workflow.
 

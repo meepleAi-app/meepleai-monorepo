@@ -41,6 +41,9 @@ on:
       # cifrato non avvierebbe il controllo che ne rifiuta i valori in chiaro.
       - 'infra/secrets/sops/**'
       - '.sops.yaml'
+      # #4978: lo script che decide l'esito del job K6, che k6-run-scenarios.bats esamina da qui
+      # (vedi il filtro `infra` più sotto).
+      - 'tests/k6/utils/run-scenarios.sh'
       # #4256: il prompt misurato e il set di scenari dell'assistente, che due classi di test unit
       # del backend leggono dal repository (vedi il filtro `backend` più sotto).
       - 'tests/llm-eval/session-assistant/prompts/**'
@@ -170,6 +173,9 @@ jobs:
               - '.husky/**'
               - 'infra/secrets/sops/**'
               - '.sops.yaml'
+              # #4978: k6-run-scenarios.bats runs tests/k6/utils/run-scenarios.sh, which
+              # decides whether the K6 job of test-performance.yml is red.
+              - 'tests/k6/utils/run-scenarios.sh'
               - 'apps/web/scripts/install-git-hooks.mjs'
               - 'apps/web/package.json'
               - '.github/workflows/dev-fast.yml'

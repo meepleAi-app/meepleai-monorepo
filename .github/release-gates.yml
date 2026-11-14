@@ -187,10 +187,10 @@ checks:
 
   - check_name: "K6 Performance Tests"
     severity: warning
-    owner: frontend-dev
+    owner: backend-dev
     override_path: exception-comment
-    pre_existing_in_main_dev: true
-    notes: "Load test. Frequently CANCELLED on parallel matrix; treat CANCELLED as inconclusive."
+    pre_existing_in_main_dev: false
+    notes: "Smoke run of the API (test-performance.yml), a correctness check since #4978: red means the preflight login, or auth_errors/checks of a k6 scenario (a defect of the API or of the scenario), or a step before k6 (install, build, API start): read the failing step. Latency is informative only. Until #4978 it was red on every round for its own causes (k6 GPG key, no load-test user, 30-minute timeout). The same job runs nightly on main-dev: compare with that run's job, not with the run's conclusion. Promote to blocker after two consecutive green release rounds (#4978)."
 
   # ─── Security ───────────────────────────────────────────────────────────────
   - check_name: "CodeQL"
@@ -288,6 +288,13 @@ checks:
     override_path: exception-comment
     pre_existing_in_main_dev: false
     notes: "Aggregate of the Playwright shards of test-e2e.yml ('E2E Tests (Shard N)'); red whenever a shard is not green. Since #4123 its log names why for each shard (FALLITO, TIMEOUT, annullato a mano, sostituito): a TIMEOUT is the 6-hour cap, not a failing test. It does not run on a run cancelled by hand or by concurrency."
+
+  - check_name: "cover-r2-strict"
+    severity: warning
+    owner: frontend-dev
+    override_path: exception-comment
+    pre_existing_in_main_dev: false
+    notes: "e2e-cover-r2-strict.yml: the cover chain (presign, CSP, load in the browser) on a Docker stack with storage. Runs on every PR that touches its paths, PRs to main-dev included. A red outside the cover chain, in the Docker build (next/font/google in the web build, apt in the API image), does not depend on the diff: #4997. Rerun on the same SHA before triaging (green on #4972, red on #4977 on the font build, green again at the rerun)."
 
 # ─── Fallback regex patterns (AC-9) ──────────────────────────────────────────
 # Applied when `check_name` is not found in the `checks:` list above.

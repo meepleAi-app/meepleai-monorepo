@@ -28,10 +28,14 @@ import {
   authGet,
   authPost,
   authPut,
+  queryString,
   validateResponse,
   validatePaginatedResponse,
   standardThresholds,
   scenarioConfigs,
+  scenariosFor,
+  thresholdsFor,
+  recordLatency,
   standardSetup,
   standardTeardown,
   weightedRandom,
@@ -61,54 +65,60 @@ const concurrentWrites = new Counter('concurrent_writes');
 
 const TEST_TYPE = __ENV.TEST_TYPE || 'smoke';
 
-export const options = {
-  scenarios: {
-    // Smoke test: Quick validation
-    smoke: {
-      executor: 'constant-vus',
-      vus: 3,
-      duration: '1m',
-      tags: { test_type: 'smoke', scenario: 'admin-concurrent' },
-      exec: 'adminConcurrentScenario',
-    },
-
-    // Load test: Multiple concurrent admins (20 VUs)
-    load: {
-      executor: 'constant-vus',
-      vus: 20,
-      duration: '5m',
-      tags: { test_type: 'load', scenario: 'admin-concurrent' },
-      exec: 'adminConcurrentScenario',
-    },
-
-    // Stress test: High concurrency admin operations
-    stress: {
-      executor: 'ramping-vus',
-      startVUs: 0,
-      stages: [
-        { duration: '1m', target: 10 },
-        { duration: '2m', target: 30 },
-        { duration: '3m', target: 50 },
-        { duration: '2m', target: 50 },
-        { duration: '2m', target: 0 },
-      ],
-      tags: { test_type: 'stress', scenario: 'admin-concurrent' },
-      exec: 'adminConcurrentScenario',
-    },
-
-    // Concurrent writes: Focus on write operations
-    concurrent_writes: {
-      executor: 'per-vu-iterations',
-      vus: 10,
-      iterations: 20,
-      maxDuration: '10m',
-      tags: { test_type: 'concurrent-writes', scenario: 'admin-concurrent' },
-      exec: 'concurrentWriteScenario',
-    },
+const testTypeScenarios = {
+  // Smoke test: Quick validation
+  smoke: {
+    executor: 'constant-vus',
+    vus: 3,
+    duration: '1m',
+    tags: { test_type: 'smoke', scenario: 'admin-concurrent' },
+    exec: 'adminConcurrentScenario',
   },
 
+  // Load test: Multiple concurrent admins (20 VUs)
+  load: {
+    executor: 'constant-vus',
+    vus: 20,
+    duration: '5m',
+    tags: { test_type: 'load', scenario: 'admin-concurrent' },
+    exec: 'adminConcurrentScenario',
+  },
+
+  // Stress test: High concurrency admin operations
+  stress: {
+    executor: 'ramping-vus',
+    startVUs: 0,
+    stages: [
+      { duration: '1m', target: 10 },
+      { duration: '2m', target: 30 },
+      { duration: '3m', target: 50 },
+      { duration: '2m', target: 50 },
+      { duration: '2m', target: 0 },
+    ],
+    tags: { test_type: 'stress', scenario: 'admin-concurrent' },
+    exec: 'adminConcurrentScenario',
+  },
+};
+
+// Concurrent writes: Focus on write operations
+const concurrentWritesScenario = {
+  executor: 'per-vu-iterations',
+  vus: 10,
+  iterations: 20,
+  maxDuration: '10m',
+  tags: { test_type: 'concurrent-writes', scenario: 'admin-concurrent' },
+  exec: 'concurrentWriteScenario',
+};
+
+export const options = {
+  // concurrent_writes runs with every test type but smoke, as it did when all the scenarios were declared
+  // together (#4978).
+  scenarios: TEST_TYPE === 'smoke'
+    ? scenariosFor(TEST_TYPE, testTypeScenarios)
+    : { ...scenariosFor(TEST_TYPE, testTypeScenarios), concurrent_writes: concurrentWritesScenario },
+
   // Performance thresholds
-  thresholds: {
+  thresholds: thresholdsFor(TEST_TYPE, {
     ...standardThresholds,
     'admin_read_latency': ['p(95)<500', 'p(99)<1000'],
     'admin_write_latency': ['p(95)<750', 'p(99)<1500'],
@@ -116,7 +126,7 @@ export const options = {
     'admin_read_errors': ['count<10'],
     'admin_write_errors': ['count<5'],
     'concurrency_errors': ['count<3'],
-  },
+  }),
 
   // HTTP configuration
   httpDebug: __ENV.HTTP_DEBUG === 'true' ? 'full' : '',
@@ -131,12 +141,13 @@ export const options = {
 // ADMIN ENDPOINTS
 // ============================================
 
-// Read endpoints (from admin-polling.js + additional)
+// Read endpoints (from admin-polling.js + additional). #4978: /admin/reports and /admin/reports/system-health
+// do not exist (404); the two GET routes of ReportingEndpoints take their place.
 const readEndpoints = [
   { path: '/api/v1/admin/llm/efficiency-report', weight: 0.15 },
   { path: '/api/v1/admin/llm/monthly-report', weight: 0.10 },
-  { path: '/api/v1/admin/reports', weight: 0.15 },
-  { path: '/api/v1/admin/reports/system-health', weight: 0.10 },
+  { path: '/api/v1/admin/reports/scheduled', weight: 0.15 },
+  { path: '/api/v1/admin/reports/executions', weight: 0.10, params: { limit: 20 } },
   { path: '/api/v1/admin/ai-models', weight: 0.10 },
   { path: '/api/v1/admin/tier-routing', weight: 0.10 },
   { path: '/api/v1/admin/alert-configuration', weight: 0.10 },
@@ -144,53 +155,39 @@ const readEndpoints = [
   { path: '/api/v1/admin/audit-log', weight: 0.10, params: { limit: 50 } },
 ];
 
-// Write endpoints (configuration updates)
+// The feature flag the writes toggle. setup() creates it when it is missing.
+const LOAD_TEST_FLAG = 'k6.load-test-flag';
+
+// Write endpoints (configuration updates). #4978: the old list targeted routes that do not exist
+// (PUT /admin/feature-flags, POST /admin/cache/invalidate, PUT /admin/rate-limits/adjust, PUT /admin/system-config:
+// 404 or 405) or sent a body the API rejects (PUT /admin/alert-configuration: 422), and the check accepted 400 and
+// 404, so nobody noticed. These are real routes, each with the read that shows the change (`verify`). There is no
+// admin route that adjusts the rate limits of a tier or a system config, so those two writes are gone.
 const writeEndpoints = [
   {
     path: '/api/v1/admin/alert-configuration',
     method: 'PUT',
-    weight: 0.30,
+    weight: 0.40,
     body: () => ({
-      enabled: Math.random() > 0.5,
-      emailNotifications: Math.random() > 0.5,
-      slackNotifications: false,
+      configKey: 'k6.load-test.enabled',
+      configValue: Math.random() > 0.5 ? 'true' : 'false',
+      category: 'Global',
+      description: 'Written by the k6 admin-concurrent scenario (#4978)',
     }),
+    verify: '/api/v1/admin/alert-configuration',
   },
   {
-    path: '/api/v1/admin/feature-flags',
-    method: 'PUT',
-    weight: 0.20,
-    body: () => ({
-      flagName: 'test_flag',
-      enabled: Math.random() > 0.5,
-    }),
-  },
-  {
-    path: '/api/v1/admin/cache/invalidate',
+    path: `/api/v1/admin/feature-flags/${LOAD_TEST_FLAG}/toggle`,
     method: 'POST',
-    weight: 0.20,
-    body: () => ({
-      cacheKey: `test_cache_${Date.now()}`,
-    }),
+    weight: 0.35,
+    query: () => ({ enabled: Math.random() > 0.5 }),
+    verify: `/api/v1/admin/feature-flags/${LOAD_TEST_FLAG}`,
   },
   {
-    path: '/api/v1/admin/rate-limits/adjust',
-    method: 'PUT',
-    weight: 0.15,
-    body: () => ({
-      tier: 'user',
-      maxRequests: 100 + Math.floor(Math.random() * 100),
-      windowSeconds: 60,
-    }),
-  },
-  {
-    path: '/api/v1/admin/system-config',
-    method: 'PUT',
-    weight: 0.15,
-    body: () => ({
-      maintenanceMode: false,
-      debugLogging: Math.random() > 0.7,
-    }),
+    path: '/api/v1/admin/configurations/cache/invalidate',
+    method: 'POST',
+    weight: 0.25,
+    verify: '/api/v1/admin/configurations',
   },
 ];
 
@@ -211,10 +208,11 @@ function adminRead(token, endpoint) {
   adminReadLatency.add(latency);
   activeOperations.add(-1);
 
+  // #4978: 200 only. Accepting 404 made a route that no longer exists look like a working one.
   const success = check(response, {
-    'read: status OK': (r) => r.status === 200 || r.status === 404,
-    'read: response time OK': (r) => r.timings.duration < 1000,
+    'read: status OK': (r) => r.status === 200,
   });
+  recordLatency(response, 1000);
 
   if (!success) {
     readErrors.add(1);
@@ -232,12 +230,14 @@ function adminWrite(token, endpoint) {
   concurrentWrites.add(1);
 
   const body = typeof endpoint.body === 'function' ? endpoint.body() : endpoint.body;
+  const query = typeof endpoint.query === 'function' ? endpoint.query() : endpoint.query;
+  const path = query ? `${endpoint.path}?${queryString(query)}` : endpoint.path;
   let response;
 
   if (endpoint.method === 'POST') {
-    response = authPost(token, endpoint.path, body);
+    response = authPost(token, path, body);
   } else {
-    response = authPut(token, endpoint.path, body);
+    response = authPut(token, path, body);
   }
 
   const latency = Date.now() - startTime;
@@ -245,8 +245,8 @@ function adminWrite(token, endpoint) {
   activeOperations.add(-1);
 
   const success = check(response, {
-    'write: status OK': (r) => [200, 201, 204, 400, 404].includes(r.status),
-    'write: response time OK': (r) => r.timings.duration < 1500,
+    // #4978: 2xx only. Accepting 400 and 404 hid that most of these writes went to routes that do not exist.
+    'write: status OK': (r) => [200, 201, 204].includes(r.status),
     'write: no conflict': (r) => r.status !== 409,
   });
 
@@ -331,7 +331,7 @@ function configurationUpdatePattern(token) {
     sleep(0.5);
 
     // Verify change
-    adminRead(token, { path: writeEndpoint.path.replace(/\/adjust|\/invalidate/, '') });
+    adminRead(token, { path: writeEndpoint.verify });
   });
 }
 
@@ -342,7 +342,7 @@ function configurationUpdatePattern(token) {
 function monitoringReviewPattern(token) {
   group('monitoring-review', function () {
     const monitoringEndpoints = [
-      { path: '/api/v1/admin/reports/system-health' },
+      { path: '/api/v1/admin/reports/executions', params: { limit: 20 } },
       { path: '/api/v1/admin/llm/efficiency-report' },
       { path: '/api/v1/admin/llm/monthly-report' },
       { path: '/api/v1/admin/tier-routing' },
@@ -441,7 +441,29 @@ export function concurrentWriteScenario() {
 // ============================================
 
 export function setup() {
-  return standardSetup('Admin Concurrent Actions', options);
+  const data = standardSetup('Admin Concurrent Actions', options);
+
+  // The flag the writes toggle (#4978). Created only when missing: POST /admin/feature-flags with a key that
+  // already exists answers 500, not 409 (#5016).
+  const token = authenticateAdmin();
+  if (!token) {
+    throw new Error('setup: admin login failed');
+  }
+  const existing = authGet(token, `/api/v1/admin/feature-flags/${LOAD_TEST_FLAG}`);
+  if (existing.status === 404) {
+    const created = authPost(token, '/api/v1/admin/feature-flags', {
+      key: LOAD_TEST_FLAG,
+      enabled: false,
+      description: 'Toggled by the k6 admin-concurrent scenario (#4978)',
+    });
+    if (created.status !== 201 && created.status !== 200) {
+      throw new Error(`setup: creating feature flag ${LOAD_TEST_FLAG} answered ${created.status}`);
+    }
+  } else if (existing.status !== 200) {
+    throw new Error(`setup: reading feature flag ${LOAD_TEST_FLAG} answered ${existing.status}`);
+  }
+
+  return data;
 }
 
 export function teardown(data) {

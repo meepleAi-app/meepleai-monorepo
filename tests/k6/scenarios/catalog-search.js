@@ -5,10 +5,13 @@
  * Simulates users searching the public game catalog.
  *
  * Endpoints tested:
- * - GET /api/v1/shared-games (paginated search)
- * - GET /api/v1/shared-games/search (advanced search)
+ * - GET /api/v1/shared-games (paginated search with filters)
  * - GET /api/v1/shared-games/{id} (game details)
- * - GET /api/v1/shared-games/stats
+ * - GET /api/v1/shared-games/categories
+ *
+ * #4978: the query parameters are the ones HandleSearchGames binds (SharedGameCatalogPublicEndpoints.cs).
+ * The scenario used to send `page`, `minPlayTime`/`maxPlayTime` and `complexity`, which the API ignores
+ * without an error, so every "page 2" was page 1 and no play-time or complexity filter was ever applied.
  *
  * Performance Targets:
  * - Response time p95 < 500ms
@@ -29,6 +32,9 @@ import {
   validatePaginatedResponse,
   standardThresholds,
   scenarioConfigs,
+  scenariosFor,
+  thresholdsFor,
+  recordLatency,
   standardSetup,
   standardTeardown,
   randomPage,
@@ -52,7 +58,7 @@ const searchErrors = new Counter('search_errors');
 const TEST_TYPE = __ENV.TEST_TYPE || 'smoke';
 
 export const options = {
-  scenarios: {
+  scenarios: scenariosFor(TEST_TYPE, {
     // Smoke test
     smoke: {
       ...scenarioConfigs.smoke,
@@ -81,17 +87,17 @@ export const options = {
       tags: { test_type: 'stress', scenario: 'catalog-search' },
       exec: 'catalogSearchScenario',
     },
-  },
+  }),
 
   // Performance thresholds
-  thresholds: {
+  thresholds: thresholdsFor(TEST_TYPE, {
     ...standardThresholds,
     'catalog_search_latency': ['p(95)<500', 'p(99)<1000'],
     'catalog_filter_latency': ['p(95)<500', 'p(99)<1000'],
     'catalog_detail_latency': ['p(95)<750', 'p(99)<1500'],
     'catalog_errors': ['count<20'],
     'search_errors': ['count<30'],
-  },
+  }),
 
   // HTTP configuration
   httpDebug: __ENV.HTTP_DEBUG === 'true' ? 'full' : '',
@@ -123,16 +129,16 @@ const playerCounts = [
   { min: 6, max: 12 },
 ];
 
-// Play time filters (minutes)
-const playTimes = [
-  { min: 15, max: 30 },
-  { min: 30, max: 60 },
-  { min: 60, max: 120 },
-  { min: 120, max: 240 },
-];
+// Play time filters (minutes): the API filters on the maximum only (maxPlayingTime)
+const playTimes = [30, 60, 120, 240];
 
-// Complexity weights
-const complexityFilters = ['1-2', '2-3', '3-4', '4-5'];
+// Complexity weight ranges (minComplexity / maxComplexity)
+const complexityFilters = [
+  { min: 1, max: 2 },
+  { min: 2, max: 3 },
+  { min: 3, max: 4 },
+  { min: 4, max: 5 },
+];
 
 /**
  * Get random search term
@@ -146,7 +152,7 @@ function getRandomSearchTerm() {
  */
 function getRandomFilters() {
   const filters = {
-    page: randomPage(10),
+    pageNumber: randomPage(10),
     pageSize: randomPageSize(),
   };
 
@@ -164,14 +170,14 @@ function getRandomFilters() {
 
   // 20% chance to filter by play time
   if (Math.random() < 0.2) {
-    const timeFilter = playTimes[Math.floor(Math.random() * playTimes.length)];
-    filters.minPlayTime = timeFilter.min;
-    filters.maxPlayTime = timeFilter.max;
+    filters.maxPlayingTime = playTimes[Math.floor(Math.random() * playTimes.length)];
   }
 
   // 15% chance to filter by complexity
   if (Math.random() < 0.15) {
-    filters.complexity = complexityFilters[Math.floor(Math.random() * complexityFilters.length)];
+    const complexity = complexityFilters[Math.floor(Math.random() * complexityFilters.length)];
+    filters.minComplexity = complexity.min;
+    filters.maxComplexity = complexity.max;
   }
 
   return filters;
@@ -192,7 +198,7 @@ function simpleSearchPattern(token) {
   const startTime = Date.now();
   const response = authGet(token, '/api/v1/shared-games', {
     search: searchTerm,
-    page: 1,
+    pageNumber: 1,
     pageSize: 20,
   });
 
@@ -210,7 +216,7 @@ function simpleSearchPattern(token) {
     const pageStart = Date.now();
     const pageResponse = authGet(token, '/api/v1/shared-games', {
       search: searchTerm,
-      page: i,
+      pageNumber: i,
       pageSize: 20,
     });
 
@@ -256,7 +262,7 @@ function filteredSearchPattern(token) {
 function browseAndViewPattern(token) {
   // Browse catalog
   const browseResponse = authGet(token, '/api/v1/shared-games', {
-    page: 1,
+    pageNumber: 1,
     pageSize: 20,
   });
 
@@ -295,8 +301,8 @@ function browseAndViewPattern(token) {
 
     const success = check(detailResponse, {
       'game-detail: status OK': (r) => r.status === 200 || r.status === 404,
-      'game-detail: response time OK': (r) => r.timings.duration < 1500,
     });
+    recordLatency(detailResponse, 1500);
 
     if (!success) {
       catalogErrors.add(1);
@@ -310,18 +316,19 @@ function browseAndViewPattern(token) {
  * User explores catalog without specific search intent.
  */
 function discoveryPattern(token) {
-  // Get catalog stats first
-  const statsResponse = authGet(token, '/api/v1/shared-games/stats');
-  validateResponse(statsResponse, 'catalog-stats');
+  // The categories first. #4978: /shared-games/stats does not exist (404).
+  const categoriesResponse = authGet(token, '/api/v1/shared-games/categories');
+  validateResponse(categoriesResponse, 'catalog-categories');
 
   sleep(1);
 
   // Browse different "sections" with various filters
   const sections = [
-    { page: 1, pageSize: 10 },
-    { page: 1, pageSize: 10, minPlayers: 2, maxPlayers: 4 },
-    { page: 1, pageSize: 10, minPlayTime: 30, maxPlayTime: 60 },
-    { page: 1, pageSize: 10, sortBy: 'popularity' },
+    { pageNumber: 1, pageSize: 10 },
+    { pageNumber: 1, pageSize: 10, minPlayers: 2, maxPlayers: 4 },
+    { pageNumber: 1, pageSize: 10, maxPlayingTime: 60 },
+    // #4978: 'popularity' is not a sort field (422); AverageRating is (SearchSharedGamesQueryValidator).
+    { pageNumber: 1, pageSize: 10, sortBy: 'AverageRating', sortDescending: true },
   ];
 
   for (const section of sections) {
@@ -340,7 +347,7 @@ function discoveryPattern(token) {
  */
 function anonymousBrowsePattern() {
   // Anonymous request (no token)
-  const url = `${config.apiBaseUrl}/api/v1/shared-games?page=1&pageSize=20`;
+  const url = `${config.apiBaseUrl}/api/v1/shared-games?pageNumber=1&pageSize=20`;
 
   const startTime = Date.now();
   const response = http.get(url, {
@@ -350,8 +357,8 @@ function anonymousBrowsePattern() {
 
   const success = check(response, {
     'anonymous: status OK': (r) => r.status === 200 || r.status === 401,
-    'anonymous: response time OK': (r) => r.timings.duration < 1000,
   });
+  recordLatency(response, 1000);
 
   if (response.status === 200) {
     searchLatency.add(Date.now() - startTime);
@@ -361,7 +368,7 @@ function anonymousBrowsePattern() {
   if (response.status === 200) {
     for (let i = 2; i <= 3; i++) {
       sleep(1);
-      const pageUrl = `${config.apiBaseUrl}/api/v1/shared-games?page=${i}&pageSize=20`;
+      const pageUrl = `${config.apiBaseUrl}/api/v1/shared-games?pageNumber=${i}&pageSize=20`;
       http.get(pageUrl, {
         headers: { 'Content-Type': 'application/json' },
         tags: { endpoint: 'anonymous-page' },

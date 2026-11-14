@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
@@ -7,6 +8,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -27,6 +29,7 @@ public sealed class AddPrivateGameCommandHandlerTests
     private readonly Mock<IPrivateGameRepository> _privateGameRepositoryMock;
     private readonly Mock<IUserLibraryRepository> _userLibraryRepositoryMock;
     private readonly Mock<ISharedGameRepository> _sharedGameRepositoryMock;
+    private readonly Mock<ITierEnforcementService> _tierEnforcementServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<AddPrivateGameCommandHandler>> _loggerMock;
     private readonly AddPrivateGameCommandHandler _handler;
@@ -36,13 +39,19 @@ public sealed class AddPrivateGameCommandHandlerTests
         _privateGameRepositoryMock = new Mock<IPrivateGameRepository>();
         _userLibraryRepositoryMock = new Mock<IUserLibraryRepository>();
         _sharedGameRepositoryMock = new Mock<ISharedGameRepository>();
+        _tierEnforcementServiceMock = new Mock<ITierEnforcementService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        // #4978: a free-tier user with no private games, unless a test says otherwise (the count mock answers 0).
+        _tierEnforcementServiceMock
+            .Setup(s => s.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.FreeTier);
         _loggerMock = new Mock<ILogger<AddPrivateGameCommandHandler>>();
 
         _handler = new AddPrivateGameCommandHandler(
             _privateGameRepositoryMock.Object,
             _userLibraryRepositoryMock.Object,
             _sharedGameRepositoryMock.Object,
+            _tierEnforcementServiceMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object);
     }
@@ -58,6 +67,7 @@ public sealed class AddPrivateGameCommandHandlerTests
                 null!,
                 _userLibraryRepositoryMock.Object,
                 _sharedGameRepositoryMock.Object,
+                _tierEnforcementServiceMock.Object,
                 _unitOfWorkMock.Object,
                 _loggerMock.Object);
         var exception = act.Should().Throw<ArgumentNullException>().Which;
@@ -74,6 +84,7 @@ public sealed class AddPrivateGameCommandHandlerTests
                 _privateGameRepositoryMock.Object,
                 null!,
                 _sharedGameRepositoryMock.Object,
+                _tierEnforcementServiceMock.Object,
                 _unitOfWorkMock.Object,
                 _loggerMock.Object);
         var exception = act2.Should().Throw<ArgumentNullException>().Which;
@@ -90,6 +101,7 @@ public sealed class AddPrivateGameCommandHandlerTests
                 _privateGameRepositoryMock.Object,
                 _userLibraryRepositoryMock.Object,
                 null!,
+                _tierEnforcementServiceMock.Object,
                 _unitOfWorkMock.Object,
                 _loggerMock.Object);
         var exception = act3.Should().Throw<ArgumentNullException>().Which;
@@ -106,11 +118,29 @@ public sealed class AddPrivateGameCommandHandlerTests
                 _privateGameRepositoryMock.Object,
                 _userLibraryRepositoryMock.Object,
                 _sharedGameRepositoryMock.Object,
+                _tierEnforcementServiceMock.Object,
                 null!,
                 _loggerMock.Object);
         var exception = act4.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("unitOfWork");
+    }
+
+    [Fact]
+    public void Constructor_NullTierEnforcementService_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        var act = () =>
+            new AddPrivateGameCommandHandler(
+                _privateGameRepositoryMock.Object,
+                _userLibraryRepositoryMock.Object,
+                _sharedGameRepositoryMock.Object,
+                null!,
+                _unitOfWorkMock.Object,
+                _loggerMock.Object);
+        var exception = act.Should().Throw<ArgumentNullException>().Which;
+
+        exception.ParamName.Should().Be("tierEnforcementService");
     }
 
     [Fact]
@@ -122,11 +152,90 @@ public sealed class AddPrivateGameCommandHandlerTests
                 _privateGameRepositoryMock.Object,
                 _userLibraryRepositoryMock.Object,
                 _sharedGameRepositoryMock.Object,
+                _tierEnforcementServiceMock.Object,
                 _unitOfWorkMock.Object,
                 null!);
         var exception = act5.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("logger");
+    }
+
+    #endregion
+
+    #region Private Game Quota Tests (#4978)
+
+    private static AddPrivateGameCommand ManualCommand(Guid userId) => new(
+        UserId: userId,
+        Source: "Manual",
+        BggId: null,
+        Title: "Quota Game",
+        MinPlayers: 2,
+        MaxPlayers: 4);
+
+    [Theory]
+    [InlineData(3)] // exactly the free-tier limit
+    [InlineData(4)] // over it: a limit lowered after the games were created
+    public async Task Handle_UserAtOrOverTheTierLimit_ThrowsPrivateGameQuotaExceededAndCreatesNothing(int owned)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        _privateGameRepositoryMock
+            .Setup(r => r.CountByOwnerIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(owned);
+
+        // Act
+        var act = () => _handler.Handle(ManualCommand(userId), CancellationToken.None);
+
+        // Assert
+        var exception = (await act.Should().ThrowAsync<PrivateGameQuotaExceededException>()).Which;
+        exception.StatusCode.Should().Be(402);
+        exception.ErrorCode.Should().Be("PRIVATE_GAME_QUOTA_EXCEEDED");
+        exception.MaxAllowed.Should().Be(TierLimits.FreeTier.MaxPrivateGames);
+        _privateGameRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_UserOneBelowTheTierLimit_CreatesTheGame()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        _privateGameRepositoryMock
+            .Setup(r => r.CountByOwnerIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.FreeTier.MaxPrivateGames - 1);
+
+        // Act
+        var result = await _handler.Handle(ManualCommand(userId), CancellationToken.None);
+
+        // Assert
+        result.Title.Should().Be("Quota Game");
+        _privateGameRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_TheLimitComesFromTheUsersTier_NotFromTheFreeTier()
+    {
+        // Arrange: as many games as the free tier allows, on a tier that allows more.
+        var userId = Guid.NewGuid();
+        _tierEnforcementServiceMock
+            .Setup(s => s.GetLimitsAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.PremiumTier);
+        _privateGameRepositoryMock
+            .Setup(r => r.CountByOwnerIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.FreeTier.MaxPrivateGames);
+
+        // Act
+        var result = await _handler.Handle(ManualCommand(userId), CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        _privateGameRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     #endregion

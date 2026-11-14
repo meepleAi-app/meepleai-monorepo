@@ -107,6 +107,9 @@ jobs:
           TestEndpoints__Enabled=true
           SEED_PROFILE=Staging
           APIENV
+          # The web service is not started, but `docker compose exec` and `logs` read the env_file of every
+          # service in the project, and stop on "env file …/web.env.dev not found".
+          : > web.env.dev
 
       - name: Boot the API (postgres, redis, api)
         if: runner.os == 'Linux'

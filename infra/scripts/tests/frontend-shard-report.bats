@@ -233,6 +233,13 @@ report() { # fixture, cartella annotazioni, budget
     grep -qE '^          BUDGET_MINUTES: \*e2e-shard-budget$' "$E2E_WORKFLOW"
 }
 
+@test "test-e2e.yml: il budget dei job di test passa da fromJSON su github.event.inputs" {
+    # Con `inputs.job_timeout_minutes || 360` il dispatch 43428149764 non ha creato un solo job di
+    # test, e il gate e' uscito rosso senza shard da giudicare. Nessun gate locale valuta
+    # l'espressione: se torna alla forma vecchia, se ne accorge solo il prossimo dispatch.
+    grep -qF "timeout-minutes: &e2e-shard-budget \${{ fromJSON(github.event.inputs.job_timeout_minutes || '360') }}" "$E2E_WORKFLOW"
+}
+
 @test "test-e2e.yml: il gate puo' leggere i job e le annotazioni, e non gira su un run annullato" {
     # Su un run annullato a mano o sostituito non c'e' niente da giudicare: il gate non gira, invece di
     # uscire rosso come nel run 42991461066. Un timeout di uno shard non annulla il run, quindi li' il

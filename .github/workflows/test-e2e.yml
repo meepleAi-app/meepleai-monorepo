@@ -72,8 +72,8 @@ jobs:
     needs: changes
     # Issue #4126 — un dispatch che chiede UN browser salta gli shard: chi chiede `mobile-safari`
     # vuole quel browser, non la suite intera su tutti e sei. Gli shard eseguono
-    # `playwright test --shard=N/6` senza `--project`, quindi coprono ogni progetto ed e` li` che
-    # vanno le ore. Con `all` (il default) nulla cambia.
+    # `playwright test --shard=N/6` su tutti i progetti locali (elencati con `--project` in
+    # apps/web/package.json, #4123), ed e` li` che vanno le ore. Con `all` (il default) nulla cambia.
     if: >-
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.project || 'all') == 'all')
       || (github.event_name != 'workflow_dispatch' && needs.changes.outputs.e2e-needed == 'true')
@@ -85,7 +85,11 @@ jobs:
     # budget sulle PR verso main-dev si fissera' sulla durata misurata della porzione scelta (DoD
     # di #4123). L'input `job_timeout_minutes` del dispatch lo abbassa per provare il gate.
     # L'ancora passa lo stesso valore al riepilogo degli shard nel Quality Gate: cambialo solo qui.
-    timeout-minutes: &e2e-shard-budget ${{ inputs.job_timeout_minutes || 360 }}
+    # Il valore passa da `github.event.inputs`, che e' sempre una stringa, e da fromJSON: con
+    # `inputs.job_timeout_minutes || 360` GitHub non ha creato ne' gli shard ne' la suite intera,
+    # e il gate ha letto `needs.e2e-tests.result == failure` senza un job (run 43428149764).
+    # Su un evento che non e' un dispatch `github.event.inputs` e' null, e vale '360'.
+    timeout-minutes: &e2e-shard-budget ${{ fromJSON(github.event.inputs.job_timeout_minutes || '360') }}
 
     # Service containers for backend
     services:

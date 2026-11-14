@@ -110,7 +110,7 @@ requires backend-lead approval via CODEOWNERS.
 - [ ] N/A — no migrations in this PR
 - [ ] Migration is forward-only (no Down() business logic, only schema)
 - [ ] Migration is rollback-safe (previous code version can still run against new schema)
-- [ ] **If `-- safe:` directive used**: rationale references the soak window and the contract-deploy PR (or issue #) that completes the cycle
+- [ ] **If `-- safe:` directive used**: rationale names the change that removed the readers and the release that took it to `main`, plus the issue the contract completes ([rollback-runbook §8.3](../docs/for-developers/operations/rollback-runbook.md#83-pattern--expand--migrate--contract-two-deploy-pattern))
 
 ## Screenshots/Recordings (if applicable)
 

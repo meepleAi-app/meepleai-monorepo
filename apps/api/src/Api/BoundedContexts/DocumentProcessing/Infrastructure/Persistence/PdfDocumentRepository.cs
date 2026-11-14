@@ -29,14 +29,6 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.CharacterCount),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.StructuredElementsJson),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.PageSpansJson),
-        // Le colonne seguenti (tabelle, diagrammi, regole atomiche e contatori) non le scrive piu'
-        // nessuna pipeline dalla fase expand di #4440; restano finche' la fase contract non le toglie.
-        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedTables),
-        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedDiagrams),
-        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.AtomicRules),
-        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.TableCount),
-        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.DiagramCount),
-        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.AtomicRuleCount),
         // Avanzamento del giro di elaborazione (vedi UpdateAsync per il nuovo tentativo).
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ProcessingProgressJson),
         // Provenienza dell'indice e lavori che seguono la prima elaborazione.

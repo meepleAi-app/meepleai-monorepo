@@ -56,10 +56,6 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasMaxLength(32)
             .HasColumnName("failed_at_state")
             .IsRequired(false);
-        // E2E fix: structured content can be very large (1000+ rules), use TEXT instead of varchar(8192)
-        builder.Property(e => e.ExtractedTables).HasColumnType("text");
-        builder.Property(e => e.ExtractedDiagrams).HasColumnType("text");
-        builder.Property(e => e.AtomicRules).HasColumnType("text");
         // Issue #1885: align with BC SharedGameCatalog convention (all other entities use
         // snake_case column names explicitly via HasColumnName). Without this mapping, EF
         // generated the column as PascalCase "SharedGameId", breaking the snake_case SQL

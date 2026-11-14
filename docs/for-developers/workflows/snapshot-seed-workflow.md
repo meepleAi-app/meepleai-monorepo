@@ -189,7 +189,10 @@ Bumpa il counter nella **stessa PR** che introduce uno di questi cambi:
 
 - Rename di una tabella seedata (es. `embeddings` → `vector_documents`,
   storicamente 2026-05)
-- Drop di una colonna seedata
+- ~~Drop di una colonna seedata~~. Non serve più da #4489: `snapshot-restore.sh` carica i dati allo
+  schema del bake, e la migrazione che toglie la colonna gira dopo, sui dati caricati. Un bump qui
+  renderebbe stantio lo snapshot pubblicato fino al bake successivo, senza proteggere nulla. Primo
+  caso: #4440, sei colonne di `pdf_documents`, senza bump
 - Cambio di tipo di una colonna seedata che invalida un dump esistente
 - Cambio della shape della query usata da `seed-index-dump.sh` (lista
   tabelle dumpate, escluded, generated)

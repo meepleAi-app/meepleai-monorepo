@@ -9556,12 +9556,6 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("AtomicRuleCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("AtomicRules")
-                        .HasColumnType("text");
-
                     b.Property<Guid?>("BaseDocumentId")
                         .HasColumnType("uuid")
                         .HasColumnName("base_document_id");
@@ -9629,9 +9623,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(512)")
                         .HasColumnName("cover_r2_key");
 
-                    b.Property<int?>("DiagramCount")
-                        .HasColumnType("integer");
-
                     b.Property<string>("DocumentCategory")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -9655,12 +9646,6 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("error_category");
-
-                    b.Property<string>("ExtractedDiagrams")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ExtractedTables")
-                        .HasColumnType("text");
 
                     b.Property<string>("ExtractedText")
                         .HasColumnType("text");
@@ -9796,9 +9781,6 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("StructuredElementsJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("structured_elements_json");
-
-                    b.Property<int?>("TableCount")
-                        .HasColumnType("integer");
 
                     b.PrimitiveCollection<List<string>>("Tags")
                         .IsRequired()

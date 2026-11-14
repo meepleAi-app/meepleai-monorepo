@@ -390,6 +390,8 @@ public partial class DropEmailColumn : Migration
 - **Pre-deploy gate**: confirm zero reads of `email` in last 7 days (log query or feature-flag telemetry).
 - **Rollback-safe within N+1**: still yes — restoring to Deploy N code requires DB restore from §6.2, which is the documented escape hatch.
 
+**Without a deployed environment (#4428).** Since 2026-10-15 no environment runs this API: `deploy-staging.yml` is disabled, and `deploy-production.yml` exists only as `.disabled`. The 7-day soak and the "zero reads of `email` in the last 7 days" check above therefore cannot be verified, because there is no traffic to observe, and the gate does not measure them. What replaces them is the condition of [release-promotion.md §5](../workflows/release-promotion.md#5-dopo-il-rilascio): the release on `main` no longer reads the table or column. The `-- safe:` line of the contract migration cites that fact, meaning the change that removed the readers and the release that took it to `main`. With no older release to run against the new schema, the entity properties and the column leave in the same change. Precedents: #4960 (`DROP TABLE rule_disputes`), #4973 (`game_memories.last_processed_event_id`), #4440 (six columns of `pdf_documents`). When a deployed environment returns, the soak and the read check apply again.
+
 ### 8.4 Enforcement (CI gate)
 
 **Status**: ✅ live since 2026-05-18 (issue [#1087](https://github.com/meepleAi-app/meepleai-monorepo/issues/1087), PR TBD).
@@ -424,7 +426,7 @@ public partial class DropEmailColumn : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.Sql(
-            "-- safe: drop legacy email column after 7-day soak; expand done in PR #NNN, contract = this PR");
+            "-- safe: drop legacy email column; expand done in PR #NNN, and the release on main no longer reads it (release PR #NNN)");
         migrationBuilder.DropColumn("email", "users");
     }
 }

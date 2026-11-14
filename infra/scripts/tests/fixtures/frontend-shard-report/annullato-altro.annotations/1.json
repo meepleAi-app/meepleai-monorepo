@@ -1,1 +1,1 @@
-[{"annotation_level":"failure","title":"","message":"The run was canceled by @maintainer."},{"annotation_level":"failure","title":"","message":"The operation was canceled."}]
+[{"annotation_level":"failure","title":"","message":"The runner has received a shutdown signal."},{"annotation_level":"failure","title":"","message":"The operation was canceled."}]

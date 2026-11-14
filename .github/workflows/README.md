@@ -50,9 +50,9 @@ Workflows are organized by category with consistent naming prefixes:
 ## Testing Workflows
 
 ### test-e2e.yml - Full E2E Suite
-- **Triggers**: Push/PR with web/api changes
-- **Jobs**: 6-shard parallel Playwright tests, quality gate (≥90% pass rate)
-- **Features**: Full browser matrix, Playwright browser caching, coverage reports, PR comments
+- **Triggers**: PR to `main` with web/api changes, manual dispatch
+- **Jobs**: 6-shard parallel Playwright tests; quality gate green only when every shard is green. Since #4123 the gate names each non-green shard (failed, timeout, cancelled by hand, superseded) and its share of the time budget, and does not run on a cancelled run
+- **Features**: Full browser matrix, Playwright browser caching, coverage reports
 - **Optimization** (Issue #3082): Increased from 4 to 6 shards (~30% faster), added browser caching (80-90% cache hit rate)
 
 ### test-performance.yml - Performance Testing

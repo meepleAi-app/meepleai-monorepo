@@ -9,11 +9,12 @@
 # verdi in locale, mentre la causa era il budget. L'aggregatore «Frontend Fast» diceva soltanto
 # `result=cancelled`, senza la parola timeout e senza quale shard.
 #
-# `cancelled` ha almeno due cause che non c'entrano col codice, e GitHub le scrive nelle annotazioni
+# `cancelled` ha almeno tre cause che non c'entrano col codice, e GitHub le scrive nelle annotazioni
 # del job:
 #   - «The job has exceeded the maximum execution time of 10m0s»     → timeout del budget
 #   - «Canceling since a higher priority waiting request … exists»   → un run piu' recente dello stesso
 #                                                                      ramo o PR l'ha sostituito
+#   - «The run was canceled by @…»                                   → qualcuno ha annullato il run
 # Questo script le legge e le nomina. Poi dice quanta parte del budget ha usato ogni shard e avvisa
 # dall'80%: un margine assoluto invecchia in silenzio mentre la suite cresce, una quota stampata a ogni
 # run no. Non e' un gate: il verdetto resta all'aggregatore.
@@ -22,14 +23,20 @@
 # numero ripetuto qui: e' gia' stato cambiato una volta, e una quota calcolata contro il valore
 # vecchio mentirebbe.
 #
+# Da #4123 riporta anche gli shard di E2E Tests (test-e2e.yml): il job, il prefisso del nome e il
+# workflow si passano come argomenti, e senza argomenti restano quelli di Frontend Tests in dev-fast.yml.
+#
 # Uso:
 #   bash infra/scripts/frontend-shard-report.sh --jobs <jobs.json> --annotations <cartella> \
-#     --budget-minutes 15
+#     --budget-minutes 15 [--name-prefix 'E2E Tests (Shard ' --suite 'E2E Tests' --workflow test-e2e.yml]
 #
 #   --jobs          la risposta di GET /repos/{o}/{r}/actions/runs/{id}/attempts/{n}/jobs
 #   --annotations   cartella con <job_id>.json = GET /repos/{o}/{r}/check-runs/{job_id}/annotations,
 #                   per gli shard annullati. Un file assente non e' un errore: la causa resta «non
 #                   determinata» e la durata dice se era probabilmente il budget.
+#   --name-prefix   l'inizio del nome dei job da riportare (default: «Frontend Tests (shard »)
+#   --suite         il nome della suite nei titoli e nel riepilogo (default: «Frontend Tests»)
+#   --workflow      il file del workflow, nei messaggi (default: dev-fast.yml)
 #
 # Se e' definita GITHUB_STEP_SUMMARY, ci scrive anche una tabella.
 #
@@ -40,6 +47,9 @@ set -euo pipefail
 WARN_PERCENT=80
 NAME_PREFIX='Frontend Tests (shard '
 
+SUITE='Frontend Tests'
+WORKFLOW_FILE='dev-fast.yml'
+
 JOBS=""
 ANN_DIR=""
 BUDGET_MIN=""
@@ -49,12 +59,18 @@ for arg in "$@"; do
     --jobs=*) JOBS="${arg#*=}" ;;
     --annotations=*) ANN_DIR="${arg#*=}" ;;
     --budget-minutes=*) BUDGET_MIN="${arg#*=}" ;;
-    --jobs|--annotations|--budget-minutes) PENDING="$arg" ;;
+    --name-prefix=*) NAME_PREFIX="${arg#*=}" ;;
+    --suite=*) SUITE="${arg#*=}" ;;
+    --workflow=*) WORKFLOW_FILE="${arg#*=}" ;;
+    --jobs|--annotations|--budget-minutes|--name-prefix|--suite|--workflow) PENDING="$arg" ;;
     *)
       case "${PENDING:-}" in
         --jobs) JOBS="$arg"; PENDING="" ;;
         --annotations) ANN_DIR="$arg"; PENDING="" ;;
         --budget-minutes) BUDGET_MIN="$arg"; PENDING="" ;;
+        --name-prefix) NAME_PREFIX="$arg"; PENDING="" ;;
+        --suite) SUITE="$arg"; PENDING="" ;;
+        --workflow) WORKFLOW_FILE="$arg"; PENDING="" ;;
         *) echo "::error::argomento non riconosciuto: $arg" >&2; exit 1 ;;
       esac
       ;;
@@ -90,7 +106,7 @@ if ! rows=$(jq -r --arg p "$NAME_PREFIX" '
   exit 1
 fi
 if [ -z "$rows" ]; then
-  echo "::error::nessuno shard concluso con nome «${NAME_PREFIX}…» in $JOBS: o il job e' stato rinominato in dev-fast.yml, o il riepilogo e' girato prima della fine degli shard" >&2
+  echo "::error::nessuno shard concluso con nome «${NAME_PREFIX}…» in $JOBS: o il job e' stato rinominato in ${WORKFLOW_FILE}, o il riepilogo e' girato prima della fine degli shard" >&2
   exit 1
 fi
 # Il jq di Windows chiude le righe con \r: senza toglierlo la durata non e' un numero.
@@ -119,7 +135,7 @@ annotate() { # livello, titolo, messaggio
   printf '::%s title=%s::%s\n' "$1" "$(esc_prop "$2")" "$(esc_data "$3")"
 }
 
-# Causa di un `cancelled`, dalle annotazioni del job: timeout | sostituito | altro:<messaggio> | ignota
+# Causa di un `cancelled`, dalle annotazioni del job: timeout | sostituito | a-mano | altro:<messaggio> | ignota
 cause_of() {
   local f="$ANN_DIR/$1.json" msgs first
   [ -f "$f" ] || { echo ignota; return; }
@@ -128,6 +144,8 @@ cause_of() {
     echo timeout
   elif grep -q 'higher priority waiting request' <<<"$msgs"; then
     echo sostituito
+  elif grep -q '^The run was canceled by ' <<<"$msgs"; then
+    echo a-mano
   else
     # «The operation was canceled.» accompagna ogni annullamento e non dice perche'.
     first=$(grep -v '^The operation was canceled\.$' <<<"$msgs" | head -1 || true)
@@ -184,7 +202,7 @@ while IFS=$'\t' read -r id name conclusion dur; do
           line="$name: TIMEOUT — $timing. Ha esaurito timeout-minutes: NON e' un test fallito."
           ann_level=error
           ann_title="${name}: timeout, non un test fallito"
-          ann_msg="Lo shard ha esaurito il budget di ${BUDGET_MIN} min (timeout-minutes in dev-fast.yml) ed e' stato chiuso come «cancelled», che gh pr checks mostra come «fail». Non e' il diff: un test rotto conclude «failure». Se gli altri shard sono verdi, rilancia il run; se succede spesso, il budget va rivisto (#4117)."
+          ann_msg="Lo shard ha esaurito il budget di ${BUDGET_MIN} min (timeout-minutes in ${WORKFLOW_FILE}) ed e' stato chiuso come «cancelled», che gh pr checks mostra come «fail». Non e' il diff: un test rotto conclude «failure». Se gli altri shard sono verdi, rilancia il run; se succede spesso, il budget va rivisto (#4117)."
           ;;
         sostituito)
           label="sostituito"
@@ -192,6 +210,13 @@ while IFS=$'\t' read -r id name conclusion dur; do
           ann_level=notice
           ann_title="${name}: sostituito"
           ann_msg="Annullato da un run piu' recente dello stesso ramo o PR (cancel-in-progress). Conta l'esito di quel run."
+          ;;
+        a-mano)
+          label="annullato a mano"
+          line="$name: annullato a mano — $timing. Qualcuno ha annullato il run: non e' un esito del codice."
+          ann_level=notice
+          ann_title="${name}: annullato a mano"
+          ann_msg="Il run e' stato annullato a mano. Non e' un test fallito: lo shard non ha un esito."
           ;;
         altro:*)
           label="annullato"
@@ -235,14 +260,14 @@ fi
 if [ "$slowest_pct" -ge 0 ]; then
   echo "Shard verde piu' lento: ${slowest_name}, $(fmt "$slowest_s") = ${slowest_pct}% del budget di ${BUDGET_MIN} min (avviso dall'${WARN_PERCENT}%)."
   if [ "$slowest_pct" -ge "$WARN_PERCENT" ]; then
-    annotate warning "Frontend Tests: margine sotto il $((100 - WARN_PERCENT))%" \
-      "${slowest_name} ha usato il ${slowest_pct}% del budget di ${BUDGET_MIN} min ed e' passato. Con il runner carico la stessa suite dura 2-3 minuti in piu' per shard (#4117): al 100% lo shard viene chiuso come «cancelled». Il budget va rivisto, o il costo per file ridotto, prima che succeda."
+    annotate warning "${SUITE}: margine sotto il $((100 - WARN_PERCENT))%" \
+      "${slowest_name} ha usato il ${slowest_pct}% del budget di ${BUDGET_MIN} min ed e' passato. Con il runner carico la stessa suite dura di piu' (per Frontend Tests 2-3 minuti a shard, #4117): al 100% lo shard viene chiuso come «cancelled». Il budget va rivisto, o il costo per file ridotto, prima che succeda."
   fi
 fi
 
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
   {
-    echo "### Frontend Tests — esito degli shard (#4117)"
+    echo "### ${SUITE} — esito degli shard (#4117)"
     echo
     echo "| shard | esito | durata | quota del budget di ${BUDGET_MIN} min |"
     echo "|---|---|---|---|"

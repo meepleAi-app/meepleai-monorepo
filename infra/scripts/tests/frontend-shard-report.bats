@@ -7,8 +7,9 @@
 # non c'era.
 #
 # Le fixture timeout, sostituito, fallito e verde sono risposte vere dell'API (run 38772184870,
-# 38638306599, 38851277548, 38859015099), ridotte ai campi che lo script legge. Le altre sono
-# costruite a mano, e lo dicono i test che le usano.
+# 38638306599, 38851277548, 38859015099), ridotte ai campi che lo script legge; e2e-timeout e
+# e2e-a-mano anche (run 41917389067 e 42991461066 di test-e2e.yml, #4123). Le altre sono costruite a
+# mano, e lo dicono i test che le usano.
 
 setup() {
     SCRIPT="$BATS_TEST_DIRNAME/../frontend-shard-report.sh"
@@ -16,6 +17,12 @@ setup() {
     NO_ANN="$BATS_TEST_TMPDIR/senza-annotazioni"
     mkdir -p "$NO_ANN"
     WORKFLOW="$BATS_TEST_DIRNAME/../../../.github/workflows/dev-fast.yml"
+    E2E_WORKFLOW="$BATS_TEST_DIRNAME/../../../.github/workflows/test-e2e.yml"
+}
+
+e2e_report() { # fixture, cartella annotazioni
+    run bash "$SCRIPT" --jobs "$FIX/$1.jobs.json" --annotations "$2" --budget-minutes 360 \
+        --name-prefix 'E2E Tests (Shard ' --suite 'E2E Tests' --workflow test-e2e.yml
 }
 
 report() { # fixture, cartella annotazioni, budget
@@ -55,11 +62,21 @@ report() { # fixture, cartella annotazioni, budget
 }
 
 @test "un'altra causa di annullamento viene riportata con il messaggio di GitHub (fixture costruita)" {
-    # Il messaggio dell'annullamento manuale e' scritto a mano: il test fissa che lo script stampi
-    # la causa che trova, scartando la riga generica che accompagna ogni annullamento.
+    # Il messaggio e' scritto a mano: il test fissa che lo script stampi la causa che trova,
+    # scartando la riga generica che accompagna ogni annullamento. Fino a #4123 la fixture usava il
+    # messaggio dell'annullamento a mano, che ora ha una classe sua (test sotto, su un run vero).
     report annullato-altro "$FIX/annullato-altro.annotations" 10
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Frontend Tests (shard 1/2): annullato — 2m 00s, 20% del budget di 10 min. Causa riportata da GitHub: The run was canceled by @maintainer."* ]]
+    [[ "$output" == *"Frontend Tests (shard 1/2): annullato — 2m 00s, 20% del budget di 10 min. Causa riportata da GitHub: The runner has received a shutdown signal."* ]]
+    [[ "$output" != *"::error"* ]]
+}
+
+@test "un run annullato a mano e' nominato come tale, non come un test fallito ne' un timeout (run vero, #4123)" {
+    e2e_report e2e-a-mano "$FIX/e2e-a-mano.annotations"
+    [ "$status" -eq 0 ]
+    [ "$(grep -c '^E2E Tests (Shard [1-6]): annullato a mano — ' <<<"$output")" -eq 6 ]
+    [[ "$output" != *"TIMEOUT"* ]]
+    [[ "$output" != *"FALLITO"* ]]
     [[ "$output" != *"::error"* ]]
 }
 
@@ -180,6 +197,61 @@ report() { # fixture, cartella annotazioni, budget
     report verde "$NO_ANN" 10m
     [ "$status" -eq 1 ]
     [[ "$output" == *"intero positivo"* ]]
+}
+
+# ─── gli shard di E2E Tests (#4123) ──────────────────────────────────────────────────────────────
+
+@test "E2E: timeout e fallimento dello stesso run restano distinti (run vero 41917389067)" {
+    # Lo shard 1 cade in pochi minuti al passo di build (#4997): e' un fallimento. Gli altri arrivano
+    # al tetto di 6 ore di GitHub: sono timeout, e chi legge «cancelled» deve vederlo scritto.
+    e2e_report e2e-timeout "$FIX/e2e-timeout.annotations"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"E2E Tests (Shard 1): FALLITO — 6m 02s, 1% del budget di 360 min."* ]]
+    [ "$(grep -c '^E2E Tests (Shard [2-6]): TIMEOUT — ' <<<"$output")" -eq 5 ]
+    [[ "$output" == *"timeout-minutes in test-e2e.yml"* ]]
+    [[ "$output" != *"Frontend"* ]]
+}
+
+@test "E2E: con GITHUB_STEP_SUMMARY il titolo e' quello della suite passata, non Frontend Tests" {
+    export GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md"
+    e2e_report e2e-timeout "$FIX/e2e-timeout.annotations"
+    [ "$status" -eq 0 ]
+    grep -qF '### E2E Tests — esito degli shard' "$GITHUB_STEP_SUMMARY"
+    grep -qF '| 2 | TIMEOUT | 362m 06s | 100% |' "$GITHUB_STEP_SUMMARY"
+}
+
+@test "test-e2e.yml: il nome del job degli shard comincia con il prefisso passato allo script" {
+    # Il gate passa il prefisso come argomento: se il job venisse rinominato senza toccarlo, il
+    # riepilogo non troverebbe shard ed uscirebbe 1.
+    prefix=$(awk -F"'" '/^ *--name-prefix / {print $2; exit}' "$E2E_WORKFLOW")
+    [ -n "$prefix" ]
+    grep -qF "    name: ${prefix}\${{ matrix.shard }})" "$E2E_WORKFLOW"
+}
+
+@test "test-e2e.yml: il budget degli shard e quello del riepilogo sono lo stesso valore" {
+    grep -qE '^    timeout-minutes: &e2e-shard-budget ' "$E2E_WORKFLOW"
+    grep -qE '^          BUDGET_MINUTES: \*e2e-shard-budget$' "$E2E_WORKFLOW"
+}
+
+@test "test-e2e.yml: il budget dei job di test passa da fromJSON su github.event.inputs" {
+    # Con `inputs.job_timeout_minutes || 360` il dispatch 43428149764 non ha creato un solo job di
+    # test, e il gate e' uscito rosso senza shard da giudicare. Nessun gate locale valuta
+    # l'espressione: se torna alla forma vecchia, se ne accorge solo il prossimo dispatch.
+    grep -qF "timeout-minutes: &e2e-shard-budget \${{ fromJSON(github.event.inputs.job_timeout_minutes || '360') }}" "$E2E_WORKFLOW"
+}
+
+@test "test-e2e.yml: il gate puo' leggere i job e le annotazioni, e non gira su un run annullato" {
+    # Su un run annullato a mano o sostituito non c'e' niente da giudicare: il gate non gira, invece di
+    # uscire rosso come nel run 42991461066. Un timeout di uno shard non annulla il run, quindi li' il
+    # gate gira e lo nomina.
+    block=$(awk '/^  e2e-quality-gate:$/ {on=1; next} on && /^  [a-z]/ {exit} on' "$E2E_WORKFLOW")
+    grep -qE '^      actions: read$' <<<"$block"
+    grep -qE '^      checks: read$' <<<"$block"
+    grep -qF 'infra/scripts/frontend-shard-report.sh' <<<"$block"
+    # La condizione del job, non quella degli step: lo step della copertura usa `always()` di proposito.
+    job_if=$(awk '/^    if: >-$/ {getline; print; exit}' <<<"$block")
+    [[ "$job_if" == *'${{ !cancelled()'* ]]
+    [[ "$job_if" != *"always()"* ]]
 }
 
 # ─── il cablaggio in dev-fast.yml ────────────────────────────────────────────────────────────────

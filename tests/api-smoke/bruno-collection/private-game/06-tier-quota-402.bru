@@ -4,41 +4,43 @@ meta {
   seq: 7
 }
 
-# Phase A.2 conversion (#943): TierLimits.FreeTier.MaxPrivateGames = 3.
-# Collection-level pre-request hook resets smoke-aaron to 0 games at start.
-# Scenario 04 creates the 1st game. This scenario's pre-request creates the
-# 2nd and 3rd, then the main POST is the 4th attempt — must be 402.
-#
-# Implicit dependency on the reset hook (collection.bru): if the reset is
-# skipped (e.g. unauthenticated) smoke-aaron may have leftover games and the
-# strict 402 will hold trivially (already over quota). Either way the
-# assertion direction is "must be 402".
+docs {
+  Phase A.2 conversion (#943): TierLimits.FreeTier.MaxPrivateGames = 3.
+  Collection-level pre-request hook resets smoke-aaron to 0 games at start.
+  Scenario 04 creates the 1st game. This scenario's pre-request creates the
+  2nd and 3rd, then the main POST is the 4th attempt — must be 402.
+
+  Implicit dependency on the reset hook (collection.bru): if the reset is
+  skipped (e.g. unauthenticated) smoke-aaron may have leftover games and the
+  strict 402 will hold trivially (already over quota). Either way the
+  assertion direction is "must be 402".
+}
 
 script:pre-request {
   // Seed games #2 and #3 to bring smoke-aaron's free-tier quota to the limit.
   // The reset hook already zeroed the state; scenario 04 (run earlier in this
   // collection) added #1. We need 2 more so the next POST is the (N+1)th.
+  // #4978: the session cookie, captured by the post-response script of collection.bru. The script read an
+  // `authToken` that nothing set, so the seed was always skipped.
   const apiBase = bru.getEnvVar("apiBase");
-  const authToken = bru.getEnvVar("authToken");
-  if (!authToken) {
-    console.warn("[smoke 06] no authToken — quota pre-seed skipped");
+  const sessionCookie = bru.getVar("sessionCookie");
+  if (!sessionCookie) {
+    console.warn("[smoke 06] no session cookie — quota pre-seed skipped");
     return;
   }
+  // #4978: axios, since `fetch` is not defined in Bruno's script sandbox.
+  const axios = require("axios");
   for (const suffix of ["2", "3"]) {
     try {
-      const r = await fetch(apiBase + "/api/v1/private-games", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + authToken,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          source: "Manual",
-          title: "SG1 Quota Seed " + suffix + " " + Date.now(),
-          minPlayers: 2,
-          maxPlayers: 4,
-          description: "Pre-seed for quota test"
-        })
+      const r = await axios.post(apiBase + "/api/v1/private-games", {
+        source: "Manual",
+        title: "SG1 Quota Seed " + suffix + " " + Date.now(),
+        minPlayers: 2,
+        maxPlayers: 4,
+        description: "Pre-seed for quota test"
+      }, {
+        headers: { "Cookie": sessionCookie },
+        validateStatus: () => true
       });
       console.log("[smoke 06] seed " + suffix + " status=" + r.status);
     } catch (err) {
@@ -66,9 +68,10 @@ tests {
   test("strict 402 — quota exhausted on 4th create (free-tier limit = 3)", function() {
     expect(res.getStatus()).to.equal(402);
   });
-  test("body has TIER_QUOTA_EXCEEDED error code", function() {
-    const body = res.getBody();
-    const bodyStr = JSON.stringify(body || {});
-    expect(bodyStr).to.match(/TIER_QUOTA_EXCEEDED|quota/i);
+  // #4978: until then POST /private-games did not check the limit at all, and this scenario had never
+  // reached the API. The error code is the private games' own (PrivateGameQuotaExceededException).
+  test("body has the PRIVATE_GAME_QUOTA_EXCEEDED error code", function() {
+    const bodyStr = JSON.stringify(res.getBody() || {});
+    expect(bodyStr).to.include("PRIVATE_GAME_QUOTA_EXCEEDED");
   });
 }

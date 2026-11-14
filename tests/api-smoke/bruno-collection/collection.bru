@@ -4,58 +4,64 @@ meta {
   version: 1
 }
 
-vars {
-  apiBase: {{apiBase}}
-  smokeUserEmail: {{smokeUserEmail}}
-  smokeUserPassword: {{smokeUserPassword}}
-}
-
 auth {
-  mode: bearer
-}
-
-auth:bearer {
-  token: {{authToken}}
+  mode: none
 }
 
 script:pre-request {
-  // Auto-login if no authToken yet (set after login script in env)
-  if (!bru.getEnvVar("authToken")) {
-    bru.setVar("authToken", "");
+  // #4978: in a block, because Bruno runs this script and the request's own pre-request script in the same
+  // scope, and a request that declares `const apiBase` failed with "Identifier 'apiBase' has already been
+  // declared".
+  {
+    // Issue #943 Phase A — call the smoke reset endpoint at collection start
+    // so each smoke run begins from a deterministic empty state. The endpoint
+    // is guarded by a triple-gate (TestEndpoints:Enabled + IsProduction()=false
+    // + hardcoded target user), so this call is a no-op in production.
+    //
+    // It runs once per collection invocation, before the first request that
+    // follows a login (sessionCookie, set by the post-response script below).
+    //
+    // #4978: it used to wait for an `authToken` that nothing set, since the API
+    // returns no token, so the reset never ran.
+    const apiBase = bru.getEnvVar("apiBase");
+    const sessionCookie = bru.getVar("sessionCookie");
+    const resetMarker = bru.getVar("smokeResetCompleted");
+
+    if (sessionCookie && apiBase && !resetMarker) {
+      try {
+        // #4978: axios, one of the libraries Bruno lets a script require. `fetch` is not defined in the
+        // script sandbox: every call ended in "[smoke-reset] failed: fetch is not defined".
+        const axios = require("axios");
+        const response = await axios.post(apiBase + "/api/v1/test/reset-smoke-aaron", {}, {
+          headers: { "Cookie": sessionCookie },
+          validateStatus: () => true
+        });
+        // Mark reset done for this collection invocation regardless of result —
+        // a 403 means the env-gate is correctly closed (e.g. against prod) and
+        // we should not retry; a 200 means clean state.
+        bru.setVar("smokeResetCompleted", "true");
+        console.log("[smoke-reset] status=" + response.status);
+      } catch (err) {
+        // Network errors are non-fatal — the smoke scenarios will still run,
+        // they may just see leftover state. Surfaces as tolerant-mode behavior.
+        console.warn("[smoke-reset] failed: " + err.message);
+      }
+    }
   }
+}
 
-  // Issue #943 Phase A — call the smoke reset endpoint at collection start
-  // so each smoke run begins from a deterministic empty state. The endpoint
-  // is guarded by a triple-gate (TestEndpoints:Enabled + IsProduction()=false
-  // + hardcoded target user), so this call is a no-op in production.
-  //
-  // Idempotent: subsequent runs in the same collection invocation also call
-  // this, but the second call finds nothing to delete and returns 0 counts.
-  //
-  // Skipped gracefully if authToken is empty (first login hasn't happened
-  // yet) — the login scenarios run first; this hook fires per-request.
-  const authToken = bru.getEnvVar("authToken");
-  const apiBase = bru.getEnvVar("apiBase");
-  const resetMarker = bru.getVar("smokeResetCompleted");
-
-  if (authToken && apiBase && !resetMarker) {
-    try {
-      const response = await fetch(apiBase + "/api/v1/test/reset-smoke-aaron", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + authToken,
-          "Content-Type": "application/json"
-        }
-      });
-      // Mark reset done for this collection invocation regardless of result —
-      // a 403 means the env-gate is correctly closed (e.g. against prod) and
-      // we should not retry; a 200 means clean state.
-      bru.setVar("smokeResetCompleted", "true");
-      console.log("[smoke-reset] status=" + response.status);
-    } catch (err) {
-      // Network errors are non-fatal — the smoke scenarios will still run,
-      // they may just see leftover state. Surfaces as tolerant-mode behavior.
-      console.warn("[smoke-reset] failed: " + err.message);
+script:post-response {
+  {
+    // #4978: the API keeps the session in the meepleai_session cookie and returns no token. Bruno's own
+    // requests carry the cookie through its cookie jar; the scripts that call fetch() (the reset above, the
+    // quota seed of private-game/06) send it themselves, from this variable.
+    const setCookie = res.getHeader("set-cookie");
+    const cookies = Array.isArray(setCookie) ? setCookie : (setCookie ? [setCookie] : []);
+    const session = cookies
+      .map((cookie) => cookie.split(";")[0].trim())
+      .find((pair) => pair.startsWith("meepleai_session=") && pair.length > "meepleai_session=".length);
+    if (session) {
+      bru.setVar("sessionCookie", session);
     }
   }
 }

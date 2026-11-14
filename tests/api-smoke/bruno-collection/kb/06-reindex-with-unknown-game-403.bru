@@ -1,0 +1,31 @@
+meta {
+  name: SG2-KB5 — Reindex with unknown gameId returns 403 RAG_OWNERSHIP_REQUIRED
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{apiBase}}/api/v1/games/00000000-0000-0000-0000-000000000001/kb/reindex
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}
+
+tests {
+  // #4978: the scenario expected 202 with pdfCount=0, "because there is no authoritative game
+  // ownership check in the reindex path". Since #4155 there is one (RagAccessGuard), and it comes
+  // first: nobody can own a game that does not exist, so the answer is 403 RAG_OWNERSHIP_REQUIRED,
+  // which also does not tell the caller whether the game exists.
+  test("returns 403 Forbidden", function() {
+    expect(res.getStatus()).to.equal(403);
+  });
+
+  test("error code is RAG_OWNERSHIP_REQUIRED for the unknown game", function() {
+    const body = res.getBody();
+    expect(body.error).to.equal("RAG_OWNERSHIP_REQUIRED");
+    expect(body.gameId).to.equal("00000000-0000-0000-0000-000000000001");
+  });
+}

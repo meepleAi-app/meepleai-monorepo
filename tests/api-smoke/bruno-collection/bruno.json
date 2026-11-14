@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "name": "meepleai-api-smoke",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"]
+}

@@ -1,20 +1,28 @@
 name: API Smoke (Bruno) — PR main-staging → main (prod promotion)
 
+# Gate on staging → prod promotion. It used to run on main-dev → main-staging too, and was moved off: the
+# login rate limit (AuthLogin, 10/min per IP) was hit when the smoke ran against an API shared by many runs
+# from one runner IP. Since #4978 the smoke runs with `--env local` against an API started on the job's own
+# runner, so each run has the limit to itself (and DISABLE_RATE_LIMITING is set below).
+#
+# #4978: this header said that a nightly cron of e2e-smoke-real-backend.yml covered main-dev. That cron was
+# removed on 2026-06-08 (lines 3-7 of that file): main-dev has the weekly cron below, and PRs to main-dev
+# run the smoke when they change it (the `smoke_self` filter of Detect Changes).
+
 on:
-  # Gate on staging → prod promotion only. Running on main-dev → main-staging
-  # was too eager: real-API smoke + 1 shared runner IP × cumulative login retries
-  # exceeds AuthLogin rate limit (10/min) and produces noise unrelated to the
-  # release diff. Nightly cron on main-dev (e2e-smoke-real-backend.yml) catches
-  # regressions earlier without gating the release flow.
   pull_request:
     branches:
       - main
+      - main-dev
     paths:
       - 'apps/api/**'
       - 'tests/api-smoke/**'
       - 'tests/fixtures/smoke-test-users.sql'
       - 'infra/**'
       - '.github/workflows/api-smoke.yml'
+  schedule:
+    # #4978: weekly on main-dev (the default branch), Monday 03:00 UTC.
+    - cron: '0 3 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -26,13 +34,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      smoke_self: ${{ steps.filter.outputs.smoke_self || 'true' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            smoke_self:
+              - 'tests/api-smoke/**'
+              - 'tests/fixtures/smoke-test-users.sql'
+              - '.github/workflows/api-smoke.yml'
+
   smoke:
+    needs: changes
+    # #4978: on PRs to main-dev only when they change the smoke itself. The trigger's paths serve both
+    # branches, so a PR to main-dev that touches only apps/api or infra starts a run with Detect Changes alone.
+    if: |
+      github.event_name != 'pull_request' ||
+      github.base_ref == 'main' ||
+      (github.base_ref == 'main-dev' && needs.changes.outputs.smoke_self == 'true')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v6
@@ -44,13 +78,24 @@ jobs:
       - name: Generate placeholder secrets (CI cannot secrets-sync)
         if: runner.os == 'Linux'
         working-directory: infra
-        run: make secrets-setup
+        run: |
+          make secrets-setup
+          # #4978: the placeholder storage.secret is a value, not an absence: its SEED_BUCKET_ENDPOINT
+          # ('https://<your-account>…') is not even a URL, the S3 client throws, and the catalog seed fails,
+          # so no shared game exists for the scenarios. With a valid but dead URL the seed retries every PDF
+          # for over ten minutes. Empty, the file still satisfies compose's env_file, and the API seeds the
+          # catalog without PDFs.
+          : > secrets/storage.secret
 
       - name: Generate placeholder env files
         if: runner.os == 'Linux'
         working-directory: infra/env
         shell: bash
         run: |
+          # #4978: TestEndpoints__Enabled opens POST /api/v1/test/reset-smoke-aaron, which the API maps only in
+          # Development (the compose environment) and lets through only with this flag. SEED_PROFILE=Staging
+          # seeds admin, AI models and the shared catalog the scenarios read (the Dev default adds layers the
+          # job has no services for).
           cat > api.env.dev <<'APIENV'
           POSTGRES_HOST=postgres
           POSTGRES_PORT=5432
@@ -59,27 +104,53 @@ jobs:
           INITIAL_ADMIN_EMAIL=smoke-user@meepleai.test
           INITIAL_ADMIN_PASSWORD=SmokeUser1!!
           INITIAL_ADMIN_DISPLAY_NAME=Smoke User
+          TestEndpoints__Enabled=true
+          SEED_PROFILE=Staging
           APIENV
+          # The web service is not started, but `docker compose exec` and `logs` read the env_file of every
+          # service in the project, and stop on "env file …/web.env.dev not found".
+          : > web.env.dev
 
-      - name: Boot dev stack
+      - name: Boot the API (postgres, redis, api)
+        if: runner.os == 'Linux'
+        working-directory: infra
+        env:
+          # Passed through by compose.dev.yml (#1099).
+          DISABLE_RATE_LIMITING: 'true'
+        run: |
+          # #4978: only the API and what it depends on. `make dev-core` also built and started the web app,
+          # which the API smoke does not use, and needed infra/env/web.env.dev, which nothing generated:
+          # the job stopped on "env file …/web.env.dev not found" before anything ran.
+          docker compose -f docker-compose.yml -f compose.dev.yml up -d --build api
+
+      - name: Wait for the API
         if: runner.os == 'Linux'
         working-directory: infra
         run: |
-          make dev-core
-          for i in {1..40}; do
-            if curl -fs http://localhost:8080/health 2>/dev/null; then
-              echo "API up"
-              break
+          # #4978: the old loop left without an error when the API never answered. Startup migrates and
+          # seeds the catalog before /health/live answers, hence the long wait.
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:8080/health/live > /dev/null 2>&1; then
+              echo "API up after $i attempts"
+              exit 0
             fi
             sleep 5
           done
+          echo "::error::The API did not answer /health/live within 5 minutes"
+          docker compose -f docker-compose.yml -f compose.dev.yml logs --tail=200 api
+          exit 1
 
       - name: Apply smoke-aaron fixture
         if: runner.os == 'Linux'
         run: |
-          cat tests/fixtures/smoke-test-users.sql | \
-            docker compose -f infra/docker-compose.yml -f infra/compose.dev.yml \
-            exec -T postgres psql -U meepleai -d meepleai_staging
+          # #4978: the database of the compose stack, from the same secret file postgres starts with. The
+          # step used meepleai_staging, which does not exist there.
+          set -a
+          . infra/secrets/database.secret
+          set +a
+          docker compose -f infra/docker-compose.yml -f infra/compose.dev.yml \
+            exec -T postgres psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+            < tests/fixtures/smoke-test-users.sql
 
       - name: Setup Node 22
         uses: actions/setup-node@v6
@@ -92,16 +163,24 @@ jobs:
           SMOKE_AARON_PASSWORD: SmokeAaron1!!
         run: tests/api-smoke/run-smoke.sh --env local
 
-      - name: Run smoke (Windows — PowerShell)
+      - name: Script compatibility (Windows — PowerShell)
         if: runner.os == 'Windows'
         shell: pwsh
-        env:
-          SMOKE_AARON_PASSWORD: SmokeAaron1!!
         run: |
-          # Windows runner: use staging API (not local Docker stack) since Win runners
-          # boot dev stack is slow and we test runner cross-platform compat here.
-          # Real assertion is on Linux runner.
-          ./tests/api-smoke/run-smoke.ps1 -Env staging -Collection private-game
+          # #4978: the Windows leg checks that run-smoke.ps1 works on PowerShell (help, argument errors), which
+          # is what it was for: "we test runner cross-platform compat here, real assertion is on Linux". It used
+          # to run the collection against staging.meepleai.app, which does not exist since 2026-10-15; running it
+          # against staging again depends on a staging server (#4428).
+          ./tests/api-smoke/test/Test-RunSmokeHelp.ps1
+
+      - name: Upload Bruno report (Linux)
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-smoke-bruno-report-${{ github.run_number }}
+          path: tests/api-smoke/reports/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Dump API logs on failure (Linux)
         if: failure() && runner.os == 'Linux'

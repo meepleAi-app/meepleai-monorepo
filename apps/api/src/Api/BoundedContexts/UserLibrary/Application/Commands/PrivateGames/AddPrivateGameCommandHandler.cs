@@ -8,6 +8,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 
@@ -21,6 +22,7 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
     private readonly IPrivateGameRepository _privateGameRepository;
     private readonly IUserLibraryRepository _userLibraryRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
+    private readonly ITierEnforcementService _tierEnforcementService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AddPrivateGameCommandHandler> _logger;
 
@@ -28,12 +30,14 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
         IPrivateGameRepository privateGameRepository,
         IUserLibraryRepository userLibraryRepository,
         ISharedGameRepository sharedGameRepository,
+        ITierEnforcementService tierEnforcementService,
         IUnitOfWork unitOfWork,
         ILogger<AddPrivateGameCommandHandler> logger)
     {
         _privateGameRepository = privateGameRepository ?? throw new ArgumentNullException(nameof(privateGameRepository));
         _userLibraryRepository = userLibraryRepository ?? throw new ArgumentNullException(nameof(userLibraryRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
+        _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -78,6 +82,21 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
 
                 throw new ConflictException($"You already have a private game with BGG ID {command.BggId.Value}");
             }
+        }
+
+        // #4978: the tier's MaxPrivateGames counts the private games the user has (deleted ones excluded by the
+        // query filter). This path never checked it, so a free user (3) created private games without end.
+        var limits = await _tierEnforcementService.GetLimitsAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+        var ownedPrivateGames = await _privateGameRepository.CountByOwnerIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+        if (ownedPrivateGames >= limits.MaxPrivateGames)
+        {
+            _logger.LogInformation(
+                "User {UserId} has {Count} private games, the maximum of the tier ({Max}): creation refused",
+                command.UserId,
+                ownedPrivateGames,
+                limits.MaxPrivateGames);
+
+            throw new PrivateGameQuotaExceededException(limits.MaxPrivateGames);
         }
 
         // Create private game using appropriate factory method

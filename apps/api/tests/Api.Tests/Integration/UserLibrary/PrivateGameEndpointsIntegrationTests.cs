@@ -438,6 +438,77 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
 
     #region Delete Private Game Tests
 
+    #region Tier quota (#4978)
+
+    private static async Task SeedPrivateGamesAsync(MeepleAiDbContext dbContext, Guid ownerId, int count, int deleted = 0)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            dbContext.PrivateGames.Add(new PrivateGameEntity
+            {
+                Id = Guid.NewGuid(),
+                OwnerId = ownerId,
+                Title = $"Quota Seed {i}",
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                Source = Api.BoundedContexts.UserLibrary.Domain.Enums.PrivateGameSource.Manual,
+                CreatedAt = DateTime.UtcNow,
+                IsDeleted = i < deleted,
+                DeletedAt = i < deleted ? DateTime.UtcNow : null
+            });
+        }
+        await dbContext.SaveChangesAsync();
+    }
+
+    private HttpRequestMessage AddManualGameRequest(string sessionToken)
+    {
+        var httpRequest = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            "/api/v1/private-games",
+            sessionToken);
+        httpRequest.Content = JsonContent.Create(new { Source = "Manual", Title = "Over The Quota", MinPlayers = 2, MaxPlayers = 4 });
+        return httpRequest;
+    }
+
+    [Fact]
+    public async Task AddPrivateGame_UserAtTheFreeTierLimit_Returns402AndAddsNoGame()
+    {
+        // Arrange: a free-tier user with as many private games as the tier allows (3).
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        await SeedPrivateGamesAsync(dbContext, userId, 3);
+
+        // Act
+        var response = await _client.SendAsync(AddManualGameRequest(sessionToken));
+
+        // Assert
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.PaymentRequired, body);
+        body.Should().Contain("PRIVATE_GAME_QUOTA_EXCEEDED");
+        (await dbContext.PrivateGames.AsNoTracking().CountAsync(g => g.OwnerId == userId)).Should().Be(3);
+    }
+
+    [Fact]
+    public async Task AddPrivateGame_DeletedGamesDoNotCountTowardsTheLimit_ReturnsCreated()
+    {
+        // Arrange: three private games, one of them deleted.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        await SeedPrivateGamesAsync(dbContext, userId, 3, deleted: 1);
+
+        // Act
+        var response = await _client.SendAsync(AddManualGameRequest(sessionToken));
+
+        // Assert
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.Created, body);
+        (await dbContext.PrivateGames.AsNoTracking().CountAsync(g => g.OwnerId == userId)).Should().Be(3);
+    }
+
+    #endregion
+
     [Fact]
     public async Task DeletePrivateGame_OwnGame_ReturnsNoContent()
     {

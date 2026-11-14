@@ -251,14 +251,14 @@ checks:
     owner: backend-dev
     override_path: exception-comment
     pre_existing_in_main_dev: false
-    notes: "API Smoke (Bruno), api-smoke.yml, on PRs to main only (#943; job renamed from 'api-smoke'). Red on the head of #4897 without a triage: read the job log before the next prod promotion."
+    notes: "API Smoke (Bruno), api-smoke.yml: the collection in tests/api-smoke against the API of the job's own compose stack (#943, #4978). Red means a failed scenario of the API (read the Bruno summary and the api-smoke-bruno-report artifact), or a step before Bruno (image build, boot, fixture). Until #4978 it never reached a request: the boot stopped on web.env.dev, Bruno ran outside the collection root, the reset waited for a token the API does not return. Also runs weekly on main-dev and on PRs to main-dev that change it. Promote to blocker after two consecutive green release rounds (#4978)."
 
   - check_name: "smoke (windows-latest)"
     severity: warning
     owner: backend-dev
     override_path: exception-comment
     pre_existing_in_main_dev: false
-    notes: "Windows leg of 'smoke (ubuntu-latest)'; same workflow, same note."
+    notes: "Windows leg of api-smoke.yml: since #4978 it checks run-smoke.ps1 on PowerShell (Test-RunSmokeHelp.ps1), with no API. It used to run against staging.meepleai.app, which does not exist since 2026-10-15; back to staging only with a staging server (#4428). Promote to blocker with 'smoke (ubuntu-latest)'."
 
   # ─── End-to-end suites (separate workflows, run on release PRs only) ────────
   - check_name: "Backend E2E Tests"

@@ -47,7 +47,7 @@ on the FIRST line of the migration's Up() body:
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql("-- safe: drop legacy email column after 7-day soak (§8.3)");
+            migrationBuilder.Sql("-- safe: drop legacy email column, not read by the release on main (§8.3)");
             migrationBuilder.DropColumn("email", "users");
         }
     }

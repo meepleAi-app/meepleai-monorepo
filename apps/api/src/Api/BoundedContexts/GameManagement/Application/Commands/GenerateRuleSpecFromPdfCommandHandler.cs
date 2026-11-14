@@ -40,8 +40,8 @@ internal class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateR
             throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
         }
 
-        // Rules come from ExtractedText alone (#4930). The AtomicRules column used to win over it, but the iText extractor
-        // that wrote it is gone (#4440): nothing refreshes it, so on a reprocessed row it would have beaten the newer text.
+        // Rules come from ExtractedText alone (#4930). The AtomicRules column used to win over it; the iText extractor
+        // that wrote it was retired, and the column dropped, with #4440.
         var rules = _parsingService.ParseRulesFromExtractedText(pdf.ExtractedText);
 
         if (rules.Count == 0)

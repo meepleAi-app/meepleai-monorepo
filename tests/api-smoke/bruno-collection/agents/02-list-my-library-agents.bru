@@ -1,0 +1,28 @@
+meta {
+  name: SG3 — Agents list: GET /agents?scope=my-library&activeOnly=true
+  type: http
+  seq: 3
+}
+
+docs {
+  #4978: this was 08-builder-filters-status, GET /agents?status=Testing. The status filter belonged to the
+  user-agent lifecycle (create, start-testing, publish, unpublish, soft-delete, restore), whose routes no
+  longer exist; its scenarios were removed. GET /agents filters by activeOnly, type and scope
+  (AgentsEndpoints.cs), and answers { success, agents, count }.
+}
+
+get {
+  url: {{apiBase}}/api/v1/agents?scope=my-library&activeOnly=true
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("response has success, an agents array and its count", function() {
+    const body = res.getBody();
+    expect(body.success).to.equal(true);
+    expect(Array.isArray(body.agents)).to.be.true;
+    expect(body.count).to.equal(body.agents.length);
+  });
+}

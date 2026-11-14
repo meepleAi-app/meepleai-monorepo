@@ -4,8 +4,13 @@ meta {
   seq: 8
 }
 
+docs {
+  #4978: page and pageSize are required query parameters of GET /bgg/search (int, no default), and
+  the frontend always sends them (bggClient.ts). Without them the API answered 400 with an empty body.
+}
+
 get {
-  url: {{apiBase}}/api/v1/bgg/search?q=Catan
+  url: {{apiBase}}/api/v1/bgg/search?q=Catan&page=1&pageSize=20
 }
 
 tests {

@@ -1,0 +1,44 @@
+meta {
+  name: SG4 — Preflight: add smokeGameId to the library and declare ownership
+  type: http
+  seq: 3
+}
+
+docs {
+  #4978: creating a chat session on a game (POST /chat/sessions) goes through RagAccessGuard
+  (#4155), like the KB routes: the user must have the game in the library and have declared owning
+  a copy, or the API answers 403 RAG_OWNERSHIP_REQUIRED. The chat-session scenarios predate the gate
+  and failed with that 403. The pre-request adds the game to the library (409 when a previous run
+  left it there), and this request declares ownership.
+}
+
+script:pre-request {
+  const axios = require("axios");
+  const apiBase = bru.getEnvVar("apiBase");
+  const gameId = bru.getVar("smokeGameId");
+  const sessionCookie = bru.getVar("sessionCookie");
+  if (gameId && sessionCookie) {
+    const added = await axios.post(apiBase + "/api/v1/library/games/" + gameId, {}, {
+      headers: { "Cookie": sessionCookie },
+      validateStatus: () => true
+    });
+    console.log("[smoke sessions] add to library status=" + added.status);
+  }
+}
+
+post {
+  url: {{apiBase}}/api/v1/library/{{smokeGameId}}/declare-ownership
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("ownership grants RAG access", function() {
+    const body = res.getBody();
+    expect(body.gameState).to.equal("Owned");
+    expect(body.hasRagAccess).to.equal(true);
+  });
+}

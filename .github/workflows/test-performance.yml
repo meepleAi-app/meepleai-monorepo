@@ -56,12 +56,12 @@ on:
       run_lighthouse:
         description: 'Run Lighthouse CI'
         required: false
-        default: 'true'
+        default: true
         type: boolean
       run_k6:
         description: 'Run K6 tests'
         required: false
-        default: 'true'
+        default: true
         type: boolean
       notify_on_failure:
         description: 'Open or comment the "Performance Tests Failed" issue if the run fails, as the nightly run does (#4978)'

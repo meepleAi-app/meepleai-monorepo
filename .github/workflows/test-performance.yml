@@ -22,8 +22,8 @@ on:
     # Deploy to Staging job that needed the same runner (incident 2026-05-26).
     # Perf on PRs to main (production release) is preserved.
     #
-    # #4978: PRs to main-dev run K6 too, but only when they change this workflow or tests/k6 (the `k6_self`
-    # filter of Detect Changes). Until then nothing ran this workflow when its own code changed, and it stayed
+    # #4978: PRs to main-dev run K6 too, but only when they change this workflow, tests/k6 or the start-perf-api
+    # action (the `k6_self` filter of Detect Changes; Lighthouse has `lighthouse_self`, #5025). Until then nothing ran this workflow when its own code changed, and it stayed
     # red on the release PRs for causes that had nothing to do with the release.
     branches: [main, main-dev]
     paths:
@@ -363,7 +363,8 @@ jobs:
     timeout-minutes: 30
     needs: changes
     # #4978: `inputs.run_lighthouse` is a boolean, as for run_k6 above. PRs to main-dev build for Lighthouse
-    # only when they change this workflow or apps/web/lighthouserc.json (the `lighthouse_self` filter). There is no
+    # only when they change this workflow, the start-perf-api action or a page list (apps/web/lighthouserc.json,
+    # apps/web/lighthouse-protected-pages.json: the `lighthouse_self` filter). There is no
     # `push` condition any more: this workflow has no push trigger.
     if: |
       (github.event_name == 'workflow_dispatch' && inputs.run_lighthouse) ||
@@ -611,16 +612,17 @@ jobs:
       - name: Assert Lighthouse budgets
         run: lhci assert
 
-      # #5025: never with the session still in the reports.
+      # #5025: never with the session still in the reports: only when the protected pages were not collected, or
+      # when the step above removed the session. A failed or cancelled removal blocks both uploads.
       - name: Upload reports to temporary public storage
-        if: always() && steps.lhci-collect.outcome == 'success' && steps.redact.outcome != 'failure'
+        if: always() && steps.lhci-collect.outcome == 'success' && (steps.lhci-collect-protected.outcome == 'skipped' || steps.redact.outcome == 'success')
         run: lhci upload
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN || secrets.GITHUB_TOKEN }}
 
       # #4978: `.lighthouseci/` is hidden too, like `.next/` above. #5025: never with the session still in the reports.
       - name: Upload Lighthouse CI Results
-        if: always() && steps.redact.outcome != 'failure'
+        if: always() && (steps.lhci-collect-protected.outcome == 'skipped' || steps.redact.outcome == 'success')
         uses: actions/upload-artifact@v7
         with:
           name: lighthouse-ci-results-${{ github.run_number }}

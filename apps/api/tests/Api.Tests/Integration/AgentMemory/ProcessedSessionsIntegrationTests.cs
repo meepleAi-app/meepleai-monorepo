@@ -20,14 +20,13 @@ using Xunit;
 namespace Api.Tests.Integration.AgentMemory;
 
 /// <summary>
-/// #4839, option C, on a real PostgreSQL: the migration adds the two <c>processed_session_ids</c> jsonb columns, the
-/// group repository writes and reads its own, and the statistics handler — real repository, real unit of work, a fresh
-/// context for each delivery as each request has its own — counts a session once even when the redelivery comes after
-/// another session of the same group.
+/// #4839, option C, on a real PostgreSQL: the migration adds the <c>processed_session_ids</c> jsonb column, the group
+/// repository writes and reads it, and the statistics handler — real repository, real unit of work, a fresh context for
+/// each delivery as each request has its own — counts a session once even when the redelivery comes after another
+/// session of the same group.
 /// </summary>
 /// <remarks>
-/// The column on <c>player_memories</c> is still in the schema: #4876 retired the code (expand), and the contract drops
-/// the table.
+/// The migration added the same column to <c>player_memories</c> too; #4876 dropped that table, and the column with it.
 /// </remarks>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
@@ -118,7 +117,7 @@ public sealed class ProcessedSessionsIntegrationTests : IAsyncLifetime
                 """)
             .ToListAsync(Ct);
 
-        columns.Should().Equal("group_memories:jsonb:YES", "player_memories:jsonb:YES");
+        columns.Should().Equal(["group_memories:jsonb:YES"], "#4876 drops player_memories, and its column with it");
     }
 
     [Fact]
@@ -172,6 +171,5 @@ public sealed class ProcessedSessionsIntegrationTests : IAsyncLifetime
         group!.Stats.TotalSessions.Should().Be(2, "two different sessions, each delivered twice");
         group.Stats.GamePlayCounts[gameId].Should().Be(2);
         group.ProcessedSessionIds.Should().Equal(first.SessionId, second.SessionId);
-        (await read.PlayerMemories.CountAsync(Ct)).Should().Be(0, "#4876: the handler no longer writes per-player stats");
     }
 }

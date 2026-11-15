@@ -828,67 +828,6 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("group_memories", (string)null);
                 });
 
-            modelBuilder.Entity("Api.BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime?>("ClaimedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("claimed_at");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("GameStatsJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("game_stats_json");
-
-                    b.Property<Guid?>("GroupId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("group_id");
-
-                    b.Property<string>("GuestName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("guest_name");
-
-                    b.Property<Guid?>("LastProcessedEventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("last_processed_event_id");
-
-                    b.Property<string>("ProcessedSessionIdsJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("processed_session_ids");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GroupId")
-                        .HasDatabaseName("ix_player_memories_group_id")
-                        .HasFilter("group_id IS NOT NULL");
-
-                    b.HasIndex("GuestName")
-                        .HasDatabaseName("ix_player_memories_guest_name")
-                        .HasFilter("user_id IS NULL");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_player_memories_user_id")
-                        .HasFilter("user_id IS NOT NULL");
-
-                    b.ToTable("player_memories", (string)null);
-                });
-
             modelBuilder.Entity("Api.BoundedContexts.Authentication.Domain.Entities.TermsAcceptance", b =>
                 {
                     b.Property<Guid>("Id")

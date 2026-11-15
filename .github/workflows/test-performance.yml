@@ -3,6 +3,10 @@ name: Performance Tests
 # Consolidated performance testing: K6 load tests + Lighthouse CI
 # Issue #2286: Workflow re-enabled after modernization
 # Issue #2928: Extended with all API load test scenarios
+#
+# DISABLED since 2026-11-15 (`gh workflow disable`), by decision of the maintainer: the performance tests wait for the
+# release to a staging server, and there is none (#4428). Neither the nightly K6 run nor the PR runs happen. To turn
+# it back on: `gh workflow enable test-performance.yml`. What it measures and how it was proved: #4978, #5023, #5025.
 
 on:
   schedule:
@@ -18,8 +22,8 @@ on:
     # Deploy to Staging job that needed the same runner (incident 2026-05-26).
     # Perf on PRs to main (production release) is preserved.
     #
-    # #4978: PRs to main-dev run K6 too, but only when they change this workflow or tests/k6 (the `k6_self`
-    # filter of Detect Changes). Until then nothing ran this workflow when its own code changed, and it stayed
+    # #4978: PRs to main-dev run K6 too, but only when they change this workflow, tests/k6 or the start-perf-api
+    # action (the `k6_self` filter of Detect Changes; Lighthouse has `lighthouse_self`, #5025). Until then nothing ran this workflow when its own code changed, and it stayed
     # red on the release PRs for causes that had nothing to do with the release.
     branches: [main, main-dev]
     paths:
@@ -28,6 +32,7 @@ on:
       - 'apps/api/src/Api/BoundedContexts/**'
       - 'tests/k6/**'
       - '.github/workflows/test-performance.yml'
+      - '.github/actions/start-perf-api/**'
   workflow_dispatch:
     inputs:
       test_type:
@@ -118,9 +123,12 @@ jobs:
             k6_self:
               - 'tests/k6/**'
               - '.github/workflows/test-performance.yml'
+              - '.github/actions/start-perf-api/**'
             lighthouse_self:
               - 'apps/web/lighthouserc.json'
+              - 'apps/web/lighthouse-protected-pages.json'
               - '.github/workflows/test-performance.yml'
+              - '.github/actions/start-perf-api/**'
 
   # ============================================
   # K6 PERFORMANCE TESTS
@@ -204,19 +212,6 @@ jobs:
           k6 version
           sudo apt-get update && sudo apt-get install -y redis-tools postgresql-client
 
-      - name: Clean API build outputs
-        working-directory: apps/api/src/Api
-        run: dotnet clean --configuration Release
-
-      - name: Build API
-        working-directory: apps/api/src/Api
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Install EF Core tools
-        run: |
-          dotnet tool update --global dotnet-ef --version 10.* || dotnet tool install --global dotnet-ef --version 10.*
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
       - name: Create test database
         run: |
           echo "Creating test database..."
@@ -232,10 +227,6 @@ jobs:
           PGPASSWORD="testpass123" psql -h localhost -U "postgres" -d postgres -c "SELECT version();"
           echo "Database connection successful"
 
-      - name: Apply migrations
-        working-directory: apps/api/src/Api
-        run: dotnet ef database update --configuration Release
-
       # #4978: the load-test account. The API seeds it as its initial admin, and k6 logs in with it both as user
       # and as admin. Before, k6 used the defaults of tests/k6/utils/shared-config.js, which no seed creates: on
       # #4897 every login answered 400. The password is made here, since the database lives as long as the job.
@@ -248,79 +239,13 @@ jobs:
             echo "K6_ADMIN_PASSWORD=$password"
           } >> "$GITHUB_ENV"
 
-      - name: Start API server
-        working-directory: apps/api/src/Api
-        run: |
-          nohup dotnet run --configuration Release --environment CI > ../../../../api.log 2>&1 &
-          echo $! > ../../../../api.pid
-        env:
-          # #4978: the Core seed layer creates the admin from these. SEED_PROFILE=Prod stops at that layer (admin
-          # and AI models): the default for the CI environment is Dev, whose MechanicGolden layer needs an
-          # embedding service the job does not have and fails after about 90 s of retries.
-          INITIAL_ADMIN_EMAIL: ${{ env.K6_ADMIN_EMAIL }}
-          INITIAL_ADMIN_PASSWORD: ${{ env.K6_ADMIN_PASSWORD }}
-          SEED_PROFILE: 'Prod'
-          DISABLE_RATE_LIMITING: 'true'
-          ASPNETCORE_ENVIRONMENT: CI
-          RateLimiting__MaxTokens__user: '999999'
-          RateLimiting__RefillRate__user: '10000'
-          RateLimiting__MaxTokens__anonymous: '999999'
-          RateLimiting__RefillRate__anonymous: '10000'
-          POSTGRES_USER: 'postgres'
-          POSTGRES_PASSWORD: 'testpass123'
-          POSTGRES_PASSWORD_FILE: ''
-          POSTGRES_DB: 'meepleai_test'
-          POSTGRES_HOST: 'localhost'
-          POSTGRES_PORT: '5432'
-          ConnectionStrings__Redis: 'localhost:6379'
-          HealthChecks__Postgres__Enabled: 'false'
-          OPENROUTER_API_KEY: 'sk-or-v1-dummy-key-for-ci-testing-only'
-          ASPNETCORE_URLS: 'http://0.0.0.0:8080'
-
-      - name: Wait for API to be ready
-        run: |
-          MAX_RETRIES=60
-          RETRY=0
-          BACKOFF=1
-
-          echo "Waiting for API to be ready (max ${MAX_RETRIES} attempts)..."
-
-          while [ $RETRY -lt $MAX_RETRIES ]; do
-            if curl -f -s http://localhost:8080/health/live > /dev/null 2>&1; then
-              echo "API is ready after $((RETRY + 1)) attempts"
-              exit 0
-            fi
-
-            RETRY=$((RETRY + 1))
-            echo "Waiting for API... ($RETRY/$MAX_RETRIES) - sleeping ${BACKOFF}s"
-            sleep $BACKOFF
-
-            if [ $BACKOFF -lt 5 ]; then
-              BACKOFF=$((BACKOFF + 1))
-            fi
-          done
-
-          echo "API failed to start after ${MAX_RETRIES} attempts"
-          tail -n 100 api.log || echo "Could not read api.log"
-          exit 1
-
-      # #4978: one login before the scenarios. A wrong account used to show only as auth_errors inside each
-      # scenario, swallowed by `|| true`; here it stops the job with the status the API returned.
-      - name: Preflight login of the load-test account
-        run: |
-          payload=$(jq -n --arg email "$K6_ADMIN_EMAIL" --arg password "$K6_ADMIN_PASSWORD" '{email: $email, password: $password}')
-          status=$(curl -s -o preflight-body.json -D preflight-headers.txt -w '%{http_code}' \
-            -X POST "${API_BASE_URL}/api/v1/auth/login" -H 'Content-Type: application/json' -d "$payload")
-          if [ "$status" != "200" ]; then
-            echo "::error::Preflight login of ${K6_ADMIN_EMAIL} answered ${status}, not 200: $(head -c 300 preflight-body.json)"
-            exit 1
-          fi
-          if ! grep -qi '^set-cookie: meepleai_session=' preflight-headers.txt; then
-            echo "::error::Preflight login answered 200 without the meepleai_session cookie"
-            exit 1
-          fi
-          rm -f preflight-body.json preflight-headers.txt
-          echo "Preflight login of ${K6_ADMIN_EMAIL}: 200, with a session cookie"
+      # #5025: build, migrations, start, wait and the preflight login are in the composite action, shared with
+      # Lighthouse CI. The login stops the job with the status the API returned (#4978).
+      - name: Start the API
+        uses: ./.github/actions/start-perf-api
+        with:
+          admin-email: ${{ env.K6_ADMIN_EMAIL }}
+          admin-password: ${{ env.K6_ADMIN_PASSWORD }}
 
       - name: Run k6 performance tests
         working-directory: tests/k6
@@ -438,7 +363,8 @@ jobs:
     timeout-minutes: 30
     needs: changes
     # #4978: `inputs.run_lighthouse` is a boolean, as for run_k6 above. PRs to main-dev build for Lighthouse
-    # only when they change this workflow or apps/web/lighthouserc.json (the `lighthouse_self` filter). There is no
+    # only when they change this workflow, the start-perf-api action or a page list (apps/web/lighthouserc.json,
+    # apps/web/lighthouse-protected-pages.json: the `lighthouse_self` filter). There is no
     # `push` condition any more: this workflow has no push trigger.
     if: |
       (github.event_name == 'workflow_dispatch' && inputs.run_lighthouse) ||
@@ -500,11 +426,37 @@ jobs:
     # lighthouse-build: no reason to share the single self-hosted runner used by
     # deploy-staging.
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # #5025: 45 like K6, since the job now builds and starts the API.
+    timeout-minutes: 45
     needs: [changes, lighthouse-build]
     # #5023: only on PRs, as for K6 (#4978), where release-gates.yml classifies the check as a warning. With `true`
     # everywhere a dispatch ended `success` with Lighthouse CI in `failure`, and notify-failure could not fire.
     continue-on-error: ${{ github.event_name == 'pull_request' }}
+    # #5025: the API the protected pages need, as in the K6 job.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'testpass123'
+          POSTGRES_DB: meepleai_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
     defaults:
       run:
         working-directory: apps/web
@@ -535,6 +487,31 @@ jobs:
           npm install --global @lhci/cli@0.15.1
           lhci --version
 
+      # #5025: the protected pages are measured as an admin of the job's own API. The password is made here, since
+      # the database lives as long as the job.
+      - name: Generate Lighthouse credentials
+        run: |
+          password="LH-$(openssl rand -hex 16)-Ci1"
+          echo "::add-mask::$password"
+          {
+            echo "LH_ADMIN_EMAIL=lighthouse-admin@example.com"
+            echo "LH_ADMIN_PASSWORD=$password"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup backend environment
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '10.0.x'
+          working-directory: apps/api
+          cache-nuget: 'true'
+
+      - name: Start the API
+        id: api
+        uses: ./.github/actions/start-perf-api
+        with:
+          admin-email: ${{ env.LH_ADMIN_EMAIL }}
+          admin-password: ${{ env.LH_ADMIN_PASSWORD }}
+
       # #4978: collect, assert and upload were a single `lhci autorun`. Split, so that a report of the wrong page
       # stops the job before its scores are asserted. NEXT_COMPRESS turns on the compression of `next start`
       # (next.config.js): deployed, the edge compresses. Without it each page weighed about 3 MB, about 2 MB of
@@ -545,9 +522,59 @@ jobs:
         env:
           NEXT_COMPRESS: 'true'
 
-      # #4978: this job starts no API and logs no one in. A protected page answers with a redirect to /login, and
-      # Lighthouse measured the login page under the name of the page requested. lighthouserc.json lists public
-      # pages only, and this step fails when a report measured another page (a redirect) or none (a runtime error).
+      # #5025: the protected pages, with the session of the admin above. Same lighthouserc.json: `--url` replaces its
+      # list of public pages (with the session `/` redirects to the signed-in area), `--settings.extraHeaders` adds
+      # to its settings, and `--additive` keeps the public reports. Not `extends` in a second rc file: lhci merges
+      # its arrays index by index, so a shorter list would inherit the last public pages.
+      - name: Collect Lighthouse reports of the protected pages
+        id: lhci-collect-protected
+        env:
+          NEXT_COMPRESS: 'true'
+          SESSION_COOKIE: ${{ steps.api.outputs.session-cookie }}
+        run: |
+          urls=()
+          while IFS= read -r url; do
+            urls+=("--url=$url")
+          done < <(jq -r '.urls[]' lighthouse-protected-pages.json)
+          headers=$(jq -cn --arg cookie "$SESSION_COOKIE" '{Cookie: $cookie}')
+          lhci collect --additive "${urls[@]}" "--settings.extraHeaders=$headers"
+
+      # #5025: a report keeps its settings, extraHeaders included, and the HTML report embeds them too. The session
+      # goes before any upload: the reports end up in an artifact and in temporary public storage.
+      - name: Remove the session from the reports
+        id: redact
+        if: always() && steps.lhci-collect-protected.outcome != 'skipped'
+        env:
+          SESSION_COOKIE: ${{ steps.api.outputs.session-cookie }}
+        run: |
+          python3 - <<'EOF'
+          import os
+          import pathlib
+
+          values = [pair.split("=", 1)[1] for pair in os.environ["SESSION_COOKIE"].split("; ") if "=" in pair]
+          values = [v for v in values if v]
+          if not values:
+              raise SystemExit("no cookie value to remove")
+          redacted = 0
+          for path in pathlib.Path(".lighthouseci").glob("*"):
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding="utf-8", errors="surrogateescape")
+              new = text
+              for value in values:
+                  new = new.replace(value, "REDACTED")
+              if new != text:
+                  path.write_text(new, encoding="utf-8", errors="surrogateescape")
+                  redacted += 1
+              if any(value in path.read_text(encoding="utf-8", errors="surrogateescape") for value in values):
+                  raise SystemExit(f"{path}: the session is still there")
+          print(f"session removed from {redacted} files")
+          EOF
+
+      # #4978: a page that redirects is measured under the name of the page requested: before #4978 the protected
+      # pages ended on /login. This step fails when a report measured another page (a redirect) or none (a
+      # runtime error), the public pages and the protected ones alike: a protected page on /login means the
+      # session above did not reach it (#5025).
       - name: Check that each report measured the requested page
         run: |
           shopt -s nullglob
@@ -585,15 +612,17 @@ jobs:
       - name: Assert Lighthouse budgets
         run: lhci assert
 
+      # #5025: never with the session still in the reports: only when the protected pages were not collected, or
+      # when the step above removed the session. A failed or cancelled removal blocks both uploads.
       - name: Upload reports to temporary public storage
-        if: always() && steps.lhci-collect.outcome == 'success'
+        if: always() && steps.lhci-collect.outcome == 'success' && (steps.lhci-collect-protected.outcome == 'skipped' || steps.redact.outcome == 'success')
         run: lhci upload
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN || secrets.GITHUB_TOKEN }}
 
-      # #4978: `.lighthouseci/` is hidden too, like `.next/` above.
+      # #4978: `.lighthouseci/` is hidden too, like `.next/` above. #5025: never with the session still in the reports.
       - name: Upload Lighthouse CI Results
-        if: always()
+        if: always() && (steps.lhci-collect-protected.outcome == 'skipped' || steps.redact.outcome == 'success')
         uses: actions/upload-artifact@v7
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
@@ -630,6 +659,24 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Archive API logs
+        if: always() && steps.api.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-api-logs-${{ github.run_number }}
+          path: api.log
+          retention-days: 7
+
+      - name: Stop the API
+        if: always()
+        working-directory: .
+        run: |
+          if [ -f api.pid ]; then
+            kill "$(cat api.pid)" 2>/dev/null || true
+            rm api.pid
+          fi
+          pkill -f "dotnet.*Api" 2>/dev/null || true
+
       - name: Comment PR with Performance Results
         if: always() && github.event_name == 'pull_request' && steps.lhci-collect.outcome == 'success'
         uses: actions/github-script@v8
@@ -641,7 +688,7 @@ jobs:
 
             const comment = `## 🚀 Lighthouse CI Performance Report
 
-            Public pages only, measured without the API and without a session (#4978): the pages listed in \`apps/web/lighthouserc.json\`.
+            The public pages of \`apps/web/lighthouserc.json\`, without a session (#4978), and the protected pages of \`apps/web/lighthouse-protected-pages.json\`, as an admin of the job's own API (#5025).
 
             ### Core Web Vitals Budgets (Desktop)
             | Metric | Budget |

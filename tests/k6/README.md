@@ -155,8 +155,10 @@ Open `reports/performance-report.html` in your browser to view:
 **File**: `.github/workflows/test-performance.yml`, job `K6 Performance Tests`.
 
 **Triggers**:
-1. **Pull Request** to `main` that touches the API or `tests/k6/`, and to `main-dev` that touches `tests/k6/` or the workflow itself
+1. **Pull Request** to `main` that touches the API or `tests/k6/`, and to `main-dev` that touches `tests/k6/`, the workflow itself or `.github/actions/start-perf-api/` (#5025)
 2. **Schedule**: nightly at 2 AM UTC, on `main-dev`
+
+> **The workflow is disabled since 2026-11-15** until a staging server returns (`CLAUDE.md`): none of these triggers runs. To turn it back on: `gh workflow enable test-performance.yml`.
 3. **Manual**: workflow dispatch, with `test_type`, `k6_scenario` and `notify_on_failure`
 
 **What it checks** (#4978): a smoke run is a correctness check, not a performance gate.

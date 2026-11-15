@@ -17,7 +17,7 @@
 
 'use client';
 
-import type { JSX, ReactNode } from 'react';
+import { useId, type JSX, type ReactNode } from 'react';
 
 import clsx from 'clsx';
 
@@ -44,6 +44,13 @@ export type SharedGamesGridGame = Omit<MeepleCardGameProps, 'labels' | 'classNam
 };
 
 export interface SharedGamesGridProps {
+  /**
+   * #5024 — name of the results region, rendered as a visually hidden `h2`. The page title is the
+   * `h1` of SharedGamesHero, and what follows it here is an `h3`: the card titles (MeepleCard grid)
+   * or the title of EmptyState/ErrorState. Without this `h2` the heading levels jump from 1 to 3
+   * (axe and Lighthouse `heading-order`).
+   */
+  readonly heading: string;
   readonly state: SharedGamesGridState;
   readonly games: readonly SharedGamesGridGame[];
   /** Required when state === 'default' or 'loading' (cards/skeletons need labels). */
@@ -57,7 +64,20 @@ export interface SharedGamesGridProps {
 
 const SKELETON_COUNT = 9;
 
-export function SharedGamesGrid({
+export function SharedGamesGrid({ heading, ...body }: SharedGamesGridProps): JSX.Element {
+  const headingId = useId();
+
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="sr-only">
+        {heading}
+      </h2>
+      <SharedGamesGridBody {...body} />
+    </section>
+  );
+}
+
+function SharedGamesGridBody({
   state,
   games,
   cardLabels,
@@ -65,7 +85,7 @@ export function SharedGamesGrid({
   errorNode,
   compact = false,
   className,
-}: SharedGamesGridProps): JSX.Element {
+}: Omit<SharedGamesGridProps, 'heading'>): JSX.Element {
   // #3470 Slice 1d-c — role gate computed once (not per card). Non-admins get no slot,
   // so the tile DOM is unchanged for the public audience; admins get an inline editor.
   const { isEditorOrAbove } = useAdminRole();

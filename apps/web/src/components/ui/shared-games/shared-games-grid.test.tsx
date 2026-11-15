@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { EmptyState } from './empty-state';
+import { ErrorState } from './error-state';
 import { type MeepleCardGameLabels } from './meeple-card-game';
 import {
   SharedGamesGrid,
@@ -91,6 +94,7 @@ const games: readonly SharedGamesGridGame[] = [
 
 function build(overrides: Partial<SharedGamesGridProps> = {}): SharedGamesGridProps {
   return {
+    heading: 'Giochi del catalogo',
     state: 'default',
     games,
     cardLabels,
@@ -219,5 +223,70 @@ describe('SharedGamesGrid (v2)', () => {
     expect(container.querySelectorAll('[data-testid="shared-games-card"]')).toHaveLength(0);
     rerender(<SharedGamesGrid {...build({ state: 'error' })} />);
     expect(container.querySelectorAll('[data-testid="shared-games-card"]')).toHaveLength(0);
+  });
+});
+
+// #5024: on /shared-games the page h1 (SharedGamesHero) was followed by an h3, the card titles or the
+// title of the empty/error state, and axe/Lighthouse `heading-order` failed. Only that rule runs here:
+// it is an axe best-practice rule, outside the WCAG A/AA set of the E2E gate.
+describe('SharedGamesGrid — heading order after the page h1 (#5024)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setRole(false);
+  });
+
+  const states: ReadonlyArray<[string, Partial<SharedGamesGridProps>]> = [
+    ['the game cards', {}],
+    [
+      'the empty state',
+      {
+        state: 'empty-search',
+        emptyNode: (
+          <EmptyState
+            kind="empty-search"
+            title="Nessun gioco"
+            resetLabel="Reset"
+            onReset={() => {}}
+          />
+        ),
+      },
+    ],
+    [
+      'the error state',
+      {
+        state: 'error',
+        errorNode: (
+          <ErrorState
+            title="Errore"
+            description="Riprova"
+            retryLabel="Riprova"
+            onRetry={() => {}}
+          />
+        ),
+      },
+    ],
+  ];
+
+  it.each(states)('keeps the heading levels in order before %s', async (_, overrides) => {
+    const { container } = render(
+      <main>
+        <h1>Catalogo community</h1>
+        <SharedGamesGrid {...build(overrides)} />
+      </main>
+    );
+
+    expect(container.querySelector('h3')).not.toBeNull();
+    const results = await axe(container, {
+      runOnly: { type: 'rule', values: ['heading-order'] },
+    });
+    expect(results.violations).toEqual([]);
+  });
+
+  it('names the results region with its heading', () => {
+    render(<SharedGamesGrid {...build()} />);
+    expect(screen.getByRole('region', { name: 'Giochi del catalogo' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Giochi del catalogo' })
+    ).toBeInTheDocument();
   });
 });

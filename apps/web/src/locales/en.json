@@ -3476,6 +3476,9 @@
         "meta": "{sessions, plural, =1 {1 session} other {# sessions}} · {wins, plural, =1 {1 win} other {# wins}}",
         "rankAriaLabel": "Rank {rank}"
       },
+      "results": {
+        "heading": "Catalog games"
+      },
       "states": {
         "emptySearch": {
           "title": "No games found",

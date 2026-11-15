@@ -19,7 +19,6 @@ internal static class AgentMemoryServiceExtensions
         // Repositories
         services.AddScoped<IGameMemoryRepository, GameMemoryRepository>();
         services.AddScoped<IGroupMemoryRepository, GroupMemoryRepository>();
-        services.AddScoped<IPlayerMemoryRepository, PlayerMemoryRepository>();
 
         // Cross-BC read services (issue #2492 — SP6 §F drawer metadata)
         services.AddScoped<IKbChunkCountReader, KbChunkCountReader>();

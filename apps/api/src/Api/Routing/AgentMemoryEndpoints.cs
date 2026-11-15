@@ -10,7 +10,7 @@ namespace Api.Routing;
 
 /// <summary>
 /// REST endpoints for the AgentMemory bounded context.
-/// Provides group memory, game memory (house rules/notes), and player stats management.
+/// Provides group memory and game memory (house rules/notes) management.
 /// </summary>
 internal static class AgentMemoryEndpoints
 {
@@ -107,14 +107,6 @@ internal static class AgentMemoryEndpoints
             .Produces(400)
             .Produces(401)
             .WithSummary("Get aggregated house-rule metadata counts (agent/game/session/kb) for SP6 §F drawer");
-
-        // === Player Stats ===
-
-        agentMemory.MapGet("/players/me/stats", HandleGetMyStats)
-            .RequireAuthenticatedUser()
-            .Produces<List<PlayerMemoryDto>>(200)
-            .Produces(401)
-            .WithSummary("Get my player stats across all games");
 
         return group;
     }
@@ -280,18 +272,6 @@ internal static class AgentMemoryEndpoints
         var result = await mediator
             .Send(new GetHouseRulesMetadataQuery(gameId, userId), cancellationToken)
             .ConfigureAwait(false);
-        return Results.Ok(result);
-    }
-
-    // === Player Stats Handlers ===
-
-    private static async Task<IResult> HandleGetMyStats(
-        [FromServices] IMediator mediator,
-        HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
-        var userId = httpContext.User.GetUserId();
-        var result = await mediator.Send(new GetPlayerStatsQuery(userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

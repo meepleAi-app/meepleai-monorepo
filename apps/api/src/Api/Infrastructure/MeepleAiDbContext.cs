@@ -303,7 +303,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameNightGuestEmailOptOutEntity> GameNightGuestEmailOptOuts => Set<GameNightGuestEmailOptOutEntity>(); // #4846: guest addresses that asked to stop game night emails
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity> GameMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity>(); // AgentMemory: per-game memory
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity> GroupMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity>(); // AgentMemory: play group memory
-    public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity> PlayerMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity>(); // AgentMemory: player statistics
+    public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity> PlayerMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity>(); // AgentMemory: player statistics, unused since #4876 (dropped by its contract)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity> SessionChatMessages => Set<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>(); // ISSUE-4760
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshot> VisionSnapshots => Set<BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshot>(); // Session Vision AI
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshotImage> VisionSnapshotImages => Set<BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshotImage>(); // Session Vision AI
@@ -470,7 +470,6 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionTeam>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.AgentMemory.Domain.Entities.GameMemory>(); // AgentMemory: domain aggregate
         modelBuilder.Ignore<BoundedContexts.AgentMemory.Domain.Entities.GroupMemory>(); // AgentMemory: domain aggregate
-        modelBuilder.Ignore<BoundedContexts.AgentMemory.Domain.Entities.PlayerMemory>(); // AgentMemory: domain aggregate
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.DatabaseMetricsSnapshot>(); // Database growth tracking

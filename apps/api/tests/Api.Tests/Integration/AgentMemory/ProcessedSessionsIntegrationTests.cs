@@ -21,10 +21,14 @@ namespace Api.Tests.Integration.AgentMemory;
 
 /// <summary>
 /// #4839, option C, on a real PostgreSQL: the migration adds the two <c>processed_session_ids</c> jsonb columns, the
-/// repositories write and read them, and the statistics handler — real repositories, real unit of work, a fresh
+/// group repository writes and reads its own, and the statistics handler — real repository, real unit of work, a fresh
 /// context for each delivery as each request has its own — counts a session once even when the redelivery comes after
-/// another session of the same player and group.
+/// another session of the same group.
 /// </summary>
+/// <remarks>
+/// The column on <c>player_memories</c> is still in the schema: #4876 retired the code (expand), and the contract drops
+/// the table.
+/// </remarks>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "AgentMemory")]
@@ -70,7 +74,6 @@ public sealed class ProcessedSessionsIntegrationTests : IAsyncLifetime
         await using var db = _fixture.CreateDbContext(_connectionString);
         var collector = new DomainEventCollector();
         var handler = new OnSessionCompletedUpdateStatsHandler(
-            new PlayerMemoryRepository(db, collector),
             new GroupMemoryRepository(db, collector),
             new UnitOfWork(db),
             Flags.Object,
@@ -119,37 +122,32 @@ public sealed class ProcessedSessionsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PlayerAndGroupMemory_ProcessedSessions_RoundTripThroughPostgres()
+    public async Task GroupMemory_ProcessedSessions_RoundTripThroughPostgres()
     {
         var sessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var player = PlayerMemory.CreateForUser(userId);
-        player.MarkProcessed(Guid.NewGuid(), sessionId);
         var group = GroupMemory.Create(userId, "Giovedi");
         group.MarkProcessed(Guid.NewGuid(), sessionId);
-        var untouched = PlayerMemory.CreateForGuest("Marco");
+        var untouched = GroupMemory.Create(userId, "Venerdi");
 
         await using (var db = _fixture.CreateDbContext(_connectionString))
         {
-            var collector = new DomainEventCollector();
-            await new PlayerMemoryRepository(db, collector).AddAsync(player, Ct);
-            await new PlayerMemoryRepository(db, collector).AddAsync(untouched, Ct);
-            await new GroupMemoryRepository(db, collector).AddAsync(group, Ct);
+            var groups = new GroupMemoryRepository(db, new DomainEventCollector());
+            await groups.AddAsync(group, Ct);
+            await groups.AddAsync(untouched, Ct);
             await db.SaveChangesAsync(Ct);
         }
 
         await using var read = _fixture.CreateDbContext(_connectionString);
-        var players = new PlayerMemoryRepository(read, new DomainEventCollector());
-        (await players.GetByUserIdAsync(userId, Ct))!.HasProcessedSession(sessionId).Should().BeTrue();
-        (await players.GetByGuestNameAsync("Marco", Ct))!.ProcessedSessionIds.Should().BeEmpty("a row with no column value reads as none");
-        (await new GroupMemoryRepository(read, new DomainEventCollector()).GetByIdAsync(group.Id, Ct))!
-            .HasProcessedSession(sessionId).Should().BeTrue();
-        (await read.Database.SqlQuery<string>($"""SELECT processed_session_ids::text AS "Value" FROM player_memories WHERE user_id = {userId}""")
+        var reader = new GroupMemoryRepository(read, new DomainEventCollector());
+        (await reader.GetByIdAsync(group.Id, Ct))!.HasProcessedSession(sessionId).Should().BeTrue();
+        (await reader.GetByIdAsync(untouched.Id, Ct))!.ProcessedSessionIds.Should().BeEmpty("a group that counted no session has none");
+        (await read.Database.SqlQuery<string>($"""SELECT processed_session_ids::text AS "Value" FROM group_memories WHERE id = {group.Id}""")
             .SingleAsync(Ct)).Should().Be($"[\"{sessionId}\"]");
     }
 
     [Fact]
-    public async Task Handler_ARedeliveryAfterAnotherSessionOfTheSamePlayerAndGroup_CountsTheSessionOnce()
+    public async Task Handler_ARedeliveryAfterAnotherSessionOfTheSameGroup_CountsTheSessionOnce()
     {
         var gameId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -170,14 +168,10 @@ public sealed class ProcessedSessionsIntegrationTests : IAsyncLifetime
         await DeliverAsync(Rebuilt(second));
 
         await using var read = _fixture.CreateDbContext(_connectionString);
-        var player = await new PlayerMemoryRepository(read, new DomainEventCollector()).GetByUserIdAsync(userId, Ct);
-        var stats = player!.GameStats.Should().ContainSingle().Subject;
-        stats.TotalPlayed.Should().Be(2, "two different sessions, each delivered twice");
-        stats.Wins.Should().Be(1);
-        stats.Losses.Should().Be(1);
         var group = await new GroupMemoryRepository(read, new DomainEventCollector()).GetByIdAsync(groupId, Ct);
-        group!.Stats.TotalSessions.Should().Be(2);
+        group!.Stats.TotalSessions.Should().Be(2, "two different sessions, each delivered twice");
         group.Stats.GamePlayCounts[gameId].Should().Be(2);
-        player.ProcessedSessionIds.Should().Equal(first.SessionId, second.SessionId);
+        group.ProcessedSessionIds.Should().Equal(first.SessionId, second.SessionId);
+        (await read.PlayerMemories.CountAsync(Ct)).Should().Be(0, "#4876: the handler no longer writes per-player stats");
     }
 }

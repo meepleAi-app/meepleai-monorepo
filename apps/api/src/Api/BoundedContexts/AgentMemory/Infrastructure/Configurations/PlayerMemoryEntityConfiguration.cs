@@ -8,6 +8,7 @@ namespace Api.BoundedContexts.AgentMemory.Infrastructure.Configurations;
 /// EF Core configuration for PlayerMemoryEntity.
 /// Table schema, indexes, and JSONB columns for player game statistics persistence.
 /// </summary>
+/// <remarks>#4876: nothing uses the table any more; it stays mapped until the contract drops it.</remarks>
 internal sealed class PlayerMemoryEntityConfiguration : IEntityTypeConfiguration<PlayerMemoryEntity>
 {
     public void Configure(EntityTypeBuilder<PlayerMemoryEntity> builder)

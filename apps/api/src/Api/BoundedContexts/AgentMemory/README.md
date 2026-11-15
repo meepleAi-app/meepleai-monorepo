@@ -2,15 +2,14 @@
 
 ## Responsabilita
 
-Gestisce la memoria persistente degli agenti AI relativa ai giochi, ai gruppi di gioco e ai giocatori. Fornisce il contesto necessario affinche gli agenti possano personalizzare le risposte in base alla storia di gioco, alle regole della casa e alle preferenze del gruppo.
+Gestisce la memoria persistente degli agenti AI relativa ai giochi e ai gruppi di gioco. Fornisce il contesto necessario affinche gli agenti possano personalizzare le risposte in base alla storia di gioco, alle regole della casa e alle preferenze del gruppo.
 
 ## Funzionalita Principali
 
 - **Game Memory**: Memoria per-gioco e per-utente contenente house rules, checklist di setup personalizzate e note
 - **Group Memory**: Memoria collettiva di un gruppo di gioco con membri (registrati o guest), preferenze e statistiche aggregate
-- **Player Memory**: Statistiche individuali per giocatore (vittorie, sconfitte, punteggi migliori) per ogni gioco
 - **House Rules**: Regole della casa aggiunte manualmente o generate automaticamente dalla risoluzione di dispute
-- **Event-Driven Stats**: Aggiornamento automatico delle statistiche alla conclusione di sessioni di gioco live
+- **Event-Driven Stats**: Aggiornamento automatico delle statistiche del gruppo alla conclusione di sessioni di gioco live
 - **Feature Flag**: Il contesto e protetto dal feature flag `Features:AgentMemory.Enabled`
 
 ## Struttura
@@ -22,21 +21,18 @@ Logica di business pura e modelli di dominio:
 - **Entities/**: Aggregate roots principali
   - `GameMemory`: Memoria per-gioco e per-owner con house rules, setup personalizzato e note
   - `GroupMemory`: Memoria collettiva di un gruppo con membri, preferenze e statistiche
-  - `PlayerMemory`: Statistiche di un giocatore (utente registrato o guest)
 - **Models/**: Modelli di dominio (owned types)
   - `HouseRule`: Regola della casa con descrizione, data e sorgente (UserAdded | DisputeOverride)
   - `MemoryNote`: Nota testuale con data e autore opzionale
   - `GroupMember`: Membro del gruppo (UserId per registrati, GuestName per ospiti)
   - `GroupPreferences`: Preferenze del gruppo (durata massima, complessita preferita, note)
   - `GroupStats`: Statistiche aggregate (sessioni totali, conteggio partite per gioco, ultima sessione)
-  - `PlayerGameStats`: Statistiche per giocatore per singolo gioco (vittorie, sconfitte, punteggio migliore)
 - **Enums/**:
   - `HouseRuleSource`: Origine della house rule (UserAdded, DisputeOverride)
   - `PreferredComplexity`: Livello di complessita preferito (Light, Medium, Heavy)
 - **Repositories/**: Interfacce repository
   - `IGameMemoryRepository`: Accesso per GameId+OwnerId o per Id
   - `IGroupMemoryRepository`: Accesso per Id o per CreatorId
-  - `IPlayerMemoryRepository`: Accesso per UserId, GuestName, GroupId con supporto multi-risultato
 
 ### Application/
 
@@ -50,27 +46,25 @@ Orchestrazione e casi d'uso (CQRS pattern con MediatR):
 - **Queries/**: Operazioni di lettura
   - `GetGameMemoryQuery`: Recupera la memoria di un gioco per un owner specifico
   - `GetGroupMemoryQuery`: Recupera i dettagli di un gruppo
-  - `GetPlayerStatsQuery`: Recupera le statistiche di un giocatore su tutti i giochi
 - **DTOs/**: Data Transfer Objects per le risposte API
   - `GameMemoryDto`, `HouseRuleDto`, `MemoryNoteDto`
   - `GroupMemoryDto`, `GroupMemberDto`, `GroupPreferencesDto`, `GroupStatsDto`
-  - `PlayerMemoryDto`, `PlayerGameStatsDto`
 - **Validators/**: FluentValidation per ogni command
 - **EventHandlers/**: Gestori di domain events cross-context
-  - `OnSessionCompletedUpdateStatsHandler`: Alla conclusione di una sessione live, aggiorna statistiche giocatore e gruppo
+  - `OnSessionCompletedUpdateStatsHandler`: Alla conclusione di una sessione live di un gruppo, aggiorna le statistiche del gruppo
 
 ### Infrastructure/
 
 Implementazioni concrete e adattatori:
 
 - **Persistence/**: Implementazioni EF Core dei repository
-  - `GameMemoryRepository`, `GroupMemoryRepository`, `PlayerMemoryRepository`
+  - `GameMemoryRepository`, `GroupMemoryRepository`
 - **Entities/**: Entita EF Core per il mapping database
-  - `GameMemoryEntity`, `GroupMemoryEntity`, `PlayerMemoryEntity`
+  - `GameMemoryEntity`, `GroupMemoryEntity`, `PlayerMemoryEntity` (quest'ultima senza più codice che la legga o la scriva: resta mappata finché il contract di #4876 non toglie la tabella `player_memories`)
 - **Configurations/**: Configurazioni EF Core (Entity Type Configuration)
   - `GameMemoryEntityConfiguration`, `GroupMemoryEntityConfiguration`, `PlayerMemoryEntityConfiguration`
 - **DependencyInjection/**: Registrazione servizi
-  - `AgentMemoryServiceExtensions.AddAgentMemoryContext()`: Registra i 3 repository nel DI container
+  - `AgentMemoryServiceExtensions.AddAgentMemoryContext()`: Registra i repository nel DI container
 
 ## Pattern Architetturali
 
@@ -90,7 +84,6 @@ PUT    /api/v1/agent-memory/groups/{groupId}/preferences        → UpdateGroupP
 GET    /api/v1/agent-memory/games/{gameId}/memory               → GetGameMemoryQuery
 POST   /api/v1/agent-memory/games/{gameId}/memory/house-rules   → AddHouseRuleCommand
 POST   /api/v1/agent-memory/games/{gameId}/memory/notes         → AddMemoryNoteCommand
-GET    /api/v1/agent-memory/players/me/stats                    → GetPlayerStatsQuery
 ```
 
 Tutti gli endpoint richiedono autenticazione (`RequireAuthenticatedUser`).
@@ -114,13 +107,9 @@ Tutti gli endpoint richiedono autenticazione (`RequireAuthenticatedUser`).
   - Name non puo essere vuoto o whitespace
   - UserId membri non puo essere vuoto, GuestName non puo essere vuoto
 
-### PlayerMemory Aggregate
+### Statistiche per giocatore (ritirate)
 
-- **Identita**: Id (GUID)
-- **Proprieta**: UserId (nullable), GuestName (nullable), GroupId (nullable), GameStats (collection), ClaimedAt, CreatedAt. `ClaimedAt` è il residuo del reclamo degli ospiti, ritirato da #4995: nessun codice lo scrive più, e la colonna resta finché #4876 non toglie la tabella
-- **Invarianti**:
-  - UserId non puo essere vuoto se presente
-  - GuestName non puo essere vuoto per giocatori guest
+L'aggregato `PlayerMemory`, con l'endpoint che restituiva le statistiche dell'utente, è stato ritirato da #4876: nessuna pagina mostrava quelle statistiche. La tabella `player_memories` resta nello schema fino al contract della stessa issue, e nessun codice la legge o la scrive.
 
 ## Dipendenze
 

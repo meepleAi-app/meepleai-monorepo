@@ -7,8 +7,8 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.AgentMemory.Domain;
 
 /// <summary>
-/// #4839 option C — the sessions already counted in a player's or a group's stats. The older guard remembers one
-/// event; this one remembers the sessions, so a redelivery is recognised whatever came in between.
+/// #4839 option C — the sessions already counted in a group's stats. The older guard remembers one event; this one
+/// remembers the sessions, so a redelivery is recognised whatever came in between.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "AgentMemory")]
@@ -73,54 +73,7 @@ public sealed class ProcessedSessionsTests
         act.Should().Throw<ArgumentException>();
     }
 
-    // ── The aggregates ──────────────────────────────────────────────────────────────────────────
-
-    [Fact]
-    public void PlayerMemory_MarkProcessed_RemembersTheEventAndTheSession()
-    {
-        var memory = PlayerMemory.CreateForUser(Guid.NewGuid());
-        var eventId = Guid.NewGuid();
-        var sessionId = Guid.NewGuid();
-
-        memory.MarkProcessed(eventId, sessionId);
-
-        memory.LastProcessedEventId.Should().Be(eventId);
-        memory.HasProcessedSession(sessionId).Should().BeTrue();
-        memory.HasProcessedSession(Guid.NewGuid()).Should().BeFalse();
-    }
-
-    [Fact]
-    public void PlayerMemory_ARememberedSessionSurvivesALaterEvent()
-    {
-        // The case the single last-event guard missed: another event came in between.
-        var memory = PlayerMemory.CreateForUser(Guid.NewGuid());
-        var first = Guid.NewGuid();
-        memory.MarkProcessed(Guid.NewGuid(), first);
-        memory.MarkProcessed(Guid.NewGuid(), Guid.NewGuid());
-
-        memory.HasProcessedSession(first).Should().BeTrue();
-    }
-
-    [Fact]
-    public void PlayerMemory_Reconstitute_PutsTheSessionsBack()
-    {
-        var sessionId = Guid.NewGuid();
-
-        var memory = PlayerMemory.Reconstitute(
-            Guid.NewGuid(), Guid.NewGuid(), null, null, null, DateTime.UtcNow, null, [], [sessionId]);
-
-        memory.HasProcessedSession(sessionId).Should().BeTrue();
-        memory.ProcessedSessionIds.Should().ContainSingle();
-    }
-
-    [Fact]
-    public void PlayerMemory_Reconstitute_WithoutSessions_HasNone()
-    {
-        var memory = PlayerMemory.Reconstitute(
-            Guid.NewGuid(), Guid.NewGuid(), null, null, null, DateTime.UtcNow, null, []);
-
-        memory.ProcessedSessionIds.Should().BeEmpty();
-    }
+    // ── The aggregate ───────────────────────────────────────────────────────────────────────────
 
     [Fact]
     public void GroupMemory_MarkProcessed_RemembersTheEventAndTheSession()

@@ -1,9 +1,12 @@
 namespace Api.BoundedContexts.AgentMemory.Infrastructure.Entities;
 
 /// <summary>
-/// Infrastructure entity for PlayerMemory aggregate.
-/// Maps domain PlayerMemory to database table for player game statistics persistence.
+/// Row of <c>player_memories</c>, the per-player game statistics.
 /// </summary>
+/// <remarks>
+/// #4876: no code reads or writes this table since the expand retired the <c>PlayerMemory</c> aggregate. The entity
+/// stays mapped so that the model still matches the schema; the contract drops the table and this entity together.
+/// </remarks>
 public class PlayerMemoryEntity
 {
     public Guid Id { get; set; }

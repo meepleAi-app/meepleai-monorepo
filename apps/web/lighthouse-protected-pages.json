@@ -1,0 +1,7 @@
+{
+  "urls": [
+    "http://localhost:3000/dashboard",
+    "http://localhost:3000/admin/overview",
+    "http://localhost:3000/library"
+  ]
+}

@@ -1,0 +1,137 @@
+name: 'Start the API for performance tests'
+description: >-
+  Builds the API, applies the migrations, starts it on :8080 with an initial admin, waits for /health/live and logs
+  the admin in. Shared by the K6 and Lighthouse CI jobs of test-performance.yml (#5025), which declare the Postgres
+  and Redis services and get POSTGRES_* and API_BASE_URL from the workflow env. The API log is api.log at the root
+  of the workspace, its pid api.pid.
+inputs:
+  admin-email:
+    description: 'Email of the admin the Core seed layer creates (INITIAL_ADMIN_EMAIL)'
+    required: true
+  admin-password:
+    description: 'Its password (INITIAL_ADMIN_PASSWORD): at least 12 characters, an uppercase letter and a digit'
+    required: true
+outputs:
+  session-cookie:
+    description: 'Cookie header value with every cookie the login set, meepleai_session included (masked in the log)'
+    value: ${{ steps.login.outputs.cookie }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup backend environment
+      uses: ./.github/actions/setup-backend
+      with:
+        dotnet-version: '10.0.x'
+        working-directory: apps/api
+        cache-nuget: 'true'
+
+    - name: Clean API build outputs
+      shell: bash
+      working-directory: apps/api/src/Api
+      run: dotnet clean --configuration Release
+
+    - name: Build API
+      shell: bash
+      working-directory: apps/api/src/Api
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Install EF Core tools
+      shell: bash
+      run: |
+        dotnet tool update --global dotnet-ef --version 10.* || dotnet tool install --global dotnet-ef --version 10.*
+        echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+    - name: Apply migrations
+      shell: bash
+      working-directory: apps/api/src/Api
+      run: dotnet ef database update --configuration Release
+
+    - name: Start API server
+      shell: bash
+      working-directory: apps/api/src/Api
+      run: |
+        nohup dotnet run --configuration Release --environment CI > "$GITHUB_WORKSPACE/api.log" 2>&1 &
+        echo $! > "$GITHUB_WORKSPACE/api.pid"
+      env:
+        # #4978: the Core seed layer creates the admin from these. SEED_PROFILE=Prod stops at that layer (admin
+        # and AI models): the default for the CI environment is Dev, whose MechanicGolden layer needs an
+        # embedding service the job does not have and fails after about 90 s of retries.
+        INITIAL_ADMIN_EMAIL: ${{ inputs.admin-email }}
+        INITIAL_ADMIN_PASSWORD: ${{ inputs.admin-password }}
+        SEED_PROFILE: 'Prod'
+        DISABLE_RATE_LIMITING: 'true'
+        ASPNETCORE_ENVIRONMENT: CI
+        RateLimiting__MaxTokens__user: '999999'
+        RateLimiting__RefillRate__user: '10000'
+        RateLimiting__MaxTokens__anonymous: '999999'
+        RateLimiting__RefillRate__anonymous: '10000'
+        POSTGRES_USER: 'postgres'
+        POSTGRES_PASSWORD: 'testpass123'
+        POSTGRES_PASSWORD_FILE: ''
+        POSTGRES_DB: 'meepleai_test'
+        POSTGRES_HOST: 'localhost'
+        POSTGRES_PORT: '5432'
+        ConnectionStrings__Redis: 'localhost:6379'
+        HealthChecks__Postgres__Enabled: 'false'
+        OPENROUTER_API_KEY: 'sk-or-v1-dummy-key-for-ci-testing-only'
+        ASPNETCORE_URLS: 'http://0.0.0.0:8080'
+
+    - name: Wait for API to be ready
+      shell: bash
+      run: |
+        MAX_RETRIES=60
+        RETRY=0
+        BACKOFF=1
+
+        echo "Waiting for API to be ready (max ${MAX_RETRIES} attempts)..."
+
+        while [ $RETRY -lt $MAX_RETRIES ]; do
+          if curl -f -s http://localhost:8080/health/live > /dev/null 2>&1; then
+            echo "API is ready after $((RETRY + 1)) attempts"
+            exit 0
+          fi
+
+          RETRY=$((RETRY + 1))
+          echo "Waiting for API... ($RETRY/$MAX_RETRIES) - sleeping ${BACKOFF}s"
+          sleep $BACKOFF
+
+          if [ $BACKOFF -lt 5 ]; then
+            BACKOFF=$((BACKOFF + 1))
+          fi
+        done
+
+        echo "API failed to start after ${MAX_RETRIES} attempts"
+        tail -n 100 "$GITHUB_WORKSPACE/api.log" || echo "Could not read api.log"
+        exit 1
+
+    # #4978: one login before the measures. A wrong account used to show only inside each k6 scenario; here it
+    # stops the job with the status the API returned. #5025: the cookies it sets are the step output, for
+    # Lighthouse CI to measure the protected pages as this admin.
+    - name: Log in as the admin
+      id: login
+      shell: bash
+      env:
+        ADMIN_EMAIL: ${{ inputs.admin-email }}
+        ADMIN_PASSWORD: ${{ inputs.admin-password }}
+      run: |
+        payload=$(jq -n --arg email "$ADMIN_EMAIL" --arg password "$ADMIN_PASSWORD" '{email: $email, password: $password}')
+        status=$(curl -s -o login-body.json -D login-headers.txt -w '%{http_code}' \
+          -X POST "${API_BASE_URL}/api/v1/auth/login" -H 'Content-Type: application/json' -d "$payload")
+        if [ "$status" != "200" ]; then
+          echo "::error::Login of ${ADMIN_EMAIL} answered ${status}, not 200: $(head -c 300 login-body.json)"
+          exit 1
+        fi
+        cookies=()
+        while IFS= read -r pair; do
+          echo "::add-mask::${pair#*=}"
+          cookies+=("$pair")
+        done < <(tr -d '\r' < login-headers.txt | sed -n -E 's/^[Ss]et-[Cc]ookie:[[:space:]]*([^;]+).*/\1/p')
+        rm -f login-body.json login-headers.txt
+        cookie=$(IFS=';'; echo "${cookies[*]}" | sed 's/;/; /g')
+        if [[ "$cookie" != *meepleai_session=* ]]; then
+          echo "::error::Login answered 200 without the meepleai_session cookie"
+          exit 1
+        fi
+        echo "cookie=$cookie" >> "$GITHUB_OUTPUT"
+        echo "Login of ${ADMIN_EMAIL}: 200, with ${#cookies[@]} cookies, meepleai_session among them"

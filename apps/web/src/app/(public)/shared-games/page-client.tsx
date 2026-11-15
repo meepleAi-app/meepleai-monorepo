@@ -355,6 +355,7 @@ export function SharedGamesPageClient({
 
         <div className="grid gap-6 px-4 py-6 sm:px-0 lg:grid-cols-[1fr_280px] lg:gap-8 lg:py-8">
           <SharedGamesGrid
+            heading={t('pages.sharedGames.results.heading')}
             state={gridState}
             games={games}
             cardLabels={cardLabels}

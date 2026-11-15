@@ -60,9 +60,9 @@ Implementazioni concrete e adattatori:
 - **Persistence/**: Implementazioni EF Core dei repository
   - `GameMemoryRepository`, `GroupMemoryRepository`
 - **Entities/**: Entita EF Core per il mapping database
-  - `GameMemoryEntity`, `GroupMemoryEntity`, `PlayerMemoryEntity` (quest'ultima senza più codice che la legga o la scriva: resta mappata finché il contract di #4876 non toglie la tabella `player_memories`)
+  - `GameMemoryEntity`, `GroupMemoryEntity`
 - **Configurations/**: Configurazioni EF Core (Entity Type Configuration)
-  - `GameMemoryEntityConfiguration`, `GroupMemoryEntityConfiguration`, `PlayerMemoryEntityConfiguration`
+  - `GameMemoryEntityConfiguration`, `GroupMemoryEntityConfiguration`
 - **DependencyInjection/**: Registrazione servizi
   - `AgentMemoryServiceExtensions.AddAgentMemoryContext()`: Registra i repository nel DI container
 
@@ -109,7 +109,7 @@ Tutti gli endpoint richiedono autenticazione (`RequireAuthenticatedUser`).
 
 ### Statistiche per giocatore (ritirate)
 
-L'aggregato `PlayerMemory`, con l'endpoint che restituiva le statistiche dell'utente, è stato ritirato da #4876: nessuna pagina mostrava quelle statistiche. La tabella `player_memories` resta nello schema fino al contract della stessa issue, e nessun codice la legge o la scrive.
+L'aggregato `PlayerMemory`, con l'endpoint che restituiva le statistiche dell'utente, è stato ritirato da #4876: nessuna pagina mostrava quelle statistiche. La tabella `player_memories` è stata tolta dal contract della stessa issue (migrazione `DropPlayerMemories`), con i valori di `game_stats_json` che conteneva.
 
 ## Dipendenze
 

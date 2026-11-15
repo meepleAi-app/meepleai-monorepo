@@ -13,8 +13,8 @@ namespace Api.Tests.Integration.AgentMemory;
 /// <summary>
 /// The contract of the structured dispute v2 (#4936) on a real PostgreSQL. #4960 drops <c>rule_disputes</c>; #4973
 /// drops <c>game_memories.last_processed_event_id</c> and the shadow property that still put it in every SELECT of the
-/// table. The same column on <c>player_memories</c> and <c>group_memories</c> stays:
-/// <c>OnSessionCompletedUpdateStatsHandler</c> reads and writes it.
+/// table. The same column on <c>group_memories</c> stays: <c>OnSessionCompletedUpdateStatsHandler</c> reads and writes
+/// it. <c>player_memories</c> had it too, until #4876 dropped the table.
 /// </summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
@@ -63,7 +63,7 @@ public sealed class RetiredDisputeSchemaIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Migrations_DropTheGameMemoryColumn_AndKeepItOnPlayerAndGroupMemories()
+    public async Task Migrations_DropTheGameMemoryColumn_AndKeepItOnGroupMemories()
     {
         await using var db = _fixture.CreateDbContext(_connectionString);
 
@@ -76,8 +76,8 @@ public sealed class RetiredDisputeSchemaIntegrationTests : IAsyncLifetime
                 """)
             .ToListAsync(Ct);
 
-        tables.Should().Equal(["group_memories", "player_memories"],
-            "#4973 drops the column from game_memories only; the session-stats handler still uses the other two");
+        tables.Should().Equal(["group_memories"],
+            "#4973 drops the column from game_memories and #4876 drops player_memories; the session-stats handler still uses the group's");
     }
 
     [Fact]

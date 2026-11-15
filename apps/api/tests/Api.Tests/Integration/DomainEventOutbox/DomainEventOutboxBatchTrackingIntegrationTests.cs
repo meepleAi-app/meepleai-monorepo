@@ -42,9 +42,9 @@ namespace Api.Tests.Integration.DomainEventOutbox;
 /// a mocked repository would not have a change tracker to conflict on.
 /// </para>
 /// <para>
-/// The per-player stats are retired (the expand of #4876): the same-user variant now proves that the handler writes no
-/// player row, and the group is the row the two events still share. The unnamed-guest variant is gone: without the
-/// player row it was the same-user case again.
+/// The per-player stats are retired and their table is dropped (#4876): the same-user variant now proves that two
+/// completions without a group still leave the batch whole, and the group is the row the two events still share. The
+/// unnamed-guest variant is gone: without the player row it was the same-user case again.
 /// </para>
 /// </remarks>
 [Collection("Integration-GroupD")]
@@ -131,7 +131,7 @@ public sealed class DomainEventOutboxBatchTrackingIntegrationTests : IAsyncLifet
     }
 
     [Fact]
-    public async Task OneBatch_TwoSessionsOfTheSameRegisteredUser_BothRowsSentAndNoPlayerRowWritten()
+    public async Task OneBatch_TwoSessionsOfTheSameRegisteredUser_BothRowsSent()
     {
         var gameId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -141,10 +141,6 @@ public sealed class DomainEventOutboxBatchTrackingIntegrationTests : IAsyncLifet
             Completed(gameId, groupId: null, Player(userId, "Alice", rank: 2)));
 
         await RunOneBatchAndExpectBothRowsSentAsync();
-
-        await using var read = _serviceProvider!.CreateAsyncScope();
-        (await read.ServiceProvider.GetRequiredService<MeepleAiDbContext>().PlayerMemories.CountAsync(Ct))
-            .Should().Be(0, "the per-player stats are retired: the row these two events used to share is never written");
     }
 
     [Fact]

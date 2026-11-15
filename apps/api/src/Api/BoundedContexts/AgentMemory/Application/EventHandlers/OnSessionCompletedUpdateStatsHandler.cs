@@ -12,8 +12,8 @@ namespace Api.BoundedContexts.AgentMemory.Application.EventHandlers;
 /// When a live session of a group completes, updates the group's stats.
 /// </summary>
 /// <remarks>
-/// #4876: the per-player stats (<c>player_memories</c>) are no longer written. Nothing showed them, and the only
-/// endpoint that read them is retired with them.
+/// #4876: there are no per-player stats any more. Nothing showed them, the only endpoint that read them is retired
+/// with them, and the <c>player_memories</c> table is dropped.
 /// </remarks>
 internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandler<LiveSessionCompletedEvent>
 {

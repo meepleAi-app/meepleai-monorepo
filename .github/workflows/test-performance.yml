@@ -533,10 +533,14 @@ jobs:
           lhci --version
 
       # #4978: collect, assert and upload were a single `lhci autorun`. Split, so that a report of the wrong page
-      # stops the job before its scores are asserted.
+      # stops the job before its scores are asserted. NEXT_COMPRESS turns on the compression of `next start`
+      # (next.config.js): deployed, the edge compresses. Without it each page weighed about 3 MB, about 2 MB of
+      # which was CSS and JS that compression saves (run 43697897745).
       - name: Collect Lighthouse reports
         id: lhci-collect
         run: lhci collect
+        env:
+          NEXT_COMPRESS: 'true'
 
       # #4978: this job starts no API and logs no one in. A protected page answers with a redirect to /login, and
       # Lighthouse measured the login page under the name of the page requested. The lighthouserc files list public

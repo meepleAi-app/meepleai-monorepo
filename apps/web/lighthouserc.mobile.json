@@ -26,7 +26,6 @@
       }
     },
     "assert": {
-      "preset": "lighthouse:recommended",
       "assertions": {
         "first-contentful-paint": ["error", { "maxNumericValue": 2500 }],
         "largest-contentful-paint": ["error", { "maxNumericValue": 4000 }],

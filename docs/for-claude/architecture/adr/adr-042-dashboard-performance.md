@@ -73,8 +73,10 @@ Real-time dashboard updates use Server-Sent Events (SSE) via `/api/v1/dashboard/
 
 ### Lighthouse CI
 - **Desktop config**: `lighthouserc.json` (3 runs, desktop preset)
-- **Mobile config**: `lighthouserc.mobile.json` (3 runs, mobile throttling)
-- **URLs audited**: `/admin/dashboard`, `/dashboard`, `/library`, `/shared-games`, `/settings`, `/admin/users`, `/editor`
+- **Mobile config**: `lighthouserc.mobile.json` (3 runs, mobile throttling; no workflow runs it)
+- **URLs audited**: `/`, `/shared-games`, `/how-it-works`, `/pricing` (public pages only, since #4978)
+
+> **Correction (2026-11-15, #4978).** This list used to name `/admin/dashboard`, `/dashboard`, `/library`, `/settings`, `/admin/users` and `/editor`. The job starts no API and logs no one in, so each of those pages redirects to `/login`, and Lighthouse would have reported the login page under their names. On the recent release rounds the job did not even get that far: the build artifact came out empty, and `lhci` was not a dependency of `apps/web`. Lighthouse CI now audits public pages only, and fails when a report measured a page other than the one requested. The Lighthouse targets in the table above are therefore not measured in CI for the dashboard: that would take the API and a session in the job.
 
 ## Consequences
 

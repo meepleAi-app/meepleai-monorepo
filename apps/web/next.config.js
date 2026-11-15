@@ -116,7 +116,10 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Enable Docker-optimized output
-  compress: false, // Disable compression to prevent ERR_CONTENT_DECODING_FAILED in proxy
+  // Off to prevent ERR_CONTENT_DECODING_FAILED in proxy: compression is left to the edge in front of the app
+  // (Cloudflare Tunnel in staging and production). #4978: Lighthouse CI has no edge in front of `next start`,
+  // so it turns compression on with NEXT_COMPRESS=true, which `next start` reads when it starts.
+  compress: process.env.NEXT_COMPRESS === 'true',
 
   // Issue #2209: Next.js Image optimization — configure remote image domains.
   //

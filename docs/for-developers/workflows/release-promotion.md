@@ -137,7 +137,7 @@ git log -1 --format='%h parents=%p %s' origin/main
 
 `api-smoke.yml`, `test-performance.yml` (Lighthouse, K6), `test-e2e.yml` (Playwright) e `security-pentest.yml` hanno `pull_request` verso `main`. Su `main-dev` ne girano due, e solo per una parte:
 
-- K6 (`test-performance.yml`) con un cron notturno, mentre Lighthouse lì viene saltato. Da #4978 K6 gira anche sulle PR verso `main-dev` che toccano `test-performance.yml` o `tests/k6/`, e Lighthouse su quelle che toccano `test-performance.yml` o i `lighthouserc` di `apps/web`;
+- K6 (`test-performance.yml`) con un cron notturno, mentre Lighthouse lì viene saltato. Da #4978 K6 gira anche sulle PR verso `main-dev` che toccano `test-performance.yml` o `tests/k6/`, e Lighthouse su quelle che toccano `test-performance.yml` o `apps/web/lighthouserc.json`;
 - `security-pentest.yml` con un cron settimanale.
 
 Smoke e Playwright non hanno un controllo su `main-dev`. Il confronto si fa con **la PR verso `main` del giro precedente**, e dove c'è con il run notturno, sulla causa del rosso (la riga di errore del log), non sul solo esito. Per K6 si legge comunque il job, non il run: fino a #4978 il run notturno risultava `success` anche con il job K6 rosso.

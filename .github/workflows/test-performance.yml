@@ -119,7 +119,7 @@ jobs:
               - 'tests/k6/**'
               - '.github/workflows/test-performance.yml'
             lighthouse_self:
-              - 'apps/web/lighthouserc*.json'
+              - 'apps/web/lighthouserc.json'
               - '.github/workflows/test-performance.yml'
 
   # ============================================
@@ -438,7 +438,7 @@ jobs:
     timeout-minutes: 30
     needs: changes
     # #4978: `inputs.run_lighthouse` is a boolean, as for run_k6 above. PRs to main-dev build for Lighthouse
-    # only when they change this workflow or the lighthouserc files (the `lighthouse_self` filter). There is no
+    # only when they change this workflow or apps/web/lighthouserc.json (the `lighthouse_self` filter). There is no
     # `push` condition any more: this workflow has no push trigger.
     if: |
       (github.event_name == 'workflow_dispatch' && inputs.run_lighthouse) ||
@@ -494,10 +494,11 @@ jobs:
 
   lighthouse-ci:
     name: Lighthouse CI
-    # Issue #1587: pinned to ubuntu-latest + explicit timeout. Lighthouse autorun
-    # operates on the build artifact served via lhci local server — no staging
-    # dependency. Same rationale as lighthouse-build: no reason to share the
-    # single self-hosted runner used by deploy-staging.
+    # Issue #1587: pinned to ubuntu-latest + explicit timeout. Lighthouse runs on
+    # the build artifact, served by `next start` (startServerCommand of
+    # lighthouserc.json) — no staging dependency. Same rationale as
+    # lighthouse-build: no reason to share the single self-hosted runner used by
+    # deploy-staging.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [changes, lighthouse-build]
@@ -543,7 +544,7 @@ jobs:
           NEXT_COMPRESS: 'true'
 
       # #4978: this job starts no API and logs no one in. A protected page answers with a redirect to /login, and
-      # Lighthouse measured the login page under the name of the page requested. The lighthouserc files list public
+      # Lighthouse measured the login page under the name of the page requested. lighthouserc.json lists public
       # pages only, and this step fails when a report measured another page (a redirect) or none (a runtime error).
       - name: Check that each report measured the requested page
         run: |

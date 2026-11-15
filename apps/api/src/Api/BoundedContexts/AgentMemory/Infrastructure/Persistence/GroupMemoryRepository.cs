@@ -90,7 +90,15 @@ internal sealed class GroupMemoryRepository : RepositoryBase, IGroupMemoryReposi
         CollectDomainEvents(memory);
 
         var entity = MapToPersistence(memory);
-        DbContext.GroupMemories.Update(entity);
+        // #4876: the reads are AsNoTracking, but the context can still track this row. An outbox batch delivers its
+        // events on one context, and an earlier event of the batch saved the same group: a second instance with that key
+        // made Update throw «already being tracked», and left an entry that failed the batch's own save, so the whole
+        // batch rolled back and came again on the next poll. The values go on the tracked instance instead.
+        var tracked = DbContext.GroupMemories.Local.FindEntry(entity.Id);
+        if (tracked is null)
+            DbContext.GroupMemories.Update(entity);
+        else
+            tracked.CurrentValues.SetValues(entity);
         return Task.CompletedTask;
     }
 

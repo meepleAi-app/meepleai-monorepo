@@ -4,13 +4,10 @@
       "numberOfRuns": 3,
       "startServerCommand": "pnpm start",
       "url": [
-        "http://localhost:3000/admin/dashboard",
-        "http://localhost:3000/dashboard",
-        "http://localhost:3000/library",
+        "http://localhost:3000/",
         "http://localhost:3000/shared-games",
-        "http://localhost:3000/settings",
-        "http://localhost:3000/admin/users",
-        "http://localhost:3000/editor"
+        "http://localhost:3000/how-it-works",
+        "http://localhost:3000/pricing"
       ],
       "settings": {
         "preset": "desktop",

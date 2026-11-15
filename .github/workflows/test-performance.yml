@@ -100,6 +100,7 @@ jobs:
       api: ${{ steps.filter.outputs.api || 'true' }}
       k6: ${{ steps.filter.outputs.k6 || 'true' }}
       k6_self: ${{ steps.filter.outputs.k6_self || 'true' }}
+      lighthouse_self: ${{ steps.filter.outputs.lighthouse_self || 'true' }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
@@ -116,6 +117,9 @@ jobs:
               - 'tests/k6/**'
             k6_self:
               - 'tests/k6/**'
+              - '.github/workflows/test-performance.yml'
+            lighthouse_self:
+              - 'apps/web/lighthouserc*.json'
               - '.github/workflows/test-performance.yml'
 
   # ============================================
@@ -433,12 +437,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: changes
-    # #4978: `inputs.run_lighthouse` is a boolean, as for run_k6 above. PRs to main-dev do not build for
-    # Lighthouse yet: its artifact comes out empty, and the fix is the third PR of #4978.
+    # #4978: `inputs.run_lighthouse` is a boolean, as for run_k6 above. PRs to main-dev build for Lighthouse
+    # only when they change this workflow or the lighthouserc files (the `lighthouse_self` filter). There is no
+    # `push` condition any more: this workflow has no push trigger.
     if: |
       (github.event_name == 'workflow_dispatch' && inputs.run_lighthouse) ||
-      (github.event_name == 'push') ||
-      (github.event_name == 'pull_request' && github.base_ref == 'main' && needs.changes.outputs.web == 'true')
+      (github.event_name == 'pull_request' && github.base_ref == 'main' && needs.changes.outputs.web == 'true') ||
+      (github.event_name == 'pull_request' && github.base_ref == 'main-dev' && needs.changes.outputs.lighthouse_self == 'true')
     defaults:
       run:
         working-directory: apps/web
@@ -470,13 +475,21 @@ jobs:
         env:
           NODE_ENV: production
 
+      # #4978: `.next/` and `.env.test` are both hidden, and upload-artifact skips hidden files by default since
+      # v4.4: the artifact came out empty ("No files were found"), and Lighthouse CI stopped on "Artifact not
+      # found". `next start` needs neither the build cache nor the standalone copy. Keep `.env.test` in the list:
+      # with it the artifact root is apps/web/, which is where Lighthouse CI downloads it.
       - name: Upload Next.js Build Artifact
         uses: actions/upload-artifact@v7
         with:
           name: nextjs-build-lighthouse-${{ github.sha }}
           path: |
             apps/web/.next/
+            !apps/web/.next/cache
+            !apps/web/.next/standalone
             apps/web/.env.test
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 1
 
   lighthouse-ci:
@@ -511,87 +524,129 @@ jobs:
           name: nextjs-build-lighthouse-${{ github.sha }}
           path: apps/web
 
-      - name: Run Lighthouse CI
-        run: pnpm exec lhci autorun
+      # #4978: `pnpm exec lhci` had nothing to run: @lhci/cli is not a dependency of apps/web, so once the artifact
+      # existed the step would have stopped on "command not found". Pinned to an exact version, as bats is in
+      # dev-fast.yml.
+      - name: Install Lighthouse CI
+        run: |
+          npm install --global @lhci/cli@0.15.1
+          lhci --version
+
+      # #4978: collect, assert and upload were a single `lhci autorun`. Split, so that a report of the wrong page
+      # stops the job before its scores are asserted.
+      - name: Collect Lighthouse reports
+        id: lhci-collect
+        run: lhci collect
+
+      # #4978: this job starts no API and logs no one in. A protected page answers with a redirect to /login, and
+      # Lighthouse measured the login page under the name of the page requested. The lighthouserc files list public
+      # pages only, and this step fails when a report measured another page (a redirect) or none (a runtime error).
+      - name: Check that each report measured the requested page
+        run: |
+          shopt -s nullglob
+          reports=(.lighthouseci/lhr-*.json)
+          if [ "${#reports[@]}" -eq 0 ]; then
+            echo "::error::lhci collect wrote no report into apps/web/.lighthouseci/"
+            exit 1
+          fi
+          {
+            echo "### Pages measured by Lighthouse"
+            echo
+            echo "| requested | measured | verdict |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          wrong=0
+          for lhr in "${reports[@]}"; do
+            requested=$(jq -r '.requestedUrl // ""' "$lhr" | sed -E 's|^[a-z]+://[^/]+||; s|[?#].*$||')
+            measured=$(jq -r '.finalDisplayedUrl // .finalUrl // ""' "$lhr" | sed -E 's|^[a-z]+://[^/]+||; s|[?#].*$||')
+            runtime_error=$(jq -r '.runtimeError.code // ""' "$lhr")
+            verdict=ok
+            if [ -n "$runtime_error" ]; then
+              verdict="runtime error $runtime_error"
+            elif [ "$measured" != "$requested" ]; then
+              verdict=redirected
+            fi
+            echo "| \`$requested\` | \`$measured\` | $verdict |" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$verdict" != ok ]; then
+              echo "::error file=apps/web/lighthouserc.json::$requested: $verdict, measured '$measured' ($lhr)"
+              wrong=$((wrong + 1))
+            fi
+          done
+          echo "reports: ${#reports[@]}, of another page or of none: $wrong"
+          [ "$wrong" -eq 0 ]
+
+      - name: Assert Lighthouse budgets
+        run: lhci assert
+
+      - name: Upload reports to temporary public storage
+        if: always() && steps.lhci-collect.outcome == 'success'
+        run: lhci upload
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN || secrets.GITHUB_TOKEN }}
 
+      # #4978: `.lighthouseci/` is hidden too, like `.next/` above.
       - name: Upload Lighthouse CI Results
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
           path: apps/web/.lighthouseci/
+          include-hidden-files: true
           retention-days: 7
 
+      # #4978: one row per page, from its median run by performance score, named after the page measured. The old
+      # step looked for a manifest.json, which only `lhci upload --target filesystem` writes, so its table was
+      # always empty; and it named the page requested.
       - name: Extract Lighthouse Metrics
         id: lighthouse-metrics
-        if: always()
+        if: always() && steps.lhci-collect.outcome == 'success'
         run: |
-          echo "Extracting Lighthouse metrics from results..."
-          METRICS_JSON="{}"
-
-          # Find the manifest.json and extract metrics
-          if [ -d ".lighthouseci" ]; then
-            MANIFEST=$(find .lighthouseci -name "manifest.json" 2>/dev/null | head -1)
-            if [ -n "$MANIFEST" ] && [ -f "$MANIFEST" ]; then
-              # Parse manifest to get result files
-              echo "Found manifest: $MANIFEST"
-
-              # Create summary from lhr files
-              SUMMARY=""
-              for lhr in .lighthouseci/lhr-*.json; do
-                if [ -f "$lhr" ]; then
-                  URL=$(jq -r '.requestedUrl // .finalUrl' "$lhr" 2>/dev/null | sed 's|http://localhost:3000||')
-                  PERF=$(jq -r '.categories.performance.score // 0' "$lhr" 2>/dev/null)
-                  A11Y=$(jq -r '.categories.accessibility.score // 0' "$lhr" 2>/dev/null)
-                  BP=$(jq -r '.categories["best-practices"].score // 0' "$lhr" 2>/dev/null)
-                  SEO=$(jq -r '.categories.seo.score // 0' "$lhr" 2>/dev/null)
-                  FCP=$(jq -r '.audits["first-contentful-paint"].numericValue // 0' "$lhr" 2>/dev/null)
-                  LCP=$(jq -r '.audits["largest-contentful-paint"].numericValue // 0' "$lhr" 2>/dev/null)
-                  TBT=$(jq -r '.audits["total-blocking-time"].numericValue // 0' "$lhr" 2>/dev/null)
-                  CLS=$(jq -r '.audits["cumulative-layout-shift"].numericValue // 0' "$lhr" 2>/dev/null)
-
-                  # Convert scores to percentages
-                  PERF_PCT=$(echo "$PERF * 100" | bc 2>/dev/null || echo "0")
-                  A11Y_PCT=$(echo "$A11Y * 100" | bc 2>/dev/null || echo "0")
-                  BP_PCT=$(echo "$BP * 100" | bc 2>/dev/null || echo "0")
-                  SEO_PCT=$(echo "$SEO * 100" | bc 2>/dev/null || echo "0")
-
-                  # Format metrics
-                  FCP_SEC=$(echo "scale=2; $FCP / 1000" | bc 2>/dev/null || echo "0")
-                  LCP_SEC=$(echo "scale=2; $LCP / 1000" | bc 2>/dev/null || echo "0")
-                  TBT_MS=$(printf "%.0f" "$TBT" 2>/dev/null || echo "0")
-                  CLS_FMT=$(printf "%.3f" "$CLS" 2>/dev/null || echo "0")
-
-                  SUMMARY="${SUMMARY}| ${URL:-/} | ${PERF_PCT%.*}% | ${A11Y_PCT%.*}% | ${FCP_SEC}s | ${LCP_SEC}s | ${TBT_MS}ms | ${CLS_FMT} |\n"
-                fi
-              done
-
-              echo "summary<<EOF" >> $GITHUB_OUTPUT
-              echo -e "$SUMMARY" >> $GITHUB_OUTPUT
-              echo "EOF" >> $GITHUB_OUTPUT
-            fi
-          fi
+          shopt -s nullglob
+          reports=(.lighthouseci/lhr-*.json)
+          [ "${#reports[@]}" -gt 0 ] || exit 0
+          SUMMARY=$(jq -rs '
+            group_by(.requestedUrl)[]
+            | sort_by(.categories.performance.score // 0)
+            | .[length / 2 | floor]
+            | [ (.finalDisplayedUrl // .finalUrl // "" | sub("^[a-z]+://[^/]+"; "")),
+                "\((.categories.performance.score // 0) * 100 | round)%",
+                "\((.categories.accessibility.score // 0) * 100 | round)%",
+                "\((.audits["first-contentful-paint"].numericValue // 0) / 10 | round / 100)s",
+                "\((.audits["largest-contentful-paint"].numericValue // 0) / 10 | round / 100)s",
+                "\(.audits["total-blocking-time"].numericValue // 0 | round)ms",
+                "\((.audits["cumulative-layout-shift"].numericValue // 0) * 1000 | round / 1000)" ]
+            | "| " + join(" | ") + " |"
+          ' "${reports[@]}")
+          {
+            echo "summary<<EOF"
+            echo "$SUMMARY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Comment PR with Performance Results
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request' && steps.lhci-collect.outcome == 'success'
         uses: actions/github-script@v8
+        env:
+          SUMMARY: ${{ steps.lighthouse-metrics.outputs.summary }}
         with:
           script: |
-            const summary = `${{ steps.lighthouse-metrics.outputs.summary }}`;
+            const summary = process.env.SUMMARY;
 
             const comment = `## 🚀 Lighthouse CI Performance Report
 
-            ### Core Web Vitals Budgets (Desktop)
-            | Metric | Target | Status |
-            |--------|--------|--------|
-            | FCP (First Contentful Paint) | < 1.8s | ✅ |
-            | LCP (Largest Contentful Paint) | < 2.5s | ✅ |
-            | TBT (Total Blocking Time) | < 300ms | ✅ |
-            | CLS (Cumulative Layout Shift) | < 0.1 | ✅ |
+            Public pages only, measured without the API and without a session (#4978): the pages listed in \`apps/web/lighthouserc.json\`.
 
-            ### Per-Page Results
+            ### Core Web Vitals Budgets (Desktop)
+            | Metric | Budget |
+            |--------|--------|
+            | FCP (First Contentful Paint) | < 1.8s |
+            | LCP (Largest Contentful Paint) | < 2.5s |
+            | TBT (Total Blocking Time) | < 300ms |
+            | CLS (Cumulative Layout Shift) | < 0.1 |
+
+            Whether each budget held is in the \`Assert Lighthouse budgets\` step of this job.
+
+            ### Per-Page Results (median run)
             | Page | Perf | A11y | FCP | LCP | TBT | CLS |
             |------|------|------|-----|-----|-----|-----|
             ${summary || '| (No data available) | - | - | - | - | - | - |'}
@@ -601,15 +656,6 @@ jobs:
             - ♿ Accessibility: ≥ 90%
             - ✅ Best Practices: ≥ 90%
             - 🔍 SEO: ≥ 80%
-
-            ### Tested Pages (7 total)
-            1. Admin Dashboard (\`/admin/dashboard\`)
-            2. User Dashboard (\`/dashboard\`)
-            3. Personal Library (\`/library\`)
-            4. Shared Catalog (\`/shared-games\`)
-            5. Profile & Settings (\`/settings\`)
-            6. User Management (\`/admin/users\`)
-            7. Editor Dashboard (\`/editor\`)
 
             📊 Full reports available in [workflow artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).
             `;

@@ -2,8 +2,10 @@ name: 'Start the API for performance tests'
 description: >-
   Builds the API, applies the migrations, starts it on :8080 with an initial admin, waits for /health/live and logs
   the admin in. Shared by the K6 and Lighthouse CI jobs of test-performance.yml (#5025), which declare the Postgres
-  and Redis services and get POSTGRES_* and API_BASE_URL from the workflow env. The API log is api.log at the root
-  of the workspace, its pid api.pid.
+  and Redis services, get POSTGRES_* and API_BASE_URL from the workflow env, and run ./.github/actions/setup-backend
+  before this action. Not from inside it: the post steps of a nested composite action lose its inputs, and the cache
+  key of setup-backend then hashes /**/*.csproj and fails the job. The API log is api.log at the root of the
+  workspace, its pid api.pid.
 inputs:
   admin-email:
     description: 'Email of the admin the Core seed layer creates (INITIAL_ADMIN_EMAIL)'
@@ -19,13 +21,6 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Setup backend environment
-      uses: ./.github/actions/setup-backend
-      with:
-        dotnet-version: '10.0.x'
-        working-directory: apps/api
-        cache-nuget: 'true'
-
     - name: Clean API build outputs
       shell: bash
       working-directory: apps/api/src/Api
@@ -124,6 +119,8 @@ runs:
         fi
         cookies=()
         while IFS= read -r pair; do
+          # An empty value is a cookie the login deletes (the old role cookie), not one to send back.
+          [ -n "${pair#*=}" ] || continue
           echo "::add-mask::${pair#*=}"
           cookies+=("$pair")
         done < <(tr -d '\r' < login-headers.txt | sed -n -E 's/^[Ss]et-[Cc]ookie:[[:space:]]*([^;]+).*/\1/p')

@@ -177,6 +177,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Setup backend environment
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '10.0.x'
+          working-directory: apps/api
+          cache-nuget: 'true'
+
       # #4978: k6 from the release tarball, at a fixed version checked against its sha256, on amd64 and arm64
       # alike. The apt repository needed a GPG key, which changed between the nightly runs of 2026-11-09 and
       # 2026-11-10 (`NO_PUBKEY C780D0BDB1A69C86`, exit 100); the arm64 branch downloaded `latest`.
@@ -485,6 +492,13 @@ jobs:
             echo "LH_ADMIN_EMAIL=lighthouse-admin@example.com"
             echo "LH_ADMIN_PASSWORD=$password"
           } >> "$GITHUB_ENV"
+
+      - name: Setup backend environment
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '10.0.x'
+          working-directory: apps/api
+          cache-nuget: 'true'
 
       - name: Start the API
         id: api

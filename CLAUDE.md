@@ -24,7 +24,7 @@
 | Migration | `dotnet ef migrations add Name` | `apps/api/src/Api/` |
 | API Docs | http://localhost:8080/scalar/v1 | Browser |
 
-> ⏸ **Nessun server staging dal 2026-10-15** ([#4428](https://github.com/meepleAi-app/meepleai-monorepo/issues/4428)). `make staging` e `make tunnel && make integration` hanno bisogno di quell'host e oggi non funzionano. I segreti non ne dipendono più: sono cifrati nel repository e `make secrets-sync` li decifra con la chiave age (ADR-099). I workflow `deploy-staging.yml` e `title-health-staging.yml` sono **disattivati**, non rimossi: al ritorno di un server, prima di `gh workflow enable <file>`, fissa la chiave host al posto di `StrictHostKeyChecking=no` (vedi #4428). Un «verifica su staging» in una DoD va scritto sotto condizione, non come arretrato.
+> ⏸ **Nessun server staging dal 2026-10-15** ([#4428](https://github.com/meepleAi-app/meepleai-monorepo/issues/4428)). `make staging` e `make tunnel && make integration` hanno bisogno di quell'host e oggi non funzionano. I segreti non ne dipendono più: sono cifrati nel repository e `make secrets-sync` li decifra con la chiave age (ADR-099). I workflow `deploy-staging.yml` e `title-health-staging.yml` sono **disattivati**, non rimossi: al ritorno di un server, prima di `gh workflow enable <file>`, fissa la chiave host al posto di `StrictHostKeyChecking=no` (vedi #4428). Anche `test-performance.yml` (K6 e Lighthouse CI) è **disattivato** dal 2026-11-15, per decisione dell'utente: i test di performance aspettano il rilascio in staging. Si riattiva con `gh workflow enable test-performance.yml`; cosa misura e com'è stato provato è in #4978, #5023 e #5025. Un «verifica su staging» in una DoD va scritto sotto condizione, non come arretrato.
 
 ### Windows Notes
 

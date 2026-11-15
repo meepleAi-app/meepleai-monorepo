@@ -3,6 +3,10 @@ name: Performance Tests
 # Consolidated performance testing: K6 load tests + Lighthouse CI
 # Issue #2286: Workflow re-enabled after modernization
 # Issue #2928: Extended with all API load test scenarios
+#
+# DISABLED since 2026-11-15 (`gh workflow disable`), by decision of the maintainer: the performance tests wait for the
+# release to a staging server, and there is none (#4428). Neither the nightly K6 run nor the PR runs happen. To turn
+# it back on: `gh workflow enable test-performance.yml`. What it measures and how it was proved: #4978, #5023, #5025.
 
 on:
   schedule:

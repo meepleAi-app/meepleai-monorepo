@@ -3,7 +3,6 @@ using Api.BoundedContexts.AgentMemory.Application.EventHandlers;
 using Api.BoundedContexts.AgentMemory.Domain.Entities;
 using Api.BoundedContexts.AgentMemory.Domain.Repositories;
 using Api.BoundedContexts.AgentMemory.Infrastructure.Persistence;
-using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Infrastructure;
@@ -31,14 +30,22 @@ namespace Api.Tests.Integration.DomainEventOutbox;
 /// #4876: an outbox batch delivers its events on ONE context (<see cref="DomainEventOutboxProcessor.RunOnceAsync"/> opens
 /// one scope per batch), and the handlers save on it. The statistics handler reads a memory with <c>AsNoTracking</c> and
 /// the repository attached a new instance with <c>DbSet.Update</c>: when the first event of the batch had already saved
-/// that row, it was still tracked, and the second event failed with «already being tracked». The row went to retry, and
-/// the retry runs every handler of the event again. <see cref="ProcessedSessionsIntegrationTests"/> does not see it: it
-/// gives each delivery a context of its own, as a request has.
+/// that row, it was still tracked, and the second event failed with «already being tracked». The entry it left made the
+/// batch's own save fail, so the whole batch rolled back and came again on every poll.
+/// <see cref="ProcessedSessionsIntegrationTests"/> does not see it: it gives each delivery a context of its own, as a
+/// request has.
 /// </summary>
 /// <remarks>
-/// Real processor, real handler, real repositories and real PostgreSQL. The mediator delivers the event to the statistics
+/// <para>
+/// Real processor, real handler, real repository and real PostgreSQL. The mediator delivers the event to the statistics
 /// handler only, resolved from the batch scope as MediatR does: the other handlers of the event are not the subject, and
-/// a <c>Mock&lt;IPlayerMemoryRepository&gt;</c> would not have a change tracker to conflict on.
+/// a mocked repository would not have a change tracker to conflict on.
+/// </para>
+/// <para>
+/// The per-player stats are retired (the expand of #4876): the same-user variant now proves that the handler writes no
+/// player row, and the group is the row the two events still share. The unnamed-guest variant is gone: without the
+/// player row it was the same-user case again.
+/// </para>
 /// </remarks>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -80,7 +87,6 @@ public sealed class DomainEventOutboxBatchTrackingIntegrationTests : IAsyncLifet
         services.RemoveAll<IFeatureFlagService>();
         services.AddSingleton(flags.Object);
 
-        services.AddScoped<IPlayerMemoryRepository, PlayerMemoryRepository>();
         services.AddScoped<IGroupMemoryRepository, GroupMemoryRepository>();
         services.AddScoped<OnSessionCompletedUpdateStatsHandler>();
 
@@ -125,7 +131,7 @@ public sealed class DomainEventOutboxBatchTrackingIntegrationTests : IAsyncLifet
     }
 
     [Fact]
-    public async Task OneBatch_TwoSessionsOfTheSameRegisteredUser_BothRowsSentAndTheUserCountedTwice()
+    public async Task OneBatch_TwoSessionsOfTheSameRegisteredUser_BothRowsSentAndNoPlayerRowWritten()
     {
         var gameId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -137,30 +143,8 @@ public sealed class DomainEventOutboxBatchTrackingIntegrationTests : IAsyncLifet
         await RunOneBatchAndExpectBothRowsSentAsync();
 
         await using var read = _serviceProvider!.CreateAsyncScope();
-        var memories = await read.ServiceProvider.GetRequiredService<IPlayerMemoryRepository>().GetAllByUserIdAsync(userId, Ct);
-        var stats = memories.Should().ContainSingle("both events are of the same user").Subject
-            .GameStats.Should().ContainSingle().Subject;
-        stats.TotalPlayed.Should().Be(2);
-        stats.Wins.Should().Be(1);
-        stats.Losses.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task OneBatch_TwoSessionsWithAnUnnamedGuest_BothRowsSentAndTheGuestRowCountedTwice()
-    {
-        var gameId = Guid.NewGuid();
-
-        // An unnamed guest is «Giocatore» in every session (RosterDisplayNames), so both events update one row.
-        await EnqueueAsync(
-            Completed(gameId, groupId: null, Player(userId: null, RosterDisplayNames.Player, rank: 1)),
-            Completed(gameId, groupId: null, Player(userId: null, RosterDisplayNames.Player, rank: 1)));
-
-        await RunOneBatchAndExpectBothRowsSentAsync();
-
-        await using var read = _serviceProvider!.CreateAsyncScope();
-        var memory = await read.ServiceProvider.GetRequiredService<IPlayerMemoryRepository>()
-            .GetByGuestNameAsync(RosterDisplayNames.Player, Ct);
-        memory!.GameStats.Should().ContainSingle().Subject.TotalPlayed.Should().Be(2);
+        (await read.ServiceProvider.GetRequiredService<MeepleAiDbContext>().PlayerMemories.CountAsync(Ct))
+            .Should().Be(0, "the per-player stats are retired: the row these two events used to share is never written");
     }
 
     [Fact]

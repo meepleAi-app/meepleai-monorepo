@@ -1,8 +1,8 @@
 namespace Api.BoundedContexts.AgentMemory.Domain.Models;
 
 /// <summary>
-/// The live sessions whose result has already been counted against a memory (a player's or a group's), so that the
-/// same session is never counted twice (#4839, option C).
+/// The live sessions whose result has already been counted against a group's memory, so that the same session is
+/// never counted twice (#4839, option C). Player memories had it too, until #4876 retired them.
 /// </summary>
 /// <remarks>
 /// The older guard, <c>LastProcessedEventId</c>, remembers ONE event: it recognises a second delivery only when no

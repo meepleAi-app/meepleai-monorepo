@@ -59,22 +59,3 @@ internal record GroupStatsDto(
     int TotalSessions,
     Dictionary<Guid, int> GamePlayCounts,
     DateTime? LastPlayedAt);
-
-/// <summary>
-/// DTO representing a player's memory aggregate.
-/// </summary>
-internal record PlayerMemoryDto(
-    Guid Id,
-    Guid? GroupId,
-    List<PlayerGameStatsDto> GameStats,
-    DateTime? ClaimedAt);
-
-/// <summary>
-/// DTO representing a player's statistics for a specific game.
-/// </summary>
-internal record PlayerGameStatsDto(
-    Guid GameId,
-    int Wins,
-    int Losses,
-    int TotalPlayed,
-    int? BestScore);

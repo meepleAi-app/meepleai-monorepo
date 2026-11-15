@@ -1,6 +1,5 @@
 using Api.BoundedContexts.AgentMemory.Application.EventHandlers;
 using Api.BoundedContexts.AgentMemory.Domain.Entities;
-using Api.BoundedContexts.AgentMemory.Domain.Models;
 using Api.BoundedContexts.AgentMemory.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
@@ -17,13 +16,13 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.AgentMemory.Application.EventHandlers;
 
 /// <summary>
-/// Tests for OnSessionCompletedUpdateStatsHandler: updates player and group stats on session completion.
+/// Tests for OnSessionCompletedUpdateStatsHandler: updates the group stats on session completion. The per-player stats
+/// were retired by #4876.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "AgentMemory")]
 public class OnSessionCompletedUpdateStatsHandlerTests
 {
-    private readonly Mock<IPlayerMemoryRepository> _playerMemoryRepoMock;
     private readonly Mock<IGroupMemoryRepository> _groupMemoryRepoMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IFeatureFlagService> _featureFlagsMock;
@@ -31,7 +30,6 @@ public class OnSessionCompletedUpdateStatsHandlerTests
 
     public OnSessionCompletedUpdateStatsHandlerTests()
     {
-        _playerMemoryRepoMock = new Mock<IPlayerMemoryRepository>();
         _groupMemoryRepoMock = new Mock<IGroupMemoryRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _featureFlagsMock = new Mock<IFeatureFlagService>();
@@ -42,68 +40,10 @@ public class OnSessionCompletedUpdateStatsHandlerTests
             .ReturnsAsync(true);
 
         _handler = new OnSessionCompletedUpdateStatsHandler(
-            _playerMemoryRepoMock.Object,
             _groupMemoryRepoMock.Object,
             _unitOfWorkMock.Object,
             _featureFlagsMock.Object,
             loggerMock.Object);
-    }
-
-    [Fact]
-    public async Task Handle_WithPlayers_UpdatesPlayerStats()
-    {
-        // Arrange
-        var gameId = Guid.NewGuid();
-        var userId1 = Guid.NewGuid();
-        var playerId1 = Guid.NewGuid();
-        var playerId2 = Guid.NewGuid();
-
-        var players = new List<CompletedPlayerSnapshot>
-        {
-            new(playerId1, userId1, "Alice", 100, 1),  // Winner
-            new(playerId2, null, "Bob", 80, 2)          // Guest loser
-        };
-
-        var notification = CreateNotification(gameId, players: players);
-
-        // Alice has existing memory
-        var aliceMemory = PlayerMemory.CreateForUser(userId1);
-        _playerMemoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(aliceMemory);
-
-        // Bob (guest) has no memory
-        _playerMemoryRepoMock
-            .Setup(r => r.GetByGuestNameAsync("Bob", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((PlayerMemory?)null);
-
-        PlayerMemory? capturedGuestMemory = null;
-        _playerMemoryRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<PlayerMemory>(), It.IsAny<CancellationToken>()))
-            .Callback<PlayerMemory, CancellationToken>((m, _) => capturedGuestMemory = m)
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await _handler.Handle(notification, CancellationToken.None);
-
-        // Assert: Alice updated
-        aliceMemory.GameStats.Should().ContainSingle();
-        aliceMemory.GameStats[0].GameId.Should().Be(gameId);
-        aliceMemory.GameStats[0].Wins.Should().Be(1);
-        aliceMemory.GameStats[0].Losses.Should().Be(0);
-        aliceMemory.GameStats[0].BestScore.Should().Be(100);
-
-        _playerMemoryRepoMock.Verify(
-            r => r.UpdateAsync(aliceMemory, It.IsAny<CancellationToken>()), Times.Once);
-
-        // Assert: Bob created
-        capturedGuestMemory.Should().NotBeNull();
-        capturedGuestMemory!.GuestName.Should().Be("Bob");
-        capturedGuestMemory.GameStats.Should().ContainSingle();
-        capturedGuestMemory.GameStats[0].Wins.Should().Be(0);
-        capturedGuestMemory.GameStats[0].Losses.Should().Be(1);
-
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -127,10 +67,6 @@ public class OnSessionCompletedUpdateStatsHandlerTests
             .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(group);
 
-        _playerMemoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PlayerMemory.CreateForUser(userId));
-
         // Act
         await _handler.Handle(notification, CancellationToken.None);
 
@@ -145,10 +81,9 @@ public class OnSessionCompletedUpdateStatsHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithoutGroupId_SkipsGroupUpdate()
+    public async Task Handle_WithoutGroupId_WritesNothing()
     {
         // Arrange
-        var gameId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
         var players = new List<CompletedPlayerSnapshot>
@@ -156,11 +91,7 @@ public class OnSessionCompletedUpdateStatsHandlerTests
             new(Guid.NewGuid(), userId, "Alice", 50, 1)
         };
 
-        var notification = CreateNotification(gameId, groupId: null, players: players);
-
-        _playerMemoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PlayerMemory.CreateForUser(userId));
+        var notification = CreateNotification(Guid.NewGuid(), groupId: null, players: players);
 
         // Act
         await _handler.Handle(notification, CancellationToken.None);
@@ -168,6 +99,22 @@ public class OnSessionCompletedUpdateStatsHandlerTests
         // Assert
         _groupMemoryRepoMock.Verify(
             r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_GroupNotFound_WritesNothing()
+    {
+        var groupId = Guid.NewGuid();
+        _groupMemoryRepoMock
+            .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GroupMemory?)null);
+
+        await _handler.Handle(CreateNotification(Guid.NewGuid(), groupId: groupId), CancellationToken.None);
+
+        _groupMemoryRepoMock.Verify(
+            r => r.UpdateAsync(It.IsAny<GroupMemory>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -178,14 +125,14 @@ public class OnSessionCompletedUpdateStatsHandlerTests
             .Setup(f => f.IsEnabledAsync("Features:AgentMemory.Enabled", null))
             .ReturnsAsync(false);
 
-        var notification = CreateNotification(Guid.NewGuid());
+        var notification = CreateNotification(Guid.NewGuid(), groupId: Guid.NewGuid());
 
         // Act
         await _handler.Handle(notification, CancellationToken.None);
 
         // Assert
-        _playerMemoryRepoMock.Verify(
-            r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _groupMemoryRepoMock.Verify(
+            r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -193,19 +140,19 @@ public class OnSessionCompletedUpdateStatsHandlerTests
     public async Task Handle_NoGameId_DoesNothing()
     {
         // Arrange
-        var notification = CreateNotification(gameId: null);
+        var notification = CreateNotification(gameId: null, groupId: Guid.NewGuid());
 
         // Act
         await _handler.Handle(notification, CancellationToken.None);
 
         // Assert
-        _playerMemoryRepoMock.Verify(
-            r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _groupMemoryRepoMock.Verify(
+            r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_TheSameCompletionRebuiltByTheOutbox_CountsEachPlayerAndTheGroupOnce()
+    public async Task Handle_TheSameCompletionRebuiltByTheOutbox_CountsTheGroupOnce()
     {
         // The handler is delivered again when the outbox retries the row, and the event it gets is rebuilt from the
         // JSON of the row. Its guard (CF-3 / #1939) compares EventId, which holds only since #4841 made EventId survive
@@ -222,11 +169,7 @@ public class OnSessionCompletedUpdateStatsHandlerTests
             JsonSerializer.Serialize(original, DomainEventJsonOptions.Default), DomainEventJsonOptions.Default)!;
         rebuilt.Should().NotBeSameAs(original);
 
-        var alice = PlayerMemory.CreateForUser(userId);
         var group = GroupMemory.Create(userId, "Test Group");
-        _playerMemoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(alice);
         _groupMemoryRepoMock
             .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(group);
@@ -234,18 +177,17 @@ public class OnSessionCompletedUpdateStatsHandlerTests
         await _handler.Handle(original, CancellationToken.None);
         await _handler.Handle(rebuilt, CancellationToken.None);
 
-        alice.GameStats.Should().ContainSingle().Which.Wins.Should().Be(1, "the second delivery is the same event");
-        group.Stats.TotalSessions.Should().Be(1);
+        group.Stats.TotalSessions.Should().Be(1, "the second delivery is the same event");
         group.Stats.GamePlayCounts[gameId].Should().Be(1);
     }
 
     [Fact]
-    public async Task Handle_ARedeliveryAfterAnotherSessionOfTheSamePlayerAndGroup_CountsTheSessionOnce()
+    public async Task Handle_ARedeliveryAfterAnotherSessionOfTheSameGroup_CountsTheSessionOnce()
     {
         // #4839, option C. The outbox commits the batch even when the row of one handler fails, so the statistics
-        // written before it stay; the NEXT event of the same player (and group) can then be counted before the retry
-        // of the first. The old guard remembered only the last event, so the first session was counted again; the
-        // set of sessions recognises it whatever came in between.
+        // written before it stay; the NEXT event of the same group can then be counted before the retry of the first.
+        // The old guard remembered only the last event, so the first session was counted again; the set of sessions
+        // recognises it whatever came in between.
         var gameId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -256,11 +198,7 @@ public class OnSessionCompletedUpdateStatsHandlerTests
         var firstRebuilt = JsonSerializer.Deserialize<LiveSessionCompletedEvent>(
             JsonSerializer.Serialize(first, DomainEventJsonOptions.Default), DomainEventJsonOptions.Default)!;
 
-        var alice = PlayerMemory.CreateForUser(userId);
         var group = GroupMemory.Create(userId, "Test Group");
-        _playerMemoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(alice);
         _groupMemoryRepoMock
             .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(group);
@@ -269,33 +207,31 @@ public class OnSessionCompletedUpdateStatsHandlerTests
         await _handler.Handle(second, CancellationToken.None);
         await _handler.Handle(firstRebuilt, CancellationToken.None);
 
-        var stats = alice.GameStats.Should().ContainSingle().Subject;
-        stats.TotalPlayed.Should().Be(2, "two different sessions, the first one delivered twice");
-        stats.Wins.Should().Be(1);
-        stats.Losses.Should().Be(1);
-        group.Stats.TotalSessions.Should().Be(2);
+        group.Stats.TotalSessions.Should().Be(2, "two different sessions, the first one delivered twice");
         group.Stats.GamePlayCounts[gameId].Should().Be(2);
     }
 
     [Fact]
-    public async Task Handle_TwoDifferentSessionsOfTheSamePlayer_BothAreCounted()
+    public async Task Handle_TwoDifferentSessionsOfTheSameGroup_BothAreCounted()
     {
-        // The other direction: remembering sessions must not turn the statistics off for a player's next session.
+        // The other direction: remembering sessions must not turn the statistics off for a group's next session.
         var gameId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var alice = PlayerMemory.CreateForUser(userId);
-        _playerMemoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(alice);
+        var group = GroupMemory.Create(userId, "Test Group");
+        _groupMemoryRepoMock
+            .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(group);
 
         await _handler.Handle(
-            CreateNotification(gameId, players: [new CompletedPlayerSnapshot(Guid.NewGuid(), userId, "Alice", 50, 1)]),
+            CreateNotification(gameId, groupId: groupId, players: [new CompletedPlayerSnapshot(Guid.NewGuid(), userId, "Alice", 50, 1)]),
             CancellationToken.None);
         await _handler.Handle(
-            CreateNotification(gameId, players: [new CompletedPlayerSnapshot(Guid.NewGuid(), userId, "Alice", 40, 1)]),
+            CreateNotification(gameId, groupId: groupId, players: [new CompletedPlayerSnapshot(Guid.NewGuid(), userId, "Alice", 40, 1)]),
             CancellationToken.None);
 
-        alice.GameStats.Should().ContainSingle().Which.TotalPlayed.Should().Be(2);
+        group.Stats.TotalSessions.Should().Be(2);
+        group.Stats.GamePlayCounts[gameId].Should().Be(2);
     }
 
     private static LiveSessionCompletedEvent CreateNotification(

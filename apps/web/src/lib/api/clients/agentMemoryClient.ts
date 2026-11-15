@@ -2,7 +2,7 @@
  * Agent Memory API Client
  *
  * Client for AgentMemory bounded context endpoints.
- * Covers: group memory, game memory (house rules, notes), player stats, guest claiming.
+ * Covers: group memory, game memory (house rules, notes), house-rule metadata.
  */
 
 import { z } from 'zod';
@@ -59,21 +59,6 @@ export const GroupMemoryDtoSchema = z.object({
   stats: GroupStatsDtoSchema.nullable(),
 });
 
-export const PlayerGameStatsDtoSchema = z.object({
-  gameId: z.string(),
-  wins: z.number(),
-  losses: z.number(),
-  totalPlayed: z.number(),
-  bestScore: z.number().nullable(),
-});
-
-export const PlayerMemoryDtoSchema = z.object({
-  id: z.string(),
-  groupId: z.string().nullable(),
-  gameStats: z.array(PlayerGameStatsDtoSchema),
-  claimedAt: z.string().nullable(),
-});
-
 /**
  * Issue #2492: aggregated counts (agent · game · session · kb) for the SP6 §F
  * drawer ConnectionBar. Backend returns all four counts in a single GET.
@@ -94,8 +79,6 @@ export type GroupMemberDto = z.infer<typeof GroupMemberDtoSchema>;
 export type GroupPreferencesDto = z.infer<typeof GroupPreferencesDtoSchema>;
 export type GroupStatsDto = z.infer<typeof GroupStatsDtoSchema>;
 export type GroupMemoryDto = z.infer<typeof GroupMemoryDtoSchema>;
-export type PlayerGameStatsDto = z.infer<typeof PlayerGameStatsDtoSchema>;
-export type PlayerMemoryDto = z.infer<typeof PlayerMemoryDtoSchema>;
 export type HouseRulesMetadataDto = z.infer<typeof HouseRulesMetadataDtoSchema>;
 
 // --- Client ---
@@ -157,16 +140,6 @@ export function createAgentMemoryClient({ httpClient }: CreateAgentMemoryClientP
         `${BASE}/house-rules/metadata?gameId=${encodeURIComponent(gameId)}`,
         HouseRulesMetadataDtoSchema
       );
-    },
-
-    // === Player Stats ===
-
-    async getMyStats(): Promise<PlayerMemoryDto[]> {
-      const result = await httpClient.get(
-        `${BASE}/players/me/stats`,
-        z.array(PlayerMemoryDtoSchema)
-      );
-      return result ?? [];
     },
   };
 }

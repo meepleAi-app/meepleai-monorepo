@@ -51,7 +51,7 @@ export * from './accessRequestsClient'; // Invite-only registration
 export * from './stagingAllowlistClient'; // #845 DevOps Wave 1
 export * from './adminNotificationsClient'; // Admin manual notifications
 export * from './contactClient'; // Public contact form
-export * from './agentMemoryClient'; // AgentMemory — groups, game memory, player stats
+export * from './agentMemoryClient'; // AgentMemory — groups, game memory
 export * from './agentDocumentsClient'; // User-scoped agent document selection
 export * from './infrastructureClient'; // AI Infrastructure Dashboard
 export * from './kbDocsClient'; // Issue #1592 Phase 2b — cross-game per-user KB docs listing

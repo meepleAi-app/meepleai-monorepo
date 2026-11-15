@@ -1,4 +1,3 @@
-using Api.BoundedContexts.AgentMemory.Domain.Entities;
 using Api.BoundedContexts.AgentMemory.Domain.Models;
 using Api.BoundedContexts.AgentMemory.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Events;
@@ -10,25 +9,25 @@ using Microsoft.Extensions.Logging;
 namespace Api.BoundedContexts.AgentMemory.Application.EventHandlers;
 
 /// <summary>
-/// When a live session completes, updates player stats for each participant
-/// and group stats if the session belongs to a group.
+/// When a live session of a group completes, updates the group's stats.
 /// </summary>
+/// <remarks>
+/// #4876: the per-player stats (<c>player_memories</c>) are no longer written. Nothing showed them, and the only
+/// endpoint that read them is retired with them.
+/// </remarks>
 internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandler<LiveSessionCompletedEvent>
 {
-    private readonly IPlayerMemoryRepository _playerMemoryRepo;
     private readonly IGroupMemoryRepository _groupMemoryRepo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFeatureFlagService _featureFlags;
     private readonly ILogger<OnSessionCompletedUpdateStatsHandler> _logger;
 
     public OnSessionCompletedUpdateStatsHandler(
-        IPlayerMemoryRepository playerMemoryRepo,
         IGroupMemoryRepository groupMemoryRepo,
         IUnitOfWork unitOfWork,
         IFeatureFlagService featureFlags,
         ILogger<OnSessionCompletedUpdateStatsHandler> logger)
     {
-        _playerMemoryRepo = playerMemoryRepo ?? throw new ArgumentNullException(nameof(playerMemoryRepo));
         _groupMemoryRepo = groupMemoryRepo ?? throw new ArgumentNullException(nameof(groupMemoryRepo));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
@@ -50,124 +49,53 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
             return;
         }
 
+        if (notification.GroupId == null)
+        {
+            _logger.LogDebug("Session {SessionId} has no GroupId; no stats to update", notification.SessionId);
+            return;
+        }
+
         var gameId = notification.GameId.Value;
+        var groupId = notification.GroupId.Value;
 
-        // Determine winner: player with CurrentRank == 1
-        var winnerPlayerId = notification.Players
-            .Where(p => p.CurrentRank == 1)
-            .Select(p => p.PlayerId)
-            .FirstOrDefault();
+        var group = await _groupMemoryRepo
+            .GetByIdAsync(groupId, cancellationToken)
+            .ConfigureAwait(false);
 
-        // Update stats for each player
-        foreach (var player in notification.Players)
+        if (group == null)
         {
-            var won = player.PlayerId == winnerPlayerId && winnerPlayerId != Guid.Empty;
-
-            PlayerMemory? memory;
-            if (player.UserId.HasValue)
-            {
-                memory = await _playerMemoryRepo
-                    .GetByUserIdAsync(player.UserId.Value, cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (memory == null)
-                {
-                    memory = PlayerMemory.CreateForUser(player.UserId.Value);
-                    memory.UpdateGameStats(gameId, won, player.TotalScore);
-                    memory.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
-                    await _playerMemoryRepo.AddAsync(memory, cancellationToken).ConfigureAwait(false);
-                }
-                else if (AlreadyCounted(memory, notification))
-                {
-                    // CF-3 / #1939: handler is re-dispatched on a rolled-back / retried event
-                    // — stats already updated for this player, skip to avoid double-increment.
-                    _logger.LogDebug(
-                        "Skipping stats update for player {UserId} on session {SessionId}: event {EventId} already processed",
-                        player.UserId.Value, notification.SessionId, notification.EventId);
-                }
-                else
-                {
-                    memory.UpdateGameStats(gameId, won, player.TotalScore);
-                    memory.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
-                    await _playerMemoryRepo.UpdateAsync(memory, cancellationToken).ConfigureAwait(false);
-                }
-            }
-            else
-            {
-                memory = await _playerMemoryRepo
-                    .GetByGuestNameAsync(player.DisplayName, cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (memory == null)
-                {
-                    memory = PlayerMemory.CreateForGuest(player.DisplayName);
-                    memory.UpdateGameStats(gameId, won, player.TotalScore);
-                    memory.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
-                    await _playerMemoryRepo.AddAsync(memory, cancellationToken).ConfigureAwait(false);
-                }
-                else if (AlreadyCounted(memory, notification))
-                {
-                    _logger.LogDebug(
-                        "Skipping stats update for guest {GuestName} on session {SessionId}: event {EventId} already processed",
-                        player.DisplayName, notification.SessionId, notification.EventId);
-                }
-                else
-                {
-                    memory.UpdateGameStats(gameId, won, player.TotalScore);
-                    memory.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
-                    await _playerMemoryRepo.UpdateAsync(memory, cancellationToken).ConfigureAwait(false);
-                }
-            }
+            _logger.LogWarning(
+                "Group {GroupId} not found when updating stats for session {SessionId}",
+                groupId, notification.SessionId);
+            return;
         }
 
-        // Update group stats if session has a GroupId
-        if (notification.GroupId.HasValue)
+        if (group.HasProcessedSession(notification.SessionId) || group.LastProcessedEventId == notification.EventId)
         {
-            var group = await _groupMemoryRepo
-                .GetByIdAsync(notification.GroupId.Value, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (group != null && (group.HasProcessedSession(notification.SessionId) || group.LastProcessedEventId == notification.EventId))
-            {
-                // CF-3 / #1939: re-dispatched event — group stats already updated.
-                _logger.LogDebug(
-                    "Skipping group stats update on session {SessionId}: event {EventId} already processed",
-                    notification.SessionId, notification.EventId);
-            }
-            else if (group != null)
-            {
-                var stats = group.Stats ?? new GroupStats();
-                stats.TotalSessions++;
-
-                if (!stats.GamePlayCounts.ContainsKey(gameId))
-                    stats.GamePlayCounts[gameId] = 0;
-                stats.GamePlayCounts[gameId]++;
-
-                stats.LastPlayedAt = notification.CompletedAt;
-
-                group.UpdateStats(stats);
-                group.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
-                await _groupMemoryRepo.UpdateAsync(group, cancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "Group {GroupId} not found when updating stats for session {SessionId}",
-                    notification.GroupId.Value, notification.SessionId);
-            }
+            // CF-3 / #1939: re-dispatched event — group stats already updated.
+            _logger.LogDebug(
+                "Skipping group stats update on session {SessionId}: event {EventId} already processed",
+                notification.SessionId, notification.EventId);
+            return;
         }
+
+        var stats = group.Stats ?? new GroupStats();
+        stats.TotalSessions++;
+
+        if (!stats.GamePlayCounts.ContainsKey(gameId))
+            stats.GamePlayCounts[gameId] = 0;
+        stats.GamePlayCounts[gameId]++;
+
+        stats.LastPlayedAt = notification.CompletedAt;
+
+        group.UpdateStats(stats);
+        group.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
+        await _groupMemoryRepo.UpdateAsync(group, cancellationToken).ConfigureAwait(false);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Updated player stats for {PlayerCount} players from session {SessionId}",
-            notification.Players.Count, notification.SessionId);
+            "Updated stats of group {GroupId} from session {SessionId}",
+            groupId, notification.SessionId);
     }
-
-    /// <summary>
-    /// The session already counted for this player: by the session itself (#4839, option C: whatever event or delivery
-    /// counted it, and whatever came in between) or, for rows written before that, by the last event seen.
-    /// </summary>
-    private static bool AlreadyCounted(PlayerMemory memory, LiveSessionCompletedEvent notification) =>
-        memory.HasProcessedSession(notification.SessionId) || memory.LastProcessedEventId == notification.EventId;
 }

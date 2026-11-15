@@ -451,7 +451,7 @@ builder.Services.AddGamificationContext();
 // Issue #3720: BusinessSimulations bounded context (financial ledger, simulations)
 builder.Services.AddBusinessSimulationsContext();
 
-// AgentMemory bounded context (game/group/player memory for AI agents)
+// AgentMemory bounded context (game/group memory for AI agents)
 builder.Services.AddAgentMemoryContext();
 
 // DatabaseSync bounded context (admin DB sync via SSH tunnel sidecar)
@@ -983,7 +983,7 @@ v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
 
 // Agent Memory
-v1Api.MapAgentMemoryEndpoints(); // AgentMemory: group, game memory, player stats endpoints
+v1Api.MapAgentMemoryEndpoints(); // AgentMemory: group and game memory endpoints
 
 // Admin extended
 app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard

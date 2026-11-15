@@ -502,7 +502,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [changes, lighthouse-build]
-    continue-on-error: true
+    # #5023: only on PRs, as for K6 (#4978), where release-gates.yml classifies the check as a warning. With `true`
+    # everywhere a dispatch ended `success` with Lighthouse CI in `failure`, and notify-failure could not fire.
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
     defaults:
       run:
         working-directory: apps/web

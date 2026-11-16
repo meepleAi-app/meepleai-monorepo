@@ -8,6 +8,10 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// </summary>
 /// <param name="UserId">The user whose password is reset.</param>
 /// <param name="NewPassword">The new password.</param>
+/// <param name="AdminId">
+/// The admin acting (from the session). #5042: the reset also unlocks the account, and the unlock is recorded with who
+/// did it, as the "unlock" action does.
+/// </param>
 /// <param name="AdminRole">
 /// The role of the admin acting (from the session). #4907: the target must have a role below it, or a reset hands
 /// over an account of the same rank or higher. The default refuses every target.
@@ -20,5 +24,6 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 internal record ResetUserPasswordCommand(
     string UserId,
     string NewPassword,
+    Guid AdminId,
     string AdminRole = "user"
 ) : ICommand;

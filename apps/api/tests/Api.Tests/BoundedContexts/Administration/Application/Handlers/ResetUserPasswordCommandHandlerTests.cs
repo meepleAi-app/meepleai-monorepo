@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -23,6 +24,8 @@ public class ResetUserPasswordCommandHandlerTests
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly ResetUserPasswordCommandHandler _handler;
+
+    private static readonly Guid ActingAdminId = Guid.NewGuid();
 
     public ResetUserPasswordCommandHandlerTests()
     {
@@ -52,6 +55,7 @@ public class ResetUserPasswordCommandHandlerTests
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
             NewPassword: "NewUnusualPwd456!",
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         // Act
@@ -83,6 +87,7 @@ public class ResetUserPasswordCommandHandlerTests
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
             NewPassword: "ResetPassword789!",
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         // Act
@@ -111,6 +116,7 @@ public class ResetUserPasswordCommandHandlerTests
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
             NewPassword: strongPassword,
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         // Act
@@ -134,6 +140,7 @@ public class ResetUserPasswordCommandHandlerTests
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
             NewPassword: "NewUnusualPwd123!",
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         // Act & Assert
@@ -168,6 +175,7 @@ public class ResetUserPasswordCommandHandlerTests
         var adminCommand = new ResetUserPasswordCommand(
             UserId: adminId.ToString(),
             NewPassword: "AdminPass123!",
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         // Act
@@ -201,6 +209,7 @@ public class ResetUserPasswordCommandHandlerTests
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
             NewPassword: "NewUnusualPwd123!",
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         // Act
@@ -228,6 +237,7 @@ public class ResetUserPasswordCommandHandlerTests
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
             NewPassword: "NewUnusualPwd123!",
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         using var cts = new CancellationTokenSource();
@@ -256,6 +266,7 @@ public class ResetUserPasswordCommandHandlerTests
         var command = new ResetUserPasswordCommand(
             UserId: emptyUserId,
             NewPassword: "NewUnusualPwd123!",
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         // Act & Assert
@@ -275,6 +286,7 @@ public class ResetUserPasswordCommandHandlerTests
         var command = new ResetUserPasswordCommand(
             UserId: Guid.NewGuid().ToString(),
             NewPassword: invalidPassword,
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         // Act & Assert
@@ -291,6 +303,7 @@ public class ResetUserPasswordCommandHandlerTests
         var command = new ResetUserPasswordCommand(
             UserId: "not-a-guid",
             NewPassword: "NewUnusualPwd123!",
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         // Act & Assert
@@ -308,6 +321,7 @@ public class ResetUserPasswordCommandHandlerTests
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
             NewPassword: "NewUnusualPwd123!",
+            AdminId: ActingAdminId,
             AdminRole: "superadmin");
 
         _userRepositoryMock
@@ -342,7 +356,7 @@ public class ResetUserPasswordCommandHandlerTests
             .ReturnsAsync(new UserBuilder().WithId(userId).WithRole(Api.SharedKernel.Domain.ValueObjects.Role.Parse(targetRole)).Build());
 
         var act = () => _handler.Handle(
-            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", adminRole),
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", ActingAdminId, adminRole),
             TestContext.Current.CancellationToken);
 
         await act.Should().ThrowAsync<Api.Middleware.Exceptions.ForbiddenException>();
@@ -365,7 +379,7 @@ public class ResetUserPasswordCommandHandlerTests
             .ReturnsAsync(new UserBuilder().WithId(userId).WithRole(Api.SharedKernel.Domain.ValueObjects.Role.Parse(targetRole)).Build());
 
         await _handler.Handle(
-            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", adminRole),
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", ActingAdminId, adminRole),
             TestContext.Current.CancellationToken);
 
         _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -395,10 +409,99 @@ public class ResetUserPasswordCommandHandlerTests
             .ReturnsAsync(1);
 
         await _handler.Handle(
-            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", "admin"),
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", ActingAdminId, "admin"),
             TestContext.Current.CancellationToken);
 
         _sessionRepositoryMock.Verify(r => r.RevokeAllUserSessionsAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
         calls.Should().Equal("revoke", "save");
+    }
+
+    /// <summary>
+    /// #5042: il reset dell'admin sblocca anche l'account, e lo sblocco porta l'admin che l'ha fatto, come «sblocca».
+    /// </summary>
+    [Fact]
+    public async Task Handle_OfALockedAccount_UnlocksIt_AndRecordsTheAdmin()
+    {
+        var userId = Guid.NewGuid();
+        var user = new UserBuilder().WithId(userId).Build();
+        user.RestoreLockoutState(failedLoginAttempts: 3, lockedUntil: DateTime.UtcNow.AddMinutes(30));
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        await _handler.Handle(
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", ActingAdminId, "admin"),
+            TestContext.Current.CancellationToken);
+
+        user.FailedLoginAttempts.Should().Be(0);
+        user.LockedUntil.Should().BeNull();
+        var unlock = user.DomainEvents.OfType<AccountUnlockedEvent>().Should().ContainSingle().Subject;
+        unlock.WasManualUnlock.Should().BeTrue();
+        unlock.UnlockedByAdminId.Should().Be(ActingAdminId);
+        _userRepositoryMock.Verify(r => r.UpdateAsync(user, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// Basta uno dei due segnali: un utente che ha sbagliato la vecchia password una o due volte non è bloccato, ma il
+    /// conto va azzerato lo stesso, o il primo errore con la password nuova lo chiude prima del previsto.
+    /// </summary>
+    [Theory]
+    [InlineData(2, null)]
+    [InlineData(3, -5)] // blocco scaduto
+    public async Task Handle_OfAnAccountWithAttemptsOrAnExpiredLock_ClearsThem(int failedAttempts, int? lockedMinutesFromNow)
+    {
+        var userId = Guid.NewGuid();
+        var user = new UserBuilder().WithId(userId).Build();
+        user.RestoreLockoutState(failedAttempts, lockedMinutesFromNow is { } m ? DateTime.UtcNow.AddMinutes(m) : null);
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        await _handler.Handle(
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", ActingAdminId, "admin"),
+            TestContext.Current.CancellationToken);
+
+        user.FailedLoginAttempts.Should().Be(0);
+        user.LockedUntil.Should().BeNull();
+        user.DomainEvents.OfType<AccountUnlockedEvent>().Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Handle_OfAnAccountWithNothingToClear_RecordsNoUnlock()
+    {
+        // User.Unlock rifiuta un account senza blocco né tentativi: il reset di un account sano deve restare com'era.
+        var userId = Guid.NewGuid();
+        var user = new UserBuilder().WithId(userId).Build();
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        await _handler.Handle(
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", ActingAdminId, "admin"),
+            TestContext.Current.CancellationToken);
+
+        user.DomainEvents.OfType<AccountUnlockedEvent>().Should().BeEmpty();
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_Forbidden_LeavesTheLockInPlace()
+    {
+        var userId = Guid.NewGuid();
+        var lockedUntil = DateTime.UtcNow.AddMinutes(30);
+        var user = new UserBuilder().WithId(userId).AsSuperAdmin().Build();
+        user.RestoreLockoutState(failedLoginAttempts: 3, lockedUntil: lockedUntil);
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        var act = () => _handler.Handle(
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", ActingAdminId, "admin"),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.ForbiddenException>();
+        user.FailedLoginAttempts.Should().Be(3);
+        user.LockedUntil.Should().Be(lockedUntil);
+        user.DomainEvents.OfType<AccountUnlockedEvent>().Should().BeEmpty();
     }
 }

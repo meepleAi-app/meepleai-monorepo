@@ -48,6 +48,12 @@ internal class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswo
         var newPasswordHash = PasswordHash.Create(command.NewPassword);
         user.UpdatePassword(newPasswordHash);
 
+        // #5042: a user who asks an admin for a new password has often locked the account trying the old one. Without
+        // this, the reset answered 200 and the new password was refused until the lock expired. It is the unlock the
+        // "unlock" action does, so AccountUnlockedEvent records the admin; Unlock refuses an account with nothing to clear.
+        if (user.FailedLoginAttempts > 0 || user.LockedUntil != null)
+            user.Unlock(command.AdminId);
+
         // #5040: an admin resets a password when the account may be in someone else's hands, so every session the user
         // has open is closed, like ChangePasswordCommandHandler does (C7), and in the same order: the revoke saves on its
         // own, before the password. If the save below fails, the user is logged out with the old password still valid;

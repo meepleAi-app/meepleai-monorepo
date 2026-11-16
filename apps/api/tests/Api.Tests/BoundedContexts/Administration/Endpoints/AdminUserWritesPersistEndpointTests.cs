@@ -1,8 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
+using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DomainEventOutbox;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -37,6 +40,9 @@ public sealed class AdminUserWritesHostFixture(SharedTestcontainersFixture share
 /// <para>
 /// #5040: un reset dell'admin chiude anche le sessioni aperte dell'utente, e uno rifiutato non chiude niente.
 /// </para>
+/// <para>
+/// #5042: un reset dell'admin sblocca anche l'account, così la password nuova entra subito.
+/// </para>
 /// </remarks>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -49,6 +55,7 @@ public sealed class AdminUserWritesPersistEndpointTests
     private readonly AdminUserWritesHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
+    private Guid _adminId;
     private string _adminToken = null!;
 
     public AdminUserWritesPersistEndpointTests(AdminUserWritesHostFixture hostFixture)
@@ -64,7 +71,7 @@ public sealed class AdminUserWritesPersistEndpointTests
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        (_, _adminToken) = await TestSessionHelper.CreateAdminSessionAsync(db);
+        (_adminId, _adminToken) = await TestSessionHelper.CreateAdminSessionAsync(db);
 
         _client = _factory.CreateClient();
     }
@@ -131,6 +138,28 @@ public sealed class AdminUserWritesPersistEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
         (await AuthMeAsync(superAdminToken)).StatusCode.Should().Be(HttpStatusCode.OK,
             "a refused reset must not log the target out");
+    }
+
+    [Fact]
+    [Trait("Issue", "5042")]
+    public async Task ResetPassword_OfALockedAccount_UnlocksIt_SoTheNewPasswordLogsIn()
+    {
+        // Chi chiede una password nuova all'admin spesso ha bloccato l'account provando la vecchia.
+        var after = FreshSecret();
+        var (userId, email) = await SeedUserAsync(FreshSecret(), lockedUntil: DateTime.UtcNow.AddMinutes(30), failedAttempts: 3);
+
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/admin/users/{userId}/reset-password", _adminToken, new { newPassword = after }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var saved = await ReadUserAsync(userId);
+        saved.FailedLoginAttempts.Should().Be(0);
+        saved.LockedUntil.Should().BeNull();
+        (await LoginAsync(email, after)).StatusCode.Should().Be(HttpStatusCode.OK, "the new password logs in right away");
+
+        // Lo sblocco va nell'outbox con l'admin, come quello di «sblocca»: da lì nasce la riga di audit.
+        (await AccountUnlockedPayloadsAsync(userId)).Should().ContainSingle()
+            .Which.Should().Contain(_adminId.ToString());
     }
 
     [Fact]
@@ -228,6 +257,22 @@ public sealed class AdminUserWritesPersistEndpointTests
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         return await db.Set<UserEntity>().AsNoTracking().SingleAsync(u => u.Id == userId);
+    }
+
+    /// <summary>I payload delle righe di outbox di <see cref="AccountUnlockedEvent"/> per l'utente.</summary>
+    private async Task<List<string>> AccountUnlockedPayloadsAsync(Guid userId)
+    {
+        var eventType = EventTypeRegistry.AliasByType.TryGetValue(typeof(AccountUnlockedEvent), out var alias)
+            ? alias
+            : typeof(AccountUnlockedEvent).FullName!;
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var payloads = await db.Set<DomainEventOutboxEntity>().AsNoTracking()
+            .Where(r => r.EventType == eventType)
+            .Select(r => r.PayloadJson)
+            .ToListAsync();
+        return payloads.Where(p => p.Contains(userId.ToString(), StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
     private Task<HttpResponseMessage> LoginAsync(string email, string secret) =>

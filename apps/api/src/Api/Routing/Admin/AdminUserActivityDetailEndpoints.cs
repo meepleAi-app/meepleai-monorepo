@@ -300,7 +300,7 @@ internal static class AdminUserActivityDetailEndpoints
 
         try
         {
-            var command = new ResetUserPasswordCommand(userId.ToString(), request.NewPassword, session.Principal!.EffectiveActor.Role);
+            var command = new ResetUserPasswordCommand(userId.ToString(), request.NewPassword, session.Principal!.EffectiveActor.Id, session.Principal!.EffectiveActor.Role);
             await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Password reset successful for user {UserId} by admin {AdminId}",

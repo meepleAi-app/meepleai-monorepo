@@ -163,6 +163,31 @@ public sealed class AdminUserWritesPersistEndpointTests
     }
 
     [Fact]
+    [Trait("Issue", "5042")]
+    public async Task ResetPassword_DuringAnImpersonation_RecordsTheUnlockByTheRealAdmin()
+    {
+        // Durante un'impersonazione il cookie è dell'utente impersonato, ma chi agisce è l'admin: l'audit va a lui.
+        Guid superAdminId, impersonatedId;
+        string impersonationToken;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            (superAdminId, _) = await TestSessionHelper.CreateSuperAdminSessionAsync(db);
+            (impersonatedId, _) = await TestSessionHelper.CreateUserSessionAsync(db);
+            impersonationToken = await TestSessionHelper.CreateImpersonationSessionAsync(db, impersonatedId, superAdminId);
+        }
+        var (userId, _) = await SeedUserAsync(FreshSecret(), lockedUntil: DateTime.UtcNow.AddMinutes(30), failedAttempts: 3);
+
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/admin/users/{userId}/reset-password", impersonationToken, new { newPassword = FreshSecret() }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var payload = (await AccountUnlockedPayloadsAsync(userId)).Should().ContainSingle().Subject;
+        payload.Should().Contain(superAdminId.ToString());
+        payload.Should().NotContain(impersonatedId.ToString(), "the impersonated user unlocked nothing");
+    }
+
+    [Fact]
     public async Task UpdateUser_SavesTheNewEmailAndDisplayName()
     {
         var (userId, _) = await SeedUserAsync(FreshSecret());

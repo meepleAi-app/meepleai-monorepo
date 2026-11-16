@@ -441,6 +441,31 @@ public class ResetUserPasswordCommandHandlerTests
         _userRepositoryMock.Verify(r => r.UpdateAsync(user, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// Basta uno dei due segnali: un utente che ha sbagliato la vecchia password una o due volte non è bloccato, ma il
+    /// conto va azzerato lo stesso, o il primo errore con la password nuova lo chiude prima del previsto.
+    /// </summary>
+    [Theory]
+    [InlineData(2, null)]
+    [InlineData(3, -5)] // blocco scaduto
+    public async Task Handle_OfAnAccountWithAttemptsOrAnExpiredLock_ClearsThem(int failedAttempts, int? lockedMinutesFromNow)
+    {
+        var userId = Guid.NewGuid();
+        var user = new UserBuilder().WithId(userId).Build();
+        user.RestoreLockoutState(failedAttempts, lockedMinutesFromNow is { } m ? DateTime.UtcNow.AddMinutes(m) : null);
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        await _handler.Handle(
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", ActingAdminId, "admin"),
+            TestContext.Current.CancellationToken);
+
+        user.FailedLoginAttempts.Should().Be(0);
+        user.LockedUntil.Should().BeNull();
+        user.DomainEvents.OfType<AccountUnlockedEvent>().Should().ContainSingle();
+    }
+
     [Fact]
     public async Task Handle_OfAnAccountWithNothingToClear_RecordsNoUnlock()
     {

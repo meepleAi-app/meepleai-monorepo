@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -101,7 +102,11 @@ public class GenerateRuleSpecFromPdfCommandHandlerTests
 
         var act = () => _handler.Handle(new GenerateRuleSpecFromPdfCommand(pdf.Id), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*does not contain any parsed rules*");
+        // #5014: un'eccezione di dominio (409), non piu' InvalidOperationException, che l'endpoint trasformava in 400.
+        var thrown = (await act.Should().ThrowExactlyAsync<PdfHasNoParsedRulesException>()).Which;
+        thrown.PdfDocumentId.Should().Be(pdf.Id);
+        thrown.StatusCode.Should().Be(409);
+        thrown.ErrorCode.Should().Be(PdfHasNoParsedRulesException.Code);
     }
 
     [Fact]

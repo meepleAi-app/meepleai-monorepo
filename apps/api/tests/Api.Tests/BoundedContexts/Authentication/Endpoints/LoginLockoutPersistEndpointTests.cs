@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -8,23 +9,54 @@ using Api.Infrastructure;
 using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.DomainEventOutbox;
+using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Authentication.Endpoints;
 
 /// <summary>
-/// La fixture di <see cref="LoginLockoutPersistEndpointTests"/>: host per classe, database per test.
+/// La fixture di <see cref="LoginLockoutPersistEndpointTests"/>: host per classe, database per test, e un
+/// <see cref="IEmailService"/> finto che annota a chi parte l'email di blocco.
 /// </summary>
 public sealed class LoginLockoutHostFixture(SharedTestcontainersFixture shared)
-    : SharedHostPerTestDatabaseFixture(shared, "login_lockout");
+    : SharedHostPerTestDatabaseFixture(shared, "login_lockout")
+{
+    /// <summary>
+    /// Destinatari delle email di blocco. Il doppio vive quanto la classe, non quanto il test (#4050): chi lo legge
+    /// filtra per l'indirizzo del proprio utente, che è nuovo a ogni test.
+    /// </summary>
+    public ConcurrentQueue<string> LockEmailRecipients { get; } = new();
+
+    protected override WebApplicationFactory<Program> ConfigureHost(WebApplicationFactory<Program> factory)
+    {
+        var email = new Mock<IEmailService>();
+        email
+            .Setup(e => e.SendAccountLockedEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<DateTime>(),
+                It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback((string to, string _, int _, DateTime _, string? _, string? _, CancellationToken _) =>
+                LockEmailRecipients.Enqueue(to))
+            .Returns(Task.CompletedTask);
+
+        return factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IEmailService>();
+            services.AddSingleton(email.Object);
+        }));
+    }
+}
 
 /// <summary>
 /// #5036 — il blocco dopo i login falliti non veniva mai salvato.
@@ -168,6 +200,61 @@ public sealed class LoginLockoutPersistEndpointTests
     }
 
     [Fact]
+    public async Task TheLockEvent_SendsOneEmail_EvenWhenDeliveredTwice()
+    {
+        // AccountLockedEventHandler segna l'evento sulla riga dell'utente dopo l'email, così una seconda consegna dello
+        // stesso evento non la rimanda. La sua UPDATE cercava la colonna `id`, che in users si chiama "Id": falliva
+        // dopo l'invio, il catch la registrava come email non partita, e il segno non veniva mai scritto, quindi ogni
+        // consegna rimandava l'email. Finché il blocco non si salvava, quel codice non girava mai.
+        // In questo host gli eventi restano nell'outbox (OutboxOnly, processore spento): il test fa ciò che fa il
+        // processore, cioè pubblica l'evento in uno scope nuovo, e lo fa due volte.
+        var (userId, email) = await SeedUserAsync(
+            FreshSecret(), lockedUntil: DateTime.UtcNow.AddMinutes(DecidedMinutes), failedAttempts: DecidedAttempts);
+        var lockEvent = new AccountLockedEvent(userId, DecidedAttempts, DateTime.UtcNow.AddMinutes(DecidedMinutes), "203.0.113.7");
+
+        for (var delivery = 0; delivery < 2; delivery++)
+        {
+            using var deliveryScope = _factory.Services.CreateScope();
+            await deliveryScope.ServiceProvider.GetRequiredService<IMediator>().Publish(lockEvent);
+        }
+
+        _hostFixture.LockEmailRecipients.Count(to => to == email).Should().Be(1, "a second delivery of the same lock sends nothing");
+        (await ReadUserAsync(userId)).LastLockoutEventId.Should().Be(lockEvent.EventId, "the handled event is marked on the user");
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var actions = await db.AuditLogs.AsNoTracking()
+            .Where(a => a.ResourceId == userId.ToString() && a.Action.StartsWith("ACCOUNT_LOCKED"))
+            .Select(a => a.Action)
+            .ToListAsync();
+        actions.Should().Equal(["ACCOUNT_LOCKED"], "the email went out, so the audit must not say it failed");
+    }
+
+    [Fact]
+    public async Task ConcurrentWrongPasswords_TakeTurnsOnTheRow_SoTheAccountLocksAtTheThreshold_Once()
+    {
+        // Chi conosce l'email può mandare tentativi in parallelo. Ognuno legge l'utente prima della verifica della
+        // password (PBKDF2), quindi tutti leggono lo stesso conto. Senza il lock sulla riga ognuno scriveva il proprio
+        // conto: incrementi persi, e un blocco riaperto da una richiesta lenta che scriveva LockedUntil = null. Con il
+        // lock il risultato non dipende dall'ordine: tre conti, un blocco, gli altri rifiutati come bloccati.
+        const int parallel = 8;
+        var (userId, email) = await SeedUserAsync(FreshSecret());
+
+        var codes = await Task.WhenAll(Enumerable.Range(0, parallel).Select(async _ =>
+        {
+            using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+            return await ErrorCodeOfAsync(await client.PostAsJsonAsync(Endpoint, new { Email = email, Password = FreshSecret() }));
+        }));
+
+        var saved = await ReadUserAsync(userId);
+        saved.FailedLoginAttempts.Should().Be(DecidedAttempts, "no increment may be lost");
+        saved.LockedUntil.Should().NotBeNull("no slow request may reopen the lock");
+        codes.Count(c => c == "invalid_credentials").Should().Be(DecidedAttempts - 1);
+        codes.Count(c => c == "account_locked").Should().Be(parallel - (DecidedAttempts - 1));
+        (await CountAccountLockedEventsAsync(userId)).Should().Be(1, "one lock, one lock email");
+    }
+
+    [Fact]
     public async Task ALockoutSavedFromAStaleRead_KeepsWhatAnAdminSavedInTheMeantime()
     {
         // Il ramo della password sbagliata gira per chiunque conosca l'email, e fra la lettura dell'utente e il
@@ -200,7 +287,10 @@ public sealed class LoginLockoutPersistEndpointTests
         saved.PasswordHash.Should().Be(hashSavedByTheAdmin, "a password saved after the read must survive the lockout write");
     }
 
-    private async Task<int> CountAccountLockedEventsAsync(Guid userId)
+    private async Task<int> CountAccountLockedEventsAsync(Guid userId) => (await AccountLockedEventIdsAsync(userId)).Count;
+
+    /// <summary>Gli id (uguali agli EventId) delle righe di outbox di <see cref="AccountLockedEvent"/> per l'utente.</summary>
+    private async Task<List<Guid>> AccountLockedEventIdsAsync(Guid userId)
     {
         var eventType = EventTypeRegistry.AliasByType.TryGetValue(typeof(AccountLockedEvent), out var alias)
             ? alias
@@ -210,9 +300,12 @@ public sealed class LoginLockoutPersistEndpointTests
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var rows = await db.Set<DomainEventOutboxEntity>().AsNoTracking()
             .Where(r => r.EventType == eventType)
-            .Select(r => r.PayloadJson)
+            .Select(r => new { r.Id, r.PayloadJson })
             .ToListAsync();
-        return rows.Count(payload => payload.Contains(userId.ToString(), StringComparison.OrdinalIgnoreCase));
+        return rows
+            .Where(r => r.PayloadJson.Contains(userId.ToString(), StringComparison.OrdinalIgnoreCase))
+            .Select(r => r.Id)
+            .ToList();
     }
 
     private async Task<(Guid UserId, string Email)> SeedUserAsync(

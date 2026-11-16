@@ -129,7 +129,7 @@ internal sealed class AccountLockedEventHandler : INotificationHandler<AccountLo
                 if (_dbContext.Database.IsRelational())
                 {
                     await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-                        $"UPDATE users SET last_lockout_event_id = {notification.EventId} WHERE id = {notification.UserId}",
+                        $"UPDATE users SET last_lockout_event_id = {notification.EventId} WHERE \"Id\" = {notification.UserId}",
                         cancellationToken).ConfigureAwait(false);
                 }
             }

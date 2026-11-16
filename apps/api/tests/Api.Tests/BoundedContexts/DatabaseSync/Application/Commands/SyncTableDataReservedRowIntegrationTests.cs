@@ -226,12 +226,8 @@ public sealed class SyncTableDataReservedRowIntegrationTests : IClassFixture<Dat
             : (_databases.RemoteConnectionString, _databases.LocalConnectionString);
 
     /// <summary>
-    /// Esegue il sync. Il suo esito non si controlla qui: <c>SyncTableDataHandler</c> scrive l'audit dopo il commit
-    /// con <c>Set&lt;AuditLog&gt;()</c>, un tipo di dominio che non è nel modello EF, quindi l'audit lancia
-    /// «Cannot create a DbSet for 'AuditLog'» e il suo <c>catch</c> prova un rollback sulla transazione già
-    /// chiusa. Il dato è già scritto, ed è quello che questi test guardano; la riga di controllo (le altre righe
-    /// sincronizzate) prova che il commit c'è stato. Difetto preesistente, non di #4612, tracciato in #5002: lo si
-    /// accetta qui per nome e non si accetta altro.
+    /// Esegue il sync e ne asserisce l'esito. Fino a #5002 l'audit scritto dopo il commit lanciava, e qui si accettava
+    /// quell'eccezione per nome: i casi con righe da scrivere non arrivavano mai all'asserzione su <c>Success</c>.
     /// </summary>
     private async Task RunSyncAsync(SyncDirection direction)
     {
@@ -248,17 +244,10 @@ public sealed class SyncTableDataReservedRowIntegrationTests : IClassFixture<Dat
         await using var local = _databases.CreateContext(_databases.LocalConnectionString);
         var handler = new SyncTableDataHandler(local, remote.Object, NullLogger<SyncTableDataHandler>.Instance);
         var target = direction == SyncDirection.LocalToStaging ? "STAGING" : "LOCAL";
-        try
-        {
-            var result = await handler.Handle(
-                new SyncTableDataCommand(Table, direction, $"SYNC {Table} TO {target}", _databases.AdminId),
-                CancellationToken.None);
-            result.Success.Should().BeTrue(result.ErrorMessage);
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("Transaction has completed", StringComparison.Ordinal))
-        {
-            // Vedi il commento del metodo (#5002).
-        }
+        var result = await handler.Handle(
+            new SyncTableDataCommand(Table, direction, $"SYNC {Table} TO {target}", _databases.AdminId),
+            CancellationToken.None);
+        result.Success.Should().BeTrue(result.ErrorMessage);
     }
 
     private SystemConfigurationEntity ReservedRow(Guid id, bool claimed, string value) => new()

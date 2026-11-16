@@ -252,6 +252,17 @@ internal class PasswordResetService : IPasswordResetService
 
         user.PasswordHash = HashPassword(newPassword);
 
+        // #5044: chi ha la casella di posta riprende l'account, come col reset dell'admin (#5042). Senza, l'endpoint di
+        // conferma faceva entrare l'utente una volta, con la sessione che apre da se', e il login successivo rispondeva
+        // account_locked anche con la password nuova. Le due colonne si scrivono sempre: EF scrive solo cio' che vede
+        // cambiato rispetto alla lettura qui sopra, quindi un tentativo sbagliato salvato da un login dopo quella lettura
+        // resterebbe nel database. L'UPDATE c'e' comunque, per la password.
+        user.FailedLoginAttempts = 0;
+        user.LockedUntil = null;
+        var userEntry = _db.Entry(user);
+        userEntry.Property(u => u.FailedLoginAttempts).IsModified = true;
+        userEntry.Property(u => u.LockedUntil).IsModified = true;
+
         // Revoke all existing sessions for security.
         // #3882: .AsTracking() richiesto — e' la mitigazione che questo commento dichiara, e senza
         // tracking non avveniva: dopo un reset password le sessioni aperte restavano tutte valide.

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
@@ -53,7 +54,7 @@ public sealed class PasswordResetServiceIntegrationTests : SharedDatabaseTestBas
     {
     }
 
-    private PasswordResetService CreateService()
+    private PasswordResetService CreateService(IPasswordHashingService? hashing = null)
     {
         var rateLimit = new Mock<IRateLimitService>();
         rateLimit
@@ -65,9 +66,19 @@ public sealed class PasswordResetServiceIntegrationTests : SharedDatabaseTestBas
             DbContext,
             _email.Object,
             rateLimit.Object,
-            _hashing,
+            hashing ?? _hashing,
             NullLogger<PasswordResetService>.Instance,
             TimeProvider);
+    }
+
+    /// <summary>
+    /// Blocca l'account come lo blocca il login al terzo tentativo sbagliato (#5036), con una scrittura diretta sulla riga.
+    /// </summary>
+    private static void SaveLock(MeepleAiDbContext db, Guid userId)
+    {
+        db.Users.Where(u => u.Id == userId).ExecuteUpdate(s => s
+            .SetProperty(u => u.FailedLoginAttempts, User.DefaultMaxFailedAttempts)
+            .SetProperty(u => u.LockedUntil, DateTime.UtcNow.AddMinutes(User.DefaultLockoutDurationMinutes)));
     }
 
     /// <summary>
@@ -198,5 +209,78 @@ public sealed class PasswordResetServiceIntegrationTests : SharedDatabaseTestBas
         // E il link vecchio non deve funzionare piu'.
         (await CreateService().ResetPasswordAsync(firstToken, NewPassword, Ct)).Success
             .Should().BeFalse("il token superato non e' piu' spendibile");
+    }
+
+    /// <summary>
+    /// #5044: chi chiede il link dopo tre password sbagliate ha l'account bloccato. Senza lo sblocco l'endpoint di conferma
+    /// lo faceva entrare una volta, con la sessione che apre da se', e il login successivo rispondeva <c>account_locked</c>
+    /// anche con la password nuova, fino alla scadenza.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5044")]
+    public async Task ResetPassword_OfALockedAccount_ClearsTheLock()
+    {
+        await ResetDatabaseAsync();
+        var (userId, email) = await SeedUserAsync();
+        SaveLock(DbContext, userId);
+        var token = await RequestResetAndCaptureTokenAsync(email);
+
+        (await CreateService().ResetPasswordAsync(token, NewPassword, Ct)).Success.Should().BeTrue();
+
+        DbContext.ChangeTracker.Clear();
+        var persisted = await DbContext.Users.FirstAsync(u => u.Id == userId, Ct);
+        persisted.FailedLoginAttempts.Should().Be(0, "il reset via email azzera i tentativi sbagliati");
+        persisted.LockedUntil.Should().BeNull("il reset via email toglie il blocco");
+    }
+
+    /// <summary>
+    /// #5044: un login sbagliato su un'altra connessione salva il blocco dopo che il reset ha letto l'utente, ancora pulito,
+    /// e prima che il reset salvi. EF scrive solo le proprieta' che vede cambiate rispetto alla sua lettura: con
+    /// un'assegnazione semplice, 0 e null restano uguali a quella lettura, non vengono scritti, e l'account resta bloccato
+    /// dopo un reset riuscito.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5044")]
+    public async Task ResetPassword_ClearsALockSavedByALoginWhileTheResetRan()
+    {
+        await ResetDatabaseAsync();
+        var (userId, email) = await SeedUserAsync();
+        var token = await RequestResetAndCaptureTokenAsync(email);
+
+        var hashing = new LockOnFirstHash(_hashing, () =>
+        {
+            using var login = CreateIndependentDbContext();
+            SaveLock(login, userId);
+        });
+        (await CreateService(hashing).ResetPasswordAsync(token, NewPassword, Ct)).Success.Should().BeTrue();
+
+        hashing.LockSaved.Should().BeTrue("il blocco deve arrivare dentro il reset, o il test non prova nulla");
+        DbContext.ChangeTracker.Clear();
+        var persisted = await DbContext.Users.FirstAsync(u => u.Id == userId, Ct);
+        persisted.FailedLoginAttempts.Should().Be(0, "il reset salvato dopo il login sbagliato vince");
+        persisted.LockedUntil.Should().BeNull("il reset salvato dopo il login sbagliato vince");
+    }
+
+    /// <summary>
+    /// Calcola l'hash come il servizio vero. Il primo hash, quello della password nuova, arriva dopo che il reset ha letto
+    /// l'utente e prima che salvi: li' salva il blocco, come un login concorrente che conta il terzo tentativo sbagliato.
+    /// </summary>
+    private sealed class LockOnFirstHash(IPasswordHashingService inner, Action saveLock) : IPasswordHashingService
+    {
+        public bool LockSaved { get; private set; }
+
+        public string HashSecret(string secret)
+        {
+            if (!LockSaved)
+            {
+                saveLock();
+                LockSaved = true;
+            }
+            return inner.HashSecret(secret);
+        }
+
+        public string HashSecret(string secret, int iterations) => inner.HashSecret(secret, iterations);
+
+        public bool VerifySecret(string secret, string storedHash) => inner.VerifySecret(secret, storedHash);
     }
 }

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.RagEnhancements;
 using Api.BoundedContexts.SystemConfiguration.Domain.Events;
+using Api.BoundedContexts.SystemConfiguration.Domain.Exceptions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
@@ -53,7 +54,8 @@ public sealed class FeatureFlagConcurrentCreateHostFixture(SharedTestcontainersF
 /// <para>
 /// Due richieste su una chiave senza riga leggono entrambe «nessuna riga» ed eseguono entrambe
 /// <c>CreateConfigurationCommand</c>. L'indice univoco su <c>(Key, Environment)</c> fa fallire la seconda
-/// con <c>DbUpdateException</c> / 23505, che il middleware non mappa: 500. In produzione l'ordine lo decide
+/// con 23505, che il middleware non mappava: 500. Da #5016 il comando la traduce in
+/// <see cref="ConfigurationKeyConflictException"/> (409), ed è quella che <c>FeatureFlagService</c> recupera. In produzione l'ordine lo decide
 /// il caso; qui è fisso. <see cref="ConfigurationLookupInterleaving"/> ferma la prima richiesta subito
 /// dopo la ricerca e, in quel punto, esegue per intero la seconda, in un altro scope e quindi con un altro
 /// <c>DbContext</c>: la seconda crea la riga, la prima ci arriva dopo e la trova già lì.
@@ -305,8 +307,84 @@ public sealed class FeatureFlagConcurrentCreateIntegrationTests : IClassFixture<
     }
 
     // ========================================
+    // CREARE UNA CHIAVE CHE ESISTE GIÀ (#5016)
+    // ========================================
+
+    [Fact]
+    public async Task CreateFeatureFlagEndpoint_WithAKeyThatExists_Answers409_AndLeavesTheRowAsItWas()
+    {
+        var key = NewFlagName();
+        var adminToken = await AdminTokenAsync();
+        using var client = _factory.CreateClient();
+
+        using var first = await PostAsync(client, "/api/v1/admin/feature-flags", adminToken, new { key, enabled = true });
+        first.StatusCode.Should().Be(HttpStatusCode.Created, await first.Content.ReadAsStringAsync(Ct));
+
+        using var second = await PostAsync(client, "/api/v1/admin/feature-flags", adminToken, new { key, enabled = false });
+
+        await AssertKeyConflictAsync(second);
+        (await RowsAsync(key)).Should().ContainSingle().Which.Value.Should().Be("true", "the row that existed stays as it was");
+    }
+
+    [Fact]
+    public async Task CreateConfigurationEndpoint_WithAKeyAndEnvironmentThatExist_Answers409_AndLeavesTheRowAsItWas()
+    {
+        var key = $"test.create-twice.{Guid.NewGuid():N}";
+        var adminToken = await AdminTokenAsync();
+        using var client = _factory.CreateClient();
+
+        using var first = await PostAsync(client, "/api/v1/admin/configurations", adminToken, ConfigurationBody(key, "primo", "All"));
+        first.StatusCode.Should().Be(HttpStatusCode.Created, await first.Content.ReadAsStringAsync(Ct));
+
+        using var second = await PostAsync(client, "/api/v1/admin/configurations", adminToken, ConfigurationBody(key, "secondo", "All"));
+
+        await AssertKeyConflictAsync(second);
+        (await RowsAsync(key)).Should().ContainSingle().Which.Value.Should().Be("primo");
+    }
+
+    [Fact]
+    public async Task CreateConfigurationEndpoint_SameKeyInAnotherEnvironment_IsNotAConflict()
+    {
+        // Control of the two tests above: the index is on (Key, Environment), so the 409 must come from that
+        // pair, not from the key alone.
+        var key = $"test.create-twice.{Guid.NewGuid():N}";
+        var adminToken = await AdminTokenAsync();
+        using var client = _factory.CreateClient();
+
+        using var first = await PostAsync(client, "/api/v1/admin/configurations", adminToken, ConfigurationBody(key, "ovunque", "All"));
+        using var second = await PostAsync(client, "/api/v1/admin/configurations", adminToken, ConfigurationBody(key, "solo-qui", "Development"));
+
+        first.StatusCode.Should().Be(HttpStatusCode.Created, await first.Content.ReadAsStringAsync(Ct));
+        second.StatusCode.Should().Be(HttpStatusCode.Created, await second.Content.ReadAsStringAsync(Ct));
+        (await RowsAsync(key)).Select(r => r.Environment).Should().BeEquivalentTo(["All", "Development"]);
+    }
+
+    // ========================================
     // SUPPORTO
     // ========================================
+
+    private async Task<string> AdminTokenAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, token) = await TestSessionHelper.CreateAdminSessionAsync(db, cancellationToken: Ct);
+        return token;
+    }
+
+    private static Task<HttpResponseMessage> PostAsync<T>(HttpClient client, string url, string token, T body) =>
+        client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Post, url, token, body), Ct);
+
+    private static object ConfigurationBody(string key, string value, string environment) =>
+        new { key, value, valueType = "string", category = "General", environment };
+
+    private static async Task AssertKeyConflictAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict, body);
+        body.Should().Contain(ConfigurationKeyConflictException.Code);
+        body.Should().NotContain("23505").And.NotContain("duplicate key").And.NotContain("IX_system_configurations",
+            "the client gets a sentence about the key, not the database error");
+    }
 
     private static string NewFlagName() => $"test.concurrent-create.{Guid.NewGuid():N}";
 

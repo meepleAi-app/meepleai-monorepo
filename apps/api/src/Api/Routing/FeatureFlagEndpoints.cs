@@ -218,6 +218,7 @@ internal static class FeatureFlagEndpoints
         .WithDescription("Create a new feature flag")
         .Produces<object>(StatusCodes.Status201Created)
         .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status409Conflict) // #5016: key and environment already exist
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
     }

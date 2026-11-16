@@ -46,6 +46,7 @@ internal static class ConfigurationEndpoints
         .WithName("CreateConfiguration")
         .WithTags("Admin", "Configuration")
         .Produces<ConfigurationDto>(201)
+        .Produces(StatusCodes.Status409Conflict) // #5016: key and environment already exist
         .ProducesValidationProblem();
 
         group.MapPut("/admin/configurations/{id:guid}", HandleUpdateConfiguration)

@@ -31,6 +31,16 @@ public class ConflictException : HttpException
         : base(StatusCodes.Status409Conflict, "conflict", message, innerException)
     {
     }
+
+    /// <summary>
+    /// A 409 with its own <paramref name="errorCode"/> that keeps the exception it translates, for the log
+    /// (e.g. <see cref="Api.BoundedContexts.SystemConfiguration.Domain.Exceptions.ConfigurationKeyConflictException"/>, #5016).
+    /// </summary>
+    [SetsRequiredMembers]
+    public ConflictException(string errorCode, string message, Exception innerException)
+        : base(StatusCodes.Status409Conflict, errorCode, message, innerException)
+    {
+    }
     public ConflictException()
     {
     }

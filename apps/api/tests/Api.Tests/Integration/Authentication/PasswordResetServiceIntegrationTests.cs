@@ -73,12 +73,14 @@ public sealed class PasswordResetServiceIntegrationTests : SharedDatabaseTestBas
 
     /// <summary>
     /// Blocca l'account come lo blocca il login al terzo tentativo sbagliato (#5036), con una scrittura diretta sulla riga.
+    /// Se non scrivesse niente, i test #5044 passerebbero anche senza lo sblocco: per questo conta le righe.
     /// </summary>
     private static void SaveLock(MeepleAiDbContext db, Guid userId)
     {
         db.Users.Where(u => u.Id == userId).ExecuteUpdate(s => s
             .SetProperty(u => u.FailedLoginAttempts, User.DefaultMaxFailedAttempts)
-            .SetProperty(u => u.LockedUntil, DateTime.UtcNow.AddMinutes(User.DefaultLockoutDurationMinutes)));
+            .SetProperty(u => u.LockedUntil, DateTime.UtcNow.AddMinutes(User.DefaultLockoutDurationMinutes)))
+            .Should().Be(1, "il blocco deve finire sulla riga dell'utente");
     }
 
     /// <summary>

@@ -130,10 +130,13 @@ internal sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand
             .ConfigureAwait(false);
 
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
-        if (user is not null)
+        // #5036: RecordSuccessfulLogin changes only the lockout state, so only that is written, and only when there is
+        // something to clear. A full UpdateAsync would copy the aggregate read here over a suspension, a password reset
+        // or a role change an admin saved in the meantime.
+        if (user is not null && (user.FailedLoginAttempts > 0 || user.LockedUntil != null))
         {
             user.RecordSuccessfulLogin();
-            await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
+            await _userRepository.UpdateLockoutStateAsync(user, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 

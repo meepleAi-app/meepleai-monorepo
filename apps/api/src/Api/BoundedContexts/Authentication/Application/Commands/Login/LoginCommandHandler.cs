@@ -71,18 +71,39 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
 
         // Issue #3339: Check if account is locked out
         if (user.IsLockedOut())
-        {
-            var remainingTime = user.GetRemainingLockoutDuration();
-            var remainingMinutes = (int)Math.Ceiling(remainingTime.TotalMinutes);
-            throw LoginRefused(LoginErrorCodes.AccountLocked, $"Account is locked. Please try again in {remainingMinutes} minute(s).");
-        }
+            throw LockedRefusal(user);
 
         // Verify password
         if (!user.VerifyPassword(command.Password))
         {
-            // Issue #3339: Record failed login attempt
-            var wasLocked = user.RecordFailedLogin(command.IpAddress);
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            // Issue #3339: Record failed login attempt.
+            // #5036: GetByEmailAsync returns a detached aggregate, and with only SaveChangesAsync nothing was written: the
+            // counter never moved and the account never locked. The count is now decided on the user row locked inside a
+            // transaction, not on the read above. That read is stale by at least the password check, and concurrent wrong
+            // passwords for one account (anyone who knows the email can send them) would otherwise each write their own
+            // stale count: increments lost, and a slow request writing LockedUntil = null over a lock just set. Only the
+            // lockout columns are written, so a suspension or a reset saved in the meantime is never overwritten.
+            var outcome = await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                if (!await _userRepository.ReloadLockoutStateForUpdateAsync(user, ct).ConfigureAwait(false))
+                    return FailedLoginOutcome.UserGone;
+                if (user.IsLockedOut())
+                    return FailedLoginOutcome.AlreadyLocked;
+
+                var lockedNow = user.RecordFailedLogin(command.IpAddress);
+                await _userRepository.UpdateLockoutStateAsync(user, ct).ConfigureAwait(false);
+                return lockedNow ? FailedLoginOutcome.LockedNow : FailedLoginOutcome.Counted;
+            }, cancellationToken).ConfigureAwait(false);
+
+            // Another request locked the account between the read above and this one.
+            if (outcome == FailedLoginOutcome.AlreadyLocked)
+                throw LockedRefusal(user);
+
+            // The user was deleted meanwhile: the same answer as an unknown email, not a 500 (#2568).
+            if (outcome == FailedLoginOutcome.UserGone)
+                throw LoginRefused(LoginErrorCodes.InvalidCredentials, "Invalid email or password");
+
+            var wasLocked = outcome == FailedLoginOutcome.LockedNow;
 
             // I10: invalid-password login failure. Actor is null (the user
             // hasn't authenticated yet, so we don't credit the attempt to
@@ -108,7 +129,7 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
                     metadata: $"{{\"attemptCount\":{user.FailedLoginAttempts},\"lockoutUntilUtc\":\"{user.LockedUntil:O}\"}}",
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                throw LoginRefused(LoginErrorCodes.AccountLocked, "Account has been locked due to too many failed login attempts. Please try again in 15 minutes.");
+                throw LoginRefused(LoginErrorCodes.AccountLocked, $"Account has been locked due to too many failed login attempts. Please try again in {User.DefaultLockoutDurationMinutes} minutes.");
             }
 
             throw LoginRefused(LoginErrorCodes.InvalidCredentials, "Invalid email or password");
@@ -157,8 +178,15 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
         // session is about to be persisted). The 2FA branch resets the
         // counter from Verify2FACommandHandler.
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
-        user.RecordSuccessfulLogin();
-        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
+
+        // #5036: RecordSuccessfulLogin changes only the lockout state, so only that is written (see the failure branch),
+        // and only when there was something to clear: in the common case the login writes nothing to the user row.
+        if (user.FailedLoginAttempts > 0 || user.LockedUntil != null)
+        {
+            user.RecordSuccessfulLogin();
+            await _userRepository.UpdateLockoutStateAsync(user, cancellationToken).ConfigureAwait(false);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // I10: successful login (non-2FA path). The 2FA-required branch
@@ -247,6 +275,21 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
     /// </summary>
     private static HttpException LoginRefused(string code, string message) =>
         new(StatusCodes.Status400BadRequest, code, message);
+
+    private static HttpException LockedRefusal(User user)
+    {
+        var remainingMinutes = (int)Math.Ceiling(user.GetRemainingLockoutDuration().TotalMinutes);
+        return LoginRefused(LoginErrorCodes.AccountLocked, $"Account is locked. Please try again in {remainingMinutes} minute(s).");
+    }
+
+    /// <summary>What a wrong password did to the account, decided on the locked row (#5036).</summary>
+    internal enum FailedLoginOutcome
+    {
+        Counted,
+        LockedNow,
+        AlreadyLocked,
+        UserGone,
+    }
 
     private static string MaskEmail(string email)
     {

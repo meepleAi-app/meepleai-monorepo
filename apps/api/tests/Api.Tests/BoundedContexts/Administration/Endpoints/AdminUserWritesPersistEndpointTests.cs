@@ -34,6 +34,9 @@ public sealed class AdminUserWritesHostFixture(SharedTestcontainersFixture share
 /// l'account. Le due azioni valgono ora solo su un bersaglio con un ruolo sotto quello di chi agisce; i due casi
 /// rifiutati sono qui.
 /// </para>
+/// <para>
+/// #5040: un reset dell'admin chiude anche le sessioni aperte dell'utente, e uno rifiutato non chiude niente.
+/// </para>
 /// </remarks>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -95,6 +98,39 @@ public sealed class AdminUserWritesPersistEndpointTests
         // Lo stesso, visto da chi fa il login.
         (await LoginAsync(email, after)).StatusCode.Should().Be(HttpStatusCode.OK);
         (await LoginAsync(email, before)).StatusCode.Should().NotBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    [Trait("Issue", "5040")]
+    public async Task ResetPassword_RevokesTheUsersOpenSessions_AndKeepsTheAdminsOwn()
+    {
+        // Un reset dell'admin serve quando l'account è compromesso: chi ha già un cookie dell'utente deve uscire.
+        var (userId, _) = await SeedUserAsync(FreshSecret());
+        var userToken = await OpenSessionAsync(userId, "user");
+        (await AuthMeAsync(userToken)).StatusCode.Should().Be(HttpStatusCode.OK, "the session is open before the reset");
+
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/admin/users/{userId}/reset-password", _adminToken, new { newPassword = FreshSecret() }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        (await AuthMeAsync(userToken)).StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+            "a password reset by an admin closes every session the user had open");
+        (await AuthMeAsync(_adminToken)).StatusCode.Should().Be(HttpStatusCode.OK, "the admin's own session stays open");
+    }
+
+    [Fact]
+    [Trait("Issue", "5040")]
+    public async Task ResetPassword_Forbidden_RevokesNothing()
+    {
+        var (userId, _) = await SeedUserAsync(FreshSecret(), role: "superadmin");
+        var superAdminToken = await OpenSessionAsync(userId, "superadmin");
+
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/admin/users/{userId}/reset-password", _adminToken, new { newPassword = FreshSecret() }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
+        (await AuthMeAsync(superAdminToken)).StatusCode.Should().Be(HttpStatusCode.OK,
+            "a refused reset must not log the target out");
     }
 
     [Fact]
@@ -196,4 +232,25 @@ public sealed class AdminUserWritesPersistEndpointTests
 
     private Task<HttpResponseMessage> LoginAsync(string email, string secret) =>
         _client.PostAsJsonAsync("/api/v1/auth/login", new { Email = email, Password = secret });
+
+    /// <summary>Apre una sessione per un utente già seminato, col ruolo che ha.</summary>
+    private async Task<string> OpenSessionAsync(Guid userId, string role)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, token) = role == "superadmin"
+            ? await TestSessionHelper.CreateSuperAdminSessionAsync(db, userId)
+            : await TestSessionHelper.CreateUserSessionAsync(db, userId);
+        return token;
+    }
+
+    /// <summary>
+    /// Chiede <c>/auth/me</c> con un token, da un client senza cookie: quello della classe ne conserva, e mescolerebbe
+    /// la sessione sondata con quella dell'admin.
+    /// </summary>
+    private async Task<HttpResponseMessage> AuthMeAsync(string token)
+    {
+        using var probe = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        return await probe.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, "/api/v1/auth/me", token));
+    }
 }

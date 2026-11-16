@@ -248,6 +248,42 @@ public class UserRepository : RepositoryBase, IUserRepository
         await Task.CompletedTask.ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async Task UpdateLockoutStateAsync(User user, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        CollectDomainEvents(user);
+
+        // #5036: only the two lockout columns are copied. EF writes the properties it sees changed on the row it just
+        // read, so every other column keeps whatever was saved after the request read the aggregate.
+        var existingUser = await DbContext.Users
+            .AsTracking()
+            .FirstOrDefaultAsync(u => u.Id == user.Id, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"User with ID {user.Id} not found for update");
+
+        existingUser.FailedLoginAttempts = user.FailedLoginAttempts;
+        existingUser.LockedUntil = user.LockedUntil;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> ReloadLockoutStateForUpdateAsync(User user, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        // AsNoTracking: the lock is taken all the same, and the values come from the row. A tracked query would hand back
+        // an instance already in the tracker, with whatever a rolled-back attempt left in it, when the execution
+        // strategy re-runs the transaction. The columns of users are PascalCase, so the key is the quoted "Id".
+        var row = await DbContext.Users
+            .FromSqlInterpolated($"SELECT * FROM users WHERE \"Id\" = {user.Id} FOR UPDATE")
+            .AsNoTracking()
+            .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (row is null)
+            return false;
+
+        user.RestoreLockoutState(row.FailedLoginAttempts, row.LockedUntil);
+        return true;
+    }
+
     public async Task DeleteAsync(User entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);

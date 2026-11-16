@@ -47,8 +47,8 @@ public class UserLockoutTests
         // Arrange
         var user = CreateTestUser();
 
-        // Lock the account (5 failed attempts)
-        for (int i = 0; i < 5; i++)
+        // Lock the account (threshold of failed attempts)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
         {
             user.RecordFailedLogin();
         }
@@ -68,15 +68,15 @@ public class UserLockoutTests
         var lockTime = new DateTimeOffset(2026, 2, 4, 10, 0, 0, TimeSpan.Zero);
         mockTimeProvider.Setup(t => t.GetUtcNow()).Returns(lockTime);
 
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
         {
             user.RecordFailedLogin(timeProvider: mockTimeProvider.Object);
         }
 
         user.IsLockedOut(mockTimeProvider.Object).Should().BeTrue();
 
-        // Move time forward past the lockout duration (15 minutes)
-        var afterLockout = lockTime.AddMinutes(16);
+        // Move time forward past the lockout duration
+        var afterLockout = lockTime.AddMinutes(User.DefaultLockoutDurationMinutes + 1);
         mockTimeProvider.Setup(t => t.GetUtcNow()).Returns(afterLockout);
 
         // Act & Assert
@@ -107,14 +107,14 @@ public class UserLockoutTests
         // Arrange
         var user = CreateTestUser();
 
-        // Act - 4 failed attempts (below default threshold of 5)
-        for (int i = 0; i < 4; i++)
+        // Act - one failed attempt below the default threshold
+        for (int i = 0; i < User.DefaultMaxFailedAttempts - 1; i++)
         {
             user.RecordFailedLogin();
         }
 
         // Assert
-        user.FailedLoginAttempts.Should().Be(4);
+        user.FailedLoginAttempts.Should().Be(User.DefaultMaxFailedAttempts - 1);
         user.IsLockedOut().Should().BeFalse();
         user.LockedUntil.Should().BeNull();
     }
@@ -125,16 +125,16 @@ public class UserLockoutTests
         // Arrange
         var user = CreateTestUser();
 
-        // Act - 5 failed attempts (reaches default threshold)
+        // Act - failed attempts up to the default threshold
         bool wasLocked = false;
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
         {
             wasLocked = user.RecordFailedLogin();
         }
 
         // Assert
         wasLocked.Should().BeTrue();
-        user.FailedLoginAttempts.Should().Be(5);
+        user.FailedLoginAttempts.Should().Be(User.DefaultMaxFailedAttempts);
         user.IsLockedOut().Should().BeTrue();
         user.LockedUntil.Should().NotBeNull();
     }
@@ -145,11 +145,13 @@ public class UserLockoutTests
         // Arrange
         var user = CreateTestUser();
 
-        // Act - 3 failed attempts with threshold of 3
+        // Act - a threshold other than the default, so the parameter is what decides
+        const int custom = User.DefaultMaxFailedAttempts + 2;
         bool wasLocked = false;
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < custom; i++)
         {
-            wasLocked = user.RecordFailedLogin(maxAttempts: 3);
+            user.IsLockedOut().Should().BeFalse("the account must not lock before the custom threshold");
+            wasLocked = user.RecordFailedLogin(maxAttempts: custom);
         }
 
         // Assert
@@ -164,17 +166,17 @@ public class UserLockoutTests
         var user = CreateTestUser();
 
         // Lock the account
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
         {
             user.RecordFailedLogin();
         }
-        user.FailedLoginAttempts.Should().Be(5);
+        user.FailedLoginAttempts.Should().Be(User.DefaultMaxFailedAttempts);
 
         // Act - Try to record another failed login while locked
         user.RecordFailedLogin();
 
         // Assert - Counter should not increment
-        user.FailedLoginAttempts.Should().Be(5);
+        user.FailedLoginAttempts.Should().Be(User.DefaultMaxFailedAttempts);
     }
 
     [Fact]
@@ -184,7 +186,7 @@ public class UserLockoutTests
         var user = CreateTestUser();
 
         // Act - Lock the account
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
         {
             user.RecordFailedLogin(ipAddress: "192.168.1.1");
         }
@@ -195,8 +197,51 @@ public class UserLockoutTests
 
         var lockEvent = domainEvents.OfType<AccountLockedEvent>().First();
         lockEvent.UserId.Should().Be(user.Id);
-        lockEvent.FailedAttempts.Should().Be(5);
+        lockEvent.FailedAttempts.Should().Be(User.DefaultMaxFailedAttempts);
         lockEvent.IpAddress.Should().Be("192.168.1.1");
+    }
+
+    [Fact]
+    public void RecordFailedLogin_AfterTheLockExpires_StartsANewCount()
+    {
+        // #5036: every lock takes the full threshold again. Before, the counter stayed at the threshold and the first
+        // wrong password after the lock expired closed the account for another full lockout.
+        var user = CreateTestUser();
+        var clock = new Mock<TimeProvider>();
+        var lockTime = new DateTimeOffset(2026, 11, 16, 10, 0, 0, TimeSpan.Zero);
+        clock.Setup(t => t.GetUtcNow()).Returns(lockTime);
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
+            user.RecordFailedLogin(timeProvider: clock.Object);
+        user.ClearDomainEvents();
+
+        clock.Setup(t => t.GetUtcNow()).Returns(lockTime.AddMinutes(User.DefaultLockoutDurationMinutes + 1));
+        var wasLocked = user.RecordFailedLogin(timeProvider: clock.Object);
+
+        wasLocked.Should().BeFalse();
+        user.FailedLoginAttempts.Should().Be(1);
+        user.LockedUntil.Should().BeNull();
+        user.DomainEvents.OfType<AccountLockedEvent>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RecordFailedLogin_AfterTheLockExpires_LocksAgainAtTheThreshold_WithANewEvent()
+    {
+        var user = CreateTestUser();
+        var clock = new Mock<TimeProvider>();
+        var lockTime = new DateTimeOffset(2026, 11, 16, 10, 0, 0, TimeSpan.Zero);
+        clock.Setup(t => t.GetUtcNow()).Returns(lockTime);
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
+            user.RecordFailedLogin(timeProvider: clock.Object);
+        user.ClearDomainEvents();
+
+        var later = lockTime.AddMinutes(User.DefaultLockoutDurationMinutes + 1);
+        clock.Setup(t => t.GetUtcNow()).Returns(later);
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
+            user.RecordFailedLogin(timeProvider: clock.Object);
+
+        user.IsLockedOut(clock.Object).Should().BeTrue();
+        user.LockedUntil.Should().Be(later.UtcDateTime.AddMinutes(User.DefaultLockoutDurationMinutes));
+        user.DomainEvents.OfType<AccountLockedEvent>().Should().ContainSingle();
     }
 
     #endregion
@@ -208,11 +253,11 @@ public class UserLockoutTests
     {
         // Arrange
         var user = CreateTestUser();
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts - 1; i++)
         {
             user.RecordFailedLogin();
         }
-        user.FailedLoginAttempts.Should().Be(3);
+        user.FailedLoginAttempts.Should().Be(User.DefaultMaxFailedAttempts - 1);
 
         // Act
         user.RecordSuccessfulLogin();
@@ -229,7 +274,7 @@ public class UserLockoutTests
 
         // This shouldn't happen in practice (can't login if locked),
         // but test the behavior anyway for edge cases
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
         {
             user.RecordFailedLogin();
         }
@@ -270,7 +315,7 @@ public class UserLockoutTests
         var adminId = Guid.NewGuid();
 
         // Lock the account
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
         {
             user.RecordFailedLogin();
         }
@@ -305,12 +350,12 @@ public class UserLockoutTests
         var user = CreateTestUser();
         var adminId = Guid.NewGuid();
 
-        // 3 failed attempts (not enough to lock)
-        for (int i = 0; i < 3; i++)
+        // Failed attempts below the threshold (not enough to lock)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts - 1; i++)
         {
             user.RecordFailedLogin();
         }
-        user.FailedLoginAttempts.Should().Be(3);
+        user.FailedLoginAttempts.Should().Be(User.DefaultMaxFailedAttempts - 1);
         user.IsLockedOut().Should().BeFalse();
 
         // Act - Admin can still reset the counter
@@ -328,7 +373,7 @@ public class UserLockoutTests
         var adminId = Guid.NewGuid();
 
         // Lock the account
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
         {
             user.RecordFailedLogin();
         }
@@ -376,7 +421,7 @@ public class UserLockoutTests
         mockTimeProvider.Setup(t => t.GetUtcNow()).Returns(now);
 
         // Lock the account
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < User.DefaultMaxFailedAttempts; i++)
         {
             user.RecordFailedLogin(lockoutMinutes: 15, timeProvider: mockTimeProvider.Object);
         }

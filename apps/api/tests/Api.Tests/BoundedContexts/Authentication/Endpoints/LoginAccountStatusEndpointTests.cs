@@ -85,10 +85,6 @@ public sealed class LoginAccountStatusEndpointTests : IAsyncLifetime
         // Arrange — admin-provisioned pending user with no password hash.
         var email = $"pending-{Guid.NewGuid():N}@test.local";
         await SeedPendingUserAsync(email);
-        // NB: a "FailedLoginAttempts must not increment" assertion is intentionally
-        // omitted — UserRepository.GetByEmailAsync returns a detached aggregate
-        // (AsNoTracking), so RecordFailedLogin already cannot persist today,
-        // making such an assertion vacuous regardless of the C2 fix.
 
         // Act
         var response = await _client.PostAsJsonAsync(Endpoint, new
@@ -105,6 +101,13 @@ public sealed class LoginAccountStatusEndpointTests : IAsyncLifetime
         body.GetProperty("message").GetString()
             .Should().Be(AccountUnavailableMessage,
                 "pending users must surface as Account is not available, not Invalid email or password.");
+
+        // Until #5036 the failed-login counter could not persist at all (detached aggregate, no UpdateAsync), so this
+        // assertion was vacuous. Now that it does, it checks the C2 gate: a pending account is refused before the
+        // lockout code runs, and its counter does not move.
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        (await db.Users.AsNoTracking().SingleAsync(u => u.Email == email)).FailedLoginAttempts.Should().Be(0);
     }
 
     [Fact]

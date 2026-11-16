@@ -7,7 +7,6 @@ using Api.BoundedContexts.DatabaseSync.Domain.Interfaces;
 using Api.BoundedContexts.DatabaseSync.Domain.Models;
 using Api.BoundedContexts.DatabaseSync.Infrastructure;
 using Api.Infrastructure;
-using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -113,8 +112,19 @@ internal class ApplyMigrationsHandler : ICommandHandler<ApplyMigrationsCommand, 
                     }
                     catch (Exception ex)
                     {
-                        await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                        // CancellationToken.None here and below: once the outcome is decided, an aborted request must not stop the
+                        // rollback, the audit or the lock release.
+                        await tx.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
                         _logger.LogError(ex, "Failed to apply migrations to staging");
+
+                        await TryWriteAuditAsync(command, operationId, "Failure", JsonSerializer.Serialize(new
+                        {
+                            direction = "LocalToStaging",
+                            migrations = diff.LocalOnly.Select(m => m.MigrationId).ToArray(),
+                            sqlHash,
+                            error = ex.Message
+                        })).ConfigureAwait(false);
+
                         return new SyncResult(false, 0, 0, operationId, ex.Message);
                     }
                 }
@@ -122,12 +132,12 @@ internal class ApplyMigrationsHandler : ICommandHandler<ApplyMigrationsCommand, 
                 _logger.LogInformation("Applied {Count} migrations to staging. OperationId={OpId}",
                     diff.LocalOnly.Count, operationId);
 
-                var audited = await TryWriteAuditAsync(command, operationId, JsonSerializer.Serialize(new
+                var audited = await TryWriteAuditAsync(command, operationId, "Success", JsonSerializer.Serialize(new
                 {
                     direction = "LocalToStaging",
                     migrations = diff.LocalOnly.Select(m => m.MigrationId).ToArray(),
                     sqlHash
-                }), cancellationToken).ConfigureAwait(false);
+                })).ConfigureAwait(false);
 
                 // The migrations are committed: the answer is a success either way, and says so when the audit is missing.
                 return new SyncResult(true, diff.LocalOnly.Count, 0, operationId,
@@ -141,42 +151,14 @@ internal class ApplyMigrationsHandler : ICommandHandler<ApplyMigrationsCommand, 
                     await using (unlockCmd.ConfigureAwait(false))
                     {
                         unlockCmd.Parameters.AddWithValue("db_sync_schema_apply");
-                        await unlockCmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                        await unlockCmd.ExecuteScalarAsync(CancellationToken.None).ConfigureAwait(false);
                     }
                 }
             }
         }
     }
 
-    /// <summary>
-    /// Writes the audit row in the local database. #5002: through <see cref="AuditLogEntity"/>, the type the EF model
-    /// maps; <c>Set&lt;AuditLog&gt;()</c> named the Administration aggregate, which it does not. Returns false, after
-    /// logging, when the row cannot be written: the migrations are already committed.
-    /// </summary>
-    private async Task<bool> TryWriteAuditAsync(
-        ApplyMigrationsCommand command, Guid operationId, string details, CancellationToken cancellationToken)
-    {
-        try
-        {
-            _dbContext.AuditLogs.Add(new AuditLogEntity
-            {
-                Id = Guid.NewGuid(),
-                UserId = command.AdminUserId,
-                Action = "DatabaseSync.ApplyMigrations",
-                Resource = "Schema",
-                ResourceId = operationId.ToString(),
-                Result = "Success",
-                Details = details,
-            });
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            return true;
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex) when (ex is not OperationCanceledException)
-#pragma warning restore CA1031
-        {
-            _logger.LogError(ex, "Failed to write the audit row of the migrations applied. OperationId={OpId}", operationId);
-            return false;
-        }
-    }
+    private Task<bool> TryWriteAuditAsync(ApplyMigrationsCommand command, Guid operationId, string result, string details) =>
+        DatabaseSyncAuditWriter.TryWriteAsync(
+            _dbContext, _logger, command.AdminUserId, "DatabaseSync.ApplyMigrations", "Schema", operationId, result, details);
 }

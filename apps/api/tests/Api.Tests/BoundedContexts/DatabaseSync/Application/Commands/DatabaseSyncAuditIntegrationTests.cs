@@ -158,6 +158,67 @@ public sealed class DatabaseSyncAuditIntegrationTests : IClassFixture<DatabaseSy
         }
     }
 
+    [Fact]
+    public async Task ApplyMigrations_WhenTheLastMigrationFails_RollsBackTheOnesBefore_AndWritesTheFailureAudit()
+    {
+        // The staging is two migrations behind, and a trigger refuses to record the last one: the script fails at its
+        // very end, after the migration before has run. Without NoTransactions (#5002) EF's own COMMIT after each
+        // migration would leave that one applied; in a single transaction nothing stays.
+        var localName = $"dbsync_mig_local_{Guid.NewGuid():N}";
+        var remoteName = $"dbsync_mig_remote_{Guid.NewGuid():N}";
+        var localConnection = await _shared.CreateIsolatedDatabaseAsync(localName);
+        var remoteConnection = await _shared.CreateIsolatedDatabaseAsync(remoteName);
+        try
+        {
+            var adminId = Guid.NewGuid();
+            await using (var local = _shared.CreateDbContext(localConnection))
+            {
+                await local.Database.MigrateAsync();
+                await TestSessionHelper.CreateAdminSessionAsync(local, adminId);
+            }
+
+            List<string> historyBefore;
+            await using (var remote = _shared.CreateDbContext(remoteConnection))
+            {
+                var migrations = remote.Database.GetMigrations().ToList();
+                await remote.GetInfrastructure().GetRequiredService<IMigrator>().MigrateAsync(migrations[^3]);
+                await remote.Database.ExecuteSqlRawAsync(
+                    "CREATE FUNCTION refuse_last_migration_5002() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN " +
+                    "IF NEW.\"MigrationId\" = '" + migrations[^1] + "' THEN RAISE EXCEPTION 'refused by the test of #5002'; END IF; " +
+                    "RETURN NEW; END $$; " +
+                    "CREATE TRIGGER refuse_last_migration_5002 BEFORE INSERT ON \"__EFMigrationsHistory\" " +
+                    "FOR EACH ROW EXECUTE FUNCTION refuse_last_migration_5002();");
+                historyBefore = (await remote.Database.GetAppliedMigrationsAsync()).ToList();
+            }
+
+            await using var handlerContext = _shared.CreateDbContext(localConnection);
+            var handler = new ApplyMigrationsHandler(
+                handlerContext, RemoteConnector(remoteConnection), NullLogger<ApplyMigrationsHandler>.Instance);
+
+            var result = await handler.Handle(
+                new ApplyMigrationsCommand(SyncDirection.LocalToStaging, "APPLY 2 MIGRATIONS TO STAGING", adminId),
+                CancellationToken.None);
+
+            result.Success.Should().BeFalse("setup: the trigger refuses the last migration");
+            result.ErrorMessage.Should().Contain("refused by the test of #5002", "setup: the failure is the one of the trigger");
+            await using (var remote = _shared.CreateDbContext(remoteConnection))
+            {
+                (await remote.Database.GetAppliedMigrationsAsync()).Should().Equal(historyBefore,
+                    "the apply is all or nothing: no migration of the script stays applied");
+            }
+
+            await using var reader = _shared.CreateDbContext(localConnection);
+            var audit = await reader.AuditLogs.AsNoTracking()
+                .SingleAsync(a => a.Action == "DatabaseSync.ApplyMigrations" && a.ResourceId == result.OperationId.ToString());
+            audit.Result.Should().Be("Failure");
+        }
+        finally
+        {
+            await _shared.DropIsolatedDatabaseAsync(localName);
+            await _shared.DropIsolatedDatabaseAsync(remoteName);
+        }
+    }
+
     // ----- Aiuti -----
 
     private async Task<SyncResult> SyncAsync(SyncDirection direction)

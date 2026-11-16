@@ -5,7 +5,6 @@ using Api.BoundedContexts.DatabaseSync.Domain.Interfaces;
 using Api.BoundedContexts.DatabaseSync.Domain.Models;
 using Api.BoundedContexts.DatabaseSync.Infrastructure;
 using Api.Infrastructure;
-using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -155,7 +154,9 @@ internal class SyncTableDataHandler : ICommandHandler<SyncTableDataCommand, Sync
                     }
                     catch (Exception ex)
                     {
-                        await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                        // CancellationToken.None here and below: once the outcome is decided, an aborted request must not stop the
+                        // rollback, the audit or the lock release.
+                        await tx.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
                         _logger.LogError(ex,
                             "Failed to sync table {Table}. OperationId={OpId}",
                             command.TableName, operationId);
@@ -165,7 +166,7 @@ internal class SyncTableDataHandler : ICommandHandler<SyncTableDataCommand, Sync
                             direction = command.Direction.ToString(),
                             error = ex.Message,
                             table = command.TableName
-                        }), cancellationToken).ConfigureAwait(false);
+                        })).ConfigureAwait(false);
 
                         return new SyncResult(false, 0, 0, operationId, ex.Message);
                     }
@@ -181,7 +182,7 @@ internal class SyncTableDataHandler : ICommandHandler<SyncTableDataCommand, Sync
                     inserted,
                     updated,
                     table = command.TableName
-                }), cancellationToken).ConfigureAwait(false);
+                })).ConfigureAwait(false);
 
                 // The rows are committed: the answer is a success either way, and says so when the audit is missing.
                 return new SyncResult(true, inserted, updated, operationId,
@@ -191,46 +192,15 @@ internal class SyncTableDataHandler : ICommandHandler<SyncTableDataCommand, Sync
             {
                 if (lockAcquired)
                 {
-                    await ReleaseAdvisoryLockAsync(targetConn, cancellationToken).ConfigureAwait(false);
+                    await ReleaseAdvisoryLockAsync(targetConn, CancellationToken.None).ConfigureAwait(false);
                 }
             }
         }
     }
 
-    /// <summary>
-    /// Writes the audit row in the local database. #5002: through <see cref="AuditLogEntity"/>, the type the EF model
-    /// maps; <c>Set&lt;AuditLog&gt;()</c> named the Administration aggregate, which it does not, and threw at every sync.
-    /// Returns false, after logging, when the row cannot be written: the outcome of the sync is already decided.
-    /// </summary>
-    private async Task<bool> TryWriteAuditAsync(
-        SyncTableDataCommand command, Guid operationId, string result, string details,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            _dbContext.AuditLogs.Add(new AuditLogEntity
-            {
-                Id = Guid.NewGuid(),
-                UserId = command.AdminUserId,
-                Action = "DatabaseSync.SyncTableData",
-                Resource = command.TableName,
-                ResourceId = operationId.ToString(),
-                Result = result,
-                Details = details,
-            });
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            return true;
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex) when (ex is not OperationCanceledException)
-#pragma warning restore CA1031
-        {
-            _logger.LogError(ex,
-                "Failed to write the audit row of the sync of {Table}. OperationId={OpId}, Result={Result}",
-                command.TableName, operationId, result);
-            return false;
-        }
-    }
+    private Task<bool> TryWriteAuditAsync(SyncTableDataCommand command, Guid operationId, string result, string details) =>
+        DatabaseSyncAuditWriter.TryWriteAsync(
+            _dbContext, _logger, command.AdminUserId, "DatabaseSync.SyncTableData", command.TableName, operationId, result, details);
 
     private static async Task<bool> TableExistsAsync(NpgsqlConnection conn, string schema, string table, CancellationToken ct)
     {

@@ -56,4 +56,16 @@ public interface IUserRepository : IRepository<User, Guid>
     /// Issue #4159: Approval workflow extension - Admin notifications
     /// </summary>
     Task<IReadOnlyList<User>> GetAdminUsersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes only the lockout state of the user (<c>FailedLoginAttempts</c>, <c>LockedUntil</c>) and collects its
+    /// domain events, so <c>AccountLockedEvent</c> still goes out with the save.
+    /// </summary>
+    /// <remarks>
+    /// #5036: the failed-login path runs for anyone who knows an email. <see cref="IRepository{TEntity, TKey}.UpdateAsync"/>
+    /// copies every column of the aggregate read at the start of the request, so a wrong password typed while an admin
+    /// suspends the user, resets the password or changes the role would write the old values back. Use this method
+    /// wherever only the lockout state changed.
+    /// </remarks>
+    Task UpdateLockoutStateAsync(User user, CancellationToken cancellationToken = default);
 }

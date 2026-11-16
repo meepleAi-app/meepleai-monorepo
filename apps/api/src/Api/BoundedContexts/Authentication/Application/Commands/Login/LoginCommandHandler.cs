@@ -83,9 +83,11 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
             // Issue #3339: Record failed login attempt
             var wasLocked = user.RecordFailedLogin(command.IpAddress);
 
-            // #5036: GetByEmailAsync returns a detached aggregate. Without UpdateAsync, SaveChangesAsync had nothing to
-            // write: the counter never moved, the account never locked, and AccountLockedEvent was never collected.
-            await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
+            // #5036: GetByEmailAsync returns a detached aggregate. With only SaveChangesAsync there was nothing to write:
+            // the counter never moved, the account never locked, and AccountLockedEvent was never collected. Only the
+            // lockout columns are written: this path runs for anyone who knows the email, and a full UpdateAsync would
+            // copy the aggregate read above over a suspension, a password reset or a role change saved in the meantime.
+            await _userRepository.UpdateLockoutStateAsync(user, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // I10: invalid-password login failure. Actor is null (the user
@@ -162,7 +164,8 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
         // counter from Verify2FACommandHandler.
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
         user.RecordSuccessfulLogin();
-        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
+        // #5036: RecordSuccessfulLogin changes only the lockout state, so only that is written (see the failure branch).
+        await _userRepository.UpdateLockoutStateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // I10: successful login (non-2FA path). The 2FA-required branch

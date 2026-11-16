@@ -3,10 +3,13 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.DomainEventOutbox;
+using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -162,6 +165,39 @@ public sealed class LoginLockoutPersistEndpointTests
         await LoginAsync(email, secret);
 
         (await CountAccountLockedEventsAsync(userId)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ALockoutSavedFromAStaleRead_KeepsWhatAnAdminSavedInTheMeantime()
+    {
+        // Il ramo della password sbagliata gira per chiunque conosca l'email, e fra la lettura dell'utente e il
+        // salvataggio passa almeno la verifica della password. Se nel frattempo un admin cambia ruolo e password,
+        // salvare il blocco non deve riscrivere quei campi con i valori letti prima.
+        var (userId, email) = await SeedUserAsync(FreshSecret());
+        var hashSavedByTheAdmin = PasswordHash.Create(FreshSecret()).Value;
+
+        using var requestScope = _factory.Services.CreateScope();
+        var users = requestScope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var unitOfWork = requestScope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var staleUser = (await users.GetByEmailAsync(new Email(email)))!;
+
+        using (var adminScope = _factory.Services.CreateScope())
+        {
+            var db = adminScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var row = await db.Users.AsTracking().SingleAsync(u => u.Id == userId);
+            row.Role = "editor";
+            row.PasswordHash = hashSavedByTheAdmin;
+            await db.SaveChangesAsync();
+        }
+
+        staleUser.RecordFailedLogin();
+        await users.UpdateLockoutStateAsync(staleUser);
+        await unitOfWork.SaveChangesAsync();
+
+        var saved = await ReadUserAsync(userId);
+        saved.FailedLoginAttempts.Should().Be(1, "the failed attempt is written");
+        saved.Role.Should().Be("editor", "a role saved after the read must survive the lockout write");
+        saved.PasswordHash.Should().Be(hashSavedByTheAdmin, "a password saved after the read must survive the lockout write");
     }
 
     private async Task<int> CountAccountLockedEventsAsync(Guid userId)

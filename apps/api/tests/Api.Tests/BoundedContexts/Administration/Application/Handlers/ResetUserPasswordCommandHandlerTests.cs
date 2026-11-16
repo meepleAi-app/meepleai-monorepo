@@ -20,15 +20,18 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 public class ResetUserPasswordCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
+    private readonly Mock<ISessionRepository> _sessionRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly ResetUserPasswordCommandHandler _handler;
 
     public ResetUserPasswordCommandHandlerTests()
     {
         _userRepositoryMock = new Mock<IUserRepository>();
+        _sessionRepositoryMock = new Mock<ISessionRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _handler = new ResetUserPasswordCommandHandler(
             _userRepositoryMock.Object,
+            _sessionRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
     [Fact]
@@ -316,6 +319,7 @@ public class ResetUserPasswordCommandHandlerTests
         await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>();
 
         _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(r => r.RevokeAllUserSessionsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>
@@ -344,6 +348,8 @@ public class ResetUserPasswordCommandHandlerTests
         await act.Should().ThrowAsync<Api.Middleware.Exceptions.ForbiddenException>();
         _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(r => r.RevokeAllUserSessionsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never,
+            "a refused reset must not log the target out (#5040)");
     }
 
     [Theory]
@@ -364,5 +370,35 @@ public class ResetUserPasswordCommandHandlerTests
 
         _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// #5040: il reset dell'admin chiude le sessioni dell'utente, e prima di salvare la password. Se il salvataggio
+    /// fallisce, l'utente resta fuori con la vecchia password; mai dentro con sessioni che il reset doveva chiudere.
+    /// </summary>
+    [Fact]
+    public async Task Handle_RevokesTheUsersSessions_BeforeSavingThePassword()
+    {
+        var userId = Guid.NewGuid();
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserBuilder().WithId(userId).Build());
+
+        var calls = new List<string>();
+        _sessionRepositoryMock
+            .Setup(r => r.RevokeAllUserSessionsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("revoke"))
+            .Returns(Task.CompletedTask);
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("save"))
+            .ReturnsAsync(1);
+
+        await _handler.Handle(
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", "admin"),
+            TestContext.Current.CancellationToken);
+
+        _sessionRepositoryMock.Verify(r => r.RevokeAllUserSessionsAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
+        calls.Should().Equal("revoke", "save");
     }
 }

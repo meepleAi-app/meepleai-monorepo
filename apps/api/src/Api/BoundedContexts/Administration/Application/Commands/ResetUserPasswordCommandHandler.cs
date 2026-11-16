@@ -13,13 +13,16 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 internal class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswordCommand>
 {
     private readonly IUserRepository _userRepository;
+    private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public ResetUserPasswordCommandHandler(
         IUserRepository userRepository,
+        ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
@@ -44,6 +47,12 @@ internal class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswo
 
         var newPasswordHash = PasswordHash.Create(command.NewPassword);
         user.UpdatePassword(newPasswordHash);
+
+        // #5040: an admin resets a password when the account may be in someone else's hands, so every session the user
+        // has open is closed, like ChangePasswordCommandHandler does (C7), and in the same order: the revoke saves on its
+        // own, before the password. If the save below fails, the user is logged out with the old password still valid;
+        // never logged in with sessions the reset should have closed.
+        await _sessionRepository.RevokeAllUserSessionsAsync(user.Id, cancellationToken).ConfigureAwait(false);
 
         // #4907: GetByIdAsync returns a detached aggregate. Without UpdateAsync, SaveChangesAsync had nothing
         // to write, and the reset answered 200 while the old password kept working.

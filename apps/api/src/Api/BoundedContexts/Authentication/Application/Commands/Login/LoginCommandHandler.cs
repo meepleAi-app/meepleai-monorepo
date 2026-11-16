@@ -82,6 +82,10 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
         {
             // Issue #3339: Record failed login attempt
             var wasLocked = user.RecordFailedLogin(command.IpAddress);
+
+            // #5036: GetByEmailAsync returns a detached aggregate. Without UpdateAsync, SaveChangesAsync had nothing to
+            // write: the counter never moved, the account never locked, and AccountLockedEvent was never collected.
+            await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // I10: invalid-password login failure. Actor is null (the user
@@ -108,7 +112,7 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
                     metadata: $"{{\"attemptCount\":{user.FailedLoginAttempts},\"lockoutUntilUtc\":\"{user.LockedUntil:O}\"}}",
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                throw LoginRefused(LoginErrorCodes.AccountLocked, "Account has been locked due to too many failed login attempts. Please try again in 15 minutes.");
+                throw LoginRefused(LoginErrorCodes.AccountLocked, $"Account has been locked due to too many failed login attempts. Please try again in {User.DefaultLockoutDurationMinutes} minutes.");
             }
 
             throw LoginRefused(LoginErrorCodes.InvalidCredentials, "Invalid email or password");

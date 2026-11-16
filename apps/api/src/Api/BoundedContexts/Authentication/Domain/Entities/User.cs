@@ -567,14 +567,15 @@ public sealed class User : AggregateRoot<Guid>
     #region Account Lockout (Issue #3339)
 
     /// <summary>
-    /// Default maximum failed login attempts before account lockout.
+    /// Default maximum failed login attempts before account lockout. #5036: 3, decided by the product owner on
+    /// 2026-11-16 (was 5).
     /// </summary>
-    public const int DefaultMaxFailedAttempts = 5;
+    public const int DefaultMaxFailedAttempts = 3;
 
     /// <summary>
-    /// Default lockout duration in minutes.
+    /// Default lockout duration in minutes. #5036: 30, decided by the product owner on 2026-11-16 (was 15).
     /// </summary>
-    public const int DefaultLockoutDurationMinutes = 15;
+    public const int DefaultLockoutDurationMinutes = 30;
 
     /// <summary>
     /// Checks if the account is currently locked out.
@@ -606,8 +607,8 @@ public sealed class User : AggregateRoot<Guid>
     /// Issue #3339: Account lockout after failed login attempts.
     /// </summary>
     /// <param name="ipAddress">IP address of the failed attempt (for audit).</param>
-    /// <param name="maxAttempts">Maximum failed attempts before lockout (default: 5).</param>
-    /// <param name="lockoutMinutes">Lockout duration in minutes (default: 15).</param>
+    /// <param name="maxAttempts">Maximum failed attempts before lockout (default: <see cref="DefaultMaxFailedAttempts"/>).</param>
+    /// <param name="lockoutMinutes">Lockout duration in minutes (default: <see cref="DefaultLockoutDurationMinutes"/>).</param>
     /// <param name="timeProvider">Optional time provider for testing.</param>
     /// <returns>True if account was locked as a result of this attempt.</returns>
     public bool RecordFailedLogin(
@@ -619,6 +620,15 @@ public sealed class User : AggregateRoot<Guid>
         // If already locked, don't increment counter
         if (IsLockedOut(timeProvider))
             return false;
+
+        // #5036: a lock that has expired starts a new count, so every lock takes maxAttempts wrong passwords again.
+        // Without this the counter stays at the threshold, and the first wrong password after the lock expires closes
+        // the account for another full lockout.
+        if (LockedUntil != null)
+        {
+            FailedLoginAttempts = 0;
+            LockedUntil = null;
+        }
 
         FailedLoginAttempts++;
 

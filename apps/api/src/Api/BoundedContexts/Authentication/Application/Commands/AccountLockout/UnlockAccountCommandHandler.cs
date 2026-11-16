@@ -43,6 +43,9 @@ internal class UnlockAccountCommandHandler : ICommandHandler<UnlockAccountComman
         // Unlock the account
         user.Unlock(command.AdminId);
 
+        // #4907: GetByIdAsync returns a detached aggregate; without UpdateAsync the lockout stayed in the
+        // database and AccountUnlockedEvent was never collected.
+        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Account {UserId} unlocked successfully by admin {AdminId}", command.UserId, command.AdminId);

@@ -40,6 +40,9 @@ internal class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswo
         var newPasswordHash = PasswordHash.Create(command.NewPassword);
         user.UpdatePassword(newPasswordHash);
 
+        // #4907: GetByIdAsync returns a detached aggregate. Without UpdateAsync, SaveChangesAsync had nothing
+        // to write, and the reset answered 200 while the old password kept working.
+        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

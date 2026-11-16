@@ -62,7 +62,8 @@ internal class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, Use
             throw new DomainException("Role changes must use the dedicated role change endpoint (requires SuperAdmin)");
         }
 
-        // Save changes
+        // #4907: GetByIdAsync returns a detached aggregate; without UpdateAsync nothing was saved.
+        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO

@@ -34,7 +34,7 @@ internal class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, Use
         var userId = Guid.Parse(command.UserId);
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
-            throw new DomainException($"User {command.UserId} not found");
+            throw new NotFoundException("User", command.UserId); // #4907: 404, not a 400 domain_error
 
         // #4907: with the update now saved, a new email plus «forgot password» would hand over an account of the
         // same rank or above.

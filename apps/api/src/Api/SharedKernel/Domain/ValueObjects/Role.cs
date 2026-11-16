@@ -117,22 +117,14 @@ public sealed class Role : ValueObject
     /// <remarks>
     /// #4907: the guard of the admin actions that hand over another account (password reset, email change). It is
     /// the rule of ADM-002 in <c>ChangeUserRoleCommandHandler</c> — «only roles below your own» — applied to the
-    /// role of the target instead of the role being assigned.
+    /// role of the target instead of the role being assigned. Derived from <see cref="HasPermission"/>, which already
+    /// orders the five roles, so the hierarchy is not written once more.
     /// </remarks>
     public bool Outranks(Role other)
     {
         ArgumentNullException.ThrowIfNull(other);
-        return Level(this) > Level(other);
+        return HasPermission(other) && !Equals(other);
     }
-
-    private static int Level(Role role) => role.Value switch
-    {
-        "superadmin" => 4,
-        "admin" => 3,
-        "editor" => 2,
-        "creator" => 1,
-        _ => 0,
-    };
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

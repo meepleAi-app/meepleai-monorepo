@@ -36,7 +36,7 @@ internal class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswo
 
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
-            throw new DomainException($"User {command.UserId} not found");
+            throw new NotFoundException("User", command.UserId); // #4907: 404, the reset endpoint catches it
 
         // #4907: with the reset now saved, an admin could take over an account of the same rank or above.
         if (!Role.TryParse(command.AdminRole, out var adminRole) || !adminRole.Outranks(user.Role))

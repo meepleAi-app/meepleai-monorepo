@@ -135,7 +135,7 @@ public class UpdateUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentUser_ThrowsDomainException()
+    public async Task Handle_WithNonExistentUser_ThrowsNotFoundException()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -153,9 +153,8 @@ public class UpdateUserCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
-        exception.Message.Should().Contain("not found");
-        exception.Message.Should().Contain(userId.ToString());
+        var exception = (await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>()).Which; // #4907: 404
+        exception.ResourceId.Should().Be(userId.ToString());
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }

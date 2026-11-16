@@ -119,7 +119,7 @@ public class ResetUserPasswordCommandHandlerTests
             Times.Once);
     }
     [Fact]
-    public async Task Handle_NonExistentUser_ThrowsDomainException()
+    public async Task Handle_NonExistentUser_ThrowsNotFoundException()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -135,9 +135,10 @@ public class ResetUserPasswordCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        var exception = (await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>()).Which;
 
-        exception.Message.Should().Contain($"User {userId} not found");
+        // #4907: 404, not a 400 domain_error.
+        exception.ResourceId.Should().Be(userId.ToString());
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -297,7 +298,7 @@ public class ResetUserPasswordCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_UserNotFound_ThrowsDomainException()
+    public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -312,7 +313,7 @@ public class ResetUserPasswordCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<DomainException>();
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>();
 
         _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }

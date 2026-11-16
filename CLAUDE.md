@@ -67,7 +67,7 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService sv
 | Context | Responsibility |
 |---------|---------------|
 | Administration | Users, roles, analytics |
-| AgentMemory | House rules, memory notes, guest player claims |
+| AgentMemory | House rules, memory notes, play-group memory and stats |
 | Authentication | Auth flows, sessions, OAuth, 2FA |
 | BusinessSimulations | Ledger entries, cost scenarios, resource forecasts |
 | DatabaseSync | DB migrations, tunnel management, sync ops |

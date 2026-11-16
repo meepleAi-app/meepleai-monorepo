@@ -49,7 +49,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -85,7 +86,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             null,
             "New Name",
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -118,7 +120,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             null,
             null,
-            Role.Admin.Value
+            Role.Admin.Value,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -140,7 +143,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -182,7 +186,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "other@example.com", // Email already used by otherUser
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -218,7 +223,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             "New Name",
-            Role.Editor.Value
+            Role.Editor.Value,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -251,7 +257,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             null,
             "  New Name  ", // Whitespace to be trimmed
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -283,7 +290,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "same@example.com", // Same email as current
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository

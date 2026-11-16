@@ -263,4 +263,23 @@ public class RoleTests
             tryParsed.Should().Be(Role.Parse(value));
         }
     }
+
+    /// <summary>
+    /// #4907: ogni coppia di ruoli, nell'ordine user &lt; creator &lt; editor &lt; admin &lt; superadmin. Un ruolo uguale
+    /// non supera: un admin non agisce su un altro admin.
+    /// </summary>
+    [Fact]
+    public void Outranks_IsTrueOnlyForAStrictlyHigherRole_OnEveryPair()
+    {
+        var ordered = new[] { "user", "creator", "editor", "admin", "superadmin" };
+
+        for (var actor = 0; actor < ordered.Length; actor++)
+        {
+            for (var target = 0; target < ordered.Length; target++)
+            {
+                Role.Parse(ordered[actor]).Outranks(Role.Parse(ordered[target])).Should().Be(
+                    actor > target, $"{ordered[actor]} vs {ordered[target]}");
+            }
+        }
+    }
 }

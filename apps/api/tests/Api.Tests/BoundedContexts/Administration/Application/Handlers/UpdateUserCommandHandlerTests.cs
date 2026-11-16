@@ -50,7 +50,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -86,7 +87,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             null,
             "New Name",
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -119,7 +121,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             null,
             null,
-            Role.Admin.Value
+            Role.Admin.Value,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -142,7 +145,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -184,7 +188,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "other@example.com", // Email already used by otherUser
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -220,7 +225,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             "New Name",
-            Role.Editor.Value
+            Role.Editor.Value,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -254,7 +260,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             "New Name",
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -291,7 +298,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             null,
             "  New Name  ", // Whitespace to be trimmed
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -323,7 +331,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "same@example.com", // Same email as current
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -341,5 +350,38 @@ public class UpdateUserCommandHandlerTests
             r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// #4907: una email nuova più «password dimenticata» consegna l'account, quindi chi agisce deve avere un ruolo
+    /// sopra quello del bersaglio. Il rifiuto arriva prima di qualunque modifica.
+    /// </summary>
+    [Theory]
+    [InlineData("admin", "admin")]
+    [InlineData("admin", "superadmin")]
+    [InlineData("superadmin", "superadmin")]
+    [InlineData("user", "user")] // il default del comando
+    public async Task Handle_TargetNotBelowTheActingRole_IsForbidden_AndSavesNothing(string adminRole, string targetRole)
+    {
+        var userId = Guid.NewGuid();
+        var user = new User(
+            userId,
+            new Email("target@example.com"),
+            "Target",
+            PasswordHash.Create("UnusualPwd123!"),
+            Role.Parse(targetRole)
+        );
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        var act = () => _handler.Handle(
+            new UpdateUserCommand(userId.ToString(), "taken-over@example.com", AdminRole: adminRole),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.ForbiddenException>();
+        user.Email.Value.Should().Be("target@example.com");
+        _mockUserRepository.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

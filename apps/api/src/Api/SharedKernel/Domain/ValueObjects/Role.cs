@@ -110,6 +110,30 @@ public sealed class Role : ValueObject
         return string.Equals(Value, requiredRole.Value, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// True when this role is strictly above <paramref name="other"/>: user &lt; creator &lt; editor &lt; admin &lt;
+    /// superadmin. An equal role does not outrank, so an admin cannot act on another admin.
+    /// </summary>
+    /// <remarks>
+    /// #4907: the guard of the admin actions that hand over another account (password reset, email change). It is
+    /// the rule of ADM-002 in <c>ChangeUserRoleCommandHandler</c> — «only roles below your own» — applied to the
+    /// role of the target instead of the role being assigned.
+    /// </remarks>
+    public bool Outranks(Role other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        return Level(this) > Level(other);
+    }
+
+    private static int Level(Role role) => role.Value switch
+    {
+        "superadmin" => 4,
+        "admin" => 3,
+        "editor" => 2,
+        "creator" => 1,
+        _ => 0,
+    };
+
     protected override IEnumerable<object?> GetEqualityComponents()
     {
         yield return Value;

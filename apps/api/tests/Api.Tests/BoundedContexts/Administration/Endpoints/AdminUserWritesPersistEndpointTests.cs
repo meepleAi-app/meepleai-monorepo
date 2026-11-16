@@ -29,6 +29,11 @@ public sealed class AdminUserWritesHostFixture(SharedTestcontainersFixture share
 /// <c>SaveChangesAsync</c>, che non aveva niente da salvare: serve <c>UpdateAsync</c> prima. Un test con un
 /// repository finto che conta le chiamate a <c>SaveChangesAsync</c> passerebbe anche col difetto, quindi
 /// qui ogni caso rilegge la riga dal database, da un altro scope.
+/// <para>
+/// Salvare davvero ha acceso un rischio che il difetto teneva spento: reset della password ed email nuova consegnano
+/// l'account. Le due azioni valgono ora solo su un bersaglio con un ruolo sotto quello di chi agisce; i due casi
+/// rifiutati sono qui.
+/// </para>
 /// </remarks>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -128,8 +133,36 @@ public sealed class AdminUserWritesPersistEndpointTests
         (await LoginAsync(email, secret)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task ResetPassword_OfASuperAdmin_ByAnAdmin_IsForbidden_AndTheOldPasswordStillWorks()
+    {
+        // Con il reset che salva, un admin si prenderebbe l'account di un superadmin: la regola di ADM-002 vale
+        // anche per il ruolo del bersaglio.
+        var before = FreshSecret();
+        var (userId, _) = await SeedUserAsync(before, role: "superadmin");
+
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/admin/users/{userId}/reset-password", _adminToken, new { newPassword = FreshSecret() }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
+        PasswordHash.FromStored((await ReadUserAsync(userId)).PasswordHash!).Verify(before).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateUser_EmailOfAnotherAdmin_ByAnAdmin_IsForbidden_AndNothingChanges()
+    {
+        var (userId, email) = await SeedUserAsync(FreshSecret(), role: "admin");
+
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put, $"/api/v1/admin/users/{userId}", _adminToken,
+            new { email = $"taken-over-{Guid.NewGuid():N}@test.local" }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
+        (await ReadUserAsync(userId)).Email.Should().Be(email);
+    }
+
     private async Task<(Guid UserId, string Email)> SeedUserAsync(
-        string secret, DateTime? lockedUntil = null, int failedAttempts = 0)
+        string secret, DateTime? lockedUntil = null, int failedAttempts = 0, string role = "user")
     {
         var userId = Guid.NewGuid();
         var email = $"admin-writes-{Guid.NewGuid():N}@test.local";
@@ -141,7 +174,7 @@ public sealed class AdminUserWritesPersistEndpointTests
             Id = userId,
             Email = email,
             DisplayName = "Utente della prova",
-            Role = "user",
+            Role = role,
             PasswordHash = PasswordHash.Create(secret).Value,
             Tier = "free",
             EmailVerified = true, // altrimenti il login si ferma alla verifica (#4985)

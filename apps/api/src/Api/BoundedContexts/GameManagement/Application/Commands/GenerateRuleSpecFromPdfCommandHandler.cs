@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -46,7 +47,7 @@ internal class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateR
 
         if (rules.Count == 0)
         {
-            throw new InvalidOperationException($"PDF document {command.PdfDocumentId} does not contain any parsed rules");
+            throw new PdfHasNoParsedRulesException(command.PdfDocumentId);
         }
 
         // Create RuleAtoms

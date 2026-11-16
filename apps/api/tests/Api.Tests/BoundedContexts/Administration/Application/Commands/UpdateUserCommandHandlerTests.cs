@@ -49,7 +49,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -85,7 +86,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             null,
             "New Name",
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -118,7 +120,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             null,
             null,
-            Role.Admin.Value
+            Role.Admin.Value,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -132,7 +135,7 @@ public class UpdateUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentUser_ThrowsDomainException()
+    public async Task Handle_WithNonExistentUser_ThrowsNotFoundException()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -140,7 +143,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -149,9 +153,8 @@ public class UpdateUserCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
-        exception.Message.Should().Contain("not found");
-        exception.Message.Should().Contain(userId.ToString());
+        var exception = (await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>()).Which; // #4907: 404
+        exception.ResourceId.Should().Be(userId.ToString());
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -182,7 +185,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "other@example.com", // Email already used by otherUser
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -218,7 +222,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             "New Name",
-            Role.Editor.Value
+            Role.Editor.Value,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -251,7 +256,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             null,
             "  New Name  ", // Whitespace to be trimmed
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository
@@ -283,7 +289,8 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "same@example.com", // Same email as current
             null,
-            null
+            null,
+            AdminRole: "superadmin"
         );
 
         _mockUserRepository

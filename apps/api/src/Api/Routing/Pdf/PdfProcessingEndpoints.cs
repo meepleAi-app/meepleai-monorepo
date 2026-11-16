@@ -410,17 +410,10 @@ internal static class PdfProcessingEndpoints
 
         logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session!.Principal!.Subject.Id, pdfId);
 
-        try
-        {
-            var command = new GenerateRuleSpecFromPdfCommand(pdfId);
-            var ruleSpecDto = await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.Json(ruleSpecDto);
-        }
-        catch (InvalidOperationException ex)
-        {
-            logger.LogWarning(ex, "Failed to generate RuleSpec from PDF {PdfId}: {Message}", pdfId, ex.Message);
-            return Results.BadRequest(new { error = ex.Message });
-        }
+        // #5014: no try/catch. A PDF without rules is PdfHasNoParsedRulesException (409), mapped by the middleware like
+        // any other exception; the catch that was here turned every InvalidOperationException into a 400 with its message.
+        var ruleSpecDto = await mediator.Send(new GenerateRuleSpecFromPdfCommand(pdfId), ct).ConfigureAwait(false);
+        return Results.Json(ruleSpecDto);
     }
 
     private static async Task<IResult> HandleIndexPdf(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)

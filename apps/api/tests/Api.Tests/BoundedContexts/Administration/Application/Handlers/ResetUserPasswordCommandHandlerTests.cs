@@ -48,7 +48,8 @@ public class ResetUserPasswordCommandHandlerTests
 
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "NewUnusualPwd456!");
+            NewPassword: "NewUnusualPwd456!",
+            AdminRole: "superadmin");
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -78,7 +79,8 @@ public class ResetUserPasswordCommandHandlerTests
 
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "ResetPassword789!");
+            NewPassword: "ResetPassword789!",
+            AdminRole: "superadmin");
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -105,7 +107,8 @@ public class ResetUserPasswordCommandHandlerTests
         var strongPassword = "VeryStr0ng!P@ssw0rd#2024";
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: strongPassword);
+            NewPassword: strongPassword,
+            AdminRole: "superadmin");
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -116,7 +119,7 @@ public class ResetUserPasswordCommandHandlerTests
             Times.Once);
     }
     [Fact]
-    public async Task Handle_NonExistentUser_ThrowsDomainException()
+    public async Task Handle_NonExistentUser_ThrowsNotFoundException()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -127,13 +130,15 @@ public class ResetUserPasswordCommandHandlerTests
 
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "NewUnusualPwd123!");
+            NewPassword: "NewUnusualPwd123!",
+            AdminRole: "superadmin");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        var exception = (await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>()).Which;
 
-        exception.Message.Should().Contain($"User {userId} not found");
+        // #4907: 404, not a 400 domain_error.
+        exception.ResourceId.Should().Be(userId.ToString());
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -159,7 +164,8 @@ public class ResetUserPasswordCommandHandlerTests
 
         var adminCommand = new ResetUserPasswordCommand(
             UserId: adminId.ToString(),
-            NewPassword: "AdminPass123!");
+            NewPassword: "AdminPass123!",
+            AdminRole: "superadmin");
 
         // Act
         await _handler.Handle(adminCommand, TestContext.Current.CancellationToken);
@@ -191,7 +197,8 @@ public class ResetUserPasswordCommandHandlerTests
 
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "NewUnusualPwd123!");
+            NewPassword: "NewUnusualPwd123!",
+            AdminRole: "superadmin");
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -217,7 +224,8 @@ public class ResetUserPasswordCommandHandlerTests
 
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "NewUnusualPwd123!");
+            NewPassword: "NewUnusualPwd123!",
+            AdminRole: "superadmin");
 
         using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
@@ -244,7 +252,8 @@ public class ResetUserPasswordCommandHandlerTests
         // Arrange
         var command = new ResetUserPasswordCommand(
             UserId: emptyUserId,
-            NewPassword: "NewUnusualPwd123!");
+            NewPassword: "NewUnusualPwd123!",
+            AdminRole: "superadmin");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -262,7 +271,8 @@ public class ResetUserPasswordCommandHandlerTests
         // Arrange
         var command = new ResetUserPasswordCommand(
             UserId: Guid.NewGuid().ToString(),
-            NewPassword: invalidPassword);
+            NewPassword: invalidPassword,
+            AdminRole: "superadmin");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -277,7 +287,8 @@ public class ResetUserPasswordCommandHandlerTests
         // Arrange
         var command = new ResetUserPasswordCommand(
             UserId: "not-a-guid",
-            NewPassword: "NewUnusualPwd123!");
+            NewPassword: "NewUnusualPwd123!",
+            AdminRole: "superadmin");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -287,13 +298,14 @@ public class ResetUserPasswordCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_UserNotFound_ThrowsDomainException()
+    public async Task Handle_UserNotFound_ThrowsNotFoundException()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "NewUnusualPwd123!");
+            NewPassword: "NewUnusualPwd123!",
+            AdminRole: "superadmin");
 
         _userRepositoryMock
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
@@ -301,8 +313,56 @@ public class ResetUserPasswordCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<DomainException>();
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>();
 
         _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// #4907: un reset consegna l'account, quindi chi agisce deve avere un ruolo sopra quello del bersaglio. Prima del
+    /// #4907 il reset non salvava, e questa regola non serviva; ora, senza, un admin si prende un superadmin.
+    /// </summary>
+    [Theory]
+    [InlineData("admin", "admin")]
+    [InlineData("admin", "superadmin")]
+    [InlineData("superadmin", "superadmin")]
+    [InlineData("editor", "admin")]
+    [InlineData("user", "user")] // il default del comando
+    [InlineData("", "user")]
+    [InlineData("not-a-role", "user")]
+    public async Task Handle_TargetNotBelowTheActingRole_IsForbidden_AndSavesNothing(string adminRole, string targetRole)
+    {
+        var userId = Guid.NewGuid();
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserBuilder().WithId(userId).WithRole(Api.SharedKernel.Domain.ValueObjects.Role.Parse(targetRole)).Build());
+
+        var act = () => _handler.Handle(
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", adminRole),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.ForbiddenException>();
+        _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("admin", "user")]
+    [InlineData("admin", "editor")]
+    [InlineData("superadmin", "admin")]
+    [InlineData("Admin", "user")] // il ruolo della sessione può arrivare con la maiuscola
+    public async Task Handle_TargetBelowTheActingRole_IsSaved(string adminRole, string targetRole)
+    {
+        var userId = Guid.NewGuid();
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserBuilder().WithId(userId).WithRole(Api.SharedKernel.Domain.ValueObjects.Role.Parse(targetRole)).Build());
+
+        await _handler.Handle(
+            new ResetUserPasswordCommand(userId.ToString(), "NewUnusualPwd123!", adminRole),
+            TestContext.Current.CancellationToken);
+
+        _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

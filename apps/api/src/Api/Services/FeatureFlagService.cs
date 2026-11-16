@@ -2,16 +2,15 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
+using Api.BoundedContexts.SystemConfiguration.Domain.Exceptions;
 using Api.Infrastructure.Entities;
 using Api.Helpers;
 using Api.Middleware;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Api.Services;
 
@@ -238,8 +237,9 @@ internal class FeatureFlagService : IFeatureFlagService
     /// and <c>FeatureFlagWritersAreNotAtomicAuditArchitectureTests</c> keeps it so.
     /// </para>
     /// <para>
-    /// Only a unique violation on <see cref="KeyEnvironmentIndexName"/> that the re-read explains is
-    /// recovered. If the colliding row is <b>inactive</b> (the lookup only sees active ones) the answer is an
+    /// Only the unique violation on <c>(Key, Environment)</c>, which <c>CreateConfigurationCommandHandler</c>
+    /// translates into <see cref="ConfigurationKeyConflictException"/> (#5016), is recovered, and only when the
+    /// re-read explains it. If the colliding row is <b>inactive</b> (the lookup only sees active ones) the answer is an
     /// explicit <see cref="Api.Middleware.Exceptions.ConflictException"/> (409, #4607) that names the row
     /// and the route that reactivates it: an admin who deactivated the configuration made a choice, and
     /// turning the flag on from another page must not undo it in silence, nor answer 500 at every attempt. If the re-read finds no
@@ -253,8 +253,7 @@ internal class FeatureFlagService : IFeatureFlagService
             using var scope = _scopeFactory.CreateScope();
             await scope.ServiceProvider.GetRequiredService<IMediator>().Send(create).ConfigureAwait(false);
         }
-        catch (DbUpdateException ex) when (
-            ex.InnerException is PostgresException pg && IsKeyEnvironmentViolation(pg.SqlState, pg.ConstraintName))
+        catch (ConfigurationKeyConflictException ex)
         {
             // The lookup that led here was stale: forget it and read what the winner wrote.
             await _configService.InvalidateAsync(create.Key, environmentName).ConfigureAwait(false);
@@ -296,24 +295,6 @@ internal class FeatureFlagService : IFeatureFlagService
                 UpdatedByUserId: userGuid)).ConfigureAwait(false);
         }
     }
-
-    /// <summary>
-    /// Name of the unique index on <c>(Key, Environment)</c> of <c>system_configurations</c>: the one a second
-    /// creation of the same flag trips. It is the default name EF gives the index declared in
-    /// <c>SystemConfigurationEntityConfiguration</c>; the integration tests of #4599 run against the real
-    /// schema and fail if it is ever renamed.
-    /// </summary>
-    internal const string KeyEnvironmentIndexName = "IX_system_configurations_Key_Environment";
-
-    /// <summary>
-    /// True when the PostgreSQL error metadata identify the unique violation on
-    /// <see cref="KeyEnvironmentIndexName"/>: SQLSTATE 23505 and that constraint name. Separate and pure so the
-    /// matching can be tested without a database; same split as
-    /// <c>NotificationDedupePipelineBehavior.IsNotificationDedupViolation</c>.
-    /// </summary>
-    internal static bool IsKeyEnvironmentViolation(string? sqlState, string? constraintName) =>
-        string.Equals(sqlState, PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
-        && string.Equals(constraintName, KeyEnvironmentIndexName, StringComparison.Ordinal);
 
     /// <summary>
     /// Enable a feature globally or for a specific role.

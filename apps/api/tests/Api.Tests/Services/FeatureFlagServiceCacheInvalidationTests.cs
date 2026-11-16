@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
+using Api.BoundedContexts.SystemConfiguration.Domain.Exceptions;
 using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
@@ -344,11 +345,14 @@ public class FeatureFlagServiceCacheInvalidationTests
     // ----------------------------------------
 
     /// <summary>
-    /// Violazione dell'indice univoco su (Key, Environment). Il nome del vincolo si imposta col costruttore
-    /// pubblico di <c>PostgresException</c> (Npgsql 10): senza, il recupero non riconosce l'errore.
+    /// Violazione dell'indice univoco su (Key, Environment), come la consegna il comando di creazione da #5016:
+    /// tradotta in <see cref="ConfigurationKeyConflictException"/>, con l'errore del database come causa. Gli altri
+    /// errori del database il comando non li traduce, e qui restano <see cref="DbUpdateException"/>
+    /// (<see cref="ErroreDiDatabase"/>).
     /// </summary>
-    private static DbUpdateException ViolazioneDiUnicita(string? vincolo = FeatureFlagService.KeyEnvironmentIndexName) =>
-        ErroreDiDatabase(PostgresErrorCodes.UniqueViolation, vincolo);
+    private static ConfigurationKeyConflictException ViolazioneDiUnicita() =>
+        new(FlagGlobale, Ambiente, ErroreDiDatabase(
+            PostgresErrorCodes.UniqueViolation, CreateConfigurationCommandHandler.KeyEnvironmentIndexName));
 
     private static DbUpdateException ErroreDiDatabase(string sqlState, string? vincolo) =>
         new("An error occurred while saving the entity changes.",
@@ -403,13 +407,13 @@ public class FeatureFlagServiceCacheInvalidationTests
     public async Task Globale_ViolazioneDiUnicitaSenzaNessunaRiga_RilanciaLErroreOriginale()
     {
         // Ne' una riga attiva da aggiornare ne' una disattivata che spieghi il conflitto (#4607): l'errore
-        // originale esce com'e', come garantisce #4599.
+        // originale esce com'e', come garantisce #4599. Da #5016 e' il 409 generico del comando, non piu' un 500.
         var errore = ViolazioneDiUnicita();
         var s = CreaScenario(creazione: (_, _) => throw errore, ricercaRiga: _ => null);
 
         var act = async () => await s.Service.EnableFeatureAsync(FlagGlobale, userId: Guid.NewGuid().ToString());
 
-        (await act.Should().ThrowAsync<DbUpdateException>()).Which.Should().BeSameAs(errore);
+        (await act.Should().ThrowAsync<ConfigurationKeyConflictException>()).Which.Should().BeSameAs(errore);
         s.Comandi.OfType<UpdateConfigValueCommand>().Should().BeEmpty();
     }
 
@@ -439,17 +443,18 @@ public class FeatureFlagServiceCacheInvalidationTests
     [Fact]
     public async Task Globale_RigaInConflittoAttivaAlSecondoControllo_RilanciaLErroreOriginale()
     {
-        // Se alla seconda lettura la riga risulta attiva (una gara fuori dal caso di #4607) non e' un 409.
+        // Se alla seconda lettura la riga risulta attiva (una gara fuori dal caso di #4607) non e' il 409 con id e
+        // rotta di #4607: esce l'errore del comando com'e'.
         var errore = ViolazioneDiUnicita();
         var s = CreaScenario(creazione: (_, _) => throw errore, ricercaRiga: _ => ConfigurazioneFinta());
 
         var act = async () => await s.Service.EnableFeatureAsync(FlagGlobale, userId: Guid.NewGuid().ToString());
 
-        (await act.Should().ThrowAsync<DbUpdateException>()).Which.Should().BeSameAs(errore);
+        (await act.Should().ThrowAsync<ConfigurationKeyConflictException>()).Which.Should().BeSameAs(errore);
     }
 
     [Theory]
-    [InlineData(PostgresErrorCodes.SerializationFailure, FeatureFlagService.KeyEnvironmentIndexName)]
+    [InlineData(PostgresErrorCodes.SerializationFailure, CreateConfigurationCommandHandler.KeyEnvironmentIndexName)]
     [InlineData(PostgresErrorCodes.ForeignKeyViolation, "FK_system_configurations_users_CreatedByUserId")] // l'autore della riga non esiste
     [InlineData(PostgresErrorCodes.UniqueViolation, "PK_system_configurations")] // un altro vincolo univoco
     [InlineData(PostgresErrorCodes.UniqueViolation, null)]

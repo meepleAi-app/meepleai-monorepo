@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
@@ -33,7 +34,12 @@ internal class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, Use
         var userId = Guid.Parse(command.UserId);
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
-            throw new DomainException($"User {command.UserId} not found");
+            throw new NotFoundException("User", command.UserId); // #4907: 404, not a 400 domain_error
+
+        // #4907: with the update now saved, a new email plus «forgot password» would hand over an account of the
+        // same rank or above.
+        if (!Role.TryParse(command.AdminRole, out var adminRole) || !adminRole.Outranks(user.Role))
+            throw new ForbiddenException("You can only update users with a role below your own");
 
         // Update email if provided
         if (!string.IsNullOrWhiteSpace(command.Email))
@@ -62,7 +68,8 @@ internal class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, Use
             throw new DomainException("Role changes must use the dedicated role change endpoint (requires SuperAdmin)");
         }
 
-        // Save changes
+        // #4907: GetByIdAsync returns a detached aggregate; without UpdateAsync nothing was saved.
+        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO

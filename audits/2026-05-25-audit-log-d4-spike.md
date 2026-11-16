@@ -28,8 +28,8 @@ IpAddress (string?), UserAgent (string?), CreatedAt (DateTime)
 | `AuditService.LogAsync()` → `_db.AuditLogs.Add(entity)` | `Services/AuditService.cs:48` | Direct DbSet — injected into TotpService, PdfRetrievalEndpoints, AccountLockedEventHandler, AccountUnlockedEventHandler, AuditLoggingBehavior (pipeline behavior), UpdateRuleSpecCommandHandler, UpdateMessageCommandHandler, DeleteMessageCommandHandler, MechanicRecalcBackgroundService, CancelRecalcJobHandler, EnqueueRecalculateAllMechanicMetricsHandler (11 call sites) |
 | `AuditLogRepository.AddAsync()` → `DbContext.AuditLogs.AddAsync()` | `Administration/Infrastructure/Persistence/AuditLogRepository.cs:62` | Repository — called from SuspendUserCommandHandler, UnsuspendUserCommandHandler, ImpersonateUserCommandHandler, EndImpersonationCommandHandler, ActivatePromptVersionCommandHandler, SendUserEmailCommandHandler, RestartServiceCommandHandler, AddStagingAllowlistEntryCommandHandler, RemoveStagingAllowlistEntryCommandHandler |
 | `_dbContext.AuditLogs.Add(auditLog)` | `SharedKernel/Application/EventHandlers/DomainEventHandlerBase.cs:113` | Direct DbSet — base class for all domain event handlers |
-| `_dbContext.Set<AuditLog>().Add(auditLog)` | `DatabaseSync/Application/Commands/SyncTableDataHandler.cs:209` | Direct Set — uses `Administration.Domain.Entities.AuditLog` |
-| `_dbContext.Set<AuditLog>().Add(auditLog)` | `DatabaseSync/Application/Commands/ApplyMigrationsHandler.cs:121` | Direct Set — uses `Administration.Domain.Entities.AuditLog` |
+| `_dbContext.Set<AuditLog>().Add(auditLog)` | `DatabaseSync/Application/Commands/SyncTableDataHandler.cs:209` | Direct Set — uses `Administration.Domain.Entities.AuditLog`, which the EF model does not map: it threw at every sync (corrected 2026-11-16, #5002: now `_dbContext.AuditLogs.Add(new AuditLogEntity { … })`) |
+| `_dbContext.Set<AuditLog>().Add(auditLog)` | `DatabaseSync/Application/Commands/ApplyMigrationsHandler.cs:121` | Direct Set — same defect as the row above (corrected 2026-11-16, #5002) |
 
 **Reads:**
 
@@ -129,6 +129,8 @@ These two entities are NOT duplicates of each other — they serve fundamentally
 - Consider renaming `Api.Infrastructure.Entities.AuditLogEntity` to `AdminAuditLogEntity` to reduce the class-name collision at the C# level. This is a refactor task, not part of S1.
 - The namespace collision (`Administration` vs `SecurityAudit` both having a class named `AuditLogEntity`) is the root cause of the D-4 ambiguity. The fix is a rename codemod, not a merge.
 
-**Communication:** No BC contract changes — both entities remain unchanged. Team note: the ambiguity is purely nominal (same class name, different namespaces). The codebase already handles this correctly via fully-qualified names where needed (e.g., `DatabaseSync` handlers import `Administration.Domain.Entities`).
+**Communication:** No BC contract changes — both entities remain unchanged. Team note: the ambiguity is purely nominal (same class name, different namespaces). ~~The codebase already handles this correctly via fully-qualified names where needed (e.g., `DatabaseSync` handlers import `Administration.Domain.Entities`).~~
+>
+> ⚠️ Correction of 2026-11-16 (#5002): it did not. The two `DatabaseSync` handlers imported `Administration.Domain.Entities` and wrote `Set<AuditLog>()`, the domain aggregate, not an entity of the EF model: «Cannot create a DbSet for 'AuditLog'» after every commit. The data was written, the admin got an exception, and no audit row was left. The handlers now write `Api.Infrastructure.Entities.AuditLogEntity` through `_dbContext.AuditLogs`. The ambiguity is not «purely nominal»: `AuditLog` (Administration domain) and the two `AuditLogEntity` (Administration, SecurityAudit) are all in reach of the same handler, and the wrong one compiles.
 
 **S1 gate impact:** D-4 is resolved. Tasks 1-4 of S1 can proceed using `Administration/AuditLogEntity` (→ `audit_logs`) as the canonical table for the admin audit log viewer. The `SecurityAudit` BC is a parallel system; do not read from it in S1 scope.

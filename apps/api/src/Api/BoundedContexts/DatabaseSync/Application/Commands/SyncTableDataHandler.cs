@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.DatabaseSync.Application.Commands;
 using Api.BoundedContexts.DatabaseSync.Domain.Enums;
 using Api.BoundedContexts.DatabaseSync.Domain.Interfaces;
@@ -121,14 +120,13 @@ internal class SyncTableDataHandler : ICommandHandler<SyncTableDataCommand, Sync
                     pksToFetch, cancellationToken).ConfigureAwait(false);
 
                 // Execute sync in a single transaction on target
+                int inserted = 0;
+                int updated = 0;
                 var tx = await targetConn.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
                 await using (tx.ConfigureAwait(false))
                 {
                     try
                     {
-                        int inserted = 0;
-                        int updated = 0;
-
                         foreach (var row in sourceRows)
                         {
                             var pkValue = BuildPkValue(row, pkColumns);
@@ -150,65 +148,59 @@ internal class SyncTableDataHandler : ICommandHandler<SyncTableDataCommand, Sync
                             }
                         }
 
+                        // #5002: the commit is the last statement of the try, so the catch only ever rolls back a
+                        // transaction that is still open. What follows the commit stays out of it.
                         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
-
-                        _logger.LogInformation(
-                            "Synced table {Table}: {Inserted} inserted, {Updated} updated. Direction={Direction}, OperationId={OpId}",
-                            command.TableName, inserted, updated, command.Direction, operationId);
-
-                        await LogAuditAsync(command, operationId, "Success", JsonSerializer.Serialize(new
-                        {
-                            direction = command.Direction.ToString(),
-                            inserted,
-                            updated,
-                            table = command.TableName
-                        }), cancellationToken).ConfigureAwait(false);
-
-                        return new SyncResult(true, inserted, updated, operationId);
                     }
                     catch (Exception ex)
                     {
-                        await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                        // CancellationToken.None here and below: once the outcome is decided, an aborted request must not stop the
+                        // rollback, the audit or the lock release.
+                        await tx.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
                         _logger.LogError(ex,
                             "Failed to sync table {Table}. OperationId={OpId}",
                             command.TableName, operationId);
 
-                        await LogAuditAsync(command, operationId, "Failure", JsonSerializer.Serialize(new
+                        await TryWriteAuditAsync(command, operationId, "Failure", JsonSerializer.Serialize(new
                         {
                             direction = command.Direction.ToString(),
                             error = ex.Message,
                             table = command.TableName
-                        }), cancellationToken).ConfigureAwait(false);
+                        })).ConfigureAwait(false);
 
                         return new SyncResult(false, 0, 0, operationId, ex.Message);
                     }
                 }
+
+                _logger.LogInformation(
+                    "Synced table {Table}: {Inserted} inserted, {Updated} updated. Direction={Direction}, OperationId={OpId}",
+                    command.TableName, inserted, updated, command.Direction, operationId);
+
+                var audited = await TryWriteAuditAsync(command, operationId, "Success", JsonSerializer.Serialize(new
+                {
+                    direction = command.Direction.ToString(),
+                    inserted,
+                    updated,
+                    table = command.TableName
+                })).ConfigureAwait(false);
+
+                // The rows are committed: the answer is a success either way, and says so when the audit is missing.
+                return new SyncResult(true, inserted, updated, operationId,
+                    audited ? null : $"Synced, but the audit row could not be written. OperationId={operationId}");
             }
             finally
             {
                 if (lockAcquired)
                 {
-                    await ReleaseAdvisoryLockAsync(targetConn, cancellationToken).ConfigureAwait(false);
+                    await ReleaseAdvisoryLockAsync(targetConn, CancellationToken.None).ConfigureAwait(false);
                 }
             }
         }
     }
 
-    private async Task LogAuditAsync(
-        SyncTableDataCommand command, Guid operationId, string result, string details,
-        CancellationToken cancellationToken)
-    {
-        var auditLog = new AuditLog(
-            id: Guid.NewGuid(),
-            userId: command.AdminUserId,
-            action: "DatabaseSync.SyncTableData",
-            resource: command.TableName,
-            result: result,
-            resourceId: operationId.ToString(),
-            details: details);
-        _dbContext.Set<AuditLog>().Add(auditLog);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-    }
+    private Task<bool> TryWriteAuditAsync(SyncTableDataCommand command, Guid operationId, string result, string details) =>
+        DatabaseSyncAuditWriter.TryWriteAsync(
+            _dbContext, _logger, command.AdminUserId, "DatabaseSync.SyncTableData", command.TableName, operationId, result, details);
 
     private static async Task<bool> TableExistsAsync(NpgsqlConnection conn, string schema, string table, CancellationToken ct)
     {

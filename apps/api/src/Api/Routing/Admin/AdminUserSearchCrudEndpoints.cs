@@ -131,7 +131,7 @@ internal static class AdminUserSearchCrudEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} updating user {UserId}", session!.Principal!.Subject.Id, LogSanitizer.Sanitize(id));
-        var command = new UpdateUserCommand(id, request.Email, request.DisplayName, request.Role);
+        var command = new UpdateUserCommand(id, request.Email, request.DisplayName, request.Role, session.Principal!.EffectiveActor.Role);
         var user = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("User {UserId} updated successfully", LogSanitizer.Sanitize(id));
         return Results.Ok(user);

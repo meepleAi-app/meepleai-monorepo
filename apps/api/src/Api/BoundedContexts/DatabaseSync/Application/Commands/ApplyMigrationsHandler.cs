@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.DatabaseSync.Application.Commands;
 using Api.BoundedContexts.DatabaseSync.Domain.Enums;
 using Api.BoundedContexts.DatabaseSync.Domain.Interfaces;
@@ -48,7 +47,14 @@ internal class ApplyMigrationsHandler : ICommandHandler<ApplyMigrationsCommand, 
             var lastStagingMigration = remoteMigrations.Count > 0 ? remoteMigrations[^1].MigrationId : null;
 
             var migrator = _dbContext.GetInfrastructure().GetRequiredService<IMigrator>();
-            var sql = migrator.GenerateScript(fromMigration: lastStagingMigration, toMigration: null, options: MigrationsSqlGenerationOptions.Idempotent);
+            // #5002: NoTransactions, because the script runs inside the transaction opened below. Without it EF wraps
+            // every migration in START TRANSACTION ... COMMIT, and the first COMMIT confirmed the handler's own
+            // transaction: the migrations stayed applied one by one and CommitAsync threw. A migration that must run
+            // outside a transaction (suppressTransaction) would now fail and roll the whole apply back; none does.
+            var sql = migrator.GenerateScript(
+                fromMigration: lastStagingMigration,
+                toMigration: null,
+                options: MigrationsSqlGenerationOptions.Idempotent | MigrationsSqlGenerationOptions.NoTransactions);
 
             if (string.IsNullOrWhiteSpace(sql))
             {
@@ -100,36 +106,42 @@ internal class ApplyMigrationsHandler : ICommandHandler<ApplyMigrationsCommand, 
                             await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                         }
 
+                        // #5002: the commit is the last statement of the try, so the catch only ever rolls back a
+                        // transaction that is still open. The audit follows, out of it.
                         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
-
-                        _logger.LogInformation("Applied {Count} migrations to staging. OperationId={OpId}",
-                            diff.LocalOnly.Count, operationId);
-
-                        var auditLog = new AuditLog(
-                            id: Guid.NewGuid(),
-                            userId: command.AdminUserId,
-                            action: "DatabaseSync.ApplyMigrations",
-                            resource: "Schema",
-                            result: "Success",
-                            resourceId: operationId.ToString(),
-                            details: JsonSerializer.Serialize(new
-                            {
-                                direction = "LocalToStaging",
-                                migrations = diff.LocalOnly.Select(m => m.MigrationId).ToArray(),
-                                sqlHash
-                            }));
-                        _dbContext.Set<AuditLog>().Add(auditLog);
-                        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-                        return new SyncResult(true, diff.LocalOnly.Count, 0, operationId);
                     }
                     catch (Exception ex)
                     {
-                        await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                        // CancellationToken.None here and below: once the outcome is decided, an aborted request must not stop the
+                        // rollback, the audit or the lock release.
+                        await tx.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
                         _logger.LogError(ex, "Failed to apply migrations to staging");
+
+                        await TryWriteAuditAsync(command, operationId, "Failure", JsonSerializer.Serialize(new
+                        {
+                            direction = "LocalToStaging",
+                            migrations = diff.LocalOnly.Select(m => m.MigrationId).ToArray(),
+                            sqlHash,
+                            error = ex.Message
+                        })).ConfigureAwait(false);
+
                         return new SyncResult(false, 0, 0, operationId, ex.Message);
                     }
                 }
+
+                _logger.LogInformation("Applied {Count} migrations to staging. OperationId={OpId}",
+                    diff.LocalOnly.Count, operationId);
+
+                var audited = await TryWriteAuditAsync(command, operationId, "Success", JsonSerializer.Serialize(new
+                {
+                    direction = "LocalToStaging",
+                    migrations = diff.LocalOnly.Select(m => m.MigrationId).ToArray(),
+                    sqlHash
+                })).ConfigureAwait(false);
+
+                // The migrations are committed: the answer is a success either way, and says so when the audit is missing.
+                return new SyncResult(true, diff.LocalOnly.Count, 0, operationId,
+                    audited ? null : $"Migrations applied, but the audit row could not be written. OperationId={operationId}");
             }
             finally
             {
@@ -139,10 +151,14 @@ internal class ApplyMigrationsHandler : ICommandHandler<ApplyMigrationsCommand, 
                     await using (unlockCmd.ConfigureAwait(false))
                     {
                         unlockCmd.Parameters.AddWithValue("db_sync_schema_apply");
-                        await unlockCmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                        await unlockCmd.ExecuteScalarAsync(CancellationToken.None).ConfigureAwait(false);
                     }
                 }
             }
         }
     }
+
+    private Task<bool> TryWriteAuditAsync(ApplyMigrationsCommand command, Guid operationId, string result, string details) =>
+        DatabaseSyncAuditWriter.TryWriteAsync(
+            _dbContext, _logger, command.AdminUserId, "DatabaseSync.ApplyMigrations", "Schema", operationId, result, details);
 }

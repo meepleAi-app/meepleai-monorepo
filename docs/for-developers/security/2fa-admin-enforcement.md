@@ -91,8 +91,6 @@ Top 4 sensitive admin actions, ranked by blast radius:
 | `SuspendUserCommand` | MEDIUM — account lockout | "User suspension blocks login and must be 2FA-guarded." |
 
 **Not yet decorated** (deferred to Phase B/C, low blast radius or read-only):
-- `BulkPasswordResetCommand` (mass action — should be decorated in Phase B)
-- `BulkRoleChangeCommand` (mass action — Phase B)
 - `BulkImportUsersCommand` (Phase B)
 - `EndImpersonationCommand` (return to admin — likely safe to skip)
 

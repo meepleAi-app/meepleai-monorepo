@@ -320,8 +320,6 @@ User administration (Admin role required):
 - `PUT /api/v1/admin/users/{id}/tier` - Change tier
 
 **Bulk Operations**
-- `POST /api/v1/admin/users/bulk/password-reset` - Bulk password reset
-- `POST /api/v1/admin/users/bulk/role-change` - Bulk role change
 - `POST /api/v1/admin/users/bulk/import` - Import from CSV
 - `GET /api/v1/admin/users/bulk/export` - Export to CSV
 

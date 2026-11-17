@@ -53,8 +53,8 @@ Fonte: `apps/api/src/Api` + `apps/web/src/types/auth.ts`.
 | E5 | AI Infrastructure — restart / health-check / config | `/admin/agents/infrastructure` | **D** (config/restart), R (health-check) |
 | E6 | Database Sync (schema/data/tunnel) | `/admin/database-sync` | **D** (apply/sync/tunnel), R (compare/preview/history) |
 | E7 | Staging allowlist — add/remove email | `/admin/staging-access` | RW (SA) |
-| E8 | Cambio ruolo utente / bulk role-change | `/admin/users`, `/admin/users/[id]` | RW (sensibile) |
-| E9 | Bulk password reset | (superficie utenti / bulk) | **D** (invia email) |
+| E8 | Cambio ruolo utente | `/admin/users`, `/admin/users/[id]` | RW (sensibile) |
+| E9 | ~~Bulk password reset~~ — rotta rimossa (#5045) | — | — |
 | E10 | Lista account Admin/SuperAdmin senza 2FA | (compliance) | R (SA) |
 
 ---
@@ -89,7 +89,7 @@ Per rendere i test eseguibili e non ambigui, usare questi valori di riferimento:
 
 ### 3.2 Requisito trasversale: AUDIT TRAIL (compliance — Nygard)
 
-**Ogni** azione SuperAdmin sensibile (cambio ruolo, rotate-key, restart, impersonation start/revoke, staging allowlist add/remove, bulk role-change, feature-flag globali) **deve** generare un record di audit **osservabile via UI**:
+**Ogni** azione SuperAdmin sensibile (cambio ruolo, rotate-key, restart, impersonation start/revoke, staging allowlist add/remove, feature-flag globali) **deve** generare un record di audit **osservabile via UI**:
 - Cambio ruolo → riga in **Role History** (`/admin/users/[id]`) + Audit Log.
 - Altre azioni critiche → **Audit tab** (`/admin/analytics?tab=audit`) o Config history (`ConfigAuditLogDialog`).
 
@@ -166,8 +166,8 @@ Per ogni azione classe **D** il test verifica, **senza confermare l'azione final
 | SA-USR-07 | Change Role da dettaglio (Select + reason + AlertDialog) | SA | RW | Conferma → ruolo aggiornato, riga in Role History | `admin/admin-user-detail.spec.ts` |
 | SA-USR-08 | Role History + Audit Log paginato (espandi dettagli) | A | R | History/audit leggibili | `audit-log.spec.ts` |
 | SA-USR-09 | Ruoli & Permessi (`/admin/users/roles`, `PermissionsMatrix`) | A | R | Matrice permessi renderizzata | GAP (verificare) |
-| SA-USR-10 | **Bulk role-change** (selezione multipla) | SA | RW→**D-boundary** | Dry-run al gate conferma; verificare limite batch (SA 1000 vs Admin 100) | GAP |
-| SA-USR-11 | **Bulk password reset** | SA | **D** | Dry-run: controllo presente/abilitato, stop al gate (invia email) | GAP |
+| SA-USR-10 | ~~Bulk role-change~~ — rotta rimossa (#5037) | — | — | — | — |
+| SA-USR-11 | ~~Bulk password reset~~ — rotta rimossa (#5045) | — | — | — | — |
 
 ### 6.4 Inviti & Richieste accesso
 
@@ -392,7 +392,7 @@ Regression: come Admin la voce nav "Staging Access" non è visibile
 | SA-NEG-04 | Admin su `/admin/staging-access` | Voce nav assente; se URL diretto, comportamento gate atteso da definire (route guard è solo `Admin`, distinzione è a livello nav) ⚠️ |
 | SA-NEG-05 | Admin vede controlli rotate-key / restart / infra-config | Disabilitati con tooltip "Requires SuperAdmin" |
 | SA-NEG-06 | SuperAdmin **non** può auto-declassarsi né essere declassato | Riga SA read-only; nessun ruolo assegnabile = superadmin |
-| SA-NEG-07 | Bulk role-change: Admin non può assegnare ruolo ≥ proprio, batch max 100; SA batch max 1000 | Limiti applicati; guardia "almeno 1 SuperAdmin resta" |
+| SA-NEG-07 | ~~Bulk role-change~~ — rotta rimossa (#5037) | — |
 | SA-NEG-08 ⚠️ | **Regressione IsInRole nudo** — SuperAdmin invia contenuto via Shared Game *wizard* (`SharedGameCatalogWizardEndpoints`) | Atteso: auto-approvato come Admin. **Rischio noto**: `IsInRole("Admin")` nudo (`:331,443,497`) tratta il SA come non-admin → `requiresApproval=true`. Test progettato per **catturare** questo difetto |
 
 > **SA-NEG-04 / SA-STG-04**: il gating di `/admin/staging-access` è solo di navigazione (`minRole: superadmin` nel nav-config), mentre il guard di route resta `Admin`. Da chiarire con l'owner se un Admin che digita l'URL diretto debba ricevere 403. Attualmente potrebbe raggiungere la pagina anche se il backend degli endpoint allowlist è `RequireSuperAdminSession` (le azioni fallirebbero, ma la pagina si aprirebbe). **Ambiguità di specifica** da risolvere.
@@ -410,14 +410,14 @@ Almeno un caso negativo per ogni azione critica — è dove i sistemi admin si r
 | SA-ERR-03 | Probe provider (SA-PRV-03) | Provider/servizio non raggiungibile | Esito probe = fail mostrato chiaramente (non crash UI) |
 | SA-ERR-04 | Cambio ruolo (SA-USR-07) | Conflitto di concorrenza (xmin) — due modifiche stesso utente | 409/errore gestito con messaggio, non 500 |
 | SA-ERR-05 | Invito (SA-INV-01) | Email già registrata / invito già pending | Validazione inline, nessun duplicato |
-| SA-ERR-06 | Bulk role-change (SA-USR-10) | Batch che declasserebbe l'ultimo SuperAdmin | Bloccato dalla guardia "almeno 1 SA resta" |
+| SA-ERR-06 | ~~Bulk role-change (SA-USR-10)~~ — rotta rimossa (#5037) | — | — |
 | SA-ERR-07 | Tunnel DB (SA-DBS-02) | Tunnel già aperto / chiave SSH assente | Stato coerente in `TunnelStatusBanner`, errore leggibile |
 | SA-ERR-08 | Feature flag globale (SA-CFG-02) | Admin (non SA) tenta toggle flag globale | Controllo negato/assente per Admin |
 | SA-ERR-09 | Sessione scaduta durante azione admin | Token/sessione invalidata mid-flow | Redirect a login, azione non eseguita |
 
 ## 9. Criteri di uscita (Definition of Done)
 
-- [ ] **Blocker pre-esecuzione risolti** (three-amigos con owner): SA-NEG-04 (URL diretto staging-access), rate-limits read-only, limiti bulk 100/1000. Nessun test parte finché gli "attesi" ambigui non sono confermati.
+- [ ] **Blocker pre-esecuzione risolti** (three-amigos con owner): SA-NEG-04 (URL diretto staging-access), rate-limits read-only. Nessun test parte finché gli "attesi" ambigui non sono confermati.
 - [ ] Tutti i test **R/RW** eseguiti e verdi con **oracolo osservabile** (elemento atteso visibile + assenza di `role=alert` d'errore), non semplice "renderizzato".
 - [ ] **Audit assertion** (§3.2): per ogni azione RW verificata la riga di audit corrispondente (Role History / Audit tab / Config history).
 - [ ] Tutti i test **D** verificati in dry-run: controllo presente + abilitato per SA + gate di sicurezza mostrato + azione **non** confermata.
@@ -439,7 +439,6 @@ Almeno un caso negativo per ogni azione critica — è dove i sistemi admin si r
 - **Database Sync** (`SA-DBS-*`) — nessuno spec dedicato individuato → **GAP critico** (azioni D + route SA-only).
 - **Staging allowlist** (`SA-STG-*`) — nessuno spec → **GAP**.
 - **Impersonation** (`SA-IMP-*`) — copertura incerta (`admin-workflow-actions`, `operations-console`) → **GAP da verificare**.
-- **Bulk password reset** (`SA-USR-11`) / **Bulk role-change** (`SA-USR-10`) → **GAP**.
 - **Lista no-2FA** (`SA-2FA-01`) → **GAP**.
 
 **Aree Admin con copertura assente/incerta:** access-requests (approva/rifiuta/bulk), status banner, n8n, providers list/config, monitor grafana/logs/mau, business budget, content hub/email-templates, catalog manual-assign, KB snapshots/feedback, set-primary-model.

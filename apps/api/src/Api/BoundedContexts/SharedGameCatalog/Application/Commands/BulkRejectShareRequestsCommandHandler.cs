@@ -12,8 +12,8 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// Handler for bulk rejection of share requests.
 /// Issue #2893: All-or-nothing transaction - if any rejection fails, entire batch rolls back.
 ///
-/// ARCHITECTURE DECISION: Uses strict all-or-nothing transaction semantics (differs from BulkPasswordReset/BulkRoleChange
-/// which allow partial success). Rationale: Share request rejection is a coordinated editorial decision where
+/// ARCHITECTURE DECISION: Uses strict all-or-nothing transaction semantics rather than partial success.
+/// Rationale: Share request rejection is a coordinated editorial decision where
 /// partial failures could create inconsistent catalog state. Per DoD requirement: "Transaction: All or nothing".
 /// </summary>
 internal sealed class BulkRejectShareRequestsCommandHandler : ICommandHandler<BulkRejectShareRequestsCommand, BulkOperationResult>

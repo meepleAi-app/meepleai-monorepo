@@ -5,55 +5,10 @@
  * API endpoints for multi-user operations
  */
 
-export interface BulkPasswordResetRequest {
-  userIds: string[];
-  sendEmail?: boolean;
-  message?: string;
-}
-
-export interface BulkRoleChangeRequest {
-  userIds: string[];
-  newRole: string;
-}
-
 export interface BulkOperationResult {
   successCount: number;
   failureCount: number;
   errors: string[];
-}
-
-/**
- * Reset passwords for multiple users
- */
-export async function bulkPasswordReset(request: BulkPasswordResetRequest): Promise<BulkOperationResult> {
-  const response = await fetch('/api/v1/admin/users/bulk/password-reset', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to reset passwords');
-  }
-
-  return response.json();
-}
-
-/**
- * Change roles for multiple users
- */
-export async function bulkRoleChange(request: BulkRoleChangeRequest): Promise<BulkOperationResult> {
-  const response = await fetch('/api/v1/admin/users/bulk/role-change', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to change roles');
-  }
-
-  return response.json();
 }
 
 /**

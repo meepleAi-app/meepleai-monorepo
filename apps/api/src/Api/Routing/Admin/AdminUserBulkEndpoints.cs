@@ -23,29 +23,6 @@ internal static class AdminUserBulkEndpoints
 
     private static void MapBulkUserEndpoints(RouteGroupBuilder group)
     {
-        group.MapPost("/admin/users/bulk/password-reset", HandleBulkPasswordReset)
-        .WithName("BulkPasswordReset")
-        .WithTags("Admin")
-        .WithSummary("Reset passwords for multiple users")
-        .WithDescription(@"**Authorization**: SuperAdmin session required (ADM-003: elevated from Admin — high-risk operation).
-
-**Limits (ADM-004)**:
-- SuperAdmin: max 1000 users per request
-- Admin role: max 100 users per request")
-        .Produces<BulkOperationResult>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status401Unauthorized)
-        .Produces(StatusCodes.Status403Forbidden);
-
-        group.MapPost("/admin/users/bulk/role-change", HandleBulkRoleChange)
-        .WithName("BulkRoleChange")
-        .WithTags("Admin")
-        .WithSummary("Change role for multiple users")
-        .Produces<BulkOperationResult>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status401Unauthorized)
-        .Produces(StatusCodes.Status403Forbidden);
-
         group.MapPost("/admin/users/bulk/import", HandleBulkImportUsers)
         .WithName("BulkImportUsers")
         .WithTags("Admin")
@@ -119,68 +96,6 @@ internal static class AdminUserBulkEndpoints
         .Produces<AccountLockoutStatusDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status404NotFound);
-    }
-
-    private static async Task<IResult> HandleBulkPasswordReset(
-        BulkPasswordResetRequest request,
-        HttpContext context,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        var (authorized, session, error) = context.RequireSuperAdminSession();
-        if (!authorized) return error!;
-
-        logger.LogInformation("SuperAdmin {AdminId} initiating bulk password reset for {Count} users",
-            session!.Principal!.EffectiveActor.Id, request.UserIds?.Count ?? 0);
-
-        try
-        {
-            var command = new BulkPasswordResetCommand(
-                request.UserIds ?? [],
-                request.NewPassword,
-                session.Principal!.EffectiveActor.Id
-            );
-
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.Ok(result);
-        }
-        catch (ForbiddenException ex)
-        {
-            logger.LogWarning(ex, "Forbidden: bulk password reset denied for {AdminId}", session.Principal!.EffectiveActor.Id);
-            return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
-        }
-    }
-
-    private static async Task<IResult> HandleBulkRoleChange(
-        BulkRoleChangeRequest request,
-        HttpContext context,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        var (authorized, session, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
-        logger.LogInformation("Admin {AdminId} initiating bulk role change for {Count} users to role {Role}",
-            session!.Principal!.EffectiveActor.Id, request.UserIds?.Count ?? 0, request.NewRole);
-
-        try
-        {
-            var command = new BulkRoleChangeCommand(
-                request.UserIds ?? [],
-                request.NewRole,
-                session.Principal!.EffectiveActor.Id
-            );
-
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.Ok(result);
-        }
-        catch (ForbiddenException ex)
-        {
-            logger.LogWarning(ex, "Forbidden: bulk role change denied for {AdminId}", session.Principal!.EffectiveActor.Id);
-            return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
-        }
     }
 
     private static async Task<IResult> HandleBulkImportUsers(

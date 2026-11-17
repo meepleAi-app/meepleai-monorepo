@@ -23,17 +23,18 @@ namespace Api.Tests.Integration.Administration;
 
 /// <summary>
 /// E2E Integration tests for bulk user operations (Issue #907).
-/// Tests complete workflows with Testcontainers: CSV import/export, bulk role changes, password resets.
+/// Tests complete workflows with Testcontainers: CSV import/export.
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
 /// <remarks>
 /// Test Coverage:
 /// 1. Complete E2E flow: CSV import → database persistence → CSV export
-/// 2. Bulk role change: multiple users updated in single transaction
-/// 3. Bulk password reset: password hashing, validation, transaction rollback
-/// 4. Error handling: validation errors, partial failures, rollback scenarios
-/// 5. Data integrity: concurrent operations, duplicate detection
-/// 6. Performance: 1000 user bulk operations within acceptable time limits
+/// 2. Error handling: validation errors, partial failures, rollback scenarios
+/// 3. Data integrity: concurrent operations, duplicate detection
+/// 4. Performance: 1000 user bulk operations within acceptable time limits
+///
+/// Bulk role change and bulk password reset were removed with their routes (#5037, #5045): no page called them
+/// since the admin UI consolidation of 2026-02-23, and both skipped rules the single-user routes enforce.
 ///
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL
 /// Execution Time Target: <30s for full suite
@@ -183,127 +184,6 @@ user3@e2etest.com,User Three,user,Password789!";
 
     #endregion
 
-    #region E2E: Bulk Role Change
-
-    [Fact]
-    public async Task E2E_BulkRoleChange_ShouldUpdateMultipleUsersAtomically()
-    {
-        // Arrange: Create test users + SuperAdmin requester (ADM-002 requires real requester in DB)
-        var superAdmin = await CreateAndSaveSuperAdminAsync("bulkrole-admin@test.com");
-        var user1 = CreateTestUser("roletest1@test.com", "User 1", Role.User);
-        var user2 = CreateTestUser("roletest2@test.com", "User 2", Role.User);
-        var user3 = CreateTestUser("roletest3@test.com", "User 3", Role.User);
-
-        await _userRepository!.AddAsync(user1, TestCancellationToken);
-        await _userRepository!.AddAsync(user2, TestCancellationToken);
-        await _userRepository!.AddAsync(user3, TestCancellationToken);
-        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
-
-        var userIds = new List<Guid> { user1.Id, user2.Id, user3.Id };
-
-        var logger = new Mock<ILogger<BulkRoleChangeCommandHandler>>();
-        var handler = new BulkRoleChangeCommandHandler(_userRepository!, _unitOfWork!, logger.Object);
-        var command = new BulkRoleChangeCommand(userIds, "admin", superAdmin.Id);
-
-        // Act
-        var result = await handler.Handle(command, TestCancellationToken);
-
-        // Assert: All users updated
-        result.Should().NotBeNull();
-        result.SuccessCount.Should().Be(3);
-        result.FailedCount.Should().Be(0);
-
-        // Verify database state
-        var updatedUser1 = await _userRepository!.GetByIdAsync(user1.Id, TestCancellationToken);
-        var updatedUser2 = await _userRepository!.GetByIdAsync(user2.Id, TestCancellationToken);
-        var updatedUser3 = await _userRepository!.GetByIdAsync(user3.Id, TestCancellationToken);
-
-        updatedUser1!.Role.Should().Be(Role.Admin);
-        updatedUser2!.Role.Should().Be(Role.Admin);
-        updatedUser3!.Role.Should().Be(Role.Admin);
-    }
-
-    [Fact]
-    public async Task E2E_BulkRoleChange_WithPartialFailure_ShouldReportErrors()
-    {
-        // Arrange: Create only 2 users + SuperAdmin requester (ADM-002 requires real requester in DB)
-        var superAdmin = await CreateAndSaveSuperAdminAsync("partialfail-admin@test.com");
-        var user1 = CreateTestUser("partialfail1@test.com", "User 1", Role.User);
-        var user2 = CreateTestUser("partialfail2@test.com", "User 2", Role.User);
-
-        await _userRepository!.AddAsync(user1, TestCancellationToken);
-        await _userRepository!.AddAsync(user2, TestCancellationToken);
-        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
-
-        var nonExistentId = Guid.NewGuid();
-        var userIds = new List<Guid> { user1.Id, nonExistentId, user2.Id };
-
-        var logger = new Mock<ILogger<BulkRoleChangeCommandHandler>>();
-        var handler = new BulkRoleChangeCommandHandler(_userRepository!, _unitOfWork!, logger.Object);
-        var command = new BulkRoleChangeCommand(userIds, "admin", superAdmin.Id);
-
-        // Act
-        var result = await handler.Handle(command, TestCancellationToken);
-
-        // Assert: Partial success
-        result.Should().NotBeNull();
-        result.SuccessCount.Should().Be(2);
-        result.FailedCount.Should().Be(1);
-        result.Errors.Should().ContainSingle();
-        result.Errors[0].Should().Contain("not found");
-    }
-
-    #endregion
-
-    #region E2E: Bulk Password Reset
-
-    [Fact]
-    public async Task E2E_BulkPasswordReset_ShouldHashAndUpdatePasswords()
-    {
-        // Arrange: Create test users + SuperAdmin requester (ADM-004 requires real requester in DB)
-        var superAdmin = await CreateAndSaveSuperAdminAsync("pwreset-admin@test.com");
-        var user1 = CreateTestUser("pwreset1@test.com", "User 1", Role.User);
-        var user2 = CreateTestUser("pwreset2@test.com", "User 2", Role.User);
-
-        await _userRepository!.AddAsync(user1, TestCancellationToken);
-        await _userRepository!.AddAsync(user2, TestCancellationToken);
-        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
-
-        var originalHash1 = user1.PasswordHash.Value;
-        var originalHash2 = user2.PasswordHash.Value;
-
-        var userIds = new List<Guid> { user1.Id, user2.Id };
-        var newPassword = "NewSecureUnusualPwd456!";
-
-        var logger = new Mock<ILogger<BulkPasswordResetCommandHandler>>();
-        var handler = new BulkPasswordResetCommandHandler(_userRepository!, _unitOfWork!, logger.Object);
-        var command = new BulkPasswordResetCommand(userIds, newPassword, superAdmin.Id);
-
-        // Act
-        var result = await handler.Handle(command, TestCancellationToken);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.SuccessCount.Should().Be(2);
-        result.FailedCount.Should().Be(0);
-
-        // Verify password hashes changed
-        var updatedUser1 = await _userRepository!.GetByIdAsync(user1.Id, TestCancellationToken);
-        var updatedUser2 = await _userRepository!.GetByIdAsync(user2.Id, TestCancellationToken);
-
-        updatedUser1!.PasswordHash.Value.Should().NotBe(originalHash1);
-        updatedUser2!.PasswordHash.Value.Should().NotBe(originalHash2);
-
-        // Verify new password can be verified
-        var isValid1 = updatedUser1.PasswordHash.Verify(newPassword);
-        var isValid2 = updatedUser2.PasswordHash.Verify(newPassword);
-
-        isValid1.Should().BeTrue();
-        isValid2.Should().BeTrue();
-    }
-
-    #endregion
-
     #region E2E: Performance Test
 
     [Fact]
@@ -425,25 +305,6 @@ duplicate@test.com,Duplicate User,user,UnusualPwd123!";
             passwordHash: PasswordHash.Create("TempUnusualPwd123!"),
             role: role
         );
-    }
-
-    /// <summary>
-    /// Creates a SuperAdmin user, saves to DB, and returns the entity.
-    /// Required for ADM-002/ADM-004: handlers now load the requester from the DB
-    /// to enforce privilege checks and role-based bulk size limits.
-    /// </summary>
-    private async Task<User> CreateAndSaveSuperAdminAsync(string email)
-    {
-        var superAdmin = new User(
-            id: Guid.NewGuid(),
-            email: new Email(email),
-            displayName: "Test SuperAdmin",
-            passwordHash: PasswordHash.Create("SuperAdminPass123!"),
-            role: Role.SuperAdmin
-        );
-        await _userRepository!.AddAsync(superAdmin, TestCancellationToken);
-        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
-        return superAdmin;
     }
 
     #endregion

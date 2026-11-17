@@ -6,12 +6,23 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Endpoints;
+
+/// <summary>
+/// La fixture di <see cref="AdminKbNavCountsEndpointIntegrationTests"/>: host per classe, database
+/// per test.
+/// </summary>
+/// <remarks>
+/// #5039: stessa forma di <c>ChatSessionEndpointsIdorIntegrationTests</c>, un host per test dentro il
+/// <c>Timeout</c> del test. Database per test e non per classe perché i conteggi sono globali: oggi
+/// l'asserzione è solo <c>&gt;= 0</c>, ma un'asserzione su un valore esatto non deve dipendere da cosa
+/// hanno seminato gli altri test.
+/// </remarks>
+public sealed class AdminKbNavCountsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "kbnav_endpoint");
 
 /// <summary>
 /// HTTP-layer integration tests for GET /api/v1/admin/kb/nav-counts.
@@ -22,47 +33,45 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Endpoints;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "1655")]
-public sealed class AdminKbNavCountsEndpointIntegrationTests : IAsyncLifetime
+[Trait("Issue", "5039")]
+public sealed class AdminKbNavCountsEndpointIntegrationTests
+    : IClassFixture<AdminKbNavCountsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
+    private readonly AdminKbNavCountsHostFixture _hostFixture;
     private HttpClient _anonClient = null!;
     private HttpClient _editorClient = null!;
     private HttpClient _adminClient = null!;
     private string _editorToken = null!;
     private string _adminToken = null!;
 
-    public AdminKbNavCountsEndpointIntegrationTests(SharedTestcontainersFixture fixture)
+    public AdminKbNavCountsEndpointIntegrationTests(AdminKbNavCountsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"kbnav_endpoint_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
+        // BeginTestAsync prima di seminare: le sessioni vanno nel database del test.
+        await _hostFixture.BeginTestAsync();
+        var factory = _hostFixture.Factory;
 
-        using var scope = _factory.Services.CreateScope();
+        using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
 
         (_, _adminToken) = await TestSessionHelper.CreateSuperAdminSessionAsync(db);
         (_, _editorToken) = await TestSessionHelper.CreateEditorSessionAsync(db);
 
-        _anonClient = _factory.CreateClient();
-        _editorClient = _factory.CreateClient();
-        _adminClient = _factory.CreateClient();
+        _anonClient = factory.CreateClient();
+        _editorClient = factory.CreateClient();
+        _adminClient = factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _anonClient?.Dispose();
         _editorClient?.Dispose();
         _adminClient?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     private static HttpRequestMessage NewRequest(string token) =>

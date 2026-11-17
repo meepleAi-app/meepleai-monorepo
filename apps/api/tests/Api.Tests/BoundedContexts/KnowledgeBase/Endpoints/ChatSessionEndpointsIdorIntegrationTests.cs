@@ -4,12 +4,24 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Endpoints;
+
+/// <summary>
+/// La fixture di <see cref="ChatSessionEndpointsIdorIntegrationTests"/>: host per classe, database
+/// per test.
+/// </summary>
+/// <remarks>
+/// #5039. La classe costruiva l'host nel proprio <c>InitializeAsync</c>, quindi una volta per test, e
+/// il <c>Timeout</c> di ogni test contava anche quel tempo. Su un runner lento il build dell'host si
+/// allunga per tutte le fixture: qui finiva oltre i 90 s, e tre dei quattro test sono andati in
+/// timeout anche su <c>main-dev</c> (run 43882007678, mediana <c>host=</c> 33,2 s). Con l'host nella
+/// fixture il <c>Timeout</c> torna a misurare la richiesta.
+/// </remarks>
+public sealed class ChatSessionEndpointsIdorHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "chat_session_idor");
 
 /// <summary>
 /// HTTP-layer IDOR tests for the user chat-session list endpoints.
@@ -21,46 +33,46 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Endpoints;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "3120")]
-public sealed class ChatSessionEndpointsIdorIntegrationTests : IAsyncLifetime
+[Trait("Issue", "5039")]
+public sealed class ChatSessionEndpointsIdorIntegrationTests
+    : IClassFixture<ChatSessionEndpointsIdorHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly ChatSessionEndpointsIdorHostFixture _hostFixture;
     private readonly Guid _gameId = Guid.NewGuid();
-    private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _ownerClient = null!;
     private HttpClient _otherClient = null!;
     private Guid _ownerId;
     private string _ownerToken = null!;
     private string _otherToken = null!;
 
-    public ChatSessionEndpointsIdorIntegrationTests(SharedTestcontainersFixture fixture)
+    public ChatSessionEndpointsIdorIntegrationTests(ChatSessionEndpointsIdorHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"chatsession_idor_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
+        // 🔴 BeginTestAsync prima di ogni uso dell'host: con l'ordine invertito i due utenti
+        // finirebbero nel database di avvio, e le richieste leggerebbero quello del test.
+        await _hostFixture.BeginTestAsync();
+        var factory = _hostFixture.Factory;
 
-        using var scope = _factory.Services.CreateScope();
+        using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
 
         (_ownerId, _ownerToken) = await TestSessionHelper.CreateUserSessionAsync(db);
         (_, _otherToken) = await TestSessionHelper.CreateUserSessionAsync(db);
 
-        _ownerClient = _factory.CreateClient();
-        _otherClient = _factory.CreateClient();
+        _ownerClient = factory.CreateClient();
+        _otherClient = factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    // I client sono di questa istanza; host e database sono della fixture.
+    public ValueTask DisposeAsync()
     {
         _ownerClient?.Dispose();
         _otherClient?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     private string UserGameSessionsUrl => $"/api/v1/users/{_ownerId}/games/{_gameId}/chat-sessions";

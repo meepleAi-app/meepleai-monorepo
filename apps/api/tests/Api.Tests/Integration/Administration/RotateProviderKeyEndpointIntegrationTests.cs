@@ -23,10 +23,59 @@ using Xunit;
 namespace Api.Tests.Integration.Administration;
 
 /// <summary>
+/// La fixture di <see cref="RotateProviderKeyEndpointIntegrationTests"/>: host per classe, database
+/// per test, con l'esecutore del probe finto e il buffer dei log dell'API.
+/// </summary>
+/// <remarks>
+/// #5039: la classe costruiva un host per test, dentro il <c>Timeout</c> del test. I due doppi hanno
+/// stato — l'esito del prossimo probe, i log accumulati — e vivono quanto la classe: la classe di test
+/// li riporta allo stato di partenza a ogni test.
+/// </remarks>
+public sealed class RotateProviderKeyHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "rotate_key")
+{
+    internal RotateProviderKeyEndpointIntegrationTests.FakeProbeExecutor Probe { get; } = new();
+
+    internal System.Text.StringBuilder CapturedLogs { get; } = new();
+
+    /// <summary>
+    /// Riporta i doppi allo stato di partenza: probe riuscito, nessun log. Da chiamare a ogni test.
+    /// </summary>
+    internal void ResetDoubles()
+    {
+        Probe.NextOutcome = ProbeOutcome.Success;
+        Probe.NextErrorMessage = null;
+        lock (CapturedLogs)
+        {
+            CapturedLogs.Clear();
+        }
+    }
+
+    // Replace IProviderProbeExecutorFactory with a deterministic test double, and hook a
+    // string-buffer logger provider to capture API-side exceptions (the default Testing-env
+    // ApiExceptionHandlerMiddleware suppresses stack traces in the response body).
+    protected override WebApplicationFactory<Program> ConfigureHost(WebApplicationFactory<Program> factory) =>
+        factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureLogging(logging =>
+            {
+                logging.AddProvider(
+                    new RotateProviderKeyEndpointIntegrationTests.StringBuilderLoggerProvider(CapturedLogs));
+            });
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll(typeof(IProviderProbeExecutorFactory));
+                services.AddSingleton<IProviderProbeExecutorFactory>(
+                    new RotateProviderKeyEndpointIntegrationTests.FakeProbeExecutorFactory(Probe));
+            });
+        });
+}
+
+/// <summary>
 /// Integration tests for POST /api/v1/admin/providers/{name}/rotate-key (Issue #1859 Phase 9).
 ///
 /// Strategy:
-/// - Real DB (Testcontainers Postgres via SharedTestcontainersFixture).
+/// - Real DB (Testcontainers Postgres, one database per test via RotateProviderKeyHostFixture).
 /// - Real <see cref="IProviderCredentialRepository"/> + <see cref="IProviderCredentialResolver"/>.
 /// - Real <c>DataProtection</c> (in-memory key ring via test factory).
 /// - <see cref="IProviderProbeExecutorFactory"/> replaced with a test double that returns
@@ -46,17 +95,16 @@ namespace Api.Tests.Integration.Administration;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 [Trait("Issue", "1859")]
-public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
+[Trait("Issue", "5039")]
+public sealed class RotateProviderKeyEndpointIntegrationTests
+    : IClassFixture<RotateProviderKeyHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private readonly FakeProbeExecutor _fakeProbe = new();
-    private readonly FakeProbeExecutorFactory _fakeProbeFactory;
+    private readonly RotateProviderKeyHostFixture _hostFixture;
+    private FakeProbeExecutor _fakeProbe = null!;
 
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _superAdminClient = null!;
     private HttpClient _editorClient = null!;
-    private MeepleAiDbContext _dbContext = null!;
     private string _superAdminToken = null!;
     private string _editorToken = null!;
     private Guid _superAdminUserId;
@@ -68,52 +116,35 @@ public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
         PropertyNameCaseInsensitive = true
     };
 
-    public RotateProviderKeyEndpointIntegrationTests(SharedTestcontainersFixture fixture)
+    public RotateProviderKeyEndpointIntegrationTests(RotateProviderKeyHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"rotate_key_{Guid.NewGuid():N}";
-        _fakeProbeFactory = new FakeProbeExecutorFactory(_fakeProbe);
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        // 1. Default probe success — individual tests override per scenario.
-        _fakeProbe.NextOutcome = ProbeOutcome.Success;
-        _fakeProbe.NextErrorMessage = null;
+        // BeginTestAsync prima di seminare: sessioni e patch del 2FA vanno nel database del test.
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
 
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
+        // 1. I doppi sono della fixture e passano da un test all'altro: si riportano qui allo stato
+        //    di partenza. Default probe success — individual tests override per scenario.
+        _hostFixture.ResetDoubles();
+        _fakeProbe = _hostFixture.Probe;
+        _capturedLogs = _hostFixture.CapturedLogs;
 
-        // 2. Build factory — replace IProviderProbeExecutorFactory with a deterministic test double.
-        //    Hook a string-buffer logger provider to capture API-side exceptions (the default
-        //    Testing-env ApiExceptionHandlerMiddleware suppresses stack traces in the response body).
-        _capturedLogs = new System.Text.StringBuilder();
-        _factory = IntegrationWebApplicationFactory.Create(connectionString)
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureLogging(logging =>
-                {
-                    logging.AddProvider(new StringBuilderLoggerProvider(_capturedLogs));
-                });
-                builder.ConfigureTestServices(services =>
-                {
-                    services.RemoveAll(typeof(IProviderProbeExecutorFactory));
-                    services.AddSingleton<IProviderProbeExecutorFactory>(_fakeProbeFactory);
-                });
-            });
-
-        // 3. Migrate DB + seed superadmin + editor sessions.
+        // 2. Seed superadmin + editor sessions.
         using var scope = _factory.Services.CreateScope();
-        _dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await _dbContext.Database.MigrateAsync();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        var (saId, saToken) = await TestSessionHelper.CreateSuperAdminSessionAsync(_dbContext);
+        var (saId, saToken) = await TestSessionHelper.CreateSuperAdminSessionAsync(dbContext);
         _superAdminUserId = saId;
         _superAdminToken = saToken;
 
-        var (_, edToken) = await TestSessionHelper.CreateEditorSessionAsync(_dbContext);
+        var (_, edToken) = await TestSessionHelper.CreateEditorSessionAsync(dbContext);
         _editorToken = edToken;
 
-        // 4. Patch the superadmin's user row to enable 2FA + set LastTotpVerifiedAt on the session
+        // 3. Patch the superadmin's user row to enable 2FA + set LastTotpVerifiedAt on the session
         //    so commands decorated with [RequireTwoFactor(ForceStrict=true, MaxAge=5)] pass through.
         //    Use raw SQL to bypass EF tracking + interceptor friction.
         //    NOTE: TotpSecretEncrypted must be non-null too — UserRepository.MapToDomain only calls
@@ -144,12 +175,12 @@ public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
         _editorClient = _factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    // I client sono di questa istanza; host, database e doppi sono della fixture.
+    public ValueTask DisposeAsync()
     {
         _superAdminClient?.Dispose();
         _editorClient?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────────────────────────
@@ -425,7 +456,7 @@ public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
     /// <see cref="OpenAiCompatibleProbeExecutor"/> via DI override so tests don't need WireMock for
     /// the upstream model-list endpoint.
     /// </summary>
-    private sealed class FakeProbeExecutor : IProviderProbeExecutor
+    internal sealed class FakeProbeExecutor : IProviderProbeExecutor
     {
         public string ProviderName => "deepseek";
         public string? ApiKeyEnvVar => "DEEPSEEK_API_KEY";
@@ -447,7 +478,7 @@ public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Returns the same fake executor for any provider name — tests only exercise "deepseek" and "openrouter".
     /// </summary>
-    private sealed class FakeProbeExecutorFactory : IProviderProbeExecutorFactory
+    internal sealed class FakeProbeExecutorFactory : IProviderProbeExecutorFactory
     {
         private readonly FakeProbeExecutor _executor;
         public FakeProbeExecutorFactory(FakeProbeExecutor executor) => _executor = executor;
@@ -471,7 +502,7 @@ public sealed class RotateProviderKeyEndpointIntegrationTests : IAsyncLifetime
     /// into a shared <see cref="System.Text.StringBuilder"/> so 500 responses are debuggable from
     /// the test's failure message. The default Testing-env response body suppresses stack traces.
     /// </summary>
-    private sealed class StringBuilderLoggerProvider : Microsoft.Extensions.Logging.ILoggerProvider
+    internal sealed class StringBuilderLoggerProvider : Microsoft.Extensions.Logging.ILoggerProvider
     {
         private readonly System.Text.StringBuilder _sink;
         public StringBuilderLoggerProvider(System.Text.StringBuilder sink) => _sink = sink;

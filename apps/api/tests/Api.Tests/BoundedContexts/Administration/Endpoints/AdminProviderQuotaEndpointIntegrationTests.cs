@@ -11,12 +11,35 @@ using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Endpoints;
+
+/// <summary>
+/// La fixture di <see cref="AdminProviderQuotaEndpointIntegrationTests"/>: host per classe, database
+/// per test, con il resolver delle credenziali sostituito.
+/// </summary>
+/// <remarks>
+/// #5039: la classe costruiva un host per test, dentro il <c>Timeout</c> del test. Il doppio qui vive
+/// quanto la classe, e può farlo perché non ha stato: risponde sempre «non configurato» e nessun test
+/// conta le sue chiamate.
+/// </remarks>
+public sealed class AdminProviderQuotaHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "provider_quota_all")
+{
+    // Stub the credential resolver to "not configured" so the aggregate returns not_configured
+    // entries deterministically, with no upstream call and WITHOUT touching global env vars.
+    protected override WebApplicationFactory<Program> ConfigureHost(WebApplicationFactory<Program> factory) =>
+        factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        {
+            var resolver = new Mock<IProviderCredentialResolver>();
+            resolver.Setup(r => r.ResolveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new ProviderCredentialNotConfiguredException("test"));
+            services.AddScoped<IProviderCredentialResolver>(_ => resolver.Object);
+        }));
+}
 
 /// <summary>
 /// Integration tests for GET /api/v1/admin/providers/quota — Issue #3043 (resolver migration #3044).
@@ -31,14 +54,13 @@ namespace Api.Tests.BoundedContexts.Administration.Endpoints;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 [Trait("Issue", "3043")]
-public sealed class AdminProviderQuotaEndpointIntegrationTests : IAsyncLifetime
+[Trait("Issue", "5039")]
+public sealed class AdminProviderQuotaEndpointIntegrationTests
+    : IClassFixture<AdminProviderQuotaHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
+    private readonly AdminProviderQuotaHostFixture _hostFixture;
     private HttpClient _adminClient = null!;
     private HttpClient _editorClient = null!;
-    private MeepleAiDbContext _dbContext = null!;
     private string _adminToken = null!;
     private string _editorToken = null!;
 
@@ -48,46 +70,34 @@ public sealed class AdminProviderQuotaEndpointIntegrationTests : IAsyncLifetime
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public AdminProviderQuotaEndpointIntegrationTests(SharedTestcontainersFixture fixture)
+    public AdminProviderQuotaEndpointIntegrationTests(AdminProviderQuotaHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"provider_quota_all_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
+        // BeginTestAsync prima di seminare: le sessioni vanno nel database del test.
+        await _hostFixture.BeginTestAsync();
+        var factory = _hostFixture.Factory;
 
-        // Stub the credential resolver to "not configured" so the aggregate returns not_configured
-        // entries deterministically, with no upstream call and WITHOUT touching global env vars.
-        _factory = IntegrationWebApplicationFactory.Create(connectionString)
-            .WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
-            {
-                var resolver = new Mock<IProviderCredentialResolver>();
-                resolver.Setup(r => r.ResolveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                    .ThrowsAsync(new ProviderCredentialNotConfiguredException("test"));
-                services.AddScoped<IProviderCredentialResolver>(_ => resolver.Object);
-            }));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        using var scope = _factory.Services.CreateScope();
-        _dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await _dbContext.Database.MigrateAsync();
-
-        var (_, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(_dbContext);
+        var (_, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(db);
         _adminToken = adminToken;
-        var (_, editorToken) = await TestSessionHelper.CreateEditorSessionAsync(_dbContext);
+        var (_, editorToken) = await TestSessionHelper.CreateEditorSessionAsync(db);
         _editorToken = editorToken;
 
-        _adminClient = _factory.CreateClient();
-        _editorClient = _factory.CreateClient();
+        _adminClient = factory.CreateClient();
+        _editorClient = factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _adminClient?.Dispose();
         _editorClient?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     private async Task<T> ReadJsonAsync<T>(HttpResponseMessage response) =>
@@ -136,7 +146,7 @@ public sealed class AdminProviderQuotaEndpointIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task GetAllQuotas_NoAuth_Returns401()
     {
-        using var client = _factory.CreateClient();
+        using var client = _hostFixture.Factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/providers/quota");
 
         var response = await client.SendAsync(request);

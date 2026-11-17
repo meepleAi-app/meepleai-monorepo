@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock CitationPdfTab to avoid cascading imports of react-pdf + api.knowledgeBase
@@ -465,6 +465,78 @@ describe('GameChatTab', () => {
         expect.arrayContaining(['noopener', 'noreferrer', 'nofollow'])
       );
       expect(link).toHaveAttribute('target', '_blank');
+    });
+  });
+
+  // #4999 (ADR-098 §5): il game-chat mostra l'intento del thread, in sola lettura. Prima aveva un suo
+  // «agente» tutor/arbitro che viveva solo nel client: l'intestazione diceva «Tutor» qualunque fosse
+  // l'intento con cui il server rispondeva, e «Arbitro» cambiava l'etichetta e nient'altro.
+  describe('intento del thread (#4999)', () => {
+    function threadWith(agentType: string | null) {
+      return {
+        id: 'thread-1',
+        gameId: 'wingspan',
+        agentId: null,
+        agentType,
+        title: 'Test',
+        createdAt: '2026-05-10T00:00:00Z',
+        lastMessageAt: '2026-05-10T10:00:00Z',
+        messageCount: 1,
+        messages: [
+          { content: 'domanda di prima', role: 'user', timestamp: '2026-05-10T10:00:00Z' },
+        ],
+      };
+    }
+
+    async function renderHydrated(threads: unknown[]) {
+      vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce(threads as any);
+      render(<GameChatTab gameId="wingspan" />);
+      await waitFor(() => expect(screen.queryAllByTestId('chat-bubble-skeleton')).toHaveLength(0));
+      return screen.getByTestId('game-chat-header');
+    }
+
+    it('su un thread «secca» l intestazione dice «Risposta secca», e niente permette di cambiarlo', async () => {
+      const header = await renderHydrated([threadWith('secca')]);
+
+      expect(header).toHaveTextContent('Risposta secca');
+      expect(header).not.toHaveTextContent(/tutor/i);
+      expect(within(header).queryAllByRole('button')).toHaveLength(0);
+      expect(screen.queryByText(/arbitro/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: /agente|intento/i })).not.toBeInTheDocument();
+    });
+
+    it('senza thread l intestazione dice «Auto»', async () => {
+      const header = await renderHydrated([]);
+
+      expect(header).toHaveTextContent('Auto');
+      expect(header).not.toHaveTextContent(/tutor/i);
+    });
+
+    it('un intento ritirato salvato sul thread si legge «Auto», come lo legge il server', async () => {
+      const header = await renderHydrated([threadWith('arbitro')]);
+
+      expect(header).toHaveTextContent('Auto');
+      expect(screen.queryByText(/arbitro/i)).not.toBeInTheDocument();
+    });
+
+    it('il nome dell assistente non dipende dall intento: né «Tutor» né «Arbitro»', async () => {
+      const header = await renderHydrated([threadWith('tutor')]);
+      expect(header).toHaveTextContent('Tutor');
+
+      expect(screen.getByRole('textbox')).not.toHaveAttribute(
+        'placeholder',
+        expect.stringMatching(/tutor|arbitro/i)
+      );
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
+      fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+      await waitFor(() => expect(screen.getByText(/Sì, ogni potere/)).toBeInTheDocument());
+
+      const answer = screen
+        .getAllByTestId('chat-bubble')
+        .find(b => b.getAttribute('data-role') === 'agent')!;
+      expect(within(answer).getByText('Assistente')).toBeInTheDocument();
+      expect(answer).not.toHaveTextContent(/tutor|arbitro/i);
     });
   });
 });

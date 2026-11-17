@@ -51,10 +51,10 @@ describe('useGameChat', () => {
     vi.mocked(api.chat.getThreadsByGame).mockResolvedValue([]);
   });
 
-  it('starts with empty messages and tutor agent', () => {
+  it('starts with empty messages and the auto intent', () => {
     const { result } = renderHook(() => useGameChat('wingspan'));
     expect(result.current.messages).toEqual([]);
-    expect(result.current.currentAgent).toBe('tutor');
+    expect(result.current.intent).toBe('auto');
     expect(result.current.isLoading).toBe(false);
   });
 
@@ -600,32 +600,6 @@ describe('useGameChat', () => {
     expect(result.current.tierLimit).toBeNull();
   });
 
-  it('switchAgent updates currentAgent', () => {
-    const { result } = renderHook(() => useGameChat('wingspan'));
-    act(() => {
-      result.current.switchAgent('arbitro');
-    });
-    expect(result.current.currentAgent).toBe('arbitro');
-  });
-
-  it('switchAgent does NOT clear message history', async () => {
-    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
-    const { result } = renderHook(() => useGameChat('wingspan'));
-    await act(async () => {
-      await result.current.ask('q');
-    });
-    expect(result.current.messages).toHaveLength(2);
-    act(() => {
-      result.current.switchAgent('arbitro');
-    });
-    expect(result.current.messages).toHaveLength(2);
-  });
-
-  it('initialAgent overrides default tutor', () => {
-    const { result } = renderHook(() => useGameChat('wingspan', 'arbitro'));
-    expect(result.current.currentAgent).toBe('arbitro');
-  });
-
   // ─── G2 hydrate tests ───────────────────────────────
 
   const sampleThreadMessage = (role: string, content: string, ts: string) => ({
@@ -634,11 +608,16 @@ describe('useGameChat', () => {
     timestamp: ts,
   });
 
-  const sampleThread = (id: string, lastMessageAt: string | null, messages: any[] = []) => ({
+  const sampleThread = (
+    id: string,
+    lastMessageAt: string | null,
+    messages: any[] = [],
+    agentType: string | null = null
+  ) => ({
     id,
     gameId: 'wingspan',
     agentId: null,
-    agentType: null,
+    agentType,
     title: 'Test thread',
     createdAt: '2026-05-10T00:00:00Z',
     lastMessageAt,
@@ -673,6 +652,33 @@ describe('useGameChat', () => {
     await waitFor(() => expect(result.current.isHydrating).toBe(false));
     expect(result.current.chatThreadId).toBe('thread-new');
     expect(result.current.messages[0].content).toBe('newer');
+  });
+
+  // #4999: the questions continue the latest thread, so the server answers in that thread's intent.
+  it('takes the intent of the thread it continues', async () => {
+    const thread = sampleThread(
+      'thread-1',
+      '2026-05-10T10:00:00Z',
+      [sampleThreadMessage('user', 'old', '2026-05-10T10:00:00Z')],
+      'secca'
+    );
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.chatThreadId).toBe('thread-1'));
+    expect(result.current.intent).toBe('secca');
+  });
+
+  it('reads a retired intent stored on the thread as auto, as the server does', async () => {
+    const thread = sampleThread(
+      'thread-1',
+      '2026-05-10T10:00:00Z',
+      [sampleThreadMessage('user', 'old', '2026-05-10T10:00:00Z')],
+      'arbitro'
+    );
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.chatThreadId).toBe('thread-1'));
+    expect(result.current.intent).toBe('auto');
   });
 
   it('starts empty when no threads exist (no error)', async () => {

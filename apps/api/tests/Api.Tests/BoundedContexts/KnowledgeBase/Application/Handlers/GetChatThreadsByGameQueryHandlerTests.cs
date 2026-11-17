@@ -54,6 +54,26 @@ public class GetChatThreadsByGameQueryHandlerTests
         _mockRepository.Verify(r => r.FindByUserIdAndGameIdAsync(userId, gameId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData("tutor")]
+    [InlineData("secca")]
+    public async Task Handle_TheThreadSwitchedToAnIntent_CarriesItInTheDto(string intent)
+    {
+        // #4999: the game chat reads the intent of the game's latest thread from this list, to show it read-only. Without
+        // it here the header said one intent and the pipeline answered in the stored one - the omission #4404 fixed on
+        // the GET by id.
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var thread = new ChatThread(Guid.NewGuid(), userId, gameId, "Test Thread");
+        thread.SwitchAgent(intent);
+        _mockRepository.Setup(r => r.FindByUserIdAndGameIdAsync(userId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatThread> { thread });
+
+        var result = await _handler.Handle(new GetChatThreadsByGameQuery(gameId, userId, 0, 10), TestContext.Current.CancellationToken);
+
+        result.Should().ContainSingle().Which.AgentType.Should().Be(intent);
+    }
+
     [Fact]
     public async Task Handle_NoThreadsForGameAndUser_ReturnsEmptyList()
     {

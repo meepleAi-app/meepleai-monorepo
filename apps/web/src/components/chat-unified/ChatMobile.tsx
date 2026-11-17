@@ -673,7 +673,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         rightActions={
           <span
             data-testid="thread-intent"
-            className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground"
+            className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground"
           >
             <span className="sr-only">Intento della risposta: </span>
             {ANSWER_INTENT_LABELS[intentOf(thread?.agentType)]}

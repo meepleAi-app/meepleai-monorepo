@@ -75,8 +75,9 @@ describe('gate: gli id d intento ritirati non tornano nel sorgente (#4999, ADR-0
   const sites = retiredIdSites(sourceFiles());
 
   it('vede le occorrenze che conosce', () => {
-    // Guardia di non vacuità: se la scansione si rompe, i controlli sotto passerebbero a vuoto.
-    expect(sites.get('lib/schemas/multi-agent-dashboard-schema.ts')?.length).toBeGreaterThan(0);
+    // Guardia di non vacuità: se la scansione si rompe, i controlli sotto passerebbero a vuoto. È
+    // ancorata all'eccezione permanente, non a una che #5001 toglie.
+    expect(sites.get('app/(public)/page.tsx')?.length).toBeGreaterThan(0);
   });
 
   it('nessun id ritirato fuori dalle eccezioni nominate', () => {

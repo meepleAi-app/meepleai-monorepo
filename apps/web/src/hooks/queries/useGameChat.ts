@@ -13,7 +13,8 @@
  *   - #4999: l'intento salvato su quel thread (`agentType`), letto come lo legge il server
  *   - Silent fail: se il fetch fallisce, isError resta false (utente può comunque chiedere)
  *
- * Backend: zero modifiche. Usa qaStream() (SSE) + api.chat.getThreadsByGame() (REST).
+ * Usa qaStream() (SSE) + api.chat.getThreadsByGame() (REST). Il backend è stato toccato una volta, da
+ * #4999: la lista per gioco riporta `agentType`, come il GET per id.
  *
  * Spec: docs/superpowers/specs/2026-05-09-game-chat-tab-v1-g5-design.md §3.4
  *       docs/superpowers/specs/2026-05-10-fast-resume-audit-g2-design.md §3.1
@@ -178,6 +179,13 @@ export function useGameChat(gameId: string): UseGameChatResult {
   // G2: Hydrate latest thread on mount
   useEffect(() => {
     let cancelled = false;
+    // #4999: un altro gioco non continua il thread di quello di prima. Senza azzerare, l'intestazione
+    // mostrava l'intento del gioco precedente e `ask` mandava il suo `chatId`, che il server scarta
+    // (thread di un altro gioco → risposta `auto`).
+    setMessages([]);
+    setChatThreadId(null);
+    setIntent('auto');
+    setHasHistoricalMessages(false);
     setIsHydrating(true);
 
     api.chat

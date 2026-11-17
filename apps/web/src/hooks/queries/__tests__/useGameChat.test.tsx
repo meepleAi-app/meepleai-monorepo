@@ -668,6 +668,64 @@ describe('useGameChat', () => {
     expect(result.current.intent).toBe('secca');
   });
 
+  // From the review of #5057: a single thread cannot tell «the thread it continues» from «the first
+  // thread of the list».
+  it('takes the intent of the most recent thread, the one whose chatId it sends', async () => {
+    const older = sampleThread(
+      'thread-old',
+      '2026-05-09T10:00:00Z',
+      [sampleThreadMessage('user', 'older', '2026-05-09T10:00:00Z')],
+      'secca'
+    );
+    const newer = sampleThread(
+      'thread-new',
+      '2026-05-10T10:00:00Z',
+      [sampleThreadMessage('user', 'newer', '2026-05-10T10:00:00Z')],
+      'tutor'
+    );
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([older, newer]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.chatThreadId).toBe('thread-new'));
+    expect(result.current.intent).toBe('tutor');
+
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+    await act(async () => {
+      await result.current.ask('q');
+    });
+    expect(vi.mocked(qaStream).mock.calls[0][0]).toMatchObject({ chatId: 'thread-new' });
+  });
+
+  it('a latest thread with no messages is not continued, so the intent stays auto', async () => {
+    const empty = sampleThread('thread-empty', '2026-05-10T10:00:00Z', [], 'secca');
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([empty]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+    expect(result.current.chatThreadId).toBeNull();
+    expect(result.current.intent).toBe('auto');
+  });
+
+  it('another game does not keep the thread, the intent or the messages of the previous one', async () => {
+    const thread = sampleThread(
+      'thread-wingspan',
+      '2026-05-10T10:00:00Z',
+      [sampleThreadMessage('user', 'wingspan question', '2026-05-10T10:00:00Z')],
+      'tutor'
+    );
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread]);
+    const { result, rerender } = renderHook(({ gameId }) => useGameChat(gameId), {
+      initialProps: { gameId: 'wingspan' },
+    });
+    await waitFor(() => expect(result.current.intent).toBe('tutor'));
+
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([]);
+    rerender({ gameId: 'azul' });
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+    expect(result.current.intent).toBe('auto');
+    expect(result.current.chatThreadId).toBeNull();
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.hasHistoricalMessages).toBe(false);
+  });
+
   it('reads a retired intent stored on the thread as auto, as the server does', async () => {
     const thread = sampleThread(
       'thread-1',

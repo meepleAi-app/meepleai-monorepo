@@ -83,14 +83,14 @@ checks:
     owner: backend-dev
     override_path: fix-forward
     pre_existing_in_main_dev: false
-    notes: "KB + RAG integration, pgvector. Da #4329 lo shard non contiene piu' DocumentProcessing ne' Integration.Authentication, che hanno shard propri: i falliti di base dei giri di rilascio (#4996) ora sono in DocProcessing. Prima di chiamare regressione un rosso, confronta i NOMI dei falliti con un run di controllo su main-dev."
+    notes: "KB + RAG integration, pgvector. Da #4329 lo shard non contiene piu' DocumentProcessing ne' Integration.Authentication, che hanno shard propri: i falliti di base dei giri di rilascio stavano in DocumentProcessing e sono corretti (#4996). Prima di chiamare regressione un rosso, confronta i NOMI dei falliti con un run di controllo su main-dev."
 
   - check_name: "Backend - Integration (DocProcessing)"
     severity: blocker
     owner: backend-dev
     override_path: fix-forward
-    pre_existing_in_main_dev: true
-    notes: "Shard nuovo con #4329 (DocumentProcessing, staccato da KnowledgeBase). Porta i falliti di base tracciati in #4996: confronta i NOMI dei falliti col controllo Dev Async su main-dev prima di chiamarla regressione."
+    pre_existing_in_main_dev: false
+    notes: "Shard nuovo con #4329 (DocumentProcessing, staccato da KnowledgeBase). Senza falliti di base: in infra/fixtures/dev-async-shard-baseline.json la voce DocProcessing non ne dichiara. Un rosso qui va letto per NOMI contro un run di controllo su main-dev prima di chiamarlo regressione."
 
   - check_name: "Backend - Integration (AuthIntegration)"
     severity: warning

@@ -55,8 +55,8 @@
     "l'artifact di uno non esiste finche' il suo job gira. La provenienza che conta e' quella",
     "nel `_comment` di ciascuno shard, che ha precedenza su questi due campi."
   ],
-  "runId": "38554611216",
-  "capturedAt": "2026-10-14",
+  "runId": "44168884431",
+  "capturedAt": "2026-11-17",
   "shards": {
     "Core": {
       "_comment": [
@@ -253,17 +253,20 @@
         "di questo shard). Sono salti PREVISTO: senza TEST_UNSTRUCTURED_URL, che nessun workflow imposta, e",
         "restano tali finche' non esiste un host con unstructured-service (decisioni dell'epic #4433). I nomi",
         "sono quelli che scrive il .trx, ricavati da un run locale con lo stesso comparatore. Il conteggio",
-        "passa da 2 a 4; quando un host c'e', le due righe girano e vanno tolte da qui con --update-baseline."
+        "passa da 2 a 4; quando un host c'e', le due righe girano e vanno tolte da qui con --update-baseline.",
+        "",
+        "#4996: tolti i 5 falliti, corretti nei test. I due OrphanCleanup... e Reindex_RacesWithDelete non",
+        "registravano ISemanticResponseCache (come #4628), quindi DeleteKbDocumentCommandHandler non si",
+        "costruiva e il seeder inghiottiva l'errore con un avviso; i due OrphanCleanup... ora asseriscono",
+        "che non ci sono avvisi. SevenStateProgression e StateDurations riusavano l'aggregato dopo un",
+        "salvataggio, con un xmin vecchio: ora lo rileggono, come fa una richiesta. Catturato con",
+        "--update-baseline dal run 44168884431 (dev-async sul ramo, 6d149a0975): Failed 0, Passed 320,",
+        "Skipped 4, Total 324. Controllo su main-dev 05d4715e18, run 44157516409: gli stessi 324 nomi, e",
+        "i soli scarti sono questi 5, da Failed a Passed."
       ],
-      "failed": 5,
+      "failed": 0,
       "skipped": 4,
-      "failedTests": [
-        "Api.Tests.Integration.DocumentProcessing.OrphanCleanupAndReattemptIntegrationTests.CleanupThenReattempt_RemovesOrphansCascade_AndReEnqueuesOnlyValidPending",
-        "Api.Tests.Integration.DocumentProcessing.OrphanCleanupAndReattemptIntegrationTests.Cleanup_IsIdempotent_OnSecondRun",
-        "Api.Tests.Integration.DocumentProcessing.PdfPipelineIntegrationTests.PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates",
-        "Api.Tests.Integration.DocumentProcessing.PdfPipelineMetricsIntegrationTests.FullPipeline_StateDurations_CanBeCalculatedFromTimingFields",
-        "Api.Tests.Integration.DocumentProcessing.PdfRowVersionConcurrencyIntegrationTests.Reindex_RacesWithDelete_LeavesNoOrphanState"
-      ],
+      "failedTests": [],
       "skippedTests": [
         "Api.Tests.BoundedContexts.DocumentProcessing.ExtractionBench.UnstructuredExtractionBenchTests.Unstructured_DoesNotFallBelowItsCommittedBaseline(extractorId: \"unstructured-fast\", strategy: Fast, blocking: True)",
         "Api.Tests.BoundedContexts.DocumentProcessing.ExtractionBench.UnstructuredExtractionBenchTests.Unstructured_DoesNotFallBelowItsCommittedBaseline(extractorId: \"unstructured-hires\", strategy: HiRes, blocking: False)",

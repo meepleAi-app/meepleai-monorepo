@@ -3418,3 +3418,32 @@ via `severity: warning` → the `warning-alerts` receiver in `alertmanager.yml` 
 3. The `2h` window absorbs transient duplicates from crash-recovery re-publish and rolling-deploy windows (old pods do not honour new pods' row-locks); a sustained breach past 2h is the real signal.
 
 Alert unit tests live in `infra/prometheus/alerts/domain-event-outbox-duplicate-publish.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).
+
+### Batches failing as a whole (#5030)
+
+Defined in `infra/prometheus/alerts/domain-event-outbox-batch.yml`, routed via `severity: critical`.
+
+| Rule | Type | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|---|
+| `DomainEventOutboxBatchFailing` | alert | `sum(increase(meepleai_domain_event_outbox_batch_failed_total_batches_total[10m])) >= 3` | 5m | The outbox is stuck: each failed batch rolls back, none of its rows advances, and the next poll takes the same rows again. Domain events are not being delivered. |
+
+`DomainEventOutboxProcessor` saves each row on its own, together with what its handlers left in the
+change tracker. A handler's residue that cannot be written therefore fails **its row**: the residue
+is dropped and the row goes to retry, with the attempt counted. What can still fail a whole batch is
+the database itself, a commit, the processor, or a handler that swallowed a failed SQL statement
+(`ExecuteUpdate`, raw SQL) and so left the transaction aborted (`25P02` on every later command).
+
+1. **Read the `exception_type` label** of `meepleai_domain_event_outbox_batch_failed_total_batches_total`,
+   then the `DomainEventOutboxProcessor batch failed; will retry on next poll` log lines, which carry the
+   stack trace.
+2. **Database down or unreachable** (`NpgsqlException`, timeouts): `DatabaseDown` (in
+   `infra/prometheus-rules.yml`) should be firing too. Fix the database; the outbox drains
+   by itself, since no attempt was counted against the rows.
+3. **`25P02` (current transaction is aborted)** in the log: a handler swallowed a failed statement.
+   The stack trace of the first error in the batch names it.
+4. **Anything else** is a processor defect: open an issue with the stack trace. The rows are intact,
+   and stay `Pending` with their attempt count unchanged until the batch can commit.
+
+`meepleai_domain_event_outbox_pending_oldest_age_seconds` keeps ageing while batches fail. Until #5030
+the health snapshot was refreshed only after a successful batch, so the gauge froze. Alert unit tests:
+`infra/prometheus/alerts/domain-event-outbox-batch.test.yml`, run by `prometheus-rules-gate.yml`.

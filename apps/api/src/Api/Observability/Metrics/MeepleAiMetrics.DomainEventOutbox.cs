@@ -70,6 +70,23 @@ internal static partial class MeepleAiMetrics
         description: "Total outbox rows transitioned to terminal Failed after retry budget exhaustion (#1535 T6).");
 
     /// <summary>
+    /// #5030 — incremented once per batch that fails AS A WHOLE in
+    /// <c>DomainEventOutboxProcessor.RunOnceAsync</c>: the transaction rolls back, no row of the
+    /// batch advances, and the next poll takes the same rows again. Tag: <c>exception_type</c>
+    /// (the CLR type name of the exception that ended the batch).
+    ///
+    /// <para>A residue a handler leaves in the change tracker no longer fails the batch (each row is
+    /// saved on its own), so what is left here is the database itself, a commit, the processor, or a
+    /// handler that swallowed a failed SQL statement and so aborted the transaction. One increment
+    /// is a blip; a sustained rate means the outbox is stuck and nothing is being delivered. Alert
+    /// rule: <c>infra/prometheus/alerts/domain-event-outbox-batch.yml</c>.</para>
+    /// </summary>
+    public static readonly Counter<long> DomainEventOutboxBatchFailed = Meter.CreateCounter<long>(
+        name: "meepleai.domain_event_outbox.batch_failed.total",
+        unit: "batches",
+        description: "Total domain_event_outbox batches that failed as a whole and rolled back (#5030).");
+
+    /// <summary>
     /// Incremented once per row purged by <c>DomainEventOutboxRetentionService</c>
     /// (Issue #1966). Tag: <c>event_type</c>. Operators can verify the retention TTL
     /// is draining the Sent partition at the expected rate by comparing

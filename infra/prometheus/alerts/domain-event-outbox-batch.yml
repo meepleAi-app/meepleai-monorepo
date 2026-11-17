@@ -1,0 +1,37 @@
+# Prometheus alerting rules — Domain Event Outbox: batches that fail as a whole.
+#
+# Issue #5030. DomainEventOutboxProcessor drains Pending rows in batches, one transaction per
+# batch. A batch that fails AS A WHOLE rolls back: no row of it advances, no attempt is counted,
+# and the next poll (every few seconds) takes the same rows again. Until #5030 that happened
+# whenever a handler left in the change tracker something the batch's final save could not write,
+# and the only trace was a LogError per poll: the health snapshot was refreshed only after a
+# successful batch, so even `pending.oldest_age_seconds` stayed frozen at its last value.
+#
+# Since #5030 each row is saved on its own, so a handler's residue fails its row, not the batch.
+# What is left to fail a batch is the database itself, a commit, or the processor — and those are
+# exactly the cases this rule watches.
+#
+# Metric source: apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.DomainEventOutbox.cs
+# (`DomainEventOutboxBatchFailed`, name `meepleai.domain_event_outbox.batch_failed.total`, unit
+# `batches`). The OpenTelemetry exporter puts the unit in the name and appends `_total` to a
+# counter: meepleai_domain_event_outbox_batch_failed_total_batches_total
+# (checked by infra/scripts/verify-alert-metric-names.sh).
+#
+# THRESHOLD: >= 3 failed batches in 10 minutes, sustained for 5 minutes. One or two are a blip (a
+# connection reset during a deploy); a stuck outbox fails on every poll, so it crosses 3 within
+# the first poll interval and keeps the condition true.
+groups:
+  - name: meepleai_domain_event_outbox_batch
+    rules:
+      - alert: DomainEventOutboxBatchFailing
+        expr: |
+          sum(increase(meepleai_domain_event_outbox_batch_failed_total_batches_total[10m])) >= 3
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          component: domain_event_outbox
+        annotations:
+          summary: "Domain event outbox batches are failing as a whole (#5030)"
+          description: "At least 3 domain_event_outbox batches failed as a whole in the last 10 minutes, for 5 minutes. A failed batch rolls back: none of its rows advances and the next poll takes the same rows again, so domain events are not being delivered. Read the exception_type label and the 'DomainEventOutboxProcessor batch failed' log lines."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#domain-event-outbox-alerts"

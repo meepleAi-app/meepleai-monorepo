@@ -14,9 +14,11 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 namespace Api.Tests.Integration.DocumentProcessing;
 
@@ -39,6 +41,10 @@ public sealed class OrphanCleanupAndReattemptIntegrationTests : IAsyncLifetime
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private IMediator? _mediator;
+
+    // #4996: the seeder swallows every failure of a delete with a warning and goes on. Read through
+    // NullLogger, a delete that never ran looked the same as a PDF that was not an orphan.
+    private readonly WarningRecorder _seederLog = new();
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -75,6 +81,9 @@ public sealed class OrphanCleanupAndReattemptIntegrationTests : IAsyncLifetime
                 It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         services.AddScoped<IVectorStoreAdapter>(_ => vectorStoreMock.Object);
+
+        // #4996: DeleteKbDocumentCommandHandler needs it since #4010; without it the delete never builds (as in #4671).
+        services.AddSingleton(Mock.Of<ISemanticResponseCache>());
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -120,8 +129,11 @@ public sealed class OrphanCleanupAndReattemptIntegrationTests : IAsyncLifetime
         var validReadyPdfId = await SeedPdfWithChildrenAsync(ValidGameId, "Ready");
 
         // Act — the CatalogSeedLayer order: cleanup (#2907) then re-enqueue (#2908)
-        await OrphanPdfCleanupSeeder.CleanupAsync(_dbContext!, _mediator!, NullLogger.Instance, Ct);
+        await OrphanPdfCleanupSeeder.CleanupAsync(_dbContext!, _mediator!, _seederLog, Ct);
         await ReattemptStalePendingPdfsSeeder.ReattemptAsync(_dbContext!, SystemUserId, NullLogger.Instance, Ct);
+
+        // Assert — the cleanup ran its deletes: a failure would be swallowed with a warning (#4996)
+        _seederLog.Warnings.Should().BeEmpty("every delete of the cleanup must succeed, not fail and be skipped");
 
         // Assert — orphans (soft-deleted parent) removed with a real EF cascade
         (await _dbContext!.PdfDocuments.FindAsync(new object[] { orphanReadyPdfId }, Ct))
@@ -162,10 +174,11 @@ public sealed class OrphanCleanupAndReattemptIntegrationTests : IAsyncLifetime
         var orphanPdfId = await SeedPdfWithChildrenAsync(SoftDeletedGameId, "Ready");
         var validPdfId = await SeedPdfWithChildrenAsync(ValidGameId, "Ready");
 
-        await OrphanPdfCleanupSeeder.CleanupAsync(_dbContext!, _mediator!, NullLogger.Instance, Ct);
+        await OrphanPdfCleanupSeeder.CleanupAsync(_dbContext!, _mediator!, _seederLog, Ct);
         // Second run must be a safe no-op (the orphan is already gone).
-        await OrphanPdfCleanupSeeder.CleanupAsync(_dbContext!, _mediator!, NullLogger.Instance, Ct);
+        await OrphanPdfCleanupSeeder.CleanupAsync(_dbContext!, _mediator!, _seederLog, Ct);
 
+        _seederLog.Warnings.Should().BeEmpty("neither run may fail a delete and skip it (#4996)");
         (await _dbContext!.PdfDocuments.FindAsync(new object[] { orphanPdfId }, Ct)).Should().BeNull();
         (await _dbContext.PdfDocuments.FindAsync(new object[] { validPdfId }, Ct)).Should().NotBeNull();
     }
@@ -287,5 +300,21 @@ public sealed class OrphanCleanupAndReattemptIntegrationTests : IAsyncLifetime
         }
 
         await _dbContext.SaveChangesAsync(Ct);
+    }
+
+    /// <summary>Keeps the warnings (and above) the seeder logs, with the exception, so a test can see what it swallowed.</summary>
+    private sealed class WarningRecorder : ILogger
+    {
+        public List<string> Warnings { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (!IsEnabled(logLevel)) return;
+            lock (Warnings) Warnings.Add($"{formatter(state, exception)} — {exception?.GetType().Name}: {exception?.Message}");
+        }
     }
 }

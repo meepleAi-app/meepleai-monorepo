@@ -762,6 +762,13 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         await _pdfRepository!.AddAsync(pdf, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
+        // #4996: read it back, as the request that transitions it would. The aggregate built by the constructor has
+        // no row version (XminVersion 0), and the save does not give it one: updating THAT instance sent
+        // `WHERE xmin = 0` and failed with a concurrency exception. No production caller reuses an instance
+        // after a save — the inventory is in #4996.
+        _dbContext.ChangeTracker.Clear();
+        pdf = (await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken))!;
+
         // Assert initial state
         pdf.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Pending);
 

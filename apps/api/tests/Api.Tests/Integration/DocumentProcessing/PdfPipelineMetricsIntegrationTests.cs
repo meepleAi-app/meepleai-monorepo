@@ -330,37 +330,21 @@ public sealed class PdfPipelineMetricsIntegrationTests : IAsyncLifetime
         await _pdfRepository!.AddAsync(pdf, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
-        // Act: Transition through all states with persistence
-        _dbContext.ChangeTracker.Clear();
-        var doc = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
-
-        doc!.TransitionTo(PdfProcessingState.Uploading);
-        await _pdfRepository.UpdateAsync(doc, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        doc.TransitionTo(PdfProcessingState.Extracting);
-        await _pdfRepository.UpdateAsync(doc, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        doc.TransitionTo(PdfProcessingState.Chunking);
-        await _pdfRepository.UpdateAsync(doc, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        doc.TransitionTo(PdfProcessingState.Embedding);
-        await _pdfRepository.UpdateAsync(doc, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        doc.TransitionTo(PdfProcessingState.Indexing);
-        await _pdfRepository.UpdateAsync(doc, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        doc.TransitionTo(PdfProcessingState.Ready);
-        await _pdfRepository.UpdateAsync(doc, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        // Act: Transition through all states with persistence. #4996: one read per transition, as one request per
+        // transition does in production. Reusing the instance after a save sent the row version it was read with,
+        // which the save had moved on, and the second update failed with a concurrency exception.
+        foreach (var state in new[]
+                 {
+                     PdfProcessingState.Uploading, PdfProcessingState.Extracting, PdfProcessingState.Chunking,
+                     PdfProcessingState.Embedding, PdfProcessingState.Indexing, PdfProcessingState.Ready,
+                 })
+        {
+            await TransitionAndSaveAsync(pdf.Id, state);
+        }
 
         // Assert: All timing fields populated and in order
         _dbContext.ChangeTracker.Clear();
-        doc = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
+        var doc = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
 
         doc!.UploadingStartedAt.Should().NotBeNull();
         doc.ExtractingStartedAt.Should().NotBeNull();
@@ -379,6 +363,19 @@ public sealed class PdfPipelineMetricsIntegrationTests : IAsyncLifetime
         extractingDuration.Should().BeGreaterThanOrEqualTo(TimeSpan.Zero);
         chunkingDuration.Should().BeGreaterThanOrEqualTo(TimeSpan.Zero);
         embeddingDuration.Should().BeGreaterThanOrEqualTo(TimeSpan.Zero);
+    }
+
+    /// <summary>
+    /// #4996: reads the aggregate, transitions it and saves it, as a request does. The instance carries the row version
+    /// it was read with, so it is not reused after the save.
+    /// </summary>
+    private async Task TransitionAndSaveAsync(Guid pdfId, PdfProcessingState state)
+    {
+        _dbContext!.ChangeTracker.Clear();
+        var doc = await _pdfRepository!.GetByIdAsync(pdfId, TestCancellationToken);
+        doc!.TransitionTo(state);
+        await _pdfRepository.UpdateAsync(doc, TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 
     [Fact]

@@ -1,13 +1,13 @@
 /**
- * GameChatSidebar — sidebar desktop (260px) con game-mini, agent switcher
- * tutor/arbitro, e history rail per quel gioco.
+ * GameChatSidebar — sidebar desktop (260px) con game-mini e history rail per quel gioco.
+ *
+ * #4999 (ADR-098 §5): qui c'era l'interruttore tutor/arbitro. Cambiava l'etichetta e niente altro,
+ * perché la risposta segue l'intento salvato sul thread. L'intento ora si legge nell'intestazione.
  * Spec: §3.3
  */
 import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
-
-import type { AgentKind } from '@/components/features/game-chat/GameChatHeader';
 
 export interface ChatHistoryItem {
   readonly id: string;
@@ -19,24 +19,15 @@ export interface ChatHistoryItem {
 export interface GameChatSidebarProps {
   readonly gameTitle: string;
   readonly gameIcon: string;
-  readonly currentAgent: AgentKind;
   readonly history: readonly ChatHistoryItem[];
-  readonly onAgentChange: (next: AgentKind) => void;
   readonly onHistorySelect: (id: string) => void;
   readonly className?: string;
 }
 
-const AGENT_LABEL: Record<AgentKind, string> = {
-  tutor: '🧙 Tutor',
-  arbitro: '⚖️ Arbitro',
-};
-
 export function GameChatSidebar({
   gameTitle,
   gameIcon,
-  currentAgent,
   history,
-  onAgentChange,
   onHistorySelect,
   className,
 }: GameChatSidebarProps): ReactElement {
@@ -58,29 +49,6 @@ export function GameChatSidebar({
         <div>
           <div className="font-bold text-sm leading-tight">{gameTitle}</div>
           <div className="font-mono text-[10px] text-muted-foreground">Chat regole</div>
-        </div>
-      </div>
-
-      <div>
-        <h4 className="mb-2 font-bold text-xs uppercase tracking-wider text-muted-foreground">
-          Agente attivo
-        </h4>
-        <div role="group" aria-label="Cambia agente" className="flex rounded-full bg-muted p-0.5">
-          {(['tutor', 'arbitro'] as const).map(k => (
-            <button
-              key={k}
-              type="button"
-              aria-pressed={currentAgent === k}
-              onClick={() => onAgentChange(k)}
-              className={clsx(
-                'flex flex-1 items-center justify-center gap-1 rounded-full px-2 py-2',
-                'font-semibold text-xs transition-colors',
-                currentAgent === k ? 'bg-[hsl(var(--c-agent))] text-white' : 'text-muted-foreground'
-              )}
-            >
-              {AGENT_LABEL[k]}
-            </button>
-          ))}
         </div>
       </div>
 

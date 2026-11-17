@@ -48,10 +48,7 @@ export { ChatInputBar } from '@/components/features/game-chat/ChatInputBar';
 export type { ChatInputBarProps } from '@/components/features/game-chat/ChatInputBar';
 
 export { GameChatHeader } from '@/components/features/game-chat/GameChatHeader';
-export type {
-  GameChatHeaderProps,
-  AgentKind,
-} from '@/components/features/game-chat/GameChatHeader';
+export type { GameChatHeaderProps } from '@/components/features/game-chat/GameChatHeader';
 
 export { GameChatSidebar } from '@/components/features/game-chat/GameChatSidebar';
 export type {

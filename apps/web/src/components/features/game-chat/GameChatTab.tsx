@@ -25,7 +25,7 @@ import { ChatInputBar } from '@/components/features/game-chat/ChatInputBar';
 import { CitationChip } from '@/components/features/game-chat/CitationChip';
 import { CitationModal } from '@/components/features/game-chat/CitationModal';
 import { ConfidenceBadge } from '@/components/features/game-chat/ConfidenceBadge';
-import { GameChatHeader, type AgentKind } from '@/components/features/game-chat/GameChatHeader';
+import { GameChatHeader } from '@/components/features/game-chat/GameChatHeader';
 import { GameChatSidebar } from '@/components/features/game-chat/GameChatSidebar';
 import {
   LowConfidenceDisclaimer,
@@ -48,7 +48,6 @@ import type { Components } from 'react-markdown';
 
 export interface GameChatTabProps {
   readonly gameId: string;
-  readonly initialAgent?: AgentKind;
   readonly gameTitle?: string;
   readonly gameIcon?: string;
 }
@@ -85,8 +84,12 @@ const AGENT_ANSWER_COMPONENTS: Components = {
   ),
 };
 
-const AGENT_AVATAR: Record<AgentKind, string> = { tutor: '🧙', arbitro: '⚖️' };
-const AGENT_NAME: Record<AgentKind, string> = { tutor: 'Tutor', arbitro: 'Arbitro' };
+/**
+ * #4999: un nome solo per chi risponde, che non dipende dall'intento. «Tutor» è un id d'intento
+ * (ADR-098 §5), e l'agente è uno (ADR-094): chiamarlo come l'intento faceva dire «Tutor» anche
+ * a una risposta secca. L'avatar resta quello predefinito della bolla.
+ */
+const ASSISTANT_NAME = 'Assistente';
 
 const SUGGESTED_DEFAULT: ReadonlyArray<Omit<SuggestedPrompt, 'onClick'>> = [
   { category: 'A', text: 'Posso ripetere questa azione nel turno?' },
@@ -97,11 +100,10 @@ const SUGGESTED_DEFAULT: ReadonlyArray<Omit<SuggestedPrompt, 'onClick'>> = [
 
 export function GameChatTab({
   gameId,
-  initialAgent = 'tutor',
   gameTitle = 'Gioco',
   gameIcon = '🎲',
 }: GameChatTabProps): ReactElement {
-  const chat = useGameChat(gameId, initialAgent);
+  const chat = useGameChat(gameId);
   const [inputValue, setInputValue] = useState('');
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -196,7 +198,7 @@ export function GameChatTab({
 
   return (
     <div className="flex h-full flex-col">
-      <GameChatHeader gameTitle={gameTitle} gameIcon={gameIcon} agent={chat.currentAgent} />
+      <GameChatHeader gameTitle={gameTitle} gameIcon={gameIcon} intent={chat.intent} />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar — hidden under lg */}
@@ -204,9 +206,7 @@ export function GameChatTab({
           <GameChatSidebar
             gameTitle={gameTitle}
             gameIcon={gameIcon}
-            currentAgent={chat.currentAgent}
             history={[]}
-            onAgentChange={chat.switchAgent}
             onHistorySelect={() => {}}
           />
         </div>
@@ -239,7 +239,7 @@ export function GameChatTab({
                       // Quando isLowQuality === true, il content della risposta è
                       // mostrato dentro il LowConfidenceDisclaimer come summary —
                       // sopprimiamo qui per evitare duplicazione UX.
-                      // #4988: il Tutor risponde in Markdown (grassetto, elenchi); senza rendering
+                      // #4988: l'assistente risponde in Markdown (grassetto, elenchi); senza rendering
                       // si vedevano gli asterischi e l'elenco schiacciato in un paragrafo. Il testo
                       // dell'utente resta testo semplice.
                       content={
@@ -256,8 +256,7 @@ export function GameChatTab({
                           />
                         )
                       }
-                      agentName={AGENT_NAME[chat.currentAgent]}
-                      avatar={AGENT_AVATAR[chat.currentAgent]}
+                      agentName={ASSISTANT_NAME}
                       isHistorical={msg.isHistorical}
                     >
                       {renderAgentExtras(msg)}
@@ -265,12 +264,7 @@ export function GameChatTab({
                   )
                 )}
                 {chat.isLoading && (
-                  <ChatBubble
-                    role="agent"
-                    content=""
-                    agentName={AGENT_NAME[chat.currentAgent]}
-                    avatar={AGENT_AVATAR[chat.currentAgent]}
-                  >
+                  <ChatBubble role="agent" content="" agentName={ASSISTANT_NAME}>
                     <TypingIndicator hint="Cerco nella KB" />
                   </ChatBubble>
                 )}
@@ -299,7 +293,7 @@ export function GameChatTab({
             onChange={setInputValue}
             onSubmit={handleSubmit}
             disabled={chat.isLoading}
-            placeholder={`Scrivi una domanda al ${AGENT_NAME[chat.currentAgent]}…`}
+            placeholder="Scrivi una domanda all'assistente…"
           />
         </div>
       </div>

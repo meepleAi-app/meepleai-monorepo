@@ -10,9 +10,11 @@
  *   - Hydrate messages text-only (no metadata G1+G5: backend ChatThreadMessage non li persiste)
  *   - Persist chatThreadId per riusarlo nelle qaStream successive (continua thread esistente)
  *   - hasHistoricalMessages flag per UX banner
+ *   - #4999: l'intento salvato su quel thread (`agentType`), letto come lo legge il server
  *   - Silent fail: se il fetch fallisce, isError resta false (utente può comunque chiedere)
  *
- * Backend: zero modifiche. Usa qaStream() (SSE) + api.chat.getThreadsByGame() (REST).
+ * Usa qaStream() (SSE) + api.chat.getThreadsByGame() (REST). Il backend è stato toccato una volta, da
+ * #4999: la lista per gioco riporta `agentType`, come il GET per id.
  *
  * Spec: docs/superpowers/specs/2026-05-09-game-chat-tab-v1-g5-design.md §3.4
  *       docs/superpowers/specs/2026-05-10-fast-resume-audit-g2-design.md §3.1
@@ -25,10 +27,10 @@ import {
   QaTooManyRequestsError,
   qaStreamKnownErrorMessage,
 } from '@/components/chat-unified/qaStreamErrors';
-import type { AgentKind } from '@/components/features/game-chat/GameChatHeader';
 import { api } from '@/lib/api';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import type { ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
+import { intentOf, type AnswerIntent } from '@/lib/chat/answer-intent';
 import { citedPage } from '@/lib/citations/citedPage';
 import { logger } from '@/lib/logger';
 import { readTierLimit, TIER_LIMIT_EXCEEDED, type TierLimit } from '@/lib/tier-limit';
@@ -68,11 +70,14 @@ export interface UseGameChatResult {
    * vero): la frase serve a chi lo chiama per far vedere il guasto.
    */
   readonly errorMessage: string | null;
-  readonly currentAgent: AgentKind;
+  /**
+   * #4999 (ADR-098 §5): l'intento del thread che le domande continuano, cioè quello con cui il server
+   * risponde. `auto` senza thread. Si mostra e non si sceglie: il selettore sta nella chat desktop.
+   */
+  readonly intent: AnswerIntent;
   readonly chatThreadId: string | null;
   readonly hasHistoricalMessages: boolean;
   readonly ask: (question: string) => Promise<void>;
-  readonly switchAgent: (next: AgentKind) => void;
 }
 
 // Module-private id counter for ephemeral chat message ids.
@@ -158,9 +163,9 @@ function toChatMessage(dto: ChatThreadMessageDto, idx: number): ChatMessage {
   };
 }
 
-export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): UseGameChatResult {
+export function useGameChat(gameId: string): UseGameChatResult {
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
-  const [currentAgent, setCurrentAgent] = useState<AgentKind>(initialAgent);
+  const [intent, setIntent] = useState<AnswerIntent>('auto');
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [tierLimit, setTierLimit] = useState<TierLimit | null>(null);
@@ -174,6 +179,13 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
   // G2: Hydrate latest thread on mount
   useEffect(() => {
     let cancelled = false;
+    // #4999: un altro gioco non continua il thread di quello di prima. Senza azzerare, l'intestazione
+    // mostrava l'intento del gioco precedente e `ask` mandava il suo `chatId`, che il server scarta
+    // (thread di un altro gioco → risposta `auto`).
+    setMessages([]);
+    setChatThreadId(null);
+    setIntent('auto');
+    setHasHistoricalMessages(false);
     setIsHydrating(true);
 
     api.chat
@@ -191,6 +203,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
 
         if (latest && latest.messages.length > 0) {
           setChatThreadId(latest.id);
+          setIntent(intentOf(latest.agentType));
           setMessages(latest.messages.map(toChatMessage));
           setHasHistoricalMessages(true);
         }
@@ -336,10 +349,6 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
     [gameId, chatThreadId]
   );
 
-  const switchAgent = useCallback((next: AgentKind) => {
-    setCurrentAgent(next);
-  }, []);
-
   return {
     messages,
     isLoading,
@@ -348,10 +357,9 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
     tierLimit,
     refusal,
     errorMessage,
-    currentAgent,
+    intent,
     chatThreadId,
     hasHistoricalMessages,
     ask,
-    switchAgent,
   };
 }

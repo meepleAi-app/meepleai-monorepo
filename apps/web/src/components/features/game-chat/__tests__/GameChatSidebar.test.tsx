@@ -6,9 +6,7 @@ describe('GameChatSidebar', () => {
   const baseProps = {
     gameTitle: 'Wingspan',
     gameIcon: '🦤',
-    currentAgent: 'tutor' as const,
     history: [],
-    onAgentChange: vi.fn(),
     onHistorySelect: vi.fn(),
   };
 
@@ -18,18 +16,12 @@ describe('GameChatSidebar', () => {
     expect(screen.getByText('🦤')).toBeInTheDocument();
   });
 
-  it('renders agent switch with current pressed', () => {
-    render(<GameChatSidebar {...baseProps} currentAgent="arbitro" />);
-    const arbitroBtn = screen.getByRole('button', { name: /Arbitro/ });
-    expect(arbitroBtn).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: /Tutor/ })).toHaveAttribute('aria-pressed', 'false');
-  });
-
-  it('calls onAgentChange when other agent clicked', () => {
-    const onAgentChange = vi.fn();
-    render(<GameChatSidebar {...baseProps} onAgentChange={onAgentChange} currentAgent="tutor" />);
-    fireEvent.click(screen.getByRole('button', { name: /Arbitro/ }));
-    expect(onAgentChange).toHaveBeenCalledWith('arbitro');
+  // #4999: the tutor/arbitro switch changed the label and nothing else. The intent is read in the header.
+  it('offers no agent or intent switch', () => {
+    render(<GameChatSidebar {...baseProps} />);
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryByText(/tutor|arbitro/i)).not.toBeInTheDocument();
   });
 
   it('renders history items + active highlight', () => {

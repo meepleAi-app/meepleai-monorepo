@@ -24,6 +24,7 @@ import {
   type ContinuationData,
 } from '@/lib/api/clients/chatClient';
 import type { ChatThreadDto, ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
+import { ANSWER_INTENT_LABELS, intentOf } from '@/lib/chat/answer-intent';
 import { cn } from '@/lib/utils';
 
 import { CitationBlock } from './CitationBlock';
@@ -664,7 +665,21 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   return (
     <div className="flex flex-col h-dvh bg-[var(--bg)]">
       {/* Header */}
-      <MobileHeader title={headerTitle} onBack={() => router.push('/chat')} />
+      {/* #4999 (ADR-098 §5): l'intento del thread, in sola lettura. Sul telefono non si sceglie (decisione
+          del committente del 2026-11-12): si legge, perché è quello con cui il server risponde. */}
+      <MobileHeader
+        title={headerTitle}
+        onBack={() => router.push('/chat')}
+        rightActions={
+          <span
+            data-testid="thread-intent"
+            className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground"
+          >
+            <span className="sr-only">Intento della risposta: </span>
+            {ANSWER_INTENT_LABELS[intentOf(thread?.agentType)]}
+          </span>
+        }
+      />
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">

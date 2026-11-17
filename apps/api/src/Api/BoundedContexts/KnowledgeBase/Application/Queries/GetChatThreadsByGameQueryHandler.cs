@@ -47,7 +47,10 @@ internal class GetChatThreadsByGameQueryHandler : IQueryHandler<GetChatThreadsBy
             CreatedAt: thread.CreatedAt,
             LastMessageAt: thread.LastMessageAt,
             MessageCount: thread.MessageCount,
-            Messages: messageDtos
+            Messages: messageDtos,
+            // #4999: the game chat shows the intent of the game's latest thread, read from this list. Without it the header
+            // said one intent while the pipeline answered in the stored one - the omission #4404 fixed on the GET by id.
+            AgentType: thread.AgentType
         );
     }
 }

@@ -51,10 +51,10 @@ describe('useGameChat', () => {
     vi.mocked(api.chat.getThreadsByGame).mockResolvedValue([]);
   });
 
-  it('starts with empty messages and tutor agent', () => {
+  it('starts with empty messages and the auto intent', () => {
     const { result } = renderHook(() => useGameChat('wingspan'));
     expect(result.current.messages).toEqual([]);
-    expect(result.current.currentAgent).toBe('tutor');
+    expect(result.current.intent).toBe('auto');
     expect(result.current.isLoading).toBe(false);
   });
 
@@ -600,32 +600,6 @@ describe('useGameChat', () => {
     expect(result.current.tierLimit).toBeNull();
   });
 
-  it('switchAgent updates currentAgent', () => {
-    const { result } = renderHook(() => useGameChat('wingspan'));
-    act(() => {
-      result.current.switchAgent('arbitro');
-    });
-    expect(result.current.currentAgent).toBe('arbitro');
-  });
-
-  it('switchAgent does NOT clear message history', async () => {
-    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
-    const { result } = renderHook(() => useGameChat('wingspan'));
-    await act(async () => {
-      await result.current.ask('q');
-    });
-    expect(result.current.messages).toHaveLength(2);
-    act(() => {
-      result.current.switchAgent('arbitro');
-    });
-    expect(result.current.messages).toHaveLength(2);
-  });
-
-  it('initialAgent overrides default tutor', () => {
-    const { result } = renderHook(() => useGameChat('wingspan', 'arbitro'));
-    expect(result.current.currentAgent).toBe('arbitro');
-  });
-
   // ─── G2 hydrate tests ───────────────────────────────
 
   const sampleThreadMessage = (role: string, content: string, ts: string) => ({
@@ -634,11 +608,16 @@ describe('useGameChat', () => {
     timestamp: ts,
   });
 
-  const sampleThread = (id: string, lastMessageAt: string | null, messages: any[] = []) => ({
+  const sampleThread = (
+    id: string,
+    lastMessageAt: string | null,
+    messages: any[] = [],
+    agentType: string | null = null
+  ) => ({
     id,
     gameId: 'wingspan',
     agentId: null,
-    agentType: null,
+    agentType,
     title: 'Test thread',
     createdAt: '2026-05-10T00:00:00Z',
     lastMessageAt,
@@ -673,6 +652,91 @@ describe('useGameChat', () => {
     await waitFor(() => expect(result.current.isHydrating).toBe(false));
     expect(result.current.chatThreadId).toBe('thread-new');
     expect(result.current.messages[0].content).toBe('newer');
+  });
+
+  // #4999: the questions continue the latest thread, so the server answers in that thread's intent.
+  it('takes the intent of the thread it continues', async () => {
+    const thread = sampleThread(
+      'thread-1',
+      '2026-05-10T10:00:00Z',
+      [sampleThreadMessage('user', 'old', '2026-05-10T10:00:00Z')],
+      'secca'
+    );
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.chatThreadId).toBe('thread-1'));
+    expect(result.current.intent).toBe('secca');
+  });
+
+  // From the review of #5057: a single thread cannot tell «the thread it continues» from «the first
+  // thread of the list».
+  it('takes the intent of the most recent thread, the one whose chatId it sends', async () => {
+    const older = sampleThread(
+      'thread-old',
+      '2026-05-09T10:00:00Z',
+      [sampleThreadMessage('user', 'older', '2026-05-09T10:00:00Z')],
+      'secca'
+    );
+    const newer = sampleThread(
+      'thread-new',
+      '2026-05-10T10:00:00Z',
+      [sampleThreadMessage('user', 'newer', '2026-05-10T10:00:00Z')],
+      'tutor'
+    );
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([older, newer]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.chatThreadId).toBe('thread-new'));
+    expect(result.current.intent).toBe('tutor');
+
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+    await act(async () => {
+      await result.current.ask('q');
+    });
+    expect(vi.mocked(qaStream).mock.calls[0][0]).toMatchObject({ chatId: 'thread-new' });
+  });
+
+  it('a latest thread with no messages is not continued, so the intent stays auto', async () => {
+    const empty = sampleThread('thread-empty', '2026-05-10T10:00:00Z', [], 'secca');
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([empty]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+    expect(result.current.chatThreadId).toBeNull();
+    expect(result.current.intent).toBe('auto');
+  });
+
+  it('another game does not keep the thread, the intent or the messages of the previous one', async () => {
+    const thread = sampleThread(
+      'thread-wingspan',
+      '2026-05-10T10:00:00Z',
+      [sampleThreadMessage('user', 'wingspan question', '2026-05-10T10:00:00Z')],
+      'tutor'
+    );
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread]);
+    const { result, rerender } = renderHook(({ gameId }) => useGameChat(gameId), {
+      initialProps: { gameId: 'wingspan' },
+    });
+    await waitFor(() => expect(result.current.intent).toBe('tutor'));
+
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([]);
+    rerender({ gameId: 'azul' });
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+    expect(result.current.intent).toBe('auto');
+    expect(result.current.chatThreadId).toBeNull();
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.hasHistoricalMessages).toBe(false);
+  });
+
+  it('reads a retired intent stored on the thread as auto, as the server does', async () => {
+    const thread = sampleThread(
+      'thread-1',
+      '2026-05-10T10:00:00Z',
+      [sampleThreadMessage('user', 'old', '2026-05-10T10:00:00Z')],
+      'arbitro'
+    );
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.chatThreadId).toBe('thread-1'));
+    expect(result.current.intent).toBe('auto');
   });
 
   it('starts empty when no threads exist (no error)', async () => {

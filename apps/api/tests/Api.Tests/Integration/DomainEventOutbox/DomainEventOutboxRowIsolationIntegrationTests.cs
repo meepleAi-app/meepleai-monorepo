@@ -7,6 +7,7 @@ using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.DomainEventOutbox;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -181,6 +182,63 @@ public sealed class DomainEventOutboxRowIsolationIntegrationTests : IAsyncLifeti
         failed.Attempts.Should().Be(1);
         failed.LastError.Should().Contain("23503", "the save's own error, not EF's «see the inner exception»");
         (await CommentExistsAsync(orphanId)).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// From the review of #5053: a repository queues the aggregate's events in the scope's collector when it stages the
+    /// change, and the context keeps them after a failed save. Dropping the residue without them would enqueue, on the
+    /// next save, an outbox row for each event of a change that was never written — a delivery of something that did not
+    /// happen, and a new one on every retry.
+    /// </summary>
+    [Fact]
+    public async Task OneBatch_UnsavableResidueWithAQueuedEvent_TheEventIsDroppedWithIt()
+    {
+        var phantom = new RowEvent(99);
+        _onPublish = (scope, evt, _) =>
+        {
+            if (evt.Marker != 2) return Task.CompletedTask;
+            scope.GetRequiredService<IDomainEventCollector>().Collect(phantom);
+            scope.GetRequiredService<MeepleAiDbContext>().RuleSpecComments.Add(OrphanComment(Guid.NewGuid()));
+            return Task.CompletedTask;
+        };
+        var ids = await EnqueueAsync(1, 2, 3);
+
+        await Processor().RunOnceAsync(batchSize: 100, cancellationToken: Ct);
+
+        var rows = await ReadRowsAsync();
+        rows.Keys.Should().BeEquivalentTo(ids, "no outbox row may be enqueued for the dropped change's event");
+        rows[ids[1]].Status.Should().Be(DomainEventOutboxStatus.Pending);
+        rows[ids[2]].Status.Should().Be(DomainEventOutboxStatus.Sent);
+    }
+
+    [Fact]
+    public async Task OneBatch_TwoRowsLeaveAnUnsavableEntity_OnlyThoseTwoAreRetried()
+    {
+        _onPublish = (scope, evt, _) =>
+        {
+            if (evt.Marker is 2 or 4)
+            {
+                scope.GetRequiredService<MeepleAiDbContext>().RuleSpecComments.Add(OrphanComment(Guid.NewGuid()));
+            }
+
+            return Task.CompletedTask;
+        };
+        var ids = await EnqueueAsync(1, 2, 3, 4, 5);
+
+        var processed = await Processor().RunOnceAsync(batchSize: 100, cancellationToken: Ct);
+
+        processed.Should().Be(5);
+        var rows = await ReadRowsAsync();
+        foreach (var sent in new[] { ids[0], ids[2], ids[4] })
+        {
+            rows[sent].Status.Should().Be(DomainEventOutboxStatus.Sent, "the second drop re-attaches rows the first one re-attached");
+        }
+
+        foreach (var retried in new[] { ids[1], ids[3] })
+        {
+            rows[retried].Status.Should().Be(DomainEventOutboxStatus.Pending);
+            rows[retried].Attempts.Should().Be(1);
+        }
     }
 
     [Fact]

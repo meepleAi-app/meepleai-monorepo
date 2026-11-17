@@ -75,9 +75,10 @@ internal static partial class MeepleAiMetrics
     /// batch advances, and the next poll takes the same rows again. Tag: <c>exception_type</c>
     /// (the CLR type name of the exception that ended the batch).
     ///
-    /// <para>A handler's failure no longer fails the batch (each row has its own savepoint), so
-    /// what is left here is the database itself, a commit, or the processor. One increment is a
-    /// blip; a sustained rate means the outbox is stuck and nothing is being delivered. Alert
+    /// <para>A residue a handler leaves in the change tracker no longer fails the batch (each row is
+    /// saved on its own), so what is left here is the database itself, a commit, the processor, or a
+    /// handler that swallowed a failed SQL statement and so aborted the transaction. One increment
+    /// is a blip; a sustained rate means the outbox is stuck and nothing is being delivered. Alert
     /// rule: <c>infra/prometheus/alerts/domain-event-outbox-batch.yml</c>.</para>
     /// </summary>
     public static readonly Counter<long> DomainEventOutboxBatchFailed = Meter.CreateCounter<long>(

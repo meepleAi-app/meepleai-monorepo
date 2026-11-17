@@ -3430,7 +3430,8 @@ Defined in `infra/prometheus/alerts/domain-event-outbox-batch.yml`, routed via `
 `DomainEventOutboxProcessor` saves each row on its own, together with what its handlers left in the
 change tracker. A handler's residue that cannot be written therefore fails **its row**: the residue
 is dropped and the row goes to retry, with the attempt counted. What can still fail a whole batch is
-the database itself, a commit, or the processor.
+the database itself, a commit, the processor, or a handler that swallowed a failed SQL statement
+(`ExecuteUpdate`, raw SQL) and so left the transaction aborted (`25P02` on every later command).
 
 1. **Read the `exception_type` label** of `meepleai_domain_event_outbox_batch_failed_total_batches_total`,
    then the `DomainEventOutboxProcessor batch failed; will retry on next poll` log lines, which carry the
@@ -3438,7 +3439,9 @@ the database itself, a commit, or the processor.
 2. **Database down or unreachable** (`NpgsqlException`, timeouts): `DatabaseDown` (in
    `infra/prometheus-rules.yml`) should be firing too. Fix the database; the outbox drains
    by itself, since no attempt was counted against the rows.
-3. **Anything else** is a processor defect: open an issue with the stack trace. The rows are intact,
+3. **`25P02` (current transaction is aborted)** in the log: a handler swallowed a failed statement.
+   The stack trace of the first error in the batch names it.
+4. **Anything else** is a processor defect: open an issue with the stack trace. The rows are intact,
    and stay `Pending` with their attempt count unchanged until the batch can commit.
 
 `meepleai_domain_event_outbox_pending_oldest_age_seconds` keeps ageing while batches fail. Until #5030

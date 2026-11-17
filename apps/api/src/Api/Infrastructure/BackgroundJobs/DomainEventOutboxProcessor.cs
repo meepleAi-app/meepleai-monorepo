@@ -2,10 +2,13 @@ using System.Text.Json;
 using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities.DomainEventOutbox;
 using Api.Observability;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace Api.Infrastructure.BackgroundJobs;
 
@@ -117,6 +120,10 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var typeResolver = scope.ServiceProvider.GetRequiredService<IDomainEventTypeResolver>();
+        // The batch context's collector: events a repository queued for changes that are then dropped
+        // must be dropped with them (#5030). Optional because a test host may build the context
+        // without one.
+        var collector = scope.ServiceProvider.GetService<IDomainEventCollector>();
 
         // All stateful work runs INSIDE the execution-strategy delegate so the prod
         // NpgsqlRetryingExecutionStrategy can replay the whole batch on transient errors.
@@ -134,15 +141,18 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
         try
         {
             batchResult = await strategy.ExecuteAsync(
-                () => DrainBatchAsync(db, mediator, typeResolver, batchSize, cancellationToken)).ConfigureAwait(false);
+                () => DrainBatchAsync(db, collector, mediator, typeResolver, batchSize, cancellationToken)).ConfigureAwait(false);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             // #5030: a batch that fails as a whole used to leave only a LogError per poll, and the
             // health snapshot was refreshed only after a successful batch, so the oldest-Pending age
             // the stale alert reads stayed frozen at its last value.
+            // When the execution strategy gives up, the exception it throws is a wrapper: the label
+            // names what actually failed.
+            var cause = ex is RetryLimitExceededException { InnerException: { } inner } ? inner : ex;
             MeepleAiMetrics.DomainEventOutboxBatchFailed.Add(
-                1, new KeyValuePair<string, object?>("exception_type", ex.GetType().Name));
+                1, new KeyValuePair<string, object?>("exception_type", cause.GetType().Name));
             await TryUpdateHealthSnapshotAfterFailureAsync(db, cancellationToken).ConfigureAwait(false);
             throw;
         }
@@ -183,12 +193,16 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
     /// </summary>
     private async Task<BatchOutcome> DrainBatchAsync(
         MeepleAiDbContext db,
+        IDomainEventCollector? collector,
         IMediator mediator,
         IDomainEventTypeResolver typeResolver,
         int batchSize,
         CancellationToken cancellationToken)
     {
+        // A replayed attempt starts clean: the previous one's transaction rolled back, so neither its
+        // tracked changes nor the events queued for them may reach this attempt's saves.
         db.ChangeTracker.Clear();
+        collector?.Clear();
         var now = _timeProvider.GetUtcNow();
 
         // FIFO drain — partial index on (status=Pending, next_attempt_at) drives the plan.
@@ -239,10 +253,10 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             }
 #pragma warning disable CA1031 // Per-row resilience: an unsavable residue must not fail the batch
-            catch (Exception saveEx) when (saveEx is not OperationCanceledException)
+            catch (Exception saveEx) when (saveEx is not OperationCanceledException && !IsTransient(saveEx))
 #pragma warning restore CA1031
             {
-                outcome = await DropUnsavableResidueAsync(db, pending, i, outcome, saveEx, now, cancellationToken)
+                outcome = await DropUnsavableResidueAsync(db, collector, pending, i, outcome, saveEx, now, cancellationToken)
                     .ConfigureAwait(false);
             }
 
@@ -406,12 +420,15 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
     /// What a handler of this row already SAVED stays, exactly as when a handler throws: handlers
     /// with an external side effect rely on that to keep their "already sent" marker across a
     /// sibling's failure, and a retry runs every handler of the event again. Only the unsaved
-    /// residue is dropped. The failed save does not poison the transaction: inside a user
-    /// transaction EF Core wraps <c>SaveChanges</c> in a savepoint of its own and rolls back to it.
+    /// residue is dropped — with the domain events a repository queued for it, which the context
+    /// keeps after a failed save and would otherwise enqueue as outbox rows on the next one. The
+    /// failed save does not poison the transaction: inside a user transaction EF Core wraps
+    /// <c>SaveChanges</c> in a savepoint of its own and rolls back to it.
     /// </para>
     /// </summary>
     private async Task<RowOutcome> DropUnsavableResidueAsync(
         MeepleAiDbContext db,
+        IDomainEventCollector? collector,
         List<DomainEventOutboxEntity> pending,
         int index,
         RowOutcome outcome,
@@ -421,6 +438,9 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
     {
         var row = pending[index];
         db.ChangeTracker.Clear();
+        // Every earlier row was saved, and a successful save empties the collector: what is left was
+        // queued by this row's handlers, for changes that were just discarded.
+        collector?.Clear();
 
         var saveError = saveEx.GetBaseException().Message;
         _logger.LogWarning(saveEx,
@@ -449,6 +469,13 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
 
         return result;
     }
+
+    /// <summary>
+    /// A transient database error (deadlock, serialization failure, lost connection) is not a residue
+    /// the handlers left: it propagates, and the execution strategy replays the batch as before #5030.
+    /// </summary>
+    private static bool IsTransient(Exception ex) =>
+        ex.GetBaseException() is NpgsqlException { IsTransient: true };
 
     /// <summary>
     /// #5030 — refreshes the health snapshot after a batch failed as a whole. Best-effort: when the

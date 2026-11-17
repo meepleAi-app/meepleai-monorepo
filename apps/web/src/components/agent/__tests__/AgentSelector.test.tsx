@@ -56,7 +56,13 @@ describe('AgentSelector', () => {
       expect(screen.getAllByText('La risposta di sempre').length).toBeGreaterThan(0);
     });
     expect(screen.getByText('Spiega la regola passo passo, con un esempio')).toBeInTheDocument();
-    expect(screen.getByText('Una riga e la citazione')).toBeInTheDocument();
+    // #5001: it says what SeccaInstruction asks for — one sentence with its citation, and on a refusal only the
+    // refusal — not «one line and the citation».
+    expect(
+      screen.getByText(
+        'Una sola frase, con la sua citazione. Se il manuale non risponde, lo dice e basta'
+      )
+    ).toBeInTheDocument();
   });
 
   it('does NOT show fabricated "online" status indicators (#3393)', async () => {

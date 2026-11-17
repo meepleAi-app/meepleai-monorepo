@@ -29,7 +29,8 @@ export const ANSWER_INTENT_LABELS: Record<AnswerIntent, string> = {
 export const ANSWER_INTENT_DESCRIPTIONS: Record<AnswerIntent, string> = {
   auto: 'La risposta di sempre',
   tutor: 'Spiega la regola passo passo, con un esempio',
-  secca: 'Una riga e la citazione',
+  // #5001: what SeccaInstruction asks for — one sentence with its citation, and on a refusal only the refusal.
+  secca: 'Una sola frase, con la sua citazione. Se il manuale non risponde, lo dice e basta',
 };
 
 /** The intent stored on a thread, as the server reads it: trimmed, lower case, and `auto` outside the list. */

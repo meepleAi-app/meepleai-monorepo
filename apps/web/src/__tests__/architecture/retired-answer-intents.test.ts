@@ -33,17 +33,10 @@ const RETIRED_ID =
 
 type Exception = { readonly permanent: string } | { readonly until: string };
 
-/** La pulizia che toglie il codice morto del vecchio sistema multi-agente: seguito di #4404. */
-const CLEANUP = '#5001 (chore(chat): pulizia e copy dopo ADR-098)';
-
+// #5001 ha tolto le sei eccezioni temporanee: il codice morto del vecchio sistema multi-agente e le etichette
+// di /chat, che ora vengono da ANSWER_INTENT_LABELS. Resta solo quella permanente.
 const EXCEPTIONS: Readonly<Record<string, Exception>> = {
   'app/(public)/page.tsx': { permanent: '«arbitro» è una parola chiave SEO, non un id' },
-  'app/(chat)/chat/page.tsx': { until: `${CLEANUP}: SYSTEM_AGENT_LABELS` },
-  'components/ui/meeple/chat-message.tsx': { until: CLEANUP },
-  'components/agent/AgentSelectorBadge.tsx': { until: CLEANUP },
-  'lib/api/orchestrator-client.ts': { until: CLEANUP },
-  'lib/schemas/multi-agent-dashboard-schema.ts': { until: CLEANUP },
-  'components/library/AgentConfigForm.tsx': { until: CLEANUP },
 };
 
 function sourceFiles(): Map<string, string> {

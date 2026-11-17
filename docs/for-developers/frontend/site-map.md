@@ -2836,7 +2836,6 @@ _Route-group: `(chat)` · 4 pagine_
   - `/chat/[threadId] -> /chat` (`ChatMobile` `MobileHeader` `onBack` → `router.push('/chat')`; mobile <lg, in loading/load-error/vista principale, + button in load-error)
   - `/chat/[threadId] -> /library/{thread.gameId}` (`ChatNavigationContext` `getNavigationLinks`; SOLO se `thread.gameId` presente — unico link risolvibile, target agent/session omessi)
   - `/chat/[threadId] -> drawer:AgentSettings` (`ChatThreadHeader` settings → `setSettingsOpen(true)`; SOLO se `thread.agentId != null`)
-  - `/chat/[threadId] -> modal:AgentSwitchDialog` (`AgentSelector` onChange → `setShowAgentConfirm(true)`; conferma → `api.chat.switchThreadAgent`; solo se newAgent ≠ corrente)
   - `/chat/[threadId] -> slide-over:PageViewerPanel` (`viewerState` → panel; solo `onClose` cablato, nessun trigger di apertura nel file)
 - **`/chat/new`**
   - `/chat/new -> /chat/{threadId}` (`handleStartChat` / `QuickStartSuggestions` onSelect → `createThreadWithContext` → push; click "Inizia Chat" o pill Quick Start)

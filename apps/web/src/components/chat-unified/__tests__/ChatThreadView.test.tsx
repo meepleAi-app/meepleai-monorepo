@@ -488,21 +488,25 @@ describe('ChatThreadView', () => {
   // Welcome Message (Issue #4780)
   // --------------------------------------------------------------------------
 
-  it('shows welcome message for new thread with agent (Tutor)', async () => {
-    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
-      ...mockThread,
-      messages: [],
-      agentType: 'Tutor',
-    });
+  // #5001 (ADR-098 §5): one welcome for every intent, about the rules. There was one per typology, keyed in
+  // capitals while threads store lower case, so `auto`, `tutor` and `secca` landed on a fallback promising strategy.
+  it.each(['auto', 'tutor', 'secca', null, 'Tutor', 'Arbitro', 'Stratega'])(
+    'a new thread stored with %j gets the same welcome, about the rules',
+    async stored => {
+      (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+        ...mockThread,
+        messages: [],
+        agentType: stored,
+      });
 
-    await renderView();
+      await renderView();
 
-    await waitFor(() => {
-      expect(screen.getByText(/Ho studiato il regolamento di Catan/)).toBeInTheDocument();
-    });
-    // Should show capabilities
-    expect(screen.getByText(/Cosa posso fare/)).toBeInTheDocument();
-  });
+      await screen.findByText(/Sono il tuo assistente per le regole di Catan/);
+      expect(screen.getByText(/Cosa posso fare/)).toBeInTheDocument();
+      // The thread is empty: the messages area holds the welcome and its questions, and nothing else.
+      expect(screen.getByTestId('messages-area').textContent).not.toMatch(/strateg|arbitr|mosse/i);
+    }
+  );
 
   // #4158: il gioco del thread si risolve per id. Scorrendo la prima pagina del catalogo
   // (20 giochi in ordine alfabetico) un gioco oltre quella pagina restava senza nome.
@@ -524,7 +528,7 @@ describe('ChatThreadView', () => {
     await renderView();
 
     await waitFor(() => {
-      expect(screen.getByText(/Ho studiato il regolamento di Catan/)).toBeInTheDocument();
+      expect(screen.getByText(/Sono il tuo assistente per le regole di Catan/)).toBeInTheDocument();
     });
     expect(apiMock.games.getById).toHaveBeenCalledWith('game-1');
   });
@@ -549,53 +553,11 @@ describe('ChatThreadView', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Ho studiato il regolamento di Il mio prototipo/)
+        screen.getByText(/Sono il tuo assistente per le regole di Il mio prototipo/)
       ).toBeInTheDocument();
     });
     expect(apiMock.library.getPrivateGame).toHaveBeenCalledWith('private-1');
     expect(apiMock.games.getById).not.toHaveBeenCalled();
-  });
-
-  it('shows welcome message for new thread with agent (Arbitro)', async () => {
-    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
-      ...mockThread,
-      messages: [],
-      agentType: 'Arbitro',
-    });
-
-    await renderView();
-
-    await waitFor(() => {
-      expect(screen.getByText(/Sono il tuo arbitro per Catan/)).toBeInTheDocument();
-    });
-  });
-
-  it('shows welcome message for new thread with agent (Stratega)', async () => {
-    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
-      ...mockThread,
-      messages: [],
-      agentType: 'Stratega',
-    });
-
-    await renderView();
-
-    await waitFor(() => {
-      expect(screen.getByText(/analizzare le tue mosse a Catan/)).toBeInTheDocument();
-    });
-  });
-
-  it('shows welcome message for new thread with agent (Narratore)', async () => {
-    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
-      ...mockThread,
-      messages: [],
-      agentType: 'Narratore',
-    });
-
-    await renderView();
-
-    await waitFor(() => {
-      expect(screen.getByText(/Benvenuto nel mondo di Catan/)).toBeInTheDocument();
-    });
   });
 
   describe('the intent of the answers (#4404)', () => {
@@ -662,7 +624,9 @@ describe('ChatThreadView', () => {
       expect(apiMock.chat.switchThreadAgent).not.toHaveBeenCalled();
     });
 
-    it('switching to the secca intent asks first, names it, and then tells the server its id', async () => {
+    // #5001 (ADR-098 §5): changing intent costs nothing and keeps the history, so there is no confirmation. The
+    // banner was a leftover of the «distinct agents» model, and an alertdialog with no name and no focus.
+    it('choosing an intent tells the server at once, with no step in between', async () => {
       (apiMock.chat.getThreadById as Mock).mockResolvedValue({
         ...mockThread,
         messages: [],
@@ -672,32 +636,31 @@ describe('ChatThreadView', () => {
       await renderView();
       const selector = await screen.findByTestId('agent-selector');
 
-      fireEvent.change(selector, { target: { value: 'secca' } });
-
-      const dialog = await screen.findByTestId('agent-switch-confirm');
-      expect(dialog).toHaveTextContent('Risposta secca');
-      expect(apiMock.chat.switchThreadAgent).not.toHaveBeenCalled();
-
-      fireEvent.click(screen.getByTestId('agent-switch-confirm-btn'));
+      fireEvent.change(selector, { target: { value: 'tutor' } });
 
       await waitFor(() => {
-        expect(apiMock.chat.switchThreadAgent).toHaveBeenCalledWith('thread-1', 'secca');
+        expect(apiMock.chat.switchThreadAgent).toHaveBeenCalledWith('thread-1', 'tutor');
       });
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('agent-switch-confirm')).not.toBeInTheDocument();
+      expect(screen.getByTestId('agent-selector')).toHaveAttribute('data-value', 'tutor');
+    });
+
+    it('a failed change leaves the selector on the stored intent and says so', async () => {
+      (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+        ...mockThread,
+        messages: [],
+        agentType: 'secca',
+      });
+      (apiMock.chat.switchThreadAgent as Mock).mockRejectedValue(new Error('500'));
+      await renderView();
+      const selector = await screen.findByTestId('agent-selector');
+
+      fireEvent.change(selector, { target: { value: 'tutor' } });
+
+      expect(await screen.findByText('Errore nel cambio del tipo di risposta')).toBeInTheDocument();
+      expect(apiMock.chat.switchThreadAgent).toHaveBeenCalledWith('thread-1', 'tutor');
       expect(screen.getByTestId('agent-selector')).toHaveAttribute('data-value', 'secca');
-    });
-  });
-
-  it('shows default welcome message for unknown typology', async () => {
-    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
-      ...mockThread,
-      messages: [],
-      agentType: 'unknown',
-    });
-
-    await renderView();
-
-    await waitFor(() => {
-      expect(screen.getByText(/Sono il tuo assistente per Catan/)).toBeInTheDocument();
     });
   });
 

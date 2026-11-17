@@ -1,9 +1,12 @@
 /**
- * Agent Welcome Messages Configuration
+ * Agent Welcome Message
  * Issue #4780: Welcome message + auto-redirect post agent creation
  *
- * Defines personalized welcome messages, capabilities, and follow-up
- * questions per agent typology.
+ * #5001 (ADR-098 §5): one welcome, the same for every intent. There is one agent (ADR-094), and the intent
+ * changes the SHAPE of the answer, not its domain. There used to be a welcome per typology, keyed `Tutor`,
+ * `Arbitro`, `Stratega`, `Narratore` while threads store the intents in lower case, so `auto`, `tutor` and `secca`
+ * all landed on a fallback that promised «strategie». Strategy and game advice are not in the rulebook: the
+ * welcome, its capabilities and its questions talk about the rules.
  */
 
 // ============================================================================
@@ -20,85 +23,21 @@ export interface AgentWelcomeConfig {
 }
 
 // ============================================================================
-// Welcome Messages by Typology
+// The welcome
 // ============================================================================
 
-const WELCOME_CONFIGS: Record<string, AgentWelcomeConfig> = {
-  Tutor: {
-    greeting:
-      'Ciao! Ho studiato il regolamento di {game} e posso aiutarti con regole, setup e strategie. Chiedimi qualsiasi cosa!',
-    capabilities: [
-      'Spiegare le regole del gioco passo dopo passo',
-      'Aiutarti con il setup iniziale',
-      'Chiarire situazioni ambigue durante la partita',
-      'Suggerire strategie per principianti',
-    ],
-    followUpQuestions: [
-      'Come si prepara il tavolo per {game}?',
-      'Quali sono le regole base di {game}?',
-      'Quali errori comuni devo evitare?',
-    ],
-  },
-  Arbitro: {
-    greeting:
-      'Sono il tuo arbitro per {game}. Descrivimi la situazione e risolverò la disputa in modo imparziale.',
-    capabilities: [
-      'Risolvere dispute sulle regole',
-      'Chiarire interazioni tra carte o meccaniche',
-      'Giudicare situazioni ambigue',
-      'Citare le regole ufficiali pertinenti',
-    ],
-    followUpQuestions: [
-      'Abbiamo un dubbio su una regola di {game}, puoi aiutarci?',
-      'Come funziona esattamente questa meccanica?',
-      'Due regole sembrano in conflitto, quale prevale?',
-    ],
-  },
-  Stratega: {
-    greeting:
-      'Ciao stratega! Sono pronto ad analizzare le tue mosse a {game}. Raccontami la situazione e troveremo la strategia migliore.',
-    capabilities: [
-      'Analizzare posizioni e suggerire mosse ottimali',
-      'Consigliare strategie in base alla fase di gioco',
-      'Valutare rischi e opportunità',
-      'Suggerire counter-strategie contro avversari',
-    ],
-    followUpQuestions: [
-      'Qual è la strategia migliore per iniziare a {game}?',
-      'Come posso migliorare la mia posizione in questa fase?',
-      'Quali sono le strategie avanzate per {game}?',
-    ],
-  },
-  Narratore: {
-    greeting:
-      "Benvenuto nel mondo di {game}! Lascia che ti racconti la storia e l'ambientazione di questo gioco straordinario.",
-    capabilities: [
-      "Raccontare la lore e l'ambientazione del gioco",
-      'Creare atmosfera durante le partite',
-      'Descrivere scenari e personaggi',
-      "Rendere l'esperienza di gioco più immersiva",
-    ],
-    followUpQuestions: [
-      "Raccontami l'ambientazione di {game}",
-      'Chi sono i personaggi principali?',
-      'Qual è la storia dietro questo gioco?',
-    ],
-  },
-};
-
-const DEFAULT_WELCOME: AgentWelcomeConfig = {
+const WELCOME: AgentWelcomeConfig = {
   greeting:
-    'Ciao! Sono il tuo assistente per {game}. Posso aiutarti con regole, strategie e molto altro.',
+    'Ciao! Sono il tuo assistente per le regole di {game}. Rispondo con quello che dice il regolamento, e ti indico dove lo dice.',
   capabilities: [
-    'Rispondere a domande sulle regole',
-    'Suggerire strategie di gioco',
-    'Aiutarti con il setup',
-    'Chiarire situazioni di gioco',
+    'Spiegarti come si gioca, passo dopo passo',
+    'Aiutarti a preparare il tavolo',
+    'Chiarire una regola che non ti è chiara',
   ],
   followUpQuestions: [
     'Come si gioca a {game}?',
-    'Quali sono le regole principali?',
-    'Hai qualche consiglio per iniziare?',
+    'Come si prepara il tavolo per {game}?',
+    'Quali sono le regole principali di {game}?',
   ],
 };
 
@@ -106,36 +45,27 @@ const DEFAULT_WELCOME: AgentWelcomeConfig = {
 // Public API
 // ============================================================================
 
-/**
- * Get welcome configuration for a given agent typology.
- * Returns default config if typology is not recognized.
- */
-export function getAgentWelcome(typology: string | null | undefined): AgentWelcomeConfig {
-  if (!typology) return DEFAULT_WELCOME;
-  return WELCOME_CONFIGS[typology] ?? DEFAULT_WELCOME;
+/** The welcome configuration: one for every intent. */
+export function getAgentWelcome(): AgentWelcomeConfig {
+  return WELCOME;
 }
 
 /**
  * Build a complete welcome message string with capabilities list.
  */
-export function buildWelcomeMessage(typology: string | null | undefined, gameName: string): string {
-  const config = getAgentWelcome(typology);
+export function buildWelcomeMessage(gameName: string): string {
   // #3226: replacer function inserts gameName verbatim (a title with $&/$$ would otherwise be
   // interpreted as a replacement pattern and corrupt the text).
-  const greeting = config.greeting.replace(/{game}/g, () => gameName);
-  const capabilities = config.capabilities.map(c => `• ${c}`).join('\n');
+  const greeting = WELCOME.greeting.replace(/{game}/g, () => gameName);
+  const capabilities = WELCOME.capabilities.map(c => `• ${c}`).join('\n');
 
   return `${greeting}\n\n**Cosa posso fare:**\n${capabilities}`;
 }
 
 /**
- * Get follow-up questions for a given typology, with game name substituted.
+ * Get the follow-up questions, with game name substituted.
  */
-export function getWelcomeFollowUpQuestions(
-  typology: string | null | undefined,
-  gameName: string
-): string[] {
-  const config = getAgentWelcome(typology);
+export function getWelcomeFollowUpQuestions(gameName: string): string[] {
   // #3226: replacer function inserts gameName verbatim (see buildWelcomeMessage).
-  return config.followUpQuestions.map(q => q.replace(/{game}/g, () => gameName));
+  return WELCOME.followUpQuestions.map(q => q.replace(/{game}/g, () => gameName));
 }

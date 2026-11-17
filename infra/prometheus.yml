@@ -46,6 +46,8 @@ rule_files:
   - '/etc/prometheus/audit-outbox.yml'
   # Issue #1965 — domain_event_outbox duplicate-publish trigger (dormant until API >=2 replicas).
   - '/etc/prometheus/domain-event-outbox-duplicate-publish.yml'
+  # Issue #5030 — domain_event_outbox batches failing as a whole (the outbox is stuck).
+  - '/etc/prometheus/domain-event-outbox-batch.yml'
   # Issue #3248 (epic #448 C5) — copyright enforcement observability alerts.
   - '/etc/prometheus/copyright-enforcement.yml'
   # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (ungrounded-rate on RAG live path).

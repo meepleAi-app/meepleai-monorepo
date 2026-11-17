@@ -50,6 +50,9 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
     private Guid _otherUserId;
     private Guid _testGameId;
 
+    // Scopes and contexts created by CreateHandlerPausedBeforeSave, released in DisposeAsync.
+    private readonly List<IAsyncDisposable> _owned = new();
+
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public DeleteRuleCommentIntegrationTests(SharedTestcontainersFixture fixture)
@@ -90,6 +93,9 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
+        foreach (var owned in _owned)
+            await owned.DisposeAsync();
+
         if (_dbContext != null)
             await _dbContext.DisposeAsync();
 
@@ -409,6 +415,49 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         root.Should().NotBeNull("the failed save rolled back, and the root was never gone");
     }
 
+    /// <summary>
+    /// Issue #5048, a failed save that is not a 0-row DELETE: a reply inserted under the root between
+    /// the read and the write makes the root DELETE fail on the foreign key. The outcome is unchanged
+    /// (the error propagates), but the tracker must be clean for the same reason as above: the audit
+    /// behaviour saves its Error row on this context.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5048")]
+    public async Task Deletion_ReplyAddedBetweenReadAndSave_FailsWithACleanTracker()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var rootId = await CreateTestCommentAsync(_testUserId, "Parent comment");
+
+        // Another request replies to the root after this handler has read it, with no replies.
+        var (handler, db) = CreateHandlerPausedBeforeSave(async ct =>
+        {
+            _dbContext!.RuleSpecComments.Add(new RuleSpecCommentEntity
+            {
+                Id = Guid.NewGuid(),
+                GameId = _testGameId,
+                Version = "1.0.0",
+                CommentText = "Late reply",
+                UserId = _otherUserId,
+                ParentCommentId = rootId,
+                CreatedAt = DateTime.UtcNow
+            });
+            await _dbContext.SaveChangesAsync(ct);
+            _dbContext.ChangeTracker.Clear();
+        });
+
+        // Act
+        var outcome = await RunAsync(handler, db, new DeleteRuleCommentCommand(rootId, _testUserId, false));
+
+        // Assert
+        outcome.Error.Should().BeOfType<DbUpdateException>();
+        db.ChangeTracker.Entries().Should().BeEmpty();
+        var resave = async () => await db.SaveChangesAsync(TestCancellationToken);
+        await resave.Should().NotThrowAsync();
+        var root = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == rootId, TestCancellationToken);
+        root.Should().NotBeNull();
+    }
+
     private static async Task<(bool Deleted, Exception? Error, MeepleAiDbContext Db)> RunAsync(
         DeleteRuleCommentCommandHandler handler, MeepleAiDbContext db, DeleteRuleCommentCommand command)
     {
@@ -429,7 +478,8 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
     private (DeleteRuleCommentCommandHandler Handler, MeepleAiDbContext Db) CreateHandlerPausedBeforeSave(
         Func<CancellationToken, Task> beforeSave)
     {
-        var scope = _serviceProvider!.CreateScope();
+        var scope = _serviceProvider!.CreateAsyncScope();
+        _owned.Add(scope);
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseNpgsql(_isolatedDbConnectionString, o => o.UseVector())
             .AddInterceptors(new BeforeFirstSaveInterceptor(beforeSave))
@@ -438,6 +488,7 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
             options,
             scope.ServiceProvider.GetRequiredService<IMediator>(),
             scope.ServiceProvider.GetRequiredService<IDomainEventCollector>());
+        _owned.Add(db);
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<DeleteRuleCommentCommandHandler>>();
         return (new DeleteRuleCommentCommandHandler(db, logger), db);
     }

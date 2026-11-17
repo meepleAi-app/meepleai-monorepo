@@ -16,6 +16,7 @@ using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -45,6 +46,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     // Optional so unit tests that pre-date Phase D continue to compile without updates.
     private readonly IRoleClassifierService? _roleClassifier;
     private readonly IPdfIndexingPipeline _pipeline;
+    private readonly IUnitOfWork _unitOfWork;
 
     public IndexPdfCommandHandler(
         MeepleAiDbContext db,
@@ -54,6 +56,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         IOptions<IndexingSettings> indexingSettings,
         ISemanticResponseCache semanticCache,
         IPdfIndexingPipeline pipeline,
+        IUnitOfWork unitOfWork,
         TimeProvider? timeProvider = null,
         IRoleClassifierService? roleClassifier = null)
     {
@@ -64,6 +67,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         _indexingSettings = indexingSettings?.Value ?? throw new ArgumentNullException(nameof(indexingSettings));
         _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
         _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? TimeProvider.System;
         _roleClassifier = roleClassifier;
     }
@@ -123,22 +127,15 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // same chunk share it.
             documentChunks = WithStableIds(documentChunks!);
 
-            // #4384: the text chunks are staged BEFORE the pgvector rows, so the first embedding batch
-            // commits them in the same transaction. The other way round, a failure after the pgvector
-            // save (e.g. the final save losing a concurrency conflict) left rows pointing at text chunk
-            // ids that were never written — worse than a null link, because the fusion prefers the vector
-            // arm's chunk id over the keyword arm's valid one.
+            // #4384: the text chunks are written BEFORE the pgvector rows, which point at them.
             // #4244: text_chunks.GameId is an FK to shared_games, so it only ever carries the shared
             // game. A private game goes in its own column: writing its id into GameId (which the
             // resolver used to hand over) made this save fail on the foreign key.
-            await SaveTextChunksToPostgresAsync(pdfId, pdf.SharedGameId, pdf.PrivateGameId, documentChunks, chunkRoles, cancellationToken).ConfigureAwait(false);
-
-            // Step 3: Update VectorDocument status
             // For private PDFs GameId is null — fall back to PrivateGameId so vectors are scoped
             // to the correct private game rather than collapsed under Guid.Empty.
             var effectiveGameId = pdf.PrivateGameId ?? pdf.SharedGameId ?? Guid.Empty;
-            var indexingSuccess = await IndexChunksInVectorStoreAsync(
-                pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, chunkRoles, vectorDoc!, cancellationToken).ConfigureAwait(false);
+            var indexingSuccess = await ReplaceChunksAndEmbeddingsAsync(
+                pdfId, pdf, effectiveGameId, documentChunks!, chunkRoles, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)
             {
                 pdf.ProcessingState = nameof(PdfProcessingState.Failed);
@@ -488,19 +485,93 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     }
 
     /// <summary>
-    /// Indexes document chunks in pgvector and updates VectorDocument.
+    /// #5003: replaces the text chunks of the PDF and the embeddings of its vector document in ONE transaction,
+    /// as the queued pipeline does since #4660.
     /// </summary>
-    private async Task<bool> IndexChunksInVectorStoreAsync(
+    /// <remarks>
+    /// <para>
+    /// The embeddings carry <c>source_chunk_id</c> of the text chunk they come from, and a re-index gives the chunks
+    /// new ids. Before, the first embedding batch committed the chunk replacement and the removal of the old
+    /// embeddings, and every further batch of 500 was a commit of its own: a failure after the first one left the
+    /// new chunks next to a partial index. In one transaction a failure leaves the previous chunks and the previous
+    /// embeddings, which still agree.
+    /// </para>
+    /// <para>
+    /// The unit of work owns the transaction because the context retries transient failures
+    /// (<c>EnableRetryOnFailure</c>, #3636), so the delegate may run more than once: it starts by forgetting what an
+    /// earlier attempt staged. A failure rolls the database back, not the tracker, so the rows of this run are
+    /// forgotten again on the way out. A concurrency conflict keeps its old outcome (Category B: the admin mutation
+    /// wins, nothing is indexed, the caller gets a failure); any other exception goes on to the top-level catch.
+    /// </para>
+    /// </remarks>
+    private async Task<bool> ReplaceChunksAndEmbeddingsAsync(
         string pdfId,
-        string gameId,
-        string extractedText,
+        PdfDocumentEntity pdf,
+        Guid gameId,
+        List<DocumentChunk> documentChunks,
+        IReadOnlyList<GameBookRole> roles,
+        VectorDocumentEntity vectorDoc,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                ForgetStagedChunkRows();
+                await SaveTextChunksToPostgresAsync(pdfId, pdf.SharedGameId, pdf.PrivateGameId, documentChunks, roles, ct)
+                    .ConfigureAwait(false);
+                await IndexChunksInVectorStoreAsync(pdfId, gameId, documentChunks, roles, vectorDoc, ct)
+                    .ConfigureAwait(false);
+            }, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            ForgetStagedChunkRows();
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(IndexPdfCommandHandler),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                pdfId, nameof(IndexPdfCommandHandler));
+            return false;
+        }
+        catch
+        {
+            ForgetStagedChunkRows();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Detaches every text chunk and pgvector row the tracker holds, whatever its state: after a rolled-back attempt
+    /// none of them is true of the database (the new ones <c>Added</c>, or <c>Unchanged</c> if their batch was saved
+    /// before the rollback; the old ones <c>Deleted</c>). The handler tracks no other row of these two types.
+    /// </summary>
+    private void ForgetStagedChunkRows()
+    {
+        foreach (var entry in _db.ChangeTracker.Entries()
+                     .Where(e => e.Entity is TextChunkEntity or PgVectorEmbeddingEntity)
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
+
+    /// <summary>
+    /// Stages the replacement of the pgvector rows of the vector document and saves it in batches of 500, inside the
+    /// transaction of <see cref="ReplaceChunksAndEmbeddingsAsync"/>: the first batch also writes the text chunks staged
+    /// by <see cref="SaveTextChunksToPostgresAsync"/>.
+    /// </summary>
+    private async Task IndexChunksInVectorStoreAsync(
+        string pdfId,
+        Guid gameGuid,
         List<DocumentChunk> documentChunks,
         IReadOnlyList<GameBookRole> roles,
         VectorDocumentEntity vectorDoc,
         CancellationToken cancellationToken)
     {
         var pdfGuid = Guid.Parse(pdfId);
-        var gameGuid = Guid.TryParse(gameId, out var g) ? g : Guid.Empty;
 
         // Remove old embeddings
         var existing = await _db.PgVectorEmbeddings
@@ -539,7 +610,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                     model: modelName,
                     pageNumber: Math.Max(1, chunk.Page),
                     lang: language,
-                    // #4384: the text chunk staged with this same id (SaveTextChunksToPostgresAsync), committed
+                    // #4384: the text chunk staged with this same id (SaveTextChunksToPostgresAsync), saved
                     // with the first batch. role_tags: the role classified once up-front for both tables (it
                     // was always 0 when classification ran only after this write). Guarded against a
                     // None/mismatched list.
@@ -547,20 +618,8 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             }).ToList();
 
             await _db.PgVectorEmbeddings.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
-            try
-            {
-                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                    nameof(IndexPdfCommandHandler),
-                    MeepleAiMetrics.PdfConcurrencyCategories.B);
-                _logger.LogWarning(ex,
-                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                    pdfId, nameof(IndexPdfCommandHandler));
-                return false;
-            }
+            // #5003: a save of the transaction, not a commit; a conflict here rolls every batch back.
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
         // VectorDocument transition processing → completed is centralised in
@@ -570,7 +629,6 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         // see epic #2242 / #2244.
 
         _logger.LogInformation("✅ [REINDEX] PDF {PdfId}: {Count} chunks indexed in pgvector", pdfId, documentChunks.Count);
-        return true;
     }
 
     /// <summary>

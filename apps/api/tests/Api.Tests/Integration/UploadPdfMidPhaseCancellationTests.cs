@@ -547,8 +547,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     /// e nessuna riga vettoriale: né quelle del salvataggio interrotto, che restano nel change tracker del
     /// contesto, né un loro salvataggio in un secondo momento da parte del gestore della cancellazione.</para>
     /// <para><b>Prova di essere arrivati alla fase:</b> l'interceptor ha fermato il primo salvataggio che
-    /// contiene righe vettoriali, e a quel punto i passaggi sono già nel database (il test lo legge prima di
-    /// cancellare).</para>
+    /// contiene righe vettoriali, e <c>PdfChunkPersistence</c> salva i passaggi prima di quello. Dal #5003 li
+    /// salva nella stessa transazione delle righe vettoriali: da un'altra connessione non si vedono ancora
+    /// (il test lo legge prima di cancellare), e la cancellazione li porta via con le righe.</para>
     /// </summary>
     [Fact(Timeout = 120_000)]
     public async Task UploadPdf_WhenCancelledWhileSavingVectorRows_LeavesNoPartialEmbeddings()
@@ -562,12 +563,15 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var (pdfId, inFlight) = await CancelWhileSavingVectorRowsAsync(harness, vectorRowsSaveHold, "mid_vector_rows.pdf");
 
         // Assert
-        inFlight.TextChunks.Should().BeGreaterThan(0, "the text chunks are saved before the vector rows, so the test is cancelling in the middle of the step");
+        // #5003: the text chunks are saved before the vector rows, in the same transaction, so another connection
+        // does not see them yet.
+        inFlight.TextChunks.Should().Be(0, "the text chunks are in the open transaction, not committed");
         inFlight.Embeddings.Should().Be(0);
 
         var outcome = await ReadOutcomeAsync(harness, pdfId);
         AssertCancelled(harness, outcome, failedAt: "Indexing");
         outcome.Embeddings.Should().Be(0, "the vector rows of a cancelled save must not be saved later by the cancellation handler");
+        outcome.TextChunks.Should().Be(0, "the cancelled transaction takes the text chunks back with the vector rows (#5003)");
         AssertQuotaReleased(harness, pdfId);
     }
 

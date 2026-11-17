@@ -19,6 +19,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Npgsql;
 using Xunit;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.Tests.Integration.DocumentProcessing;
 
@@ -232,7 +233,8 @@ public sealed class IndexPdfVectorDocNoTrackingPersistenceIntegrationTests : IAs
             NullLogger<IndexPdfCommandHandler>.Instance,
             IndexingSettings(),
             Mock.Of<ISemanticResponseCache>(),
-            Mock.Of<IPdfIndexingPipeline>());
+            Mock.Of<IPdfIndexingPipeline>(),
+            new EfCoreUnitOfWork(actDb));
 
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), TestCancellationToken);
         return (pdfId, result);

@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
@@ -29,8 +30,16 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 /// per altre vie.
 /// </para>
 /// <para>
-/// Un salvataggio che fallisce lascia le righe nel change tracker. Lo ripuliscono i gestori d'errore
-/// dei due caricamenti, prima di segnare il PDF <c>Failed</c>: una regola sola per ogni tipo di riga.
+/// #5003: passaggi e righe vettoriali si scrivono in UNA transazione, come nella pipeline a coda dal
+/// #4660. Prima il commit dei passaggi era a sé, e ogni lotto di righe vettoriali un altro: in una
+/// rielaborazione, un fallimento fra i due lasciava le righe vettoriali vecchie collegate a passaggi
+/// già cancellati, e uno a metà dei lotti un indice parziale. Ora un fallimento lascia passaggi e righe
+/// vettoriali di prima, che si corrispondono.
+/// </para>
+/// <para>
+/// La transazione tiene indietro il database, non il change tracker: le righe di questo salvataggio,
+/// salvate o no, si dimenticano all'uscita da un fallimento, e all'inizio di un tentativo che la
+/// strategia di esecuzione ripete.
 /// </para>
 /// </remarks>
 internal static class PdfChunkPersistence
@@ -38,12 +47,16 @@ internal static class PdfChunkPersistence
     private const int EmbeddingBatchSize = 500;
 
     /// <summary>
-    /// Sostituisce passaggi e righe vettoriali del PDF. Il documento vettoriale deve già esistere.
+    /// Sostituisce passaggi e righe vettoriali del PDF, in una transazione. Il documento vettoriale deve
+    /// già esistere. Un conflitto di concorrenza non lancia (Categoria B: vince la modifica dell'admin) e
+    /// non scrive niente. La transazione la apre <c>unitOfWork</c>, che deve essere quella dello stesso
+    /// scope di <c>db</c>.
     /// </summary>
     /// <exception cref="ArgumentException">Un embedding per passaggio manca, o uno non è valido.</exception>
     /// <exception cref="InvalidOperationException">Il nome del modello manca, o il salvataggio è fallito.</exception>
     public static async Task SaveAsync(
         MeepleAiDbContext db,
+        IUnitOfWork unitOfWork,
         Guid pdfId,
         PdfDocumentEntity pdfDoc,
         IReadOnlyList<DocumentChunkInput> chunks,
@@ -56,6 +69,7 @@ internal static class PdfChunkPersistence
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(db);
+        ArgumentNullException.ThrowIfNull(unitOfWork);
         ArgumentNullException.ThrowIfNull(pdfDoc);
         ArgumentNullException.ThrowIfNull(chunks);
         ArgumentNullException.ThrowIfNull(embeddings);
@@ -80,16 +94,51 @@ internal static class PdfChunkPersistence
             throw new ArgumentException($"{invalid} embedding(s) are empty or contain NaN/Infinity", nameof(embeddings));
         }
 
-        var savedChunks = await SaveTextChunksAsync(db, pdfId, pdfDoc, chunks, roleClassifier, timeProvider, logger, handlerName, cancellationToken)
-            .ConfigureAwait(false);
-        await SaveEmbeddingsAsync(db, pdfId, pdfDoc, chunks, embeddings, savedChunks, modelName, logger, handlerName, cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            // #3636: the unit of work, not BeginTransactionAsync: under the retrying execution strategy a
+            // transaction opened directly throws, and the strategy may run the delegate more than once.
+            await unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                ForgetStagedRows(db);
+                var savedChunks = await SaveTextChunksAsync(db, pdfId, pdfDoc, chunks, roleClassifier, timeProvider, logger, ct)
+                    .ConfigureAwait(false);
+                await SaveEmbeddingsAsync(db, pdfId, pdfDoc, chunks, embeddings, savedChunks, modelName, logger, ct)
+                    .ConfigureAwait(false);
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            ForgetStagedRows(db);
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(handlerName, MeepleAiMetrics.PdfConcurrencyCategories.B);
+            logger.LogWarning(ex,
+                "Concurrency conflict on the text chunks or vector rows of PDF {PdfId} in {Handler} (Category B) — admin mutation wins, nothing was written, pipeline will re-read on next tick",
+                pdfId, handlerName);
+        }
+        catch
+        {
+            ForgetStagedRows(db);
+            throw;
+        }
     }
 
-    /// <returns>
-    /// I passaggi salvati per <c>ChunkIndex</c>, a cui le righe vettoriali si collegano; vuoto se il
-    /// salvataggio ha perso un conflitto di concorrenza e niente è stato scritto.
-    /// </returns>
+    /// <summary>
+    /// Stacca dal tracker ogni passaggio e ogni riga vettoriale, in qualunque stato: dopo un tentativo
+    /// tornato indietro nessuno corrisponde al database (i nuovi <c>Added</c>, o <c>Unchanged</c> se il
+    /// loro salvataggio è passato prima del rollback; i vecchi <c>Deleted</c>). I due caricamenti non
+    /// tengono altre righe di questi tipi sul contesto.
+    /// </summary>
+    private static void ForgetStagedRows(MeepleAiDbContext db)
+    {
+        foreach (var entry in db.ChangeTracker.Entries()
+                     .Where(e => e.Entity is TextChunkEntity or PgVectorEmbeddingEntity)
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
+
+    /// <returns>I passaggi salvati per <c>ChunkIndex</c>, a cui le righe vettoriali si collegano.</returns>
     private static async Task<IReadOnlyDictionary<int, TextChunkEntity>> SaveTextChunksAsync(
         MeepleAiDbContext db,
         Guid pdfId,
@@ -98,7 +147,6 @@ internal static class PdfChunkPersistence
         IRoleClassifierService? roleClassifier,
         TimeProvider timeProvider,
         ILogger logger,
-        string handlerName,
         CancellationToken cancellationToken)
     {
         // Re-processing: the old chunks go.
@@ -148,20 +196,9 @@ internal static class PdfChunkPersistence
         {
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(handlerName, MeepleAiMetrics.PdfConcurrencyCategories.B);
-            logger.LogWarning(ex,
-                "Concurrency conflict on TextChunks for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfId, handlerName);
-
-            // #4384: the failed inserts and deletes stay in the change tracker, and the next save (the
-            // pgvector batch) would submit them again. Drop them: nothing was written, so the pgvector
-            // rows get no link rather than a link to rows that may not exist.
-            DetachAll<TextChunkEntity>(db);
-            return new Dictionary<int, TextChunkEntity>();
-        }
-        catch (DbUpdateException ex)
+        // #5003: a concurrency conflict leaves through SaveAsync, which rolls back and writes nothing. It used
+        // to be swallowed here, and the vector rows were then saved without a link next to the old chunks.
+        catch (DbUpdateException ex) when (ex is not DbUpdateConcurrencyException)
         {
             throw new InvalidOperationException("Saving the text chunks of the PDF failed.", ex);
         }
@@ -180,7 +217,6 @@ internal static class PdfChunkPersistence
         IReadOnlyDictionary<int, TextChunkEntity> savedChunks,
         string modelName,
         ILogger logger,
-        string handlerName,
         CancellationToken cancellationToken)
     {
         var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
@@ -225,21 +261,10 @@ internal static class PdfChunkPersistence
             await db.PgVectorEmbeddings.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
             try
             {
+                // #5003: a save of the transaction, not a commit.
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                MeepleAiMetrics.RecordPdfConcurrencyConflict(handlerName, MeepleAiMetrics.PdfConcurrencyCategories.B);
-                logger.LogWarning(ex,
-                    "Concurrency conflict on PgVectorEmbeddings for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                    pdfId, handlerName);
-
-                // The pending inserts and deletes would go out again with the caller's next save (the
-                // Ready transition), fail again, and leave the PDF in flight. Drop them.
-                DetachAll<PgVectorEmbeddingEntity>(db);
-                return;
-            }
-            catch (DbUpdateException ex)
+            catch (DbUpdateException ex) when (ex is not DbUpdateConcurrencyException)
             {
                 throw new InvalidOperationException("Saving the vector rows of the PDF failed.", ex);
             }
@@ -250,14 +275,5 @@ internal static class PdfChunkPersistence
 
         logger.LogInformation("✅ [PG-VECTOR] Completed pgvector indexing for PDF {PdfId}: {Total} embeddings saved",
             pdfId, chunks.Count);
-    }
-
-    private static void DetachAll<TEntity>(MeepleAiDbContext db)
-        where TEntity : class
-    {
-        foreach (var entry in db.ChangeTracker.Entries<TEntity>().Where(e => e.State != EntityState.Unchanged).ToList())
-        {
-            entry.State = EntityState.Detached;
-        }
     }
 }

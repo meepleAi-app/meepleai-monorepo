@@ -18,6 +18,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -626,8 +627,9 @@ internal partial class UploadPdfCommandHandler
         // #4384: text chunks BEFORE the pgvector rows, which point at them — moving this after the
         // embeddings, or running the two in parallel, brings back rows with a null or dangling
         // source_chunk_id.
+        // #5003: one transaction for both, opened by the unit of work of this scope (same context as db).
         await PdfChunkPersistence.SaveAsync(
-            db, Guid.Parse(pdfId), pdfDoc, allDocumentChunks, embeddings,
+            db, scope.ServiceProvider.GetRequiredService<IUnitOfWork>(), Guid.Parse(pdfId), pdfDoc, allDocumentChunks, embeddings,
             scope.ServiceProvider.GetRequiredService<IEmbeddingService>().GetModelName(),
             scope.ServiceProvider.GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>(),
             _timeProvider, _logger, nameof(UploadPdfCommandHandler), cancellationToken).ConfigureAwait(false);

@@ -655,7 +655,8 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             _serviceProvider!.GetRequiredService<ILogger<IndexPdfCommandHandler>>(),
             CreateIndexingSettings(),
             _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
-            _serviceProvider!.GetRequiredService<IPdfIndexingPipeline>()
+            _serviceProvider!.GetRequiredService<IPdfIndexingPipeline>(),
+            new EfCoreUnitOfWork(_dbContext!)
         );
 
         var command = new IndexPdfCommand(pdfId.ToString());

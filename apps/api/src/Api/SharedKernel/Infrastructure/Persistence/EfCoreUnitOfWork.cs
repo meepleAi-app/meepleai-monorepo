@@ -66,7 +66,11 @@ internal class EfCoreUnitOfWork : IUnitOfWork
                 {
                     try
                     {
-                        await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                        // #5003: not the caller's token. After a cancellation it is already cancelled, so the
+                        // rollback threw at once (EF logs that at Error, "An error occurred using a
+                        // transaction") and only the dispose below undid the work. A rollback is short, and
+                        // it has to run precisely when the caller gave up.
+                        await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
                     }
                     catch (Exception rollbackEx) when (rollbackEx is not OperationCanceledException)
                     {

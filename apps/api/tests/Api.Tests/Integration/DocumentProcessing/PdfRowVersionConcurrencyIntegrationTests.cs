@@ -18,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 namespace Api.Tests.Integration.DocumentProcessing;
 
@@ -90,6 +91,9 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
                 It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         services.AddScoped<IVectorStoreAdapter>(_ => vectorStoreMock.Object);
+
+        // #4996: DeleteKbDocumentCommandHandler needs it since #4010; without it the delete never builds (as in #4671).
+        services.AddSingleton(Mock.Of<ISemanticResponseCache>());
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();

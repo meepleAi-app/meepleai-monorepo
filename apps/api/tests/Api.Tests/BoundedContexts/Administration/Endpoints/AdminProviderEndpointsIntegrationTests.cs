@@ -48,7 +48,7 @@ public sealed class AdminProviderEndpointsHostFixture(SharedTestcontainersFixtur
     // the factory's own configuration.
     protected override Dictionary<string, string?> ExtraConfiguration => new()
     {
-        // ASP.NET Core binds Providers__OpenRouter__ListModelsUrl → Providers:OpenRouter:ListModelsUrl
+        // Same key as the env var Providers__OpenRouter__BaseUrl; the probe appends /models to it.
         ["Providers:OpenRouter:BaseUrl"] = $"{WireMock.Url}/api/v1",
         // #3887: ProviderCredentialResolver resolves the key through IConfiguration, so the
         // probe sees it without touching the process environment.
@@ -65,8 +65,8 @@ public sealed class AdminProviderEndpointsHostFixture(SharedTestcontainersFixtur
 /// + session directly into the DB. The session token is placed in the meepleai_session cookie
 /// on each request (matches ReviewLockEndpointsIntegrationTests pattern).
 ///
-/// URL override strategy: IntegrationWebApplicationFactory.Create(extraConfig) injects
-/// Providers:OpenRouter:ListModelsUrl → WireMock server URL via in-memory configuration.
+/// URL override strategy: AdminProviderEndpointsHostFixture.ExtraConfiguration points
+/// Providers:OpenRouter:BaseUrl at the fixture's WireMock server via in-memory configuration.
 /// No factory subclassing needed.
 ///
 /// Rate limit strategy: IntegrationWebApplicationFactory disables rate limiting per-host via its

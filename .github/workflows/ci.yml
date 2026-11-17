@@ -993,8 +993,8 @@ jobs:
       # colore del job.
       #
       # `!cancelled()`: qui un passo dopo un `Run Integration Tests` fallito viene saltato (nel job
-      # 129695306408 il guard qui sopra è `skipped`), e gli shard con falliti di base, come
-      # DocProcessing (#4996), sono proprio quelli di cui non si saprebbe mai il margine. Lo script
+      # 129695306408 il guard qui sopra è `skipped`), e uno shard con un test rosso, come era
+      # DocProcessing fino a #4996, è proprio quello di cui non si saprebbe mai il margine. Lo script
       # assente è un errore, come in dev-async.yml: un percorso sbagliato produrrebbe un log senza
       # la riga, che si legge come «tutto a posto».
       - name: 'Session budget: share of the TestSessionTimeout (#3742, #4329)'

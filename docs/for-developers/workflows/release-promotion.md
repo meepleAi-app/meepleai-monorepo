@@ -106,10 +106,11 @@ Questi sono rossi qualunque cosa contenga la PR. Verificali uno per uno con il l
 | check | perché | finché |
 |---|---|---|
 | `validate-source-branch` (Branch Policy) | pretende `main-dev` come unico source di `main-staging`, e il source è `release/*` | finché il workflow non ammette `release/*`; è advisory |
-| `Backend - Integration (DocProcessing)` di `ci.yml` | porta i test di DocumentProcessing rossi anche su `main-dev`: sono i falliti di base, che fino a #4329 stavano nello shard `KnowledgeBase` | #4996. **Confronta i NOMI** dei falliti con lo shard `DocProcessing` del controllo |
 | `A11y unit smoke` (Staging Gate) | lo step viene annullato dopo pochi minuti (timeout noto) | — |
 | `Frontend - Lint` | gate DS-17-1, copertura 0/3, rosso dichiarato dal commit #4048 | #4047 |
 | `CI Success`, `Backend E2E Quality Gate`, `E2E Quality Gate` | aggregati: rossi quando lo è un job a monte | — |
+
+Fino a #4996 la tabella aveva anche `Backend - Integration (DocProcessing)` di `ci.yml`: portava cinque test di DocumentProcessing rossi anche su `main-dev`, che fino a #4329 stavano nello shard `KnowledgeBase`. #4996 li ha corretti, e ora un rosso di quello shard non è per costruzione: confronta i NOMI dei falliti con lo shard `DocProcessing` del controllo, come per ogni altro.
 
 Fino a #4329 la tabella aveva anche `Backend - Integration (Games)` di `ci.yml` (riferimento storico). Lo shard superava spesso il limite di 75 minuti del run (`Aborting test run: test run timeout`), con zero falliti ed esito `Aborted`, e la parte non eseguita la provava solo il controllo. #4329 l'ha diviso in `Catalog` e `GamesAdmin`, come nel Dev Async. Da allora ogni shard di `ci.yml` stampa nel log la quota del `TestSessionTimeout` che ha usato (riga `[<shard>] sessione: …`) e avvisa dall'80%.
 

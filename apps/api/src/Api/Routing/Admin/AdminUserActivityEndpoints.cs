@@ -28,22 +28,6 @@ internal static class AdminUserActivityEndpoints
 
     private static void MapBulkUserEndpoints(RouteGroupBuilder group)
     {
-        group.MapPost("/admin/users/bulk/password-reset", HandleBulkPasswordReset)
-        .WithName("BulkPasswordReset")
-        .WithTags("Admin")
-        .WithSummary("Reset passwords for multiple users")
-        .Produces<BulkOperationResult>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status401Unauthorized);
-
-        group.MapPost("/admin/users/bulk/role-change", HandleBulkRoleChange)
-        .WithName("BulkRoleChange")
-        .WithTags("Admin")
-        .WithSummary("Change role for multiple users")
-        .Produces<BulkOperationResult>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status401Unauthorized);
-
         group.MapPost("/admin/users/bulk/import", HandleBulkImportUsers)
         .WithName("BulkImportUsers")
         .WithTags("Admin")
@@ -261,52 +245,6 @@ internal static class AdminUserActivityEndpoints
             .Produces<EndImpersonationResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden);
-    }
-
-    private static async Task<IResult> HandleBulkPasswordReset(
-        BulkPasswordResetRequest request,
-        HttpContext context,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        var (authorized, session, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
-        logger.LogInformation("Admin {AdminId} initiating bulk password reset for {Count} users",
-            session!.Principal!.EffectiveActor.Id, request.UserIds?.Count ?? 0);
-
-        var command = new BulkPasswordResetCommand(
-            request.UserIds ?? [],
-            request.NewPassword,
-            session.Principal!.EffectiveActor.Id
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
-    }
-
-    private static async Task<IResult> HandleBulkRoleChange(
-        BulkRoleChangeRequest request,
-        HttpContext context,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        var (authorized, session, error) = context.RequireSuperAdminSession();
-        if (!authorized) return error!;
-
-        logger.LogInformation("Admin {AdminId} initiating bulk role change for {Count} users to role {Role}",
-            session!.Principal!.EffectiveActor.Id, request.UserIds?.Count ?? 0, request.NewRole);
-
-        var command = new BulkRoleChangeCommand(
-            request.UserIds ?? [],
-            request.NewRole,
-            session.Principal!.EffectiveActor.Id
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleBulkImportUsers(

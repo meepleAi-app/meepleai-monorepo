@@ -319,58 +319,6 @@
       "name": "Bulk Operations",
       "item": [
         {
-          "name": "Bulk Password Reset",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userIds\": [\n    \"user-id-1\",\n    \"user-id-2\",\n    \"user-id-3\"\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/users/bulk/password-reset",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "users", "bulk", "password-reset"]
-            },
-            "description": "Send password reset emails to multiple users"
-          }
-        },
-        {
-          "name": "Bulk Role Change",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userIds\": [\n    \"user-id-1\",\n    \"user-id-2\"\n  ],\n  \"role\": \"Editor\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/users/bulk/role-change",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "users", "bulk", "role-change"]
-            },
-            "description": "Change role for multiple users at once"
-          }
-        },
-        {
           "name": "Import Users (CSV)",
           "request": {
             "method": "POST",

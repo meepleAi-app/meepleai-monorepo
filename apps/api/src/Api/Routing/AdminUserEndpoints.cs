@@ -50,16 +50,6 @@ internal record UpdateUserTierRequest(string Tier);
 internal record SetUserLevelRequest(int Level);
 
 /// <summary>
-/// Request payload for bulk password reset.
-/// </summary>
-internal record BulkPasswordResetRequest(IReadOnlyList<Guid> UserIds, string NewPassword);
-
-/// <summary>
-/// Request payload for bulk role change.
-/// </summary>
-internal record BulkRoleChangeRequest(IReadOnlyList<Guid> UserIds, string NewRole);
-
-/// <summary>
 /// Request payload for suspending a user account.
 /// </summary>
 internal record SuspendUserRequest(string? Reason);

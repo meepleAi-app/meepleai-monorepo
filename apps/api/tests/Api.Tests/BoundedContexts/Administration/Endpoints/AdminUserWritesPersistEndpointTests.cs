@@ -43,6 +43,9 @@ public sealed class AdminUserWritesHostFixture(SharedTestcontainersFixture share
 /// <para>
 /// #5042: un reset dell'admin sblocca anche l'account, così la password nuova entra subito.
 /// </para>
+/// <para>
+/// #5037, #5045: il cambio di ruolo e il reset della password in blocco non esistono più.
+/// </para>
 /// </remarks>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -249,6 +252,35 @@ public sealed class AdminUserWritesPersistEndpointTests
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
         (await ReadUserAsync(userId)).Email.Should().Be(email);
+    }
+
+    /// <summary>
+    /// #5037, #5045: le due rotte in blocco non hanno più una pagina dal 2026-02-23 e saltavano le regole delle rotte
+    /// singole. Il reset in blocco lasciava a un SuperAdmin l'account di un altro SuperAdmin, senza chiudere le sessioni né
+    /// sbloccare; il cambio di ruolo rispondeva 422 a ogni richiesta, e riparato avrebbe lasciato a un Admin declassare un
+    /// altro Admin. Se tornano, tornano con la guardia di ruolo su ogni bersaglio e con le regole del reset singolo.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "5037")]
+    [Trait("Issue", "5045")]
+    [InlineData("/api/v1/admin/users/bulk/role-change")]
+    [InlineData("/api/v1/admin/users/bulk/password-reset")]
+    public async Task BulkRoleChangeAndBulkPasswordReset_AreGone(string route)
+    {
+        string superAdminToken;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            (_, superAdminToken) = await TestSessionHelper.CreateSuperAdminSessionAsync(db);
+        }
+        var (userId, _) = await SeedUserAsync(FreshSecret());
+
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, route, superAdminToken,
+            new { userIds = new[] { userId }, newRole = "editor", newPassword = FreshSecret() }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound, await response.Content.ReadAsStringAsync());
+        (await ReadUserAsync(userId)).Role.Should().Be("user");
     }
 
     private async Task<(Guid UserId, string Email)> SeedUserAsync(

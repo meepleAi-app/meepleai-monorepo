@@ -35,10 +35,11 @@ namespace Api.Tests.Integration.DomainEventOutbox;
 /// on the same context the processor saves, exactly as a MediatR handler resolved from that scope does.
 /// </para>
 /// <para>
-/// The third test is the other direction, and it passes on <c>main-dev</c> as well: what a failing handler (or its
-/// siblings) already SAVED stays committed with the batch. Sibling handlers with an external side effect rely on that to
-/// keep their "already sent" marker when another handler of the same event fails; a fix that rolled every failing row
-/// back would make them repeat the side effect on the retry.
+/// The direction that must NOT change: what a failing handler (or its siblings) already SAVED stays committed with the
+/// batch. Sibling handlers with an external side effect rely on that to keep their "already sent" marker when another
+/// handler of the same event fails; a fix that rolled the failing row back to a savepoint would make them repeat the side
+/// effect on the retry. The third test pins it for a handler that just throws (it passes on <c>main-dev</c> as well), the
+/// first for a handler that also leaves an unsavable residue.
 /// </para>
 /// </remarks>
 [Collection("Integration-GroupD")]
@@ -123,10 +124,17 @@ public sealed class DomainEventOutboxRowIsolationIntegrationTests : IAsyncLifeti
     public async Task OneBatch_HandlerThrowsLeavingAnUnsavableEntity_OnlyItsRowIsRetried()
     {
         var orphanId = Guid.NewGuid();
-        _onPublish = (scope, evt, _) =>
+        var savedId = Guid.NewGuid();
+        _onPublish = async (scope, evt, ct) =>
         {
-            if (evt.Marker != 2) return Task.CompletedTask;
-            scope.GetRequiredService<MeepleAiDbContext>().RuleSpecComments.Add(OrphanComment(orphanId));
+            if (evt.Marker != 2) return;
+            var db = scope.GetRequiredService<MeepleAiDbContext>();
+
+            // What a sibling handler of the same event saved first — e.g. an "already sent" marker.
+            db.AuditOutbox.Add(AuditOutboxEntity.CreatePending(savedId, "{}", DateTimeOffset.UtcNow));
+            await db.SaveChangesAsync(ct);
+
+            db.RuleSpecComments.Add(OrphanComment(orphanId));
             throw new InvalidOperationException("handler-2 failed");
         };
         var ids = await EnqueueAsync(1, 2, 3);
@@ -143,6 +151,8 @@ public sealed class DomainEventOutboxRowIsolationIntegrationTests : IAsyncLifeti
         failed.NextAttemptAt.Should().NotBeNull();
         failed.LastError.Should().Contain("handler-2 failed", "the handler's own error is the cause worth reading");
         (await CommentExistsAsync(orphanId)).Should().BeFalse("what the failing handler left unsaved is dropped");
+        (await AuditRowExistsAsync(savedId)).Should().BeTrue(
+            "only the unsaved residue is dropped: what was already saved stays, as when a handler just throws");
     }
 
     [Fact]
@@ -194,11 +204,8 @@ public sealed class DomainEventOutboxRowIsolationIntegrationTests : IAsyncLifeti
         rows[ids[1]].Attempts.Should().Be(1);
         rows[ids[0]].Status.Should().Be(DomainEventOutboxStatus.Sent);
         rows[ids[2]].Status.Should().Be(DomainEventOutboxStatus.Sent);
-        await using var read = _serviceProvider!.CreateAsyncScope();
-        var kept = await read.ServiceProvider.GetRequiredService<MeepleAiDbContext>().AuditOutbox
-            .AsNoTracking()
-            .AnyAsync(r => r.Id == savedId, Ct);
-        kept.Should().BeTrue("a write the handler already saved is not rolled back by its row's failure");
+        (await AuditRowExistsAsync(savedId)).Should().BeTrue(
+            "a write the handler already saved is not rolled back by its row's failure");
     }
 
     /// <summary>
@@ -280,6 +287,14 @@ public sealed class DomainEventOutboxRowIsolationIntegrationTests : IAsyncLifeti
         return await scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>().DomainEventOutbox
             .AsNoTracking()
             .ToDictionaryAsync(r => r.Id, Ct);
+    }
+
+    private async Task<bool> AuditRowExistsAsync(Guid id)
+    {
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>().AuditOutbox
+            .AsNoTracking()
+            .AnyAsync(r => r.Id == id, Ct);
     }
 
     private async Task<bool> CommentExistsAsync(Guid id)

@@ -149,6 +149,25 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
     protected virtual WebApplicationFactory<Program> ConfigureHost(
         WebApplicationFactory<Program> factory) => factory;
 
+    /// <summary>
+    /// Primo passaggio, prima del template e dell'host: qui la fixture concreta avvia ciò che
+    /// <see cref="ExtraConfiguration"/> deve nominare, come un server WireMock di cui l'host legge
+    /// l'URL. Ciò che avvia qui lo chiude in <see cref="StopDependenciesAsync"/>.
+    /// </summary>
+    /// <remarks>
+    /// #5039. Sta fuori dalla misura di <c>fixture-timing</c>: il primo scambio con WireMock può
+    /// costare da 1 a oltre 15 s (#4298), e finirebbe nella voce <c>template=</c> che non lo descrive.
+    /// Come per <see cref="ConfigureHost"/>, ciò che avvia vive quanto la classe: lo stato che
+    /// accumula (le mappature di WireMock, per esempio) va azzerato per test dalla classe di test.
+    /// </remarks>
+    protected virtual ValueTask StartDependenciesAsync() => ValueTask.CompletedTask;
+
+    /// <summary>
+    /// Ultimo passaggio, dopo che l'host è chiuso: chiude ciò che <see cref="StartDependenciesAsync"/>
+    /// ha avviato. Gira anche quando l'avvio è fallito a metà, quindi deve tollerare campi nulli.
+    /// </summary>
+    protected virtual ValueTask StopDependenciesAsync() => ValueTask.CompletedTask;
+
     protected SharedHostPerTestDatabaseFixture(SharedTestcontainersFixture shared, string databasePrefix)
     {
         _shared = shared;
@@ -164,7 +183,7 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        var started = Stopwatch.GetTimestamp();
+        long started;
         long afterTemplate;
         long afterBootClone;
         long afterCreate;
@@ -172,6 +191,10 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
 
         try
         {
+            // 0. Le dipendenze che la configurazione dell'host nomina, fuori dalla misura.
+            await StartDependenciesAsync();
+            started = Stopwatch.GetTimestamp();
+
             // 1. Il TEMPLATE: creato e migrato una volta sola.
             _templateDatabase = $"{_prefix}_tmpl";
             var templateConnection = await _shared.CreateIsolatedDatabaseAsync(_templateDatabase);
@@ -448,6 +471,16 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
         catch
         {
             // La dismissione dell'host non deve nascondere l'esito dei test.
+        }
+
+        // Dopo l'host, che fino a qui può ancora parlare con queste dipendenze.
+        try
+        {
+            await StopDependenciesAsync();
+        }
+        catch
+        {
+            // Come sopra: la chiusura non deve nascondere l'esito dei test.
         }
 
         // I database per test e il template: lasciarli in giro riempie il container di Postgres, e

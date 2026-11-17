@@ -19,6 +19,45 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.Administration.Endpoints;
 
 /// <summary>
+/// La fixture di <see cref="AdminProviderEndpointsIntegrationTests"/>: host per classe, database per
+/// test, e il WireMock che fa da OpenRouter.
+/// </summary>
+/// <remarks>
+/// #5039: la classe costruiva un host per test, dentro il <c>Timeout</c> del test. WireMock sta qui e
+/// non nella classe di test perché l'host ne legge l'URL dalla configurazione, quindi deve esistere
+/// prima dell'host; lo avvia <see cref="StartDependenciesAsync"/>, già scaldato (#4298). Le sue
+/// mappature vivono quanto la classe: la classe di test le azzera a ogni test.
+/// </remarks>
+public sealed class AdminProviderEndpointsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "provider_probe")
+{
+    public WireMockServer WireMock { get; private set; } = null!;
+
+    // Warm: this class is the first in the Games shard to talk to WireMock, and the probe gives up
+    // after 5 s (#4298).
+    protected override async ValueTask StartDependenciesAsync() =>
+        WireMock = await WarmWireMockServer.StartAsync();
+
+    protected override ValueTask StopDependenciesAsync()
+    {
+        WireMock?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    // Override OpenRouter URL and API key via configuration. Rate limiting is disabled per-host by
+    // the factory's own configuration.
+    protected override Dictionary<string, string?> ExtraConfiguration => new()
+    {
+        // ASP.NET Core binds Providers__OpenRouter__ListModelsUrl → Providers:OpenRouter:ListModelsUrl
+        ["Providers:OpenRouter:BaseUrl"] = $"{WireMock.Url}/api/v1",
+        // #3887: ProviderCredentialResolver resolves the key through IConfiguration, so the
+        // probe sees it without touching the process environment.
+        [AdminProviderEndpointsIntegrationTests.OpenRouterApiKeyName] =
+            AdminProviderEndpointsIntegrationTests.OpenRouterApiKeyValue
+    };
+}
+
+/// <summary>
 /// Integration tests for POST /api/v1/admin/providers/{name}/probe endpoint.
 /// Issue #936 — G1 (provider token observability) + G3 (audit log) Gherkin scenarios.
 ///
@@ -47,19 +86,19 @@ namespace Api.Tests.BoundedContexts.Administration.Endpoints;
 // #3887: this class holds DefaultFactory_DisablesRateLimitingViaConfigurationOnly, the guard that
 // rejected the first version of that fix — so `dotnet test --filter Issue=3887` must reach it.
 [Trait("Issue", "3887")]
-public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
+[Trait("Issue", "5039")]
+public sealed class AdminProviderEndpointsIntegrationTests
+    : IClassFixture<AdminProviderEndpointsHostFixture>, IAsyncLifetime
 {
     // #3887: the provider API key travels through IConfiguration, never the process environment.
-    private const string OpenRouterApiKeyName = "OPENROUTER_API_KEY";
-    private const string OpenRouterApiKeyValue = "test-token-valid-secret";
+    internal const string OpenRouterApiKeyName = "OPENROUTER_API_KEY";
+    internal const string OpenRouterApiKeyValue = "test-token-valid-secret";
 
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly AdminProviderEndpointsHostFixture _hostFixture;
     private WireMockServer _wireMock = null!;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _superAdminClient = null!;
     private HttpClient _editorClient = null!;
-    private MeepleAiDbContext _dbContext = null!;
     private string _superAdminToken = null!;
     private string _editorToken = null!;
 
@@ -69,63 +108,43 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public AdminProviderEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
+    public AdminProviderEndpointsIntegrationTests(AdminProviderEndpointsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"provider_probe_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        // 1. Start WireMock before any env vars or factory creation. Warm: this class is the first
-        //    in the Games shard to talk to WireMock, and the probe gives up after 5 s (#4298).
-        _wireMock = await WarmWireMockServer.StartAsync();
+        // BeginTestAsync prima di seminare: le sessioni e le righe di audit vanno nel database del test.
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
 
-        // 3. Create an isolated test database
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
+        // Le mappature di un test non devono rispondere al successivo: ogni test registra la sua
+        // risposta su /api/v1/models.
+        _wireMock = _hostFixture.WireMock;
+        _wireMock.Reset();
 
-        // 4. Build factory — override OpenRouter URL and API key via extraConfig.
-        //    Rate limiting is disabled per-host by the factory's own configuration.
-        _factory = IntegrationWebApplicationFactory.Create(
-            connectionString,
-            extraConfig: new Dictionary<string, string?>
-            {
-                // ASP.NET Core binds Providers__OpenRouter__ListModelsUrl → Providers:OpenRouter:ListModelsUrl
-                ["Providers:OpenRouter:BaseUrl"] = $"{_wireMock.Url}/api/v1",
-                // #3887: ProviderCredentialResolver resolves the key through IConfiguration, so the
-                // probe sees it without touching the process environment.
-                [OpenRouterApiKeyName] = OpenRouterApiKeyValue
-            });
-
-        // 5. Migrate DB + seed users
         using var scope = _factory.Services.CreateScope();
-        _dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await _dbContext.Database.MigrateAsync();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Seed SuperAdmin session
-        var (_, superAdminToken) = await TestSessionHelper.CreateSuperAdminSessionAsync(_dbContext);
+        var (_, superAdminToken) = await TestSessionHelper.CreateSuperAdminSessionAsync(db);
         _superAdminToken = superAdminToken;
 
         // Seed Editor session (non-SuperAdmin — used for 403 test)
-        var (_, editorToken) = await TestSessionHelper.CreateEditorSessionAsync(_dbContext);
+        var (_, editorToken) = await TestSessionHelper.CreateEditorSessionAsync(db);
         _editorToken = editorToken;
 
-        // 6. Create HTTP clients
         _superAdminClient = _factory.CreateClient();
         _editorClient = _factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    // I client sono di questa istanza; host, database e WireMock sono della fixture.
+    public ValueTask DisposeAsync()
     {
         _superAdminClient?.Dispose();
         _editorClient?.Dispose();
-
-        // Dispose DB context first (scoped — already disposed when scope exited in InitializeAsync)
-        // _dbContext was obtained from a using scope so it is already disposed here. No action needed.
-
-        _factory?.Dispose();
-        _wireMock?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

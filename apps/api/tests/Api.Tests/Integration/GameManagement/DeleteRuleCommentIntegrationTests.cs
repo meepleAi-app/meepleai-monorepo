@@ -4,12 +4,16 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using Pgvector.EntityFrameworkCore;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -249,7 +253,8 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         comment.Should().BeNull();
     }
     [Fact]
-    public async Task DeleteNonExistentComment_ThrowsInvalidOperation()
+    [Trait("Issue", "5048")]
+    public async Task DeleteNonExistentComment_ThrowsNotFound()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -264,9 +269,9 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         // Act
         Func<Task> act = async () => await handler.Handle(command, TestCancellationToken);
 
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*not found*");
+        // Assert — #2568: NotFoundException (404), not an InvalidOperationException that reached
+        // 404 only because the middleware matches "not found" in its message.
+        await act.Should().ThrowAsync<NotFoundException>();
     }
     [Fact]
     public async Task DeleteCommentWithReplies_CascadeDeletes()
@@ -311,67 +316,147 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         var replyComment = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == reply.Id, TestCancellationToken);
         replyComment.Should().BeNull("replies should be cascade deleted");
     }
+    /// <summary>
+    /// Issue #5048: both requests read the comment before either deletes it — the interleaving
+    /// that <c>Task.Run</c> produced only sometimes, and that made the old version of this test
+    /// intermittent. The loser's DELETE touches 0 rows, which is the same situation as deleting an
+    /// absent comment, seen later: it gets the same <see cref="NotFoundException"/>, not the
+    /// <see cref="DbUpdateConcurrencyException"/> the middleware turns into 409 "reload and retry".
+    /// </summary>
     [Fact]
-    public async Task ConcurrentDeletion_HandlesRaceConditionGracefully()
+    [Trait("Issue", "5048")]
+    public async Task ConcurrentDeletion_BothReadBeforeEitherSaves_LoserGetsNotFound()
     {
         // Arrange
         await ResetDatabaseAsync();
         var commentId = await CreateTestCommentAsync(_testUserId);
 
-        // Create two independent handlers with separate DbContexts
-        var handler1 = CreateIndependentHandler();
-        var handler2 = CreateIndependentHandler();
+        var arrived = 0;
+        var bothHaveRead = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task WaitForTheOther(CancellationToken ct)
+        {
+            if (Interlocked.Increment(ref arrived) == 2)
+            {
+                bothHaveRead.TrySetResult();
+            }
 
-        var command = new DeleteRuleCommentCommand(
-            commentId,
-            _testUserId,
-            false
-        );
+            return bothHaveRead.Task.WaitAsync(TimeSpan.FromSeconds(30), ct);
+        }
+
+        var (handler1, db1) = CreateHandlerPausedBeforeSave(WaitForTheOther);
+        var (handler2, db2) = CreateHandlerPausedBeforeSave(WaitForTheOther);
+        var command = new DeleteRuleCommentCommand(commentId, _testUserId, false);
 
         // Act
-        var task1 = Task.Run(async () =>
-        {
-            try
-            {
-                return await handler1.Handle(command, TestCancellationToken);
-            }
-            catch (InvalidOperationException)
-            {
-                return false; // Comment already deleted
-            }
-        });
-
-        var task2 = Task.Run(async () =>
-        {
-            try
-            {
-                return await handler2.Handle(command, TestCancellationToken);
-            }
-            catch (InvalidOperationException)
-            {
-                return false; // Comment already deleted
-            }
-        });
-
-        var results = await Task.WhenAll(task1, task2);
+        var outcomes = await Task.WhenAll(
+            RunAsync(handler1, db1, command),
+            RunAsync(handler2, db2, command));
 
         // Assert
-        var successCount = results.Count(r => r);
+        outcomes.Should().ContainSingle(o => o.Error == null && o.Deleted, "exactly one request deletes the comment");
+        var loser = outcomes.Single(o => o.Error != null);
+        loser.Error.Should().BeOfType<NotFoundException>("the comment is gone, as if it had never been there");
 
-        // At least one should succeed or get "not found"
-        successCount.Should().BeGreaterThanOrEqualTo(1, "at least one deletion should succeed");
+        // The loser's context is the one the audit behaviour saves its Error row with: a leftover
+        // Deleted entry would resend the DELETE, fail again, and the audit row would be lost.
+        loser.Db.ChangeTracker.Entries().Should().BeEmpty();
+        var resave = async () => await loser.Db.SaveChangesAsync(TestCancellationToken);
+        await resave.Should().NotThrowAsync();
 
-        // Verify final database state
         var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, TestCancellationToken);
         comment.Should().BeNull("comment should be deleted");
     }
 
-    private DeleteRuleCommentCommandHandler CreateIndependentHandler()
+    /// <summary>
+    /// Issue #5048, the other direction: the 0-row DELETE is a REPLY removed under the cascade while
+    /// the root is still there. That is a real conflict — a retry would succeed — so it must stay a
+    /// <see cref="DbUpdateConcurrencyException"/> (409) and leave the root in place, rather than
+    /// answer 404 for a comment that exists.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5048")]
+    public async Task Deletion_ReplyRemovedBetweenReadAndSave_StaysConflictAndKeepsRoot()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var rootId = await CreateTestCommentAsync(_testUserId, "Parent comment");
+        var replyId = Guid.NewGuid();
+        _dbContext!.RuleSpecComments.Add(new RuleSpecCommentEntity
+        {
+            Id = replyId,
+            GameId = _testGameId,
+            Version = "1.0.0",
+            CommentText = "Reply comment",
+            UserId = _otherUserId,
+            ParentCommentId = rootId,
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear(); // #3866: fine arrange — vedi CreateTestCommentAsync
+
+        // Another request deletes the reply after this handler has read the tree.
+        var (handler, db) = CreateHandlerPausedBeforeSave(ct => _dbContext.RuleSpecComments
+            .Where(c => c.Id == replyId)
+            .ExecuteDeleteAsync(ct));
+
+        // Act
+        var outcome = await RunAsync(handler, db, new DeleteRuleCommentCommand(rootId, _testUserId, false));
+
+        // Assert
+        outcome.Error.Should().BeOfType<DbUpdateConcurrencyException>();
+        db.ChangeTracker.Entries().Should().BeEmpty();
+        var root = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == rootId, TestCancellationToken);
+        root.Should().NotBeNull("the failed save rolled back, and the root was never gone");
+    }
+
+    private static async Task<(bool Deleted, Exception? Error, MeepleAiDbContext Db)> RunAsync(
+        DeleteRuleCommentCommandHandler handler, MeepleAiDbContext db, DeleteRuleCommentCommand command)
+    {
+        try
+        {
+            return (await handler.Handle(command, TestCancellationToken), null, db);
+        }
+        catch (Exception ex)
+        {
+            return (false, ex, db);
+        }
+    }
+
+    /// <summary>
+    /// A handler on its own context, whose first save waits for <paramref name="beforeSave"/>: what
+    /// lets a test place another request exactly between this handler's read and its write.
+    /// </summary>
+    private (DeleteRuleCommentCommandHandler Handler, MeepleAiDbContext Db) CreateHandlerPausedBeforeSave(
+        Func<CancellationToken, Task> beforeSave)
     {
         var scope = _serviceProvider!.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseNpgsql(_isolatedDbConnectionString, o => o.UseVector())
+            .AddInterceptors(new BeforeFirstSaveInterceptor(beforeSave))
+            .Options;
+        var db = new MeepleAiDbContext(
+            options,
+            scope.ServiceProvider.GetRequiredService<IMediator>(),
+            scope.ServiceProvider.GetRequiredService<IDomainEventCollector>());
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<DeleteRuleCommentCommandHandler>>();
+        return (new DeleteRuleCommentCommandHandler(db, logger), db);
+    }
 
-        return new DeleteRuleCommentCommandHandler(dbContext, logger);
+    private sealed class BeforeFirstSaveInterceptor(Func<CancellationToken, Task> beforeSave) : SaveChangesInterceptor
+    {
+        private int _saves;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Increment(ref _saves) == 1)
+            {
+                await beforeSave(cancellationToken).ConfigureAwait(false);
+            }
+
+            return result;
+        }
     }
 }

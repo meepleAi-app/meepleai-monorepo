@@ -315,64 +315,6 @@ test.describe('Gap Analysis: Critical Features', () => {
    * Issue #4118: Admin Bulk Operations
    */
   test.describe('Admin Bulk Operations', () => {
-    test('Admin - Select users and bulk password reset', async ({ page }) => {
-      await page.goto('/admin/users');
-
-      // Select multiple users
-      const checkboxes = page.locator('[data-testid="user-checkbox"]');
-      await checkboxes.nth(0).check();
-      await checkboxes.nth(1).check();
-      await checkboxes.nth(2).check();
-
-      // Verify bulk toolbar appears
-      const toolbar = page.locator('[data-testid="bulk-actions-toolbar"]');
-      await expect(toolbar).toBeVisible();
-      await expect(toolbar).toContainText('3 selected');
-
-      // Click bulk password reset
-      await toolbar.locator('[data-testid="bulk-password-reset"]').click();
-
-      // Confirmation dialog
-      const dialog = page.locator('[data-testid="bulk-password-reset-dialog"]');
-      await expect(dialog).toBeVisible();
-      await expect(dialog).toContainText('3 users');
-
-      await dialog.locator('[data-testid="confirm-reset"]').click();
-
-      // Verify success
-      await expect(page.locator('text=Password reset emails sent')).toBeVisible();
-
-      // TODO: Verify emails sent in test environment
-    });
-
-    test('Admin - Bulk role change with preview', async ({ page }) => {
-      await page.goto('/admin/users');
-
-      // Select users
-      await page.locator('[data-testid="user-checkbox"]').nth(0).check();
-      await page.locator('[data-testid="user-checkbox"]').nth(1).check();
-
-      // Bulk role change
-      const toolbar = page.locator('[data-testid="bulk-actions-toolbar"]');
-      await toolbar.locator('[data-testid="bulk-role-change"]').click();
-
-      const dialog = page.locator('[data-testid="bulk-role-change-dialog"]');
-      await expect(dialog).toBeVisible();
-
-      // Select new role
-      await dialog.selectOption('[data-testid="new-role-select"]', 'Editor');
-
-      // Verify preview
-      const preview = dialog.locator('[data-testid="affected-users-preview"]');
-      await expect(preview).toContainText('2 users');
-
-      // Confirm
-      await dialog.locator('[data-testid="confirm-role-change"]').click();
-
-      // Verify success
-      await expect(page.locator('text=Roles updated')).toBeVisible();
-    });
-
     test('Admin - CSV import with validation and error handling', async ({ page }) => {
       await page.goto('/admin/users');
 

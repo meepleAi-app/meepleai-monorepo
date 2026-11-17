@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,7 +34,7 @@ internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComme
             .AsTracking()
             .Include(c => c.Replies)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
-.ConfigureAwait(false) ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
+.ConfigureAwait(false) ?? throw new NotFoundException("RuleComment", command.CommentId.ToString());
 
         // Verify ownership or admin
         if (comment.UserId != command.UserId && !command.IsAdmin)
@@ -48,7 +49,36 @@ internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComme
         }
 
         _dbContext.RuleSpecComments.Remove(comment);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex)
+        {
+            // Issue #5048. The tracker is cleared on every failed save: it still holds the Deleted
+            // entries, and the audit behaviour writes its Error row with a SaveChanges on this same
+            // scoped context — which would resend those DELETEs, fail again, and lose the audit row
+            // in its catch. Besides the race below, a reply inserted under the root between our read
+            // and our write fails the root DELETE on the foreign key, and needs the same clean-up.
+            _dbContext.ChangeTracker.Clear();
+
+            // A DELETE that touched 0 rows means another request removed the row between our read
+            // and our write — e.g. a double click, two tabs, or an admin and the author at once. If
+            // the root comment is the one that is gone, this is the same request as "delete an
+            // absent comment", seen a few milliseconds later, and it gets the same answer (404)
+            // instead of the 409 "reload and retry" the middleware gives a concurrency exception. If
+            // the root is still there, a REPLY vanished under the cascade: that one really is a
+            // conflict, and a retry would succeed, so it stays a 409.
+            if (ex is DbUpdateConcurrencyException
+                && !await _dbContext.RuleSpecComments
+                    .AnyAsync(c => c.Id == command.CommentId, cancellationToken)
+                    .ConfigureAwait(false))
+            {
+                throw new NotFoundException("RuleComment", command.CommentId.ToString(), ex);
+            }
+
+            throw;
+        }
 
         _logger.LogInformation(
             "Deleted comment {CommentId} by user {UserId} (admin: {IsAdmin})",

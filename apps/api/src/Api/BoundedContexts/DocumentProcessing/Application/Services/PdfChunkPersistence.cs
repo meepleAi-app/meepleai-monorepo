@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
@@ -48,12 +49,13 @@ internal static class PdfChunkPersistence
 
     /// <summary>
     /// Sostituisce passaggi e righe vettoriali del PDF, in una transazione. Il documento vettoriale deve
-    /// già esistere. Un conflitto di concorrenza non lancia (Categoria B: vince la modifica dell'admin) e
-    /// non scrive niente. La transazione la apre <c>unitOfWork</c>, che deve essere quella dello stesso
-    /// scope di <c>db</c>.
+    /// già esistere. La transazione la apre <c>unitOfWork</c>, che deve essere quella dello stesso scope di
+    /// <c>db</c>. Un conflitto di concorrenza non scrive niente e si propaga: il chiamante non deve dichiarare
+    /// l'indice completo né il PDF pronto.
     /// </summary>
     /// <exception cref="ArgumentException">Un embedding per passaggio manca, o uno non è valido.</exception>
     /// <exception cref="InvalidOperationException">Il nome del modello manca, o il salvataggio è fallito.</exception>
+    /// <exception cref="DbUpdateConcurrencyException">Un'altra scrittura ha toccato le stesse righe; niente è stato scritto.</exception>
     public static async Task SaveAsync(
         MeepleAiDbContext db,
         IUnitOfWork unitOfWork,
@@ -94,6 +96,12 @@ internal static class PdfChunkPersistence
             throw new ArgumentException($"{invalid} embedding(s) are empty or contain NaN/Infinity", nameof(embeddings));
         }
 
+        // Phase D4: role_tags is populated on insert, so the pgvector rows can copy it. Classified here, before
+        // the transaction: the classifier may call an LLM for every chunk, and neither the open transaction nor a
+        // retry of it should wait for, or repeat, that (same rule as the queued pipeline, #4660).
+        var roles = await TextChunkRoleClassifier.ClassifyRolesAsync(roleClassifier, chunks, logger, cancellationToken)
+            .ConfigureAwait(false);
+
         try
         {
             // #3636: the unit of work, not BeginTransactionAsync: under the retrying execution strategy a
@@ -101,7 +109,7 @@ internal static class PdfChunkPersistence
             await unitOfWork.ExecuteInTransactionAsync(async ct =>
             {
                 ForgetStagedRows(db);
-                var savedChunks = await SaveTextChunksAsync(db, pdfId, pdfDoc, chunks, roleClassifier, timeProvider, logger, ct)
+                var savedChunks = await SaveTextChunksAsync(db, pdfId, pdfDoc, chunks, roles, timeProvider, logger, ct)
                     .ConfigureAwait(false);
                 await SaveEmbeddingsAsync(db, pdfId, pdfDoc, chunks, embeddings, savedChunks, modelName, logger, ct)
                     .ConfigureAwait(false);
@@ -112,8 +120,12 @@ internal static class PdfChunkPersistence
             ForgetStagedRows(db);
             MeepleAiMetrics.RecordPdfConcurrencyConflict(handlerName, MeepleAiMetrics.PdfConcurrencyCategories.B);
             logger.LogWarning(ex,
-                "Concurrency conflict on the text chunks or vector rows of PDF {PdfId} in {Handler} (Category B) — admin mutation wins, nothing was written, pipeline will re-read on next tick",
+                "Concurrency conflict on the text chunks or vector rows of PDF {PdfId} in {Handler} (Category B) — admin mutation wins, nothing was written",
                 pdfId, handlerName);
+
+            // Not swallowed: the caller would go on to declare the index completed (and the game's knowledge
+            // base present) and the PDF Ready, with nothing of this run written.
+            throw;
         }
         catch
         {
@@ -144,7 +156,7 @@ internal static class PdfChunkPersistence
         Guid pdfId,
         PdfDocumentEntity pdfDoc,
         IReadOnlyList<DocumentChunkInput> chunks,
-        IRoleClassifierService? roleClassifier,
+        IReadOnlyList<GameBookRole> roles,
         TimeProvider timeProvider,
         ILogger logger,
         CancellationToken cancellationToken)
@@ -187,9 +199,7 @@ internal static class PdfChunkPersistence
             })
             .ToList();
 
-        // Phase D4: role_tags is populated on insert, so the pgvector rows can copy it.
-        await TextChunkRoleClassifier.AssignRoleTagsAsync(roleClassifier, textChunkEntities, chunks, logger, cancellationToken)
-            .ConfigureAwait(false);
+        TextChunkRoleClassifier.ApplyRoles(textChunkEntities, roles);
 
         db.TextChunks.AddRange(textChunkEntities);
         try

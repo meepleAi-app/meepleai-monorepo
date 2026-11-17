@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -24,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration.DocumentProcessing;
@@ -169,6 +171,107 @@ public sealed class ChunksAndEmbeddingsOneTransactionIntegrationTests : IAsyncLi
         after.ShouldAgree();
     }
 
+    /// <summary>
+    /// A concurrency conflict keeps its Category B outcome on the re-index (the run fails, the admin mutation wins), and
+    /// writes nothing: before, the batches already committed stayed.
+    /// </summary>
+    [Fact]
+    public async Task Reindex_WhenAnEmbeddingBatchHitsAConcurrencyConflict_NothingIsWrittenAndTheRunFails()
+    {
+        var pdfId = await CreatePdfAsync(LargeText(paragraphs: 3000));
+        (await IndexAsync(pdfId)).Success.Should().BeTrue();
+        var before = await SnapshotAsync(pdfId);
+
+        _failer.Throw = () => new DbUpdateConcurrencyException("conflict injected by the test");
+        _failer.FailOnEmbeddingSave = 2;
+        var second = await IndexAsync(pdfId);
+
+        second.Success.Should().BeFalse();
+        second.ErrorCode.Should().Be(PdfIndexingErrorCode.VectorIndexingFailed);
+        var after = await SnapshotAsync(pdfId);
+        after.ChunkIds.Should().BeEquivalentTo(before.ChunkIds);
+        after.EmbeddingIds.Should().BeEquivalentTo(before.EmbeddingIds);
+        after.ShouldAgree();
+    }
+
+    /// <summary>
+    /// From the review of #5054: the upload swallowed a conflict and went on to declare the index completed and the PDF
+    /// Ready with nothing of the run written. The conflict now leaves the save, after rolling everything back.
+    /// </summary>
+    [Fact]
+    public async Task UploadSave_WhenTheSaveHitsAConcurrencyConflict_ItThrowsAndNothingIsWritten()
+    {
+        var pdfId = await CreatePdfAsync("Short text, saved through the upload path.");
+        await CreateVectorDocumentAsync(pdfId);
+        await UploadSaveAsync(pdfId, Chunks("old", 3));
+        var before = await SnapshotAsync(pdfId);
+
+        _failer.Throw = () => new DbUpdateConcurrencyException("conflict injected by the test");
+        _failer.FailOnEmbeddingSave = 1;
+        var save = async () => await UploadSaveAsync(pdfId, Chunks("new", 4));
+
+        await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        var after = await SnapshotAsync(pdfId);
+        after.ChunkIds.Should().BeEquivalentTo(before.ChunkIds);
+        after.EmbeddingIds.Should().BeEquivalentTo(before.EmbeddingIds);
+        after.ShouldAgree();
+    }
+
+    /// <summary>
+    /// A transient error makes the execution strategy run the transaction again. The second attempt must not trip on
+    /// what the first one left in the change tracker: the chunk ids are stable across attempts (an identity conflict),
+    /// and the embeddings of the failed batch stay Added (inserted twice). Forgetting them at the head of the delegate is
+    /// what this proves.
+    /// </summary>
+    [Fact]
+    public async Task Reindex_WhenAnEmbeddingBatchFailsTransiently_TheRetriedAttemptWritesOneConsistentIndex()
+    {
+        var pdfId = await CreatePdfAsync(LargeText(paragraphs: 3000));
+        (await IndexAsync(pdfId)).Success.Should().BeTrue();
+        var before = await SnapshotAsync(pdfId);
+
+        _failer.Throw = Transient;
+        _failer.FailOnEmbeddingSave = 2;
+        var second = await IndexAsync(pdfId);
+
+        second.Success.Should().BeTrue(second.ErrorMessage);
+        _failer.Tripped.Should().BeTrue();
+        var after = await SnapshotAsync(pdfId);
+        after.ChunkIds.Should().NotIntersectWith(before.ChunkIds, "the retried run replaced the index");
+        after.EmbeddingIds.Should().HaveCount(after.ChunkIds.Count, "one embedding per chunk, none left over from the failed attempt");
+        after.ShouldAgree();
+    }
+
+    [Fact]
+    public async Task UploadSave_WhenTheEmbeddingsFailTransiently_TheRetriedAttemptWritesOneConsistentIndex()
+    {
+        var pdfId = await CreatePdfAsync("Short text, saved through the upload path.");
+        await CreateVectorDocumentAsync(pdfId);
+        await UploadSaveAsync(pdfId, Chunks("old", 3));
+        var before = await SnapshotAsync(pdfId);
+
+        // The classifier may be an LLM call per chunk: it runs before the transaction, so a retry does not repeat it.
+        var classifier = new Mock<IRoleClassifierService>();
+        classifier.Setup(c => c.ClassifyAsync(It.IsAny<IReadOnlyList<ChunkInput>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ChunkInput> inputs, CancellationToken _) =>
+                inputs.Select(_ => GameBookRole.RulesReference).ToList());
+
+        _failer.Throw = Transient;
+        _failer.FailOnEmbeddingSave = 1;
+        await UploadSaveAsync(pdfId, Chunks("new", 4), classifier.Object);
+
+        _failer.Tripped.Should().BeTrue();
+        classifier.Verify(c => c.ClassifyAsync(It.IsAny<IReadOnlyList<ChunkInput>>(), It.IsAny<CancellationToken>()), Times.Once(),
+            "classified once, before the transaction, not once per attempt");
+        var after = await SnapshotAsync(pdfId);
+        after.ChunkIds.Should().HaveCount(4).And.NotIntersectWith(before.ChunkIds);
+        after.EmbeddingIds.Should().HaveCount(4, "one embedding per chunk, none left over from the failed attempt");
+        after.ShouldAgree();
+    }
+
+    /// <summary>What the retrying execution strategy treats as transient: an <see cref="NpgsqlException"/> over a timeout.</summary>
+    private static Exception Transient() => new NpgsqlException("transient failure injected by the test", new TimeoutException());
+
     private async Task<IndexingResultDto> IndexAsync(Guid pdfId)
     {
         await using var scope = _serviceProvider!.CreateAsyncScope();
@@ -176,7 +279,7 @@ public sealed class ChunksAndEmbeddingsOneTransactionIntegrationTests : IAsyncLi
         return await handler.Handle(new IndexPdfCommand(pdfId.ToString()), Ct);
     }
 
-    private async Task UploadSaveAsync(Guid pdfId, IReadOnlyList<DocumentChunkInput> chunks)
+    private async Task UploadSaveAsync(Guid pdfId, IReadOnlyList<DocumentChunkInput> chunks, IRoleClassifierService? classifier = null)
     {
         await using var scope = _serviceProvider!.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -189,7 +292,7 @@ public sealed class ChunksAndEmbeddingsOneTransactionIntegrationTests : IAsyncLi
             chunks,
             chunks.Select(_ => Vector()).ToList(),
             "test-embedding-model",
-            roleClassifier: null,
+            classifier,
             TimeProvider.System,
             NullLogger.Instance,
             nameof(ChunksAndEmbeddingsOneTransactionIntegrationTests),
@@ -285,6 +388,7 @@ public sealed class ChunksAndEmbeddingsOneTransactionIntegrationTests : IAsyncLi
         private int _embeddingSaves;
         public volatile int FailOnEmbeddingSave;
         public volatile bool Tripped;
+        public Func<Exception> Throw = () => new InjectedSaveFailureException();
 
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
             DbContextEventData eventData,
@@ -296,7 +400,7 @@ public sealed class ChunksAndEmbeddingsOneTransactionIntegrationTests : IAsyncLi
                 && Interlocked.Increment(ref _embeddingSaves) == FailOnEmbeddingSave)
             {
                 Tripped = true;
-                throw new InjectedSaveFailureException();
+                throw Throw();
             }
 
             return base.SavingChangesAsync(eventData, result, cancellationToken);

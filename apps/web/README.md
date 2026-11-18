@@ -626,7 +626,7 @@ function Component() {
 
 - **Code Splitting**: Automatic via Next.js dynamic imports
 - **Image Optimization**: Next.js Image component
-- **Font Optimization**: next/font with font subsetting
+- **Font Optimization**: self-hosted woff2 subsets with `unicode-range` and preloaded latin files (`src/styles/fonts.css`, #4997)
 - **Bundle Analysis**: `pnpm analyze`
 - **Tree Shaking**: Automatic (ES modules)
 - **Minification**: Terser (production builds)

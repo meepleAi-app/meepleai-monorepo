@@ -107,12 +107,13 @@
   /* ─── Typography ─── */
   --f-display: 'Quicksand', system-ui, sans-serif;
   --f-body:    'Nunito', system-ui, sans-serif;
-  /* Post DS-step 2a (2026-05-24): JetBrains Mono loaded via next/font/google
-   * in app/layout.tsx exposes the `--font-jetbrains-mono` CSS variable.
-   * Bridge it into the canonical `--f-mono` token to make the dependency
-   * explicit (mirrors `--font-quicksand` -> `--f-display` / `--font-nunito`
-   * -> `--f-body` pattern intent). Falls back to ui-monospace if the variable
-   * is not set (e.g. in unit-test setups without next/font hydration).
+  /* Post DS-step 2a (2026-05-24): JetBrains Mono, self-hosted by
+   * styles/fonts.css since #4997, exposes the `--font-jetbrains-mono` CSS
+   * variable. Bridge it into the canonical `--f-mono` token to make the
+   * dependency explicit (mirrors `--font-quicksand` -> `--f-display` /
+   * `--font-nunito` -> `--f-body` pattern intent). Falls back to ui-monospace
+   * if the variable is not set (e.g. in unit-test setups that do not load
+   * fonts.css).
    */
   --f-mono:    var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace;
 

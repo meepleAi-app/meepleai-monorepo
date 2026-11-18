@@ -167,6 +167,39 @@ describe('GameDetailHero (Wave C.1)', () => {
     expect(screen.queryByText('2019')).not.toBeInTheDocument();
   });
 
+  // #5066: the cover comes from the library detail, which falls back to a private game, and a private game
+  // imported from BGG stored the BGG image URLs. Hard ban on browser requests to BGG hosts (#2123, ADR-059 §5).
+  it('does not request a BGG image: it renders the placeholder instead', () => {
+    const { container } = render(
+      <GameDetailHero
+        title="Wingspan"
+        imageUrl="https://cf.geekdo-images.com/abc/pic123.jpg"
+        variant="own"
+        meta={baseMeta}
+        isFavorite={false}
+        labels={labels}
+      />
+    );
+    const cover = container.querySelector('[data-slot="game-detail-hero-cover"]');
+    expect(cover?.querySelector('img')).toBeNull();
+    expect(container.innerHTML).not.toMatch(/geekdo/);
+  });
+
+  it('renders an allowed cover image', () => {
+    const { container } = render(
+      <GameDetailHero
+        title="Wingspan"
+        imageUrl="/api/v1/covers/wingspan.webp"
+        variant="own"
+        meta={baseMeta}
+        isFavorite={false}
+        labels={labels}
+      />
+    );
+    const img = container.querySelector('[data-slot="game-detail-hero-cover"] img');
+    expect(img?.getAttribute('src')).toBe('/api/v1/covers/wingspan.webp');
+  });
+
   it('exposes data-slot="game-detail-hero" for E2E selector', () => {
     const { container } = render(
       <GameDetailHero

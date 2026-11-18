@@ -23,6 +23,8 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
+import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
+
 export type GameDetailHeroVariant = 'own' | 'community';
 
 export interface GameDetailHeroLabels {
@@ -81,6 +83,10 @@ export function GameDetailHero(props: GameDetailHeroProps): ReactElement {
     className,
   } = props;
 
+  // #5066: a plain <img>, so the BGG check of the image loader does not run here. The cover can come from a
+  // private game imported from BGG; a blocked host (#2123, ADR-059 §5) renders the placeholder instead.
+  const coverUrl = shouldUsePlaceholder(imageUrl) ? null : imageUrl;
+
   // Compose meta line from non-null parts.
   const metaParts = [
     meta.designer,
@@ -103,10 +109,10 @@ export function GameDetailHero(props: GameDetailHeroProps): ReactElement {
         className="relative h-[180px] w-full overflow-hidden bg-gradient-to-br from-amber-500/30 via-rose-500/30 to-violet-500/30 sm:h-[240px]"
         data-slot="game-detail-hero-cover"
       >
-        {imageUrl ? (
+        {coverUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
-            src={imageUrl}
+            src={coverUrl}
             alt=""
             aria-hidden="true"
             className="h-full w-full object-cover"

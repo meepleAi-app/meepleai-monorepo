@@ -33,6 +33,14 @@ const BLOCKED_IMAGE_HOSTS: readonly string[] = [
 ];
 
 /**
+ * True for a path on this origin: a single leading "/". `//host/…` is protocol-relative and `/\host/…` is read
+ * the same way by browsers (backslash as slash), so both name another host (#5066).
+ */
+function isSameOriginPath(value: string): boolean {
+  return value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\');
+}
+
+/**
  * Parses `imageUrl` and returns its lowercased hostname, or `null` when the
  * input is missing, a data/relative URL, or fails to parse. Centralises the
  * URL-parsing rules so every BGG-host decision uses the same anchored,
@@ -47,10 +55,13 @@ function parseImageHost(imageUrl: string | null | undefined): string | null {
   if (!trimmed) return null;
 
   // Data URLs and same-origin relative paths carry no third-party host.
-  if (trimmed.startsWith('data:') || trimmed.startsWith('/')) return null;
+  if (trimmed.startsWith('data:') || isSameOriginPath(trimmed)) return null;
 
   try {
-    return new URL(trimmed).hostname.toLowerCase();
+    // Left with a leading "/" are the protocol-relative forms: they take the page's scheme, so any https base
+    // resolves their host. Anything else must be absolute, as before.
+    const base = trimmed.startsWith('/') ? 'https://same-origin.invalid' : undefined;
+    return new URL(trimmed, base).hostname.toLowerCase();
   } catch {
     return null;
   }
@@ -97,7 +108,7 @@ export function shouldUsePlaceholder(imageUrl: string | null | undefined): boole
   if (!trimmed) return true;
 
   // Data URLs and same-origin relative paths are always allowed.
-  if (trimmed.startsWith('data:') || trimmed.startsWith('/')) return false;
+  if (trimmed.startsWith('data:') || isSameOriginPath(trimmed)) return false;
 
   const host = parseImageHost(trimmed);
   // A non-parseable URL has no host we can vet → fall back to the placeholder.

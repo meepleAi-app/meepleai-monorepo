@@ -43,7 +43,7 @@ export function GameChatHeader({
       <div>
         <div className="font-bold text-base leading-tight">{gameTitle}</div>
         <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--c-agent)/0.15)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--c-agent))]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--c-agent)/0.15)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-entity-agent-text">
             <span className="sr-only">Intento della risposta: </span>
             {ANSWER_INTENT_LABELS[intent]}
           </span>

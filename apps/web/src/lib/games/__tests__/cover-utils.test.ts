@@ -133,6 +133,24 @@ describe('isBlockedImageHost (#2655 — hostname-anchored BGG detection)', () =>
     expect(isBlockedImageHost('//cf.geekdo-images.com/pic123.jpg')).toBe(true);
     expect(isBlockedImageHost('/\\cf.geekdo-images.com/pic123.jpg')).toBe(true);
   });
+
+  // #5072: resolved like an <img src> on an https page. SafeImg blocks on this alone.
+  it.each([
+    '\\\\cf.geekdo-images.com/pic.jpg', // \\host → //host
+    '  //cf.geekdo-images.com/pic.jpg  ',
+    'http:cf.geekdo-images.com/pic.jpg', // another scheme: absolute, the host is BGG's
+    '//cf.geekdo-images.com\t/pic.jpg', // the parser drops tabs
+  ])('returns true for %p, which a browser sends to BGG (#5072)', url => {
+    expect(isBlockedImageHost(url)).toBe(true);
+  });
+
+  it.each([
+    'https:cf.geekdo-images.com/pic.jpg', // the page's own scheme: a path on this origin
+    'blob:https://meepleai.app/3f1c2a9e-0000-4000-8000-000000000000',
+    'images/cf.geekdo-images.com.jpg',
+  ])('returns false for %p, which stays on this origin or is local (#5072)', url => {
+    expect(isBlockedImageHost(url)).toBe(false);
+  });
 });
 
 describe('hashToHue', () => {

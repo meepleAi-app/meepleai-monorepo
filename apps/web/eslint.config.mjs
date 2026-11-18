@@ -23,6 +23,8 @@ import noHardcodedColorUtility from "./eslint-rules/no-hardcoded-color-utility.j
 // (post-#1229 regression preventer; rationale in rule docstring)
 import apiClientV1Prefix from "./eslint-rules/api-client-v1-prefix.js";
 import noBggHost from "./eslint-rules/no-bgg-host.js";
+// Issue #5072 — every <img> / unoptimized next/image with a variable src goes through SafeImg.
+import noUnguardedImg from "./eslint-rules/no-unguarded-img.js";
 // Game detail orphan routes guard — ADR-061 removed
 // /games/[id]/{reviews,strategies,chat}; restoration requires a follow-up ADR.
 import noGameDetailOrphanRoutes from "./eslint-rules/no-game-detail-orphan-routes.js";
@@ -120,6 +122,8 @@ export default [
           "api-client-v1-prefix": apiClientV1Prefix,
           // Issue #2123 — BGG ToS compliance hard ban on user-side BGG asset traffic.
           "no-bgg-host": noBggHost,
+          // Issue #5072 — central BGG guard for <img> and unoptimized next/image.
+          "no-unguarded-img": noUnguardedImg,
           // ADR-061 — game detail orphan routes removed; re-scaffolding requires a follow-up ADR.
           "no-game-detail-orphan-routes": noGameDetailOrphanRoutes,
           // Issue #2389 Block A.7 — useLiveSessionStore.scores is deprecated; use useSessionScores() instead.
@@ -322,6 +326,12 @@ export default [
     settings: {
       react: {
         version: "detect",
+      },
+      // Issue #5072 — SafeImg renders an <img>: jsx-a11y checks its `alt` as it would on the element.
+      "jsx-a11y": {
+        components: {
+          SafeImg: "img",
+        },
       },
     },
   },
@@ -718,7 +728,10 @@ export default [
   //      `src/app/admin/(dashboard)/**` and `src/components/admin/**` host the
   //      admin BGG XML API consumer (ADR-059 §2). The BGG fetcher legitimately
   //      surfaces BGG URLs in admin-only UI (e.g. BggSearchPanel) for the admin
-  //      to manually pick a game to import. Never user-facing.
+  //      to manually pick a game to import. Never user-facing. Rendering those
+  //      thumbnails in the admin's browser is the written exception of #5072
+  //      (ADR-059 §5.6): `<SafeImg allowBggHost>`, accepted by
+  //      local/no-unguarded-img only under these two paths.
   //
   //   3. E2E test suite (`e2e/**`)
   //      Tests assert the admin BGG-import flow and the user-side BGG ban; both
@@ -739,6 +752,34 @@ export default [
     ],
     rules: {
       "local/no-bgg-host": "off",
+    },
+  },
+  // Issue #5072 — central guard of the BGG asset ban (ADR-059 §5). Every <img>
+  // and every `unoptimized` next/image with a variable src goes through
+  // SafeImg (src/components/ui/data-display/safe-img.tsx), which blocks a URL a
+  // browser would send to a BGG host and fires the SLO beacon. Constant
+  // sources and local previews built in place (`data:`/`blob:` templates,
+  // `URL.createObjectURL(…)`) need no guard; a preview kept in state goes
+  // through SafeImg, which passes `blob:` and `data:` unchanged.
+  // `allowBggHost` is the admin BGG search exception, allowed only where the
+  // no-bgg-host override above allows BGG literals.
+  {
+    files: ["src/**/*.{ts,tsx,js,jsx}"],
+    ignores: [
+      "**/__tests__/**",
+      "**/__mocks__/**",
+      "**/*.test.{ts,tsx,js,jsx}",
+      "**/*.spec.{ts,tsx,js,jsx}",
+      "**/*.stories.{ts,tsx,js,jsx}",
+      "**/*.story.{ts,tsx,js,jsx}",
+      "src/stories/**",
+      "src/test-utils/**",
+    ],
+    rules: {
+      "local/no-unguarded-img": [
+        "error",
+        { allowBggHostIn: ["src/app/admin/", "src/components/admin/"] },
+      ],
     },
   },
   // Composite no-restricted-imports block for src/**.

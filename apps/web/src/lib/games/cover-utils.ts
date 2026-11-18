@@ -35,6 +35,9 @@ const BLOCKED_IMAGE_HOSTS: readonly string[] = [
   'boardgamegeek.com',
 ];
 
+/** Stands for the page's origin when a URL is resolved the way the browser resolves it (#5072). */
+const SAME_ORIGIN_BASE = 'https://same-origin.invalid/';
+
 /**
  * True for a path on this origin: a single leading "/". `//host/…` is protocol-relative and `/\host/…` is read
  * the same way by browsers (backslash as slash), so both name another host (#5066).
@@ -63,7 +66,7 @@ function parseImageHost(imageUrl: string | null | undefined): string | null {
   try {
     // Left with a leading "/" are the protocol-relative forms: they take the page's scheme, so any https base
     // resolves their host. Anything else must be absolute, as before.
-    const base = trimmed.startsWith('/') ? 'https://same-origin.invalid' : undefined;
+    const base = trimmed.startsWith('/') ? SAME_ORIGIN_BASE : undefined;
     // "host." names the same host as "host" (#5069); the URL parser keeps the trailing dot.
     return new URL(trimmed, base).hostname.toLowerCase().replace(/\.+$/, '');
   } catch {
@@ -87,11 +90,22 @@ function isBggImageHostname(host: string): boolean {
  * BGG asset request was attempted (e.g. before firing the SLO=0 beacon), so a
  * garbage src that merely *contains* a BGG token is not mis-counted.
  *
+ * #5072: the URL resolves against a base, as a browser resolves an `<img src>` on its page, so a relative path
+ * stays on this origin and a form the browser reads as another host does too here (`\\host/…`, `http:host/…`).
+ * `SafeImg` blocks on this alone: it must not turn away anything a browser would not send to BGG.
+ *
  * SSR-safe.
  */
 export function isBlockedImageHost(imageUrl: string | null | undefined): boolean {
-  const host = parseImageHost(imageUrl);
-  return host !== null && isBggImageHostname(host);
+  const trimmed = imageUrl?.trim();
+  if (!trimmed) return false;
+
+  try {
+    const host = new URL(trimmed, SAME_ORIGIN_BASE).hostname.toLowerCase().replace(/\.+$/, '');
+    return isBggImageHostname(host);
+  } catch {
+    return false;
+  }
 }
 
 /**

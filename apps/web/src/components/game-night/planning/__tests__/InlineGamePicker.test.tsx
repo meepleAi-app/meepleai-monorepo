@@ -1,7 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InlineGamePicker } from '../InlineGamePicker';
+
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
+const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+const ALLOWED = 'https://covers.meepleai.app/abc/cover.webp';
+
+beforeEach(() => {
+  reportBggAttempt.mockClear();
+});
 
 const mockGames = [
   { id: 'g1', title: 'Catan', thumbnailUrl: '', minPlayers: 3, maxPlayers: 4 },
@@ -38,5 +48,24 @@ describe('InlineGamePicker', () => {
   it('excludes already selected games', () => {
     render(<InlineGamePicker games={mockGames} onSelect={vi.fn()} excludeIds={['g1']} />);
     expect(screen.queryByText('Catan')).not.toBeInTheDocument();
+  });
+
+  it('never renders a BGG thumbnail: the Gamepad2 icon instead, and the beacon fires (#5072)', () => {
+    const { container } = render(
+      <InlineGamePicker
+        games={[
+          { ...mockGames[0], thumbnailUrl: BGG },
+          { ...mockGames[1], thumbnailUrl: ALLOWED },
+        ]}
+        onSelect={vi.fn()}
+      />
+    );
+
+    const catan = screen.getByRole('button', { name: /Catan/ });
+    expect(container.querySelector('img[src*="geekdo-images"]')).toBeNull();
+    expect(catan.querySelector('img')).toBeNull();
+    expect(catan.querySelector('svg[class*="lucide-gamepad"]')).not.toBeNull();
+    expect(screen.getByRole('img', { name: 'Ticket to Ride' })).toHaveAttribute('src', ALLOWED);
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
   });
 });

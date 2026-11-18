@@ -50,7 +50,7 @@ import type { ReactElement } from 'react';
 import clsx from 'clsx';
 
 import type { GamebookCardData, GamebookStatus } from '@/lib/gamebook-index/schemas';
-import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
+import { cssImageUrl } from '@/lib/images/css-image-url';
 
 export interface GamebookCardLabels {
   /** Status pill label — ready (e.g. "Pronto"). */
@@ -221,7 +221,9 @@ function Cover({ cover, emoji, pagesLabel, status }: CoverProps): ReactElement {
   // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-hue warm gradient (game+agent); template literal, CSS vars cannot carry multi-stop gradients
   const fallbackGradient = `linear-gradient(155deg, hsl(28, 80%, 38%) 0%, hsl(38, 92%, 60%) 100%)`;
   // #5069: a BGG cover (#2123, ADR-059 §5) counts as no cover, so it can never reach the CSS as an image.
-  const background = (shouldUsePlaceholder(cover) ? null : cover) ?? fallbackGradient;
+  // #5072: an allowed cover is drawn over the gradient. A bare URL in `background` is not valid CSS, so the
+  // cover never showed.
+  const coverImage = cssImageUrl(cover);
 
   return (
     <div
@@ -231,7 +233,11 @@ function Cover({ cover, emoji, pagesLabel, status }: CoverProps): ReactElement {
         'relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden',
         status === 'indexing' && 'opacity-80'
       )}
-      style={{ background }}
+      style={{
+        backgroundImage: coverImage ? `${coverImage}, ${fallbackGradient}` : fallbackGradient,
+        backgroundPosition: 'center',
+        backgroundSize: 'cover',
+      }}
     >
       <span className="text-5xl drop-shadow-md">{emoji ?? '📖'}</span>
       <span

@@ -31,6 +31,7 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import type { SessionSnapshotDto } from '@/lib/api/clients/sessionSnapshotsClient';
 
 export interface PhotosGalleryLabels {
@@ -112,24 +113,22 @@ export function PhotosGallery({
               )}
               aria-label={altText}
             >
-              {downloadUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- thumbnail tile; orchestrator may lift to <Image> when lightbox lands
-                <img
-                  src={downloadUrl}
-                  alt={altText}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                />
-              ) : (
-                // TODO #807-followup: two-entity gradient (session+toolkit) — keep inline until CSS vars support alpha stops
-                <div
-                  aria-hidden="true"
-                  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-entity alpha gradient in Tailwind arbitrary class; CSS vars cannot carry alpha in from-[]/to-[]
-                  className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[hsla(240,60%,55%,0.18)] to-[hsla(142,70%,31%,0.1)] text-3xl"
-                >
-                  📷
-                </div>
-              )}
+              <SafeImg
+                src={downloadUrl}
+                alt={altText}
+                loading="lazy"
+                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                fallback={
+                  // TODO #807-followup: two-entity gradient (session+toolkit) — keep inline until CSS vars support alpha stops
+                  <div
+                    aria-hidden="true"
+                    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-entity alpha gradient in Tailwind arbitrary class; CSS vars cannot carry alpha in from-[]/to-[]
+                    className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[hsla(240,60%,55%,0.18)] to-[hsla(142,70%,31%,0.1)] text-3xl"
+                  >
+                    📷
+                  </div>
+                }
+              />
               {s.caption && (
                 <span
                   className={clsx(

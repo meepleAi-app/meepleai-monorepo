@@ -11,6 +11,7 @@
 import { useState } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useCurrentUser, useLeaderboard } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
@@ -32,10 +33,7 @@ export interface LeaderboardTableProps {
  * <LeaderboardTable period="AllTime" />
  * ```
  */
-export function LeaderboardTable({
-  period = 'AllTime',
-  className,
-}: LeaderboardTableProps){
+export function LeaderboardTable({ period = 'AllTime', className }: LeaderboardTableProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<LeaderboardPeriod>(period);
 
   const { data: leaderboard, isLoading } = useLeaderboard(selectedPeriod);
@@ -107,8 +105,13 @@ export function LeaderboardTable({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-8" data-testid="leaderboard-empty">
-            <p className="text-muted-foreground text-sm" data-testid="leaderboard-empty-message">No contributors yet</p>
+          <div
+            className="flex flex-col items-center justify-center py-8"
+            data-testid="leaderboard-empty"
+          >
+            <p className="text-muted-foreground text-sm" data-testid="leaderboard-empty-message">
+              No contributors yet
+            </p>
           </div>
         )}
       </CardContent>
@@ -125,7 +128,7 @@ interface LeaderboardRowProps {
   isCurrentUser: boolean;
 }
 
-function LeaderboardRow({ entry, position, isCurrentUser }: LeaderboardRowProps){
+function LeaderboardRow({ entry, position, isCurrentUser }: LeaderboardRowProps) {
   const positionIcon = getPositionIcon(position);
 
   return (
@@ -150,18 +153,16 @@ function LeaderboardRow({ entry, position, isCurrentUser }: LeaderboardRowProps)
 
       {/* User Avatar */}
       <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-        {entry.avatarUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element -- External user-provided avatar URL */
-          <img
-            src={entry.avatarUrl}
-            alt={entry.userName}
-            className="h-full w-full rounded-full object-cover"
-          />
-        ) : (
-          <span className="text-primary text-lg font-semibold">
-            {entry.userName.charAt(0).toUpperCase()}
-          </span>
-        )}
+        <SafeImg
+          src={entry.avatarUrl}
+          alt={entry.userName}
+          className="h-full w-full rounded-full object-cover"
+          fallback={
+            <span className="text-primary text-lg font-semibold">
+              {entry.userName.charAt(0).toUpperCase()}
+            </span>
+          }
+        />
       </div>
 
       {/* User Info */}
@@ -173,28 +174,25 @@ function LeaderboardRow({ entry, position, isCurrentUser }: LeaderboardRowProps)
           )}
         </p>
         <p className="text-muted-foreground text-xs">
-          {entry.contributionCount} {entry.contributionCount === 1 ? 'contribution' : 'contributions'}
+          {entry.contributionCount}{' '}
+          {entry.contributionCount === 1 ? 'contribution' : 'contributions'}
         </p>
       </div>
 
       {/* Top Badges */}
       <div className="flex gap-1">
-        {entry.topBadges.slice(0, 3).map((badge) => (
+        {entry.topBadges.slice(0, 3).map(badge => (
           <div
             key={badge.id}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-muted"
             title={badge.name}
           >
-            {badge.iconUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element -- External user-provided badge icon URL */
-              <img
-                src={badge.iconUrl}
-                alt={badge.name}
-                className="h-5 w-5 object-contain"
-              />
-            ) : (
-              <span className="text-sm">{getTierIcon(badge.tier)}</span>
-            )}
+            <SafeImg
+              src={badge.iconUrl}
+              alt={badge.name}
+              className="h-5 w-5 object-contain"
+              fallback={<span className="text-sm">{getTierIcon(badge.tier)}</span>}
+            />
           </div>
         ))}
       </div>

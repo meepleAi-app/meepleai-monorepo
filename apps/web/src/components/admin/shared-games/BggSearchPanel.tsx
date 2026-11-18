@@ -29,6 +29,7 @@ import {
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card } from '@/components/ui/data-display/card';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
@@ -378,9 +379,10 @@ export function BggSearchPanel({
                     >
                       {/* Thumbnail */}
                       {result.thumbnailUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        // BGG's own thumbnail, in the admin's browser only: the exception of #5072 (ADR-059 §5.6).
+                        <SafeImg
                           src={result.thumbnailUrl}
+                          allowBggHost
                           alt={result.name}
                           className="h-16 w-16 flex-shrink-0 rounded object-cover"
                         />
@@ -526,9 +528,10 @@ export function BggSearchPanel({
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 rounded-md border bg-background p-3">
                       {manualPreview.thumbnailUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        // BGG's own thumbnail, in the admin's browser only: the exception of #5072 (ADR-059 §5.6).
+                        <SafeImg
                           src={manualPreview.thumbnailUrl}
+                          allowBggHost
                           alt={manualPreview.name}
                           className="h-16 w-16 rounded object-cover"
                         />

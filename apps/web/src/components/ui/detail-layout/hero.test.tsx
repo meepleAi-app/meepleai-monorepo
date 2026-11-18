@@ -13,9 +13,16 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Hero, type HeroLabels } from './hero';
+
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
+beforeEach(() => {
+  reportBggAttempt.mockClear();
+});
 
 const labels: HeroLabels = {
   entityLabel: 'Game',
@@ -79,6 +86,24 @@ describe('Hero (Wave A.4)', () => {
     // The large cover-emoji span (text-[110px]) must NOT be rendered. The
     // entity pill 🎲 is unrelated and always rendered, so we don't assert on it.
     expect(container.querySelector('span.text-\\[110px\\]')).toBeNull();
+  });
+
+  it('never renders a BGG coverUrl: the cover emoji instead, and the beacon fires (#5072)', () => {
+    const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+    const { container } = render(
+      <Hero
+        title="Catan"
+        coverUrl={BGG}
+        toolkitsCount={0}
+        agentsCount={0}
+        kbsCount={0}
+        labels={labels}
+      />
+    );
+    expect(container.querySelector('img[src*="geekdo-images"]')).toBeNull();
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('span.text-\\[110px\\]')?.textContent).toBe('🎲');
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
   });
 
   it('renders rating stars with aria-label (clamped to 0..5)', () => {

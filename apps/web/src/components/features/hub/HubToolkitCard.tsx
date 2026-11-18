@@ -6,6 +6,7 @@
 
 import Link from 'next/link';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import type { RecommendedToolkit } from '@/lib/api/schemas/discover-cross-cutting.schemas';
 
 export interface HubToolkitCardLabels {
@@ -33,12 +34,12 @@ export function HubToolkitCard({ toolkit, labels, onClick, onInstall }: HubToolk
         aria-hidden="true"
         className="flex aspect-[5/3] items-center justify-center bg-gradient-to-br from-[hsl(var(--c-toolkit)/0.22)] to-[hsl(var(--c-toolkit)/0.05)] text-4xl"
       >
-        {toolkit.coverImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={toolkit.coverImageUrl} alt="" className="h-full w-full object-cover" />
-        ) : (
-          '🧰'
-        )}
+        <SafeImg
+          src={toolkit.coverImageUrl}
+          alt=""
+          className="h-full w-full object-cover"
+          fallback={'🧰'}
+        />
         <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-[hsl(var(--c-toolkit)/0.95)] px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase tracking-wider text-background">
           🧰 Toolkit
         </span>

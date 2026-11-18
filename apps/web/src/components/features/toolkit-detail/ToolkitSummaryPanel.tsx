@@ -12,6 +12,9 @@ import type { JSX } from 'react';
 
 import clsx from 'clsx';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
+import { cssImageUrl } from '@/lib/images/css-image-url';
+
 import { Stars } from './Stars';
 
 export interface ToolkitSummaryPanelLabels {
@@ -66,8 +69,8 @@ export function ToolkitSummaryPanel({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{
-          background: coverImageUrl
-            ? `url(${coverImageUrl}) center/cover`
+          background: cssImageUrl(coverImageUrl)
+            ? `${cssImageUrl(coverImageUrl)} center/cover`
             : 'linear-gradient(135deg, hsl(var(--c-toolkit) / 0.18) 0%, hsl(var(--c-game) / 0.14) 100%)',
         }}
       />
@@ -78,14 +81,16 @@ export function ToolkitSummaryPanel({
             data-slot="toolkit-detail-author-chip"
             className="inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-2.5 py-1 text-xs font-bold font-[Quicksand] text-foreground"
           >
-            {authorAvatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={authorAvatarUrl} alt="" className="h-4 w-4 rounded-full object-cover" />
-            ) : (
-              <span aria-hidden="true" className="text-sm">
-                👤
-              </span>
-            )}
+            <SafeImg
+              src={authorAvatarUrl}
+              alt=""
+              className="h-4 w-4 rounded-full object-cover"
+              fallback={
+                <span aria-hidden="true" className="text-sm">
+                  👤
+                </span>
+              }
+            />
             <span>
               {labels.authorChipPrefix} {authorName}
             </span>

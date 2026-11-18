@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 
 import clsx from 'clsx';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
 import type { PlayRecordPhoto } from '@/lib/api/schemas/play-records.schemas';
 
@@ -81,8 +82,7 @@ export function PlayRecordPhotoGallery({
               aria-label={alt}
               className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- thumbnail tile */}
-              <img
+              <SafeImg
                 src={p.thumbnailUrl ?? p.url}
                 alt=""
                 aria-hidden="true"
@@ -101,8 +101,7 @@ export function PlayRecordPhotoGallery({
           </DialogTitle>
           {active && (
             <div className="flex flex-col gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element -- full-res lightbox */}
-              <img
+              <SafeImg
                 src={active.url}
                 alt={active.caption ?? labels.photoAltFallback}
                 className="max-h-[70vh] w-full rounded-md object-contain"

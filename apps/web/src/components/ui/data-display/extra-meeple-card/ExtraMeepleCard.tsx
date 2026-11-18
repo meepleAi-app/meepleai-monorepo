@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/navigation/tabs';
+import { cssImageUrl } from '@/lib/images/css-image-url';
 import { cn } from '@/lib/utils';
 
 import { AITab } from './tabs/AITab';
@@ -199,10 +200,10 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
           ================================================================ */}
       <div className="relative h-[180px] overflow-hidden">
         {/* Background image */}
-        {imageUrl ? (
+        {cssImageUrl(imageUrl) ? (
           <div
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${imageUrl})` }}
+            style={{ backgroundImage: cssImageUrl(imageUrl) }}
           />
         ) : (
           <div className="absolute inset-0" style={{ background: `hsl(${SESSION_COLOR})` }} />

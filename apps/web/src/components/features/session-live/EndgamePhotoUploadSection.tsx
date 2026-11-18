@@ -16,6 +16,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { usePlayRecordPhotoUpload } from '@/hooks/mutations/usePlayRecordPhotoUpload';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
@@ -289,8 +290,7 @@ export function EndgamePhotoUploadSection({
               className="flex items-center gap-3 rounded-md border border-border bg-card p-2"
             >
               {/* Thumbnail */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <SafeImg
                 src={photo.objectUrl}
                 alt={photo.file.name}
                 className="h-10 w-10 rounded object-cover"

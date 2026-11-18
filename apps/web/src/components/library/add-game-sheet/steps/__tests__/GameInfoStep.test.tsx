@@ -20,8 +20,14 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
 import { api } from '@/lib/api';
 import { GameInfoStep } from '../GameInfoStep';
+
+const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+const ALLOWED = 'https://covers.meepleai.app/abc/cover.webp';
 
 const mockApi = api as {
   library: {
@@ -158,6 +164,21 @@ describe('GameInfoStep', () => {
 
     expect(screen.getByTestId('info-title')).not.toBeDisabled();
     expect(screen.getByTestId('info-min-players')).not.toBeDisabled();
+  });
+
+  it('never renders a BGG cover in the preview, and the beacon fires (#5072)', () => {
+    initializeWithGame({ ...mockCatalogGame, imageUrl: BGG, thumbnailUrl: BGG });
+    const { container, unmount } = render(<GameInfoStep {...defaultProps} />);
+
+    expect(container.querySelector('img[src*="geekdo-images"]')).toBeNull();
+    expect(screen.queryByRole('img', { name: 'Catan' })).toBeNull();
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
+    unmount();
+
+    initializeWithGame({ ...mockCatalogGame, imageUrl: ALLOWED, thumbnailUrl: ALLOWED });
+    render(<GameInfoStep {...defaultProps} />);
+
+    expect(screen.getByRole('img', { name: 'Catan' })).toHaveAttribute('src', ALLOWED);
   });
 
   it('shows save button', () => {

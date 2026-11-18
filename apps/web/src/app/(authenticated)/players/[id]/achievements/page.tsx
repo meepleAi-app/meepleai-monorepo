@@ -18,6 +18,7 @@ import { useParams } from 'next/navigation';
 import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
@@ -117,18 +118,16 @@ export default function PlayerAchievementsPage() {
                   className="p-5 rounded-xl border border-primary/30 bg-card shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start gap-3 mb-3">
-                    {badge.iconUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={badge.iconUrl}
-                        alt={badge.name}
-                        className="h-10 w-10 rounded-full object-cover shrink-0"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Star className="h-5 w-5 text-primary" />
-                      </div>
-                    )}
+                    <SafeImg
+                      src={badge.iconUrl}
+                      alt={badge.name}
+                      className="h-10 w-10 rounded-full object-cover shrink-0"
+                      fallback={
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Star className="h-5 w-5 text-primary" />
+                        </div>
+                      }
+                    />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold font-quicksand truncate">{badge.name}</h3>
                       <p className="text-sm text-muted-foreground font-nunito line-clamp-2">

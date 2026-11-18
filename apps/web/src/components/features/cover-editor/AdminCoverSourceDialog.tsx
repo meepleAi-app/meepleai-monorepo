@@ -12,6 +12,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
@@ -237,8 +238,7 @@ export function AdminCoverSourceDialog({
                                   : 'border-border hover:border-border-strong'
                               }`}
                             >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
+                              <SafeImg
                                 src={cand.previewUrl}
                                 alt={`Anteprima ${SOURCE_LABEL[cand.source]}`}
                                 loading="lazy"

@@ -4,6 +4,7 @@
 import { type ReactNode } from 'react';
 
 import type { ChatMessageRole } from '@/components/chat/shared';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { cn } from '@/lib/utils';
 
 import { CitationExpander } from './CitationExpander';
@@ -137,8 +138,7 @@ export function ChatMessageBubble({
             <div className="mb-2 flex flex-wrap gap-2">
               {imageUrls.map((url, idx) => (
                 <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- chat image URLs may be blob: URLs (live previews) or arbitrary remote hosts not whitelisted in next.config.js images.domains; using next/image would break either case */}
-                  <img
+                  <SafeImg
                     src={url}
                     alt={`Immagine ${idx + 1}`}
                     className="h-15 w-20 cursor-pointer rounded-md border border-border object-cover transition-opacity hover:opacity-80"

@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 
 import { Gamepad2, Library, Share2 } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
@@ -132,17 +133,16 @@ export const CollectionExtraMeepleCard = React.memo(function CollectionExtraMeep
                     key={g.id}
                     className="flex items-center gap-3 rounded-lg bg-card/50 border border-border/40 p-2.5"
                   >
-                    {g.imageUrl ? (
-                      <img
-                        src={g.imageUrl}
-                        alt={g.title}
-                        className="h-10 w-10 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded bg-teal-50">
-                        <Gamepad2 className="h-5 w-5 text-teal-400" />
-                      </div>
-                    )}
+                    <SafeImg
+                      src={g.imageUrl}
+                      alt={g.title}
+                      className="h-10 w-10 rounded object-cover"
+                      fallback={
+                        <div className="flex h-10 w-10 items-center justify-center rounded bg-teal-50">
+                          <Gamepad2 className="h-5 w-5 text-teal-400" />
+                        </div>
+                      }
+                    />
                     <p className="font-nunito text-xs font-medium text-foreground">{g.title}</p>
                   </div>
                 ))

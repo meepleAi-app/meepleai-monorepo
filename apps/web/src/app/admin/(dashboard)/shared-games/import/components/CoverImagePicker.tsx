@@ -15,6 +15,7 @@ import type { JSX } from 'react';
 
 import { ImageIcon, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -169,8 +170,7 @@ export function CoverImagePicker({
           {pdfPreviewUrl && (
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Anteprima pagina {pageNumber}</p>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <SafeImg
                 src={pdfPreviewUrl}
                 alt={`Pagina ${pageNumber} del PDF`}
                 className="max-h-48 rounded border object-contain"

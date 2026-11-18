@@ -16,6 +16,8 @@ import type { JSX } from 'react';
 
 import clsx from 'clsx';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
+
 import { Stars } from './Stars';
 
 export interface RatingBreakdownReview {
@@ -137,21 +139,19 @@ export function RatingBreakdown({
               className="rounded-lg border border-border bg-card p-3.5"
             >
               <div className="mb-1.5 flex items-center gap-2.5">
-                {r.raterAvatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={r.raterAvatarUrl}
-                    alt=""
-                    className="h-8 w-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <span
-                    aria-hidden="true"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-muted font-bold font-[Quicksand] text-[11px] text-foreground"
-                  >
-                    {initialsOf(r.raterDisplayName)}
-                  </span>
-                )}
+                <SafeImg
+                  src={r.raterAvatarUrl}
+                  alt=""
+                  className="h-8 w-8 rounded-full object-cover"
+                  fallback={
+                    <span
+                      aria-hidden="true"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-muted font-bold font-[Quicksand] text-[11px] text-foreground"
+                    >
+                      {initialsOf(r.raterDisplayName)}
+                    </span>
+                  }
+                />
                 <div className="min-w-0 flex-1">
                   <div className="font-bold font-[Quicksand] text-sm text-foreground">
                     {r.raterDisplayName}

@@ -10,6 +10,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 
 import { Camera, Upload, X, AlertCircle, ImageIcon } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import {
   Dialog,
   DialogContent,
@@ -23,11 +24,7 @@ import { cn } from '@/lib/utils';
 
 /** Matches backend AttachmentType enum values. */
 export type AttachmentType =
-  | 'PlayerArea'
-  | 'BoardState'
-  | 'CharacterSheet'
-  | 'ResourceInventory'
-  | 'Custom';
+  'PlayerArea' | 'BoardState' | 'CharacterSheet' | 'ResourceInventory' | 'Custom';
 
 const ATTACHMENT_TYPE_LABELS: Record<AttachmentType, string> = {
   PlayerArea: 'Player Area',
@@ -286,7 +283,7 @@ export function PhotoUploadModal({
             {preview && file ? (
               <div className="space-y-2">
                 <div className="relative mx-auto max-h-48 overflow-hidden rounded-lg">
-                  <img
+                  <SafeImg
                     src={preview}
                     alt="Preview"
                     className="mx-auto max-h-48 rounded-lg object-contain"

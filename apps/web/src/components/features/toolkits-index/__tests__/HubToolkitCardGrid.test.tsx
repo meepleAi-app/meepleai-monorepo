@@ -27,6 +27,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { HubToolkitCardGrid, type HubToolkitCardItem } from '../HubToolkitCardGrid';
 
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
+const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+const ALLOWED = 'https://covers.meepleai.app/abc/cover.webp';
+
 const labels = {
   gameRefFallback: 'Universale (multi-game)',
   installCta: '+ Installa toolkit',
@@ -162,5 +168,30 @@ describe('HubToolkitCardGrid (Issue #1480)', () => {
     const root = container.querySelector('[data-slot="toolkits-index-card"]');
     expect(root).toHaveClass('extra');
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('shows the emoji instead of a BGG cover, and an allowed cover as an <img> (#5072)', () => {
+    reportBggAttempt.mockClear();
+    const { container, rerender } = render(
+      <HubToolkitCardGrid
+        toolkit={makeToolkit({ coverImageUrl: BGG, coverEmoji: '🎲' })}
+        labels={labels}
+      />
+    );
+    const srcs = () =>
+      Array.from(container.querySelectorAll('img'), img => img.getAttribute('src'));
+
+    expect(srcs().some(src => src?.includes('geekdo-images'))).toBe(false);
+    expect(screen.getByText('🎲')).toBeInTheDocument();
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
+
+    rerender(
+      <HubToolkitCardGrid
+        toolkit={makeToolkit({ coverImageUrl: ALLOWED, coverEmoji: '🎲' })}
+        labels={labels}
+      />
+    );
+    expect(srcs()).toEqual([ALLOWED]);
+    expect(screen.queryByText('🎲')).not.toBeInTheDocument();
   });
 });

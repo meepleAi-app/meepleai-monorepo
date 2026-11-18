@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { useRecentsStore } from '@/stores/use-recents';
 
 interface QuickCardItem {
@@ -45,7 +46,7 @@ export function QuickCardsCarousel({ items }: QuickCardsCarouselProps) {
           className="flex-shrink-0 snap-start w-[140px] rounded-2xl border border-border/30 bg-card/60 backdrop-blur-sm p-3 text-left transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-[0.97]"
         >
           {item.imageUrl && (
-            <img
+            <SafeImg
               src={item.imageUrl}
               alt=""
               className="w-full h-[80px] rounded-xl object-cover mb-2"

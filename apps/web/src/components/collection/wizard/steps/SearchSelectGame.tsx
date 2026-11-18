@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 
 import { toast } from '@/components/layout';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -65,66 +66,69 @@ export function SearchSelectGame() {
   }, [searchQuery]);
 
   // Search API call
-  const searchGames = useCallback(async (query: string, pageNum: number, append: boolean = false) => {
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
+  const searchGames = useCallback(
+    async (query: string, pageNum: number, append: boolean = false) => {
+      // Cancel previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
 
-    if (!query.trim()) {
-      setResults([]);
-      setTotalCount(0);
-      setHasMore(false);
-      setError(null);
-      return;
-    }
-
-    if (append) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
-    }
-    setError(null);
-
-    try {
-      const response = await api.sharedGames.search({
-        searchTerm: query,
-        page: pageNum,
-        pageSize: PAGE_SIZE,
-        status: 2, // Published only
-      });
-
-      const mappedResults: SearchResult[] = response.items.map(game => ({
-        id: game.id,
-        title: game.title,
-        yearPublished: game.yearPublished,
-        thumbnailUrl: game.thumbnailUrl,
-        minPlayers: game.minPlayers,
-        maxPlayers: game.maxPlayers,
-        playingTimeMinutes: game.playingTimeMinutes,
-        averageRating: game.averageRating,
-      }));
+      if (!query.trim()) {
+        setResults([]);
+        setTotalCount(0);
+        setHasMore(false);
+        setError(null);
+        return;
+      }
 
       if (append) {
-        setResults(prev => [...prev, ...mappedResults]);
+        setLoadingMore(true);
       } else {
-        setResults(mappedResults);
+        setLoading(true);
       }
+      setError(null);
 
-      setTotalCount(response.total);
-      setHasMore(pageNum * PAGE_SIZE < response.total);
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        const message = err instanceof Error ? err.message : 'Search failed';
-        setError(message);
-        toast.error(`Search error: ${message}`);
+      try {
+        const response = await api.sharedGames.search({
+          searchTerm: query,
+          page: pageNum,
+          pageSize: PAGE_SIZE,
+          status: 2, // Published only
+        });
+
+        const mappedResults: SearchResult[] = response.items.map(game => ({
+          id: game.id,
+          title: game.title,
+          yearPublished: game.yearPublished,
+          thumbnailUrl: game.thumbnailUrl,
+          minPlayers: game.minPlayers,
+          maxPlayers: game.maxPlayers,
+          playingTimeMinutes: game.playingTimeMinutes,
+          averageRating: game.averageRating,
+        }));
+
+        if (append) {
+          setResults(prev => [...prev, ...mappedResults]);
+        } else {
+          setResults(mappedResults);
+        }
+
+        setTotalCount(response.total);
+        setHasMore(pageNum * PAGE_SIZE < response.total);
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          const message = err instanceof Error ? err.message : 'Search failed';
+          setError(message);
+          toast.error(`Search error: ${message}`);
+        }
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   // Trigger search on debounced query change
   useEffect(() => {
@@ -236,19 +240,17 @@ export function SearchSelectGame() {
               >
                 <div className="flex gap-3">
                   {/* Thumbnail */}
-                  {game.thumbnailUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={game.thumbnailUrl}
-                      alt=""
-                      className="w-12 h-12 rounded object-cover flex-shrink-0"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                      <span className="text-xl">🎲</span>
-                    </div>
-                  )}
+                  <SafeImg
+                    src={game.thumbnailUrl}
+                    alt=""
+                    className="w-12 h-12 rounded object-cover flex-shrink-0"
+                    loading="lazy"
+                    fallback={
+                      <div className="w-12 h-12 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                        <span className="text-xl">🎲</span>
+                      </div>
+                    }
+                  />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground dark:text-white truncate">
                       {game.title}

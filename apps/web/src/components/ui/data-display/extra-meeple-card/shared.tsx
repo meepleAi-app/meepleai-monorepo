@@ -12,6 +12,7 @@ import React from 'react';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
 import { TabsTrigger } from '@/components/ui/navigation/tabs';
+import { cssImageUrl } from '@/lib/images/css-image-url';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -122,10 +123,10 @@ export function EntityHeader({
 }) {
   return (
     <div className="relative h-[140px] overflow-hidden">
-      {imageUrl ? (
+      {cssImageUrl(imageUrl) ? (
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${imageUrl})` }}
+          style={{ backgroundImage: cssImageUrl(imageUrl) }}
         />
       ) : (
         <div className="absolute inset-0" style={{ background: `hsl(${color})` }} />

@@ -16,6 +16,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
+
 export interface CoverFocalPointPickerProps {
   imageUrl?: string | null;
   alt?: string;
@@ -123,17 +125,19 @@ export function CoverFocalPointPicker({
         disabled ? 'opacity-60' : 'cursor-crosshair'
       }`}
     >
-      {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt={alt ?? ''} className="h-full w-full object-cover" />
-      ) : (
-        <div
-          className="flex h-full w-full items-center justify-center text-sm text-muted-foreground"
-          aria-hidden="true"
-        >
-          Nessuna anteprima
-        </div>
-      )}
+      <SafeImg
+        src={imageUrl}
+        alt={alt ?? ''}
+        className="h-full w-full object-cover"
+        fallback={
+          <div
+            className="flex h-full w-full items-center justify-center text-sm text-muted-foreground"
+            aria-hidden="true"
+          >
+            Nessuna anteprima
+          </div>
+        }
+      />
       <button
         type="button"
         aria-label={`${label}: ${positionLabel}. Usa le frecce per regolare.`}

@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 import { Search, Loader2 } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
@@ -220,7 +221,7 @@ function SearchResultRow({ game, onViewGame, onAskAboutGame }: SearchResultRowPr
     <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-card/40 transition-colors">
       {/* Thumbnail */}
       {game.thumbnailUrl && (
-        <img
+        <SafeImg
           src={game.thumbnailUrl}
           alt={title}
           className="h-10 w-10 rounded-lg object-cover flex-shrink-0"

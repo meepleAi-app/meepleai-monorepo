@@ -45,6 +45,7 @@ import type { ReactElement } from 'react';
 import clsx from 'clsx';
 
 import type { BggSearchResult, CatalogGameRef } from '@/lib/gamebook-upload';
+import { cssImageUrl } from '@/lib/images/css-image-url';
 
 export interface GameSearchCardLabels {
   /** Aria-label suffix for selection state (e.g. "Selezionato"). */
@@ -138,8 +139,9 @@ export function GameSearchCard({
 
   const ariaLabel = isSelected ? `${title} — ${labels.selectedAria}` : title;
 
-  const coverBackground =
-    coverImageUrl != null ? `url(${coverImageUrl}) center/cover` : tokens.coverGradient;
+  // #5072: a BGG cover (#2123, ADR-059 §5) counts as no cover.
+  const coverImage = cssImageUrl(coverImageUrl);
+  const coverBackground = coverImage != null ? `${coverImage} center/cover` : tokens.coverGradient;
 
   return (
     <button
@@ -167,7 +169,7 @@ export function GameSearchCard({
         className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden"
         style={{ background: coverBackground }}
       >
-        {coverImageUrl == null && (
+        {coverImage == null && (
           <span className="text-3xl drop-shadow-md">{tokens.fallbackEmoji}</span>
         )}
       </div>

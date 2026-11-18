@@ -3,6 +3,8 @@
 
 import { useMemo, useState } from 'react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
+
 import { entityHsl, entityIcon, entityLabel } from '../tokens';
 
 import type { CardStatus, MeepleCardProps, MeepleEntityType } from '../types';
@@ -270,7 +272,7 @@ function EntityTableRow({ card, onRowClick, isLast }: EntityTableRowProps) {
         <div className="flex items-center gap-2.5">
           {card.imageUrl ? (
             // Same convention as Cover.tsx: plain <img> for arbitrary remote URLs.
-            <img
+            <SafeImg
               src={card.imageUrl}
               alt=""
               className="h-8 w-8 flex-shrink-0 rounded-md object-cover"

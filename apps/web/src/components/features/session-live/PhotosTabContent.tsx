@@ -20,6 +20,7 @@ import { Camera, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { useIntl } from 'react-intl';
 
 import { SessionSnapshotPanel } from '@/components/session/SessionSnapshotPanel';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import { addPhoto, listPhotos, deletePhoto, type StoredPhoto } from '@/lib/storage/photo-store';
@@ -59,7 +60,7 @@ function PhotoCard({
 }: PhotoCardProps): ReactElement {
   return (
     <div className="group relative rounded-xl overflow-hidden bg-muted aspect-square shadow-sm border border-border">
-      <img src={photo.objectUrl} alt={photoAlt} className="w-full h-full object-cover" />
+      <SafeImg src={photo.objectUrl} alt={photoAlt} className="w-full h-full object-cover" />
       {/* Hover overlay */}
       <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors" />
       {/* Timestamp badge */}

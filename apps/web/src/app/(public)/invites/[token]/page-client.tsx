@@ -22,11 +22,11 @@
 
 import { useCallback, useMemo, useState, useSyncExternalStore, type JSX } from 'react';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 import { useAuthUser } from '@/components/auth/AuthProvider';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import {
   AcceptedSuccessShell,
   DeclinedShell,
@@ -449,7 +449,7 @@ function PendingSurface({
       />
       <div className="flex flex-col gap-3.5 px-4 pb-5">
         {/* Game thumbnail INLINE per YAGNI (32px square) — appears only when image present. */}
-        {/* #5069: `unoptimized` skips the image loader and its BGG check (#2123, ADR-059 §5). */}
+        {/* #5069: no BGG URL leaves the thumbnail out; SafeImg guards the <img> itself (#5072). */}
         {invitation.primaryGameImageUrl &&
         !shouldUsePlaceholder(invitation.primaryGameImageUrl) &&
         invitation.primaryGameName ? (
@@ -457,13 +457,12 @@ function PendingSurface({
             data-slot="invites-token-game-thumb"
             className="flex items-center gap-2.5 rounded-md border border-[hsl(var(--border-light))] bg-[hsl(var(--bg-muted))] px-3 py-2"
           >
-            <Image
+            <SafeImg
               src={invitation.primaryGameImageUrl}
               alt=""
               width={32}
               height={32}
               className="h-8 w-8 flex-shrink-0 rounded object-cover"
-              unoptimized
             />
             <span className="font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--text-muted))]">
               {t('pages.invites.session.primaryGameLabel')}

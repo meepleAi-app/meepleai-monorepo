@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 
 import { Camera, FileText, Filter, ImageOff } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { cn } from '@/lib/utils';
 
 import type { MediaTabData, MediaItem } from '../types';
@@ -26,17 +27,16 @@ function MediaItemCard({ item }: { item: MediaItem }) {
         className="group relative aspect-square overflow-hidden rounded-lg bg-muted cursor-pointer"
         data-testid={`media-photo-${item.id}`}
       >
-        {item.thumbnailUrl || item.url ? (
-          <img
-            src={item.thumbnailUrl || item.url}
-            alt={item.title || 'Session photo'}
-            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-slate-300">
-            <ImageOff className="h-8 w-8" />
-          </div>
-        )}
+        <SafeImg
+          src={item.thumbnailUrl || item.url}
+          alt={item.title || 'Session photo'}
+          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+          fallback={
+            <div className="flex h-full items-center justify-center text-slate-300">
+              <ImageOff className="h-8 w-8" />
+            </div>
+          }
+        />
         {item.turnNumber != null && (
           <span className="absolute top-1.5 right-1.5 rounded-full bg-foreground/60 px-1.5 py-0.5 text-[10px] font-bold text-white font-nunito">
             T{item.turnNumber}
@@ -63,7 +63,9 @@ function MediaItemCard({ item }: { item: MediaItem }) {
           </span>
         </div>
         {item.turnNumber != null && (
-          <span className="text-[10px] text-muted-foreground font-nunito">Turn {item.turnNumber}</span>
+          <span className="text-[10px] text-muted-foreground font-nunito">
+            Turn {item.turnNumber}
+          </span>
         )}
       </div>
       <p className="font-nunito text-xs text-muted-foreground line-clamp-3">{item.content || ''}</p>

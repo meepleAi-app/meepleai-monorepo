@@ -34,6 +34,7 @@ import { useCallback, useEffect, useId, useState, type JSX, type KeyboardEvent }
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Loader2, Search } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -467,8 +468,7 @@ function PickerCover({ imageUrl, className }: PickerCoverProps): JSX.Element {
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- ext. urls vary, no static optim. needed for picker preview
-    <img
+    <SafeImg
       src={imageUrl}
       alt=""
       className={cn(className, 'object-cover')}

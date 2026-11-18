@@ -1,6 +1,7 @@
 /* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { cn } from '@/lib/utils';
 
 export interface ChatRecentItem {
@@ -110,12 +111,12 @@ export function ChatSidebar({
               background: 'linear-gradient(135deg, hsl(25 75% 78%), hsl(25 80% 55%))',
             }}
           >
-            {game.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={game.imageUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-[11px]">🎲</span>
-            )}
+            <SafeImg
+              src={game.imageUrl}
+              alt=""
+              className="h-full w-full object-cover"
+              fallback={<span className="text-[11px]">🎲</span>}
+            />
           </div>
           <span className="min-w-0 flex-1 truncate font-nunito text-[0.74rem] font-bold text-[var(--text)]">
             {game.name}

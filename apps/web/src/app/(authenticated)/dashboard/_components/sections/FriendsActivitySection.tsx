@@ -20,6 +20,7 @@ import type { JSX } from 'react';
 
 import Link from 'next/link';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import type { FriendActivity, FriendActivityVerb } from '@/hooks/use-friends-activity';
 import { useCascadeNavigationStore } from '@/lib/stores/cascade-navigation-store';
 
@@ -129,8 +130,7 @@ export function FriendsActivitySection({
               className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted"
             >
               {activity.avatar && (
-                // eslint-disable-next-line @next/next/no-img-element -- avoid Next/Image domain config for external avatar URLs
-                <img src={activity.avatar} alt="" className="h-full w-full object-cover" />
+                <SafeImg src={activity.avatar} alt="" className="h-full w-full object-cover" />
               )}
             </button>
             <div className="flex-1">

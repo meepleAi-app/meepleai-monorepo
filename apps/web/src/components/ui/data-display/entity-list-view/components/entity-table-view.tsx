@@ -18,6 +18,7 @@ import React, { useMemo, useState } from 'react';
 
 import { Star } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { cn } from '@/lib/utils';
 
 import { DataTable, SortableHeader } from '../../data-table';
@@ -131,7 +132,7 @@ function createDefaultColumns(entity: MeepleEntityType): ColumnDef<TableRowData,
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           {row.original.imageUrl && (
-            <img
+            <SafeImg
               src={row.original.imageUrl}
               alt=""
               className="w-8 h-8 rounded object-cover flex-shrink-0"

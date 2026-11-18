@@ -177,4 +177,25 @@ describe('ToolkitSummaryPanel (Issue #1479)', () => {
     expect(root).toHaveClass('custom-class');
     expect(root).toHaveClass('rounded-2xl');
   });
+
+  // #5072: a BGG cover (#2123, ADR-059 §5) is treated as no cover: the gradient backdrop.
+  it('treats a BGG cover as no cover in the backdrop, and draws an allowed one (#5072)', () => {
+    const backdropStyle = (coverImageUrl: string | null) => {
+      const { container, unmount } = render(
+        <ToolkitSummaryPanel {...baseProps} coverImageUrl={coverImageUrl} />
+      );
+      const style = container
+        .querySelector('[data-slot="toolkit-detail-summary-panel"]')!
+        .firstElementChild!.getAttribute('style');
+      unmount();
+      return style;
+    };
+
+    const noCover = backdropStyle(null);
+    expect(noCover).toMatch(/linear-gradient/);
+    expect(backdropStyle('https://cf.geekdo-images.com/abc/pic1.jpg')).toBe(noCover);
+    expect(backdropStyle('https://covers.meepleai.app/abc/cover.webp')).toContain(
+      'url("https://covers.meepleai.app/abc/cover.webp")'
+    );
+  });
 });

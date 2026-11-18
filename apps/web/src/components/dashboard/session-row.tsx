@@ -6,6 +6,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Button } from '@/components/ui/primitives/button';
 import type { SessionSummaryDto } from '@/lib/api/dashboard-client';
 
@@ -31,7 +32,7 @@ export function SessionRow({ session, onViewDetails }: SessionRowProps) {
       {/* Game thumbnail */}
       {session.gameImageUrl && (
         <div className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden bg-muted">
-          <img
+          <SafeImg
             src={session.gameImageUrl}
             alt={session.gameName}
             className="w-full h-full object-cover"

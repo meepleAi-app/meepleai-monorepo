@@ -20,6 +20,7 @@ import ReactCrop, { type PercentCrop, centerCrop, makeAspectCrop } from 'react-i
 import 'react-image-crop/dist/ReactCrop.css';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/data-display/avatar';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
   Dialog,
@@ -386,8 +387,7 @@ export function AvatarUpload({
                   minWidth={50}
                   minHeight={50}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- react-image-crop requires native img element for cropping */}
-                  <img
+                  <SafeImg
                     ref={imageRef}
                     src={selectedImage}
                     alt="Immagine da ritagliare"

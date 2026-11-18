@@ -6,6 +6,7 @@
  * Session Vision AI — Task 15.2
  */
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import type { SessionSnapshotDto } from '@/lib/api/clients/sessionSnapshotsClient';
 import { cn } from '@/lib/utils';
 
@@ -64,7 +65,7 @@ export function SnapshotCard({ snapshot, isLatest, className }: SnapshotCardProp
                 rel="noopener noreferrer"
                 className="block flex-shrink-0"
               >
-                <img
+                <SafeImg
                   src={img.downloadUrl ?? ''}
                   alt={`Snapshot turno ${snapshot.turnNumber}`}
                   className="h-16 w-20 rounded-lg border border-[var(--border)] object-cover transition-opacity hover:opacity-80"
@@ -81,9 +82,7 @@ export function SnapshotCard({ snapshot, isLatest, className }: SnapshotCardProp
             {snapshot.caption}
           </p>
         )}
-        <span className="shrink-0 font-mono text-[10px] text-[var(--text-muted)]">
-          {timeLabel}
-        </span>
+        <span className="shrink-0 font-mono text-[10px] text-[var(--text-muted)]">{timeLabel}</span>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { cn } from '@/lib/utils';
 
 import { RowScroller } from './RowScroller';
@@ -170,21 +171,20 @@ export function HorizontalRow({
                 regardless of what the backend resolved, which is why fixing CoverUrlResolver
                 wiring alone wouldn't have been visible here. Falls back to the existing
                 emoji unchanged — this does not touch the #1856 DEC-2 placeholder decision. */}
-            {item.imageUrl ? (
-              <img
-                src={item.imageUrl}
-                alt=""
-                className="h-[180px] w-full object-cover"
-                loading="lazy"
-              />
-            ) : (
-              <div
-                className="flex h-[180px] items-center justify-center bg-gradient-to-br from-muted to-muted/40 text-4xl"
-                aria-hidden="true"
-              >
-                🎲
-              </div>
-            )}
+            <SafeImg
+              src={item.imageUrl}
+              alt=""
+              className="h-[180px] w-full object-cover"
+              loading="lazy"
+              fallback={
+                <div
+                  className="flex h-[180px] items-center justify-center bg-gradient-to-br from-muted to-muted/40 text-4xl"
+                  aria-hidden="true"
+                >
+                  🎲
+                </div>
+              }
+            />
             <div className="flex flex-col gap-1 p-3">
               <div className="flex items-center gap-2">
                 <div className="line-clamp-1 flex-1 font-bold font-[Quicksand] text-sm text-foreground">

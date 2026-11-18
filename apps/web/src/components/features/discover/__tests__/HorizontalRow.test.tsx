@@ -21,9 +21,16 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { HorizontalRow, type RowItemBase } from '../HorizontalRow';
+
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
+beforeEach(() => {
+  reportBggAttempt.mockClear();
+});
 
 const makeItem = (id: string, name: string): RowItemBase => ({ id, name });
 
@@ -307,6 +314,23 @@ describe('HorizontalRow', () => {
     const card = container.querySelector('[data-slot="row-card"]');
     expect(card?.querySelector('img')).toBeNull();
     expect(card?.textContent).toContain('🎲');
+  });
+
+  it('never renders a BGG imageUrl: the 🎲 placeholder instead, and the beacon fires (#5072)', () => {
+    const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+    const { container } = render(
+      <HorizontalRow
+        rowId="games"
+        title="Giochi"
+        variant="featured"
+        items={[{ id: 'x', name: 'Wingspan', imageUrl: BGG }]}
+      />
+    );
+    const card = container.querySelector('[data-slot="row-card"]');
+    expect(container.querySelector('img[src*="geekdo-images"]')).toBeNull();
+    expect(card?.querySelector('img')).toBeNull();
+    expect(card?.textContent).toContain('🎲');
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
   });
 
   it('compact variant cards have data-variant="compact"', () => {

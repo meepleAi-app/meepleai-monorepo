@@ -6,6 +6,7 @@
  * Displays a badge icon with tier-based visual effects and tooltip.
  */
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import type { BadgeSummaryDto, BadgeTier } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -66,19 +67,17 @@ export function BadgeIcon({ badge, size = 'md', className }: BadgeIconProps) {
           tierGlow
         )}
       >
-        {badge.iconUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
-          <img
-            src={badge.iconUrl}
-            alt={badge.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className={cn('text-xs font-bold', tierColor)}>{badge.tier[0]}</span>
-          </div>
-        )}
+        <SafeImg
+          src={badge.iconUrl}
+          alt={badge.name}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          fallback={
+            <div className="w-full h-full flex items-center justify-center">
+              <span className={cn('text-xs font-bold', tierColor)}>{badge.tier[0]}</span>
+            </div>
+          }
+        />
       </div>
 
       {/* Tooltip */}

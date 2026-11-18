@@ -23,6 +23,7 @@ import type { JSX, ReactNode } from 'react';
 import clsx from 'clsx';
 
 import { entityHsl, entityHslText } from '@/components/ui/data-display/meeple-card/tokens';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 
 export interface HeroLabels {
   /** Entity pill label for the game itself (e.g. "Game"). */
@@ -218,23 +219,21 @@ export function Hero({
           backgroundColor: entityHsl('game', 0.12),
         }}
       >
-        {coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={coverUrl}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            style={
-              coverFocal
-                ? { objectPosition: `${coverFocal.x * 100}% ${coverFocal.y * 100}%` }
-                : undefined
-            }
-          />
-        ) : (
-          <span aria-hidden="true" className={clsx(emojiSize, 'drop-shadow-lg')}>
-            {emoji}
-          </span>
-        )}
+        <SafeImg
+          src={coverUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          style={
+            coverFocal
+              ? { objectPosition: `${coverFocal.x * 100}% ${coverFocal.y * 100}%` }
+              : undefined
+          }
+          fallback={
+            <span aria-hidden="true" className={clsx(emojiSize, 'drop-shadow-lg')}>
+              {emoji}
+            </span>
+          }
+        />
         <div
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/35 to-transparent"

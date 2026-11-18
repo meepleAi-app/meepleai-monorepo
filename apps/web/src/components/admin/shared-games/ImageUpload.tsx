@@ -15,9 +15,9 @@
 import { type ChangeEvent, useCallback, useState, useRef, type DragEvent } from 'react';
 
 import { AlertCircle, ImageIcon, Upload, X, Link as LinkIcon } from 'lucide-react';
-import Image from 'next/image';
 
 import { toast } from '@/components/layout/Toast';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
@@ -280,14 +280,16 @@ export function ImageUpload({
               'cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
               isDragOver && !disabled && 'border-primary bg-primary/5',
               hasErrors && 'border-destructive',
-              !isDragOver && !hasErrors && 'border-muted-foreground/25 hover:border-muted-foreground/50',
+              !isDragOver &&
+                !hasErrors &&
+                'border-muted-foreground/25 hover:border-muted-foreground/50',
               disabled && 'opacity-50 cursor-not-allowed'
             )}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={handleClick}
-            onKeyDown={(e) => {
+            onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 handleClick();
@@ -306,12 +308,10 @@ export function ImageUpload({
 
             {showPreview ? (
               <div className="relative w-full max-w-[200px] aspect-square">
-                <Image
+                <SafeImg
                   src={previewSrc}
                   alt="Preview"
-                  fill
-                  className="object-contain rounded-md"
-                  unoptimized
+                  className="absolute inset-0 h-full w-full object-contain rounded-md"
                 />
               </div>
             ) : (
@@ -323,10 +323,7 @@ export function ImageUpload({
               </>
             )}
 
-            <p
-              id="image-upload-hint"
-              className="text-xs text-muted-foreground mt-2 text-center"
-            >
+            <p id="image-upload-hint" className="text-xs text-muted-foreground mt-2 text-center">
               JPG, PNG, WebP • Max 5MB • Recommended: {recommendedSize}
             </p>
           </div>
@@ -342,7 +339,7 @@ export function ImageUpload({
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   handleClear();
                 }}
@@ -395,12 +392,11 @@ export function ImageUpload({
           {/* URL preview */}
           {urlValue && (
             <div className="relative w-full max-w-[200px] aspect-square border rounded-md overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <SafeImg
                 src={urlValue}
                 alt="URL Preview"
                 className="w-full h-full object-contain"
-                onError={(e) => {
+                onError={e => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />

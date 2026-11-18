@@ -138,6 +138,24 @@ describe('GamebookCard', () => {
     expect(coverStyle('https://cf.geekdo-images.com/abc/pic1.jpg')).toBe(noCover);
   });
 
+  // #5072: an allowed cover is an image over the gradient. As a bare URL in `background` it was invalid CSS,
+  // so jsdom dropped it, as a browser does, and the card showed the gradient alone.
+  it('draws an allowed cover over the gradient', () => {
+    render(
+      <GamebookCard
+        gamebook={{ ...READY_GAMEBOOK, cover: 'https://covers.meepleai.app/abc/cover.webp' }}
+        onClick={vi.fn()}
+        labels={LABELS}
+      />
+    );
+    const cover = document.querySelector<HTMLElement>('[data-slot="gamebook-card-cover"]')!;
+
+    expect(cover.style.backgroundImage).toContain(
+      'url("https://covers.meepleai.app/abc/cover.webp")'
+    );
+    expect(cover.style.backgroundImage).toMatch(/linear-gradient/);
+  });
+
   it('renders cover with emoji fallback and "X/Y pag" label', () => {
     render(<GamebookCard gamebook={READY_GAMEBOOK} onClick={vi.fn()} labels={LABELS} />);
     const cover = document.querySelector('[data-slot="gamebook-card-cover"]');

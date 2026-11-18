@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { GamePicker, type GameOption } from '@/components/features/game-picker';
 import { AddSelfButton, OptOutButton, SelfBadge } from '@/components/session/SelfPlayerControls';
 import { Badge } from '@/components/ui/badge';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { ownUserId, useSelfPlayer, type SelfPlayer } from '@/hooks/useSelfPlayer';
@@ -390,7 +391,7 @@ function ReviewStep({
         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Gioco</p>
         <div className="flex items-center gap-3">
           {selectedGame?.imageUrl && (
-            <img
+            <SafeImg
               src={selectedGame.imageUrl}
               alt={gameName}
               className="h-10 w-10 rounded-lg object-cover"

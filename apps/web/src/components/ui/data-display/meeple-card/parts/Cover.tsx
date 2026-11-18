@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
 
 import { entityHsl, entityIcon } from '../tokens';
@@ -72,7 +73,7 @@ export function Cover({ entity, variant, imageUrl, alt, coverEmoji, coverFocal }
           </span>
         </div>
       ) : (
-        <img
+        <SafeImg
           src={imageUrl}
           alt={alt ?? ''}
           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"

@@ -14,9 +14,9 @@ import {
   LoaderCircleIcon,
   CheckCircle2Icon,
 } from 'lucide-react';
-import Image from 'next/image';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Button } from '@/components/ui/primitives/button';
 import {
   useCreateGameFromWizard,
@@ -52,12 +52,13 @@ export function GameDetailsStep({ selectedGame, onBack, onGameCreated }: GameDet
         <CardHeader>
           <CardTitle className="flex items-center gap-3 text-lg">
             {selectedGame.thumbnailUrl ? (
-              <Image
+              // BGG's own thumbnail, in the admin's browser only: the exception of #5072 (ADR-059 §5.6).
+              <SafeImg
                 src={selectedGame.thumbnailUrl}
                 alt={selectedGame.name}
                 width={80}
                 height={80}
-                unoptimized
+                allowBggHost
                 className="h-20 w-20 rounded-lg object-cover shrink-0 bg-muted dark:bg-zinc-700"
               />
             ) : (

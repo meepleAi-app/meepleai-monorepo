@@ -17,6 +17,7 @@ import type { JSX } from 'react';
 
 import clsx from 'clsx';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Stars } from '@/components/ui/feedback/Stars';
 
 export interface HubToolkitCardItem {
@@ -92,17 +93,19 @@ export function HubToolkitCardGrid({
           compact ? 'aspect-[4/3]' : 'aspect-[5/3]'
         )}
       >
-        {toolkit.coverImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={toolkit.coverImageUrl} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <span
-            aria-hidden="true"
-            className={clsx('drop-shadow-lg', compact ? 'text-5xl' : 'text-6xl')}
-          >
-            {toolkit.coverEmoji ?? '🧰'}
-          </span>
-        )}
+        <SafeImg
+          src={toolkit.coverImageUrl}
+          alt=""
+          className="h-full w-full object-cover"
+          fallback={
+            <span
+              aria-hidden="true"
+              className={clsx('drop-shadow-lg', compact ? 'text-5xl' : 'text-6xl')}
+            >
+              {toolkit.coverEmoji ?? '🧰'}
+            </span>
+          }
+        />
         {toolkit.badge && (
           // Decorative overlay on a variable cover image — must stay dark in both
           // light and dark themes for legibility; no semantic DS-15 token maps to

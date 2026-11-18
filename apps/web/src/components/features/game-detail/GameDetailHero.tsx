@@ -23,6 +23,7 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
 
 export type GameDetailHeroVariant = 'own' | 'community';
@@ -109,24 +110,22 @@ export function GameDetailHero(props: GameDetailHeroProps): ReactElement {
         className="relative h-[180px] w-full overflow-hidden bg-gradient-to-br from-amber-500/30 via-rose-500/30 to-violet-500/30 sm:h-[240px]"
         data-slot="game-detail-hero-cover"
       >
-        {coverUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={coverUrl}
-            alt=""
-            aria-hidden="true"
-            className="h-full w-full object-cover"
-            data-dynamic
-          />
-        ) : (
-          <div
-            aria-hidden="true"
-            className="flex h-full w-full items-center justify-center text-[90px] sm:text-[130px]"
-            style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,.4))', opacity: 0.92 }}
-          >
-            🎲
-          </div>
-        )}
+        <SafeImg
+          src={coverUrl}
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover"
+          data-dynamic
+          fallback={
+            <div
+              aria-hidden="true"
+              className="flex h-full w-full items-center justify-center text-[90px] sm:text-[130px]"
+              style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,.4))', opacity: 0.92 }}
+            >
+              🎲
+            </div>
+          }
+        />
 
         {/* Gradient overlay */}
         <div

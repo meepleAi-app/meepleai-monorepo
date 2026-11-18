@@ -50,6 +50,7 @@ import type { ReactElement } from 'react';
 import clsx from 'clsx';
 
 import type { GamebookCardData, GamebookStatus } from '@/lib/gamebook-index/schemas';
+import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
 
 export interface GamebookCardLabels {
   /** Status pill label — ready (e.g. "Pronto"). */
@@ -219,7 +220,8 @@ function Cover({ cover, emoji, pagesLabel, status }: CoverProps): ReactElement {
   // TODO #807-followup: two-hue warm gradient (hue 28/38) — near game entity but distinct shade; keep inline
   // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-hue warm gradient (game+agent); template literal, CSS vars cannot carry multi-stop gradients
   const fallbackGradient = `linear-gradient(155deg, hsl(28, 80%, 38%) 0%, hsl(38, 92%, 60%) 100%)`;
-  const background = cover ?? fallbackGradient;
+  // #5069: a BGG cover (#2123, ADR-059 §5) counts as no cover, so it can never reach the CSS as an image.
+  const background = (shouldUsePlaceholder(cover) ? null : cover) ?? fallbackGradient;
 
   return (
     <div

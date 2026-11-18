@@ -519,8 +519,11 @@ public sealed class SharedGame : AggregateRoot<Guid>
         ValidateMinAge(minAge);
         ValidateComplexityRating(complexityRating);
         ValidateAverageRating(averageRating);
-        ValidateImageUrl(imageUrl);
-        ValidateThumbnailUrl(thumbnailUrl);
+        // #5069: optional, as on UPDATE since #4090 (these columns are a deprecation tombstone; covers come from
+        // CoverUrlResolver). Approving the proposal of a private game without an image had no URL to give and answered
+        // 400. The HTTP create validator and EnrichFromBgg stay strict. A non-empty URL must still be absolute.
+        ValidateOptionalImageUrl(imageUrl);
+        ValidateOptionalThumbnailUrl(thumbnailUrl);
 
         if (createdBy == Guid.Empty)
             throw new ArgumentException("CreatedBy cannot be empty", nameof(createdBy));
@@ -1104,7 +1107,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         ValidateMinAge(minAge);
         ValidateComplexityRating(complexityRating);
         ValidateAverageRating(averageRating);
-        // #4090: optional on update, required on create — see ValidateOptionalImageUrl.
+        // #4090: optional on update; #5069: optional on Create too. EnrichFromBgg still requires them.
         ValidateOptionalImageUrl(imageUrl);
         ValidateOptionalThumbnailUrl(thumbnailUrl);
 
@@ -1803,9 +1806,8 @@ public sealed class SharedGame : AggregateRoot<Guid>
             throw new ArgumentException("AverageRating must be between 1.0 and 10.0", nameof(rating));
     }
 
-    // Creation keeps requiring a value: Create_WithInvalidImageUrl_ThrowsArgumentException (both
-    // SharedGameTests and SharedGameDomainTests) and the create validator all assert it, and #4090
-    // left that product question alone.
+    // Required only by EnrichFromBgg since #5069 (EnrichFromBgg_WithEmptyImageUrl_ShouldThrowValidation).
+    // Create takes the optional form below; the HTTP create validator still requires a value.
     private static void ValidateImageUrl(string imageUrl)
     {
         if (string.IsNullOrWhiteSpace(imageUrl))

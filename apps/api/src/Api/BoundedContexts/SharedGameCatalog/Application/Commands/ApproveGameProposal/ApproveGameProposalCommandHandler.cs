@@ -9,6 +9,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -266,8 +267,8 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
             minAge: promotionData.MinAge,
             complexityRating: promotionData.ComplexityRating,
             averageRating: null, // Not available from private game
-            imageUrl: promotionData.ImageUrl,
-            thumbnailUrl: promotionData.ThumbnailUrl,
+            imageUrl: AllowedImage(promotionData.ImageUrl),
+            thumbnailUrl: AllowedImage(promotionData.ThumbnailUrl),
             rules: null, // Rules will be added from documents
             createdBy: contributorId,
             bggId: promotionData.BggId);
@@ -346,8 +347,8 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
             minAge: promotionData.MinAge,
             complexityRating: promotionData.ComplexityRating,
             averageRating: null,
-            imageUrl: promotionData.ImageUrl,
-            thumbnailUrl: promotionData.ThumbnailUrl,
+            imageUrl: AllowedImage(promotionData.ImageUrl),
+            thumbnailUrl: AllowedImage(promotionData.ThumbnailUrl),
             rules: null,
             createdBy: contributorId,
             bggId: null); // Variants don't use BGG ID
@@ -360,4 +361,11 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
 
         return sharedGame.Id;
     }
+
+    /// <summary>
+    /// #5069: a private game's image reaches the shared catalog only if its host is allowed. A BGG URL (#2123,
+    /// ADR-059 §5), which the BGG import stored before #5070, becomes "no image", the value ToSharedGame already
+    /// gives a missing one; the cover then comes from the PDF flow.
+    /// </summary>
+    private static string AllowedImage(string url) => BggHostDenyList.IsBanned(url) ? string.Empty : url;
 }

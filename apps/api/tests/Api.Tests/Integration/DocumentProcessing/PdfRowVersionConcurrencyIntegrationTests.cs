@@ -142,6 +142,28 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 
+    /// <summary>#5056: two passages and the vector document of an indexed PDF, which the delete removes by cascade.</summary>
+    private async Task SeedIndexAsync(Guid pdfId)
+    {
+        _dbContext!.TextChunks.AddRange(
+            new TextChunkEntity { PdfDocumentId = pdfId, SharedGameId = TestSharedGameId, Content = "Ogni giocatore pesca due carte.", ChunkIndex = 0, PageNumber = 1, CharacterCount = 31 },
+            new TextChunkEntity { PdfDocumentId = pdfId, SharedGameId = TestSharedGameId, Content = "Il primo giocatore e' il piu' giovane.", ChunkIndex = 1, PageNumber = 1, CharacterCount = 38 });
+        _dbContext.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            PdfDocumentId = pdfId,
+            SharedGameId = TestSharedGameId,
+            ChunkCount = 2,
+            TotalCharacters = 69,
+            IndexingStatus = "completed",
+            IndexedAt = DateTime.UtcNow,
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+    }
+
+    private async Task<(int Chunks, int VectorDocuments)> CountIndexRowsAsync(Guid pdfId) =>
+        (await _dbContext!.TextChunks.AsNoTracking().CountAsync(tc => tc.PdfDocumentId == pdfId, TestCancellationToken),
+         await _dbContext.VectorDocuments.AsNoTracking().CountAsync(vd => vd.PdfDocumentId == pdfId, TestCancellationToken));
+
     private async Task<PdfDocumentEntity> SeedReadyPdfAsync(string? indexerVersion = null)
     {
         var pdf = new PdfDocumentEntity
@@ -220,6 +242,12 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
     public async Task Reindex_RacesWithDelete_LeavesNoOrphanState()
     {
         var pdf = await SeedReadyPdfAsync();
+        // #5056: the index of a Ready PDF — passages and its vector document — so that «the delete leaves no orphan»
+        // has something to leave. Without them the orphan count below was 0 with or without the cascade.
+        await SeedIndexAsync(pdf.Id);
+        var (chunksBefore, vectorDocumentsBefore) = await CountIndexRowsAsync(pdf.Id);
+        chunksBefore.Should().Be(2, "the race starts from an indexed PDF");
+        vectorDocumentsBefore.Should().Be(1, "the race starts from an indexed PDF");
 
         using var barrier = new Barrier(participantCount: 2);
 
@@ -312,9 +340,13 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
             // Il delete è passato — che abbia vinto la gara (a) o sia arrivato dopo il reindex
             // (b). L'invariante che conta è la stessa nei due casi, ed è quella che protegge i
             // dati: la cancellazione non lascia chunk appesi a un documento che non c'è più.
-            var orphanChunks = await _dbContext.TextChunks.AsNoTracking()
-                .CountAsync(tc => tc.PdfDocumentId == pdf.Id, TestCancellationToken);
+            // #5056: this branch runs only when the delete wins the race. In three instrumented local runs the
+            // reindex always won (the delete got a ConflictException), so the cascade has its deterministic test in
+            // DeleteKbDocumentCommandHandlerIntegrationTests.Handle_RemovesDoc_ChunksVectors_AndDetachesFromConsumingAgents,
+            // which goes red without the cascade. Here the index is seeded, so the check means something when it runs.
+            var (orphanChunks, orphanVectorDocuments) = await CountIndexRowsAsync(pdf.Id);
             orphanChunks.Should().Be(0, "il cascade delete non deve lasciare TextChunk orfani");
+            orphanVectorDocuments.Should().Be(0, "il cascade delete non deve lasciare VectorDocument orfani");
         }
     }
 

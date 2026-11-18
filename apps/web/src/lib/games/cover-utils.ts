@@ -22,14 +22,17 @@
  * to render. The `local/no-bgg-host` ESLint rule is per-line disabled here
  * because removing the constant would break the runtime guard that the rest
  * of the FE depends on.
+ *
+ * #5069: the same suffixes as the backend `BggHostDenyList`, each matching the
+ * host and its subdomains. Listing only the image CDNs let `*.boardgamegeek.com`
+ * and other geekdo hosts through.
  */
 const BLOCKED_IMAGE_HOSTS: readonly string[] = [
   // eslint-disable-next-line local/no-bgg-host -- blocklist data, not a URL
-  'cf.geekdo-images.com',
+  'geekdo-images.com', // cf.geekdo-images.com, geekdo-images.com
+  'geekdo.com', // images.geekdo.com
   // eslint-disable-next-line local/no-bgg-host -- blocklist data, not a URL
-  'geekdo-images.com',
-  // eslint-disable-next-line local/no-bgg-host -- blocklist data, not a URL
-  'images.geekdo.com',
+  'boardgamegeek.com',
 ];
 
 /**
@@ -61,7 +64,8 @@ function parseImageHost(imageUrl: string | null | undefined): string | null {
     // Left with a leading "/" are the protocol-relative forms: they take the page's scheme, so any https base
     // resolves their host. Anything else must be absolute, as before.
     const base = trimmed.startsWith('/') ? 'https://same-origin.invalid' : undefined;
-    return new URL(trimmed, base).hostname.toLowerCase();
+    // "host." names the same host as "host" (#5069); the URL parser keeps the trailing dot.
+    return new URL(trimmed, base).hostname.toLowerCase().replace(/\.+$/, '');
   } catch {
     return null;
   }

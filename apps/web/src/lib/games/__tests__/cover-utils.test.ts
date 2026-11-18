@@ -78,6 +78,30 @@ describe('isBlockedImageHost (#2655 — hostname-anchored BGG detection)', () =>
     expect(isBlockedImageHost('https://eu.cf.geekdo-images.com/foo.png')).toBe(true);
   });
 
+  // #5069: the same hosts as the backend BggHostDenyList — BGG itself and any geekdo host, not only the image CDNs.
+  it.each([
+    'https://boardgamegeek.com/image/123/catan',
+    'https://www.boardgamegeek.com/image/123/catan',
+    'https://static.geekdo.com/images/x.png',
+  ])('returns true for a BGG host the backend also bans: %s', url => {
+    expect(isBlockedImageHost(url)).toBe(true);
+    expect(shouldUsePlaceholder(url)).toBe(true);
+  });
+
+  // #5069: "host." is the same host as "host" (fully qualified form), and the URL parser keeps the dot.
+  it.each(['https://cf.geekdo-images.com./pic.jpg', 'https://www.boardgamegeek.com../pic.jpg'])(
+    'reads a trailing dot as the same host: %s',
+    url => {
+      expect(isBlockedImageHost(url)).toBe(true);
+      expect(shouldUsePlaceholder(url)).toBe(true);
+    }
+  );
+
+  it('anchors the match on a label boundary', () => {
+    expect(isBlockedImageHost('https://notboardgamegeek.com/pic.jpg')).toBe(false);
+    expect(isBlockedImageHost('https://geekdo.com.evil.example/pic.jpg')).toBe(false);
+  });
+
   it.each([null, undefined, '', '   '])('returns false for missing input %p', input => {
     expect(isBlockedImageHost(input)).toBe(false);
   });

@@ -185,11 +185,14 @@ describe('GameDetailHero (Wave C.1)', () => {
     expect(container.innerHTML).not.toMatch(/geekdo/);
   });
 
+  // The covers the app produces are presigned storage URLs (S3BlobStorageService): the check must let them through.
   it('renders an allowed cover image', () => {
+    const cover =
+      'https://acc0unt.r2.cloudflarestorage.com/meepleai/covers/wingspan.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=abc123';
     const { container } = render(
       <GameDetailHero
         title="Wingspan"
-        imageUrl="/api/v1/covers/wingspan.webp"
+        imageUrl={cover}
         variant="own"
         meta={baseMeta}
         isFavorite={false}
@@ -197,7 +200,21 @@ describe('GameDetailHero (Wave C.1)', () => {
       />
     );
     const img = container.querySelector('[data-slot="game-detail-hero-cover"] img');
-    expect(img?.getAttribute('src')).toBe('/api/v1/covers/wingspan.webp');
+    expect(img?.getAttribute('src')).toBe(cover);
+  });
+
+  it('does not request a protocol-relative BGG image either', () => {
+    const { container } = render(
+      <GameDetailHero
+        title="Wingspan"
+        imageUrl="//cf.geekdo-images.com/abc/pic123.jpg"
+        variant="own"
+        meta={baseMeta}
+        isFavorite={false}
+        labels={labels}
+      />
+    );
+    expect(container.querySelector('[data-slot="game-detail-hero-cover"] img')).toBeNull();
   });
 
   it('exposes data-slot="game-detail-hero" for E2E selector', () => {

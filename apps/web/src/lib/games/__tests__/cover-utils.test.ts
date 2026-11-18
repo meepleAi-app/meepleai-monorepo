@@ -48,6 +48,19 @@ describe('shouldUsePlaceholder', () => {
     expect(shouldUsePlaceholder('/uploads/covers/abc.webp')).toBe(false);
   });
 
+  // #5066: a leading "/" is not always this origin. "//host/…" is protocol-relative, and browsers read
+  // "/\host/…" the same way (backslash as slash), so both are requests to another host.
+  it.each(['//cf.geekdo-images.com/pic123.jpg', '/\\cf.geekdo-images.com/pic123.jpg'])(
+    'returns true for a BGG host behind a leading slash: %s',
+    src => {
+      expect(shouldUsePlaceholder(src)).toBe(true);
+    }
+  );
+
+  it('returns false for a protocol-relative first-party host', () => {
+    expect(shouldUsePlaceholder('//covers.meepleai.app/abc/cover.webp')).toBe(false);
+  });
+
   it('returns false for arbitrary first-party HTTPS hosts', () => {
     expect(shouldUsePlaceholder('https://meepleai.app/static/foo.png')).toBe(false);
     expect(shouldUsePlaceholder('https://cdn.wikimedia.org/foo.jpg')).toBe(false);
@@ -90,6 +103,11 @@ describe('isBlockedImageHost (#2655 — hostname-anchored BGG detection)', () =>
     expect(isBlockedImageHost('https://covers.meepleai.app/abc/cover.webp')).toBe(false);
     expect(isBlockedImageHost('data:image/png;base64,iVBORw0KGgo=')).toBe(false);
     expect(isBlockedImageHost('/uploads/covers/abc.webp')).toBe(false);
+  });
+
+  it('returns true for a protocol-relative BGG host (#5066)', () => {
+    expect(isBlockedImageHost('//cf.geekdo-images.com/pic123.jpg')).toBe(true);
+    expect(isBlockedImageHost('/\\cf.geekdo-images.com/pic123.jpg')).toBe(true);
   });
 });
 

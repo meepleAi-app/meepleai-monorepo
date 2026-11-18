@@ -514,7 +514,7 @@ function StepPlayers({ players, onPlayersChange }: StepPlayersProps): ReactEleme
           🤖
         </span>
         <span className="text-muted-foreground">
-          <strong className="font-bold text-[hsl(var(--c-agent))]">Nanolith Tutor</strong> consiglia{' '}
+          <strong className="font-bold text-entity-agent-text">Nanolith Tutor</strong> consiglia{' '}
           <strong className="font-semibold">{players.length} giocatori</strong> per la prima
           campagna.
         </span>

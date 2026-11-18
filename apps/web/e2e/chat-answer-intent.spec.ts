@@ -336,6 +336,58 @@ async function snapshot(
   await testInfo.attach(name, { path, contentType: 'image/png' });
 }
 
+/**
+ * #5060: the WCAG contrast ratio of a text element against what is behind it — its own background, composited over
+ * the nearest opaque ancestor. Colours are converted by the browser (canvas), not parsed. axe cannot do this here: on
+ * the game chat it reports these nodes as «incomplete» (the drawer overlays the page, the page background is a
+ * gradient), so a check through axe passed on the 3.64:1 pill.
+ */
+async function contrastRatio(subject: ReturnType<Page['locator']>): Promise<number> {
+  return subject.evaluate(element => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    const rgba = (colour: string): number[] => {
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = colour;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+      return [r, g, b, a / 255];
+    };
+    let base: number[] = [255, 255, 255, 1];
+    for (let el = element.parentElement; el; el = el.parentElement) {
+      const c = rgba(getComputedStyle(el).backgroundColor);
+      if (c[3] > 0.99) {
+        base = c;
+        break;
+      }
+    }
+    // The element's own background, then each translucent layer below it down to the opaque base.
+    const layers: number[][] = [];
+    for (let el: Element | null = element; el; el = el.parentElement) {
+      const c = rgba(getComputedStyle(el).backgroundColor);
+      if (c[3] > 0.99) break;
+      if (c[3] > 0) layers.unshift(c);
+    }
+    const background = layers.reduce(
+      (under, [r, g, b, a]) => [
+        r * a + under[0] * (1 - a),
+        g * a + under[1] * (1 - a),
+        b * a + under[2] * (1 - a),
+      ],
+      base.slice(0, 3)
+    );
+    const text = rgba(getComputedStyle(element).color);
+    const luminance = ([r, g, b]: number[]) =>
+      [r, g, b]
+        .map(v => v / 255)
+        .map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const [l1, l2] = [luminance(text), luminance(background)].sort((x, y) => y - x);
+    return (l1 + 0.05) / (l2 + 0.05);
+  });
+}
+
 async function openThread(page: Page, backend: FakeBackend): Promise<void> {
   await backend.install(page);
   await page.goto(`/chat/${THREAD_ID}`);
@@ -465,6 +517,7 @@ test.describe('the answer intent, on the phone (#5000)', () => {
   }, testInfo) => {
     const backend = fakeBackend('secca', [
       { role: 'user', content: 'Quante carte si pescano?', timestamp: NOW },
+      { role: 'assistant', content: 'Due carte a testa.', timestamp: NOW },
     ]);
     await backend.install(page);
     // #4992: the deep link opens the drawer on the chat, below lg.
@@ -483,5 +536,18 @@ test.describe('the answer intent, on the phone (#5000)', () => {
     ).toBeVisible();
     await expect(header.getByRole('button')).toHaveCount(0);
     await snapshot(page, testInfo, 'phone-game-chat-no-arbitro', header);
+
+    // #5060: the intent pill and the name of the assistant are text on a tint of the agent colour. With the base
+    // colour they measured 3.64:1 and about 4:1, under AA 4.5:1 for normal text; the text token of the agent colour
+    // is meant for this.
+    const answer = page.locator('[data-testid="chat-bubble"][data-role="agent"]:visible');
+    const pill = header.locator('span:has(> .sr-only)');
+    const assistantName = answer.getByText('Assistente', { exact: true });
+    await expect(assistantName).toBeVisible();
+    expect(await contrastRatio(pill), 'the intent pill, 10 px bold').toBeGreaterThanOrEqual(4.5);
+    expect(
+      await contrastRatio(assistantName),
+      'the name of the assistant, 14 px bold'
+    ).toBeGreaterThanOrEqual(4.5);
   });
 });

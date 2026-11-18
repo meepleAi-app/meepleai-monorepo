@@ -51,7 +51,7 @@ export function ChatBubble({
           >
             {avatar ?? '🤖'}
           </span>
-          <span className="font-bold text-sm text-[hsl(var(--c-agent))]">{agentName}</span>
+          <span className="font-bold text-sm text-entity-agent-text">{agentName}</span>
         </div>
       )}
       <div data-slot="bubble-content">{content}</div>

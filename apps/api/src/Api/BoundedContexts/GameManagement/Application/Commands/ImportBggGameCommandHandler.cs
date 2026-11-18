@@ -102,8 +102,11 @@ internal sealed class ImportBggGameCommandHandler
                     playingTimeMinutes: bggDetails.PlayingTimeMinutes,
                     minAge: null,
                     complexityRating: bggDetails.ComplexityRating,
-                    imageUrl: bggDetails.ImageUrl,
-                    thumbnailUrl: bggDetails.ThumbnailUrl);
+                    // #5066, BGG freeze #2123 / ADR-059 §5: BGG's <image>/<thumbnail> point at its CDN, which the
+                    // browser must never be asked for. Same as manual creation: the cover materializes later via
+                    // the PDF flow.
+                    imageUrl: null,
+                    thumbnailUrl: null);
 
                 libraryEntry = new UserLibraryEntry(
                     id: Guid.NewGuid(),

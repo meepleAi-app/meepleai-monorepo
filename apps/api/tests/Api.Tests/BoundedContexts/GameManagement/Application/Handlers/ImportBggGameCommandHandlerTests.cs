@@ -75,7 +75,31 @@ public sealed class ImportBggGameCommandHandlerTests
         result.PrivateGameId.Should().NotBe(Guid.Empty);
         result.LibraryEntryId.Should().NotBe(Guid.Empty);
         result.Title.Should().Be("Ticket to Ride");
-        result.ImageUrl.Should().Be("https://example.com/image.jpg");
+        result.ImageUrl.Should().BeNull("#5066: the BGG image is not stored, so the result has none");
+    }
+
+    [Fact]
+    public async Task Handle_WithValidCommand_DoesNotStoreTheBggImageUrls()
+    {
+        // #5066: hard ban on browser requests to BGG hosts (#2123, ADR-059 §5). Manual creation already stored
+        // null; the import stored BGG's <image>/<thumbnail>, which /games/{id} then rendered in a plain <img>.
+        SetupTierAllowed();
+        SetupNoDuplicate();
+        SetupBggDetails();
+        SetupRepoDefaults();
+        PrivateGame? stored = null;
+        _privateGameRepoMock
+            .Setup(x => x.AddAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()))
+            .Callback<PrivateGame, CancellationToken>((game, _) => stored = game)
+            .Returns(Task.CompletedTask);
+
+        await _sut.Handle(CreateCommand(), CancellationToken.None);
+
+        stored.Should().NotBeNull();
+        stored!.ImageUrl.Should().BeNull();
+        stored.ThumbnailUrl.Should().BeNull();
+        stored.BggId.Should().Be(TestBggId, "the rest of the BGG data is still imported");
+        stored.Title.Should().Be("Ticket to Ride");
     }
 
     [Fact]
@@ -444,8 +468,9 @@ public sealed class ImportBggGameCommandHandlerTests
                 MaxPlayers = 5,
                 PlayingTimeMinutes = 60,
                 ComplexityRating = 1.9m,
-                ImageUrl = "https://example.com/image.jpg",
-                ThumbnailUrl = "https://example.com/thumb.jpg"
+                // What BGG's XML API answers: its own CDN.
+                ImageUrl = "https://cf.geekdo-images.com/ttr/pic38668.jpg",
+                ThumbnailUrl = "https://cf.geekdo-images.com/ttr/pic38668_t.jpg"
             });
     }
 

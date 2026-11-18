@@ -4,8 +4,13 @@
  * Full user journey tests:
  * - Game detail → Chat flow
  * - Admin agent chat
- * - Multi-agent switching
  * - Offline recovery
+ *
+ * #5059: the «Multi-Agent Switching» test is gone. It switched to the «Decisore» agent on
+ * /library/games/{id}/chat, a route with no page, and ADR-098 §5 retired switching agents: the chat chooses an
+ * answer intent, covered in the browser by `chat-answer-intent.spec.ts` (#5000). The rest of this file still
+ * targets routes and a login field that do not exist: see the rewrite of §4 in
+ * docs/for-developers/specs/2026-10-07-legacy-library-routes-and-e2e-selector-drift.md.
  */
 
 import { test, expect } from '@playwright/test';
@@ -131,31 +136,6 @@ test.describe('Agent Chat - Admin Flow', () => {
     await popupPage.waitForLoadState();
     await expect(popupPage).toHaveURL(/\/chat-popout$/);
     await expect(popupPage.locator('h2')).toContainText('Admin Agent Chat');
-  });
-});
-
-test.describe('Agent Chat - Multi-Agent Switching', () => {
-  test('switches between agents mid-conversation', async ({ page }) => {
-    await page.goto('/library/games/test-game-id/chat');
-
-    // Send first message (default agent)
-    const input = page.locator('textarea[placeholder*="Chiedi"]');
-    await input.fill('Setup question');
-    await page.click('button:has-text("Send")');
-
-    // Wait for response
-    await expect(page.locator('text=/Tutor/i')).toBeVisible();
-
-    // Switch to Decisore agent
-    await page.click('[data-testid="agent-selector"]');
-    await page.click('text=Decisore');
-
-    // Send strategic question
-    await input.fill('What move should I make?');
-    await page.click('button:has-text("Send")');
-
-    // Response should come from Decisore
-    await expect(page.locator('text=/Decisore/i')).toBeVisible();
   });
 });
 

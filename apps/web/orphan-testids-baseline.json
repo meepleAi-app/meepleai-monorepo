@@ -38,7 +38,6 @@
     "e2e/admin/shared-games-workflow.spec.ts": 10,
     "e2e/admin/tier-feature-flags.spec.ts": 1,
     "e2e/admin/user-activity.spec.ts": 1,
-    "e2e/agent-chat.spec.ts": 1,
     "e2e/agent/agent-config-flow.spec.ts": 14,
     "e2e/agent/agent-rag-flow.spec.ts": 22,
     "e2e/agent/chat-streaming.spec.ts": 9,

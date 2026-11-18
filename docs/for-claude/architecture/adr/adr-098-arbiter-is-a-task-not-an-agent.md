@@ -42,6 +42,8 @@ La landing promette «Il tuo arbitro AI per le serate giochi da tavolo».
 
    `arbitro` esce (l'arbitrato è nella partita), `stratega` e `narratore` escono (consigli di gioco e ambientazione non stanno nel regolamento: una pipeline che risponde con fonti non ha niente da citare). Il dominio e il frontend hanno **lo stesso** elenco, la pipeline legge l'intento e applica la sezione del profilo corrispondente. I valori già salvati fuori elenco si leggono come `auto` fino al contract (expand → contract, ADR-094).
 
+   **Precedenza sullo stile** (#5001, decisione del committente del 2026-11-12). Le sezioni di `tutor` e `secca` vengono dopo l'istruzione di stile e dichiarano di prevalere sulla lunghezza e sul formato che lo stile chiede. Lo stile predefinito vuole al massimo 200 parole in elenco: troppo poco per una regola spiegata in passi con un esempio, e troppo per una risposta secca. Nessuna delle due prevale sul caso di rifiuto né sul modo di citare, che restano al resto del prompt; il tutor non prevale nemmeno sull'istruzione di continuare una risposta interrotta, perché è la risposta che più spesso si interrompe e non deve ricominciare.
+
 ## Consequences
 
 **Positive**: una sola identità anche nel linguaggio del prodotto; la promessa «arbitro AI» atterra dove c'è una disputa vera; il selettore smette di promettere un comportamento che non esiste e smette di far fallire `stratega`/`narratore`; il validatore Python ha un consumatore raggiungibile; esce codice che nessuno chiama.

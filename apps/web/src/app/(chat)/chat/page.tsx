@@ -22,60 +22,7 @@ import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
 import { useRecentsStore } from '@/stores/use-recents';
 
-// ─── Agent Group ─────────────────────────────────────────────────────────────
-
-interface AgentGroup {
-  /** Stable key for collapsing state */
-  key: string;
-  /** Display label (agent name or system type) */
-  label: string;
-  sessions: ChatSessionSummaryDto[];
-}
-
-const SYSTEM_AGENT_LABELS: Record<string, string> = {
-  auto: 'Agente Auto',
-  tutor: 'Tutor',
-  arbitro: 'Arbitro',
-  stratega: 'Stratega',
-  narratore: 'Narratore',
-};
-
-function groupSessionsByAgent(sessions: ChatSessionSummaryDto[]): AgentGroup[] {
-  const map = new Map<string, AgentGroup>();
-
-  for (const session of sessions) {
-    let key: string;
-    let label: string;
-
-    if (session.agentId) {
-      key = `agent:${session.agentId}`;
-      label = session.agentName ?? 'Agente personalizzato';
-    } else if (session.agentType) {
-      key = `type:${session.agentType}`;
-      label = SYSTEM_AGENT_LABELS[session.agentType.toLowerCase()] ?? session.agentType;
-    } else {
-      key = 'none';
-      label = 'Chat generali';
-    }
-
-    if (!map.has(key)) {
-      map.set(key, { key, label, sessions: [] });
-    }
-    const group = map.get(key);
-    if (group) group.sessions.push(session);
-  }
-
-  // Sort: most recently active group first (use max across all sessions in group)
-  const latestDate = (group: AgentGroup) =>
-    group.sessions.reduce((max, s) => {
-      const d = s.lastMessageAt ?? s.createdAt ?? '';
-      return d > max ? d : max;
-    }, '');
-
-  return [...map.values()].sort(
-    (a, b) => new Date(latestDate(b)).getTime() - new Date(latestDate(a)).getTime()
-  );
-}
+import { groupSessionsByAgent, type AgentGroup } from './_lib/group-sessions-by-agent';
 
 // ─── Agent Group Row ──────────────────────────────────────────────────────────
 

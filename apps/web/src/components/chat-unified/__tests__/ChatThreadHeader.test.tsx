@@ -99,27 +99,10 @@ describe('ChatThreadHeader', () => {
     expect(screen.getByTestId('header-delete-btn')).toBeInTheDocument();
   });
 
-  // ── Typology badge ──────────────────────────────────────────────────
-
-  it.each([
-    ['Tutor', 'Tutor'],
-    ['Arbitro', 'Arbitro'],
-    ['Stratega', 'Stratega'],
-    ['Narratore', 'Narratore'],
-  ])('renders typology badge for %s', (agentType, expectedLabel) => {
-    render(<ChatThreadHeader title="Test" agentType={agentType} />);
-    const badge = screen.getByTestId('typology-badge');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveTextContent(expectedLabel);
-  });
-
-  it('does not render typology badge when agentType is not provided', () => {
-    render(<ChatThreadHeader title="Test" />);
-    expect(screen.queryByTestId('typology-badge')).not.toBeInTheDocument();
-  });
-
-  it('does not render typology badge for unknown agentType', () => {
-    render(<ChatThreadHeader title="Test" agentType="Unknown" />);
+  // #5001: the typology badge is gone. ChatThreadView never passed `agentType`, so it never rendered, and its
+  // keys were the retired agents. The intent is shown by the selector.
+  it('renders no typology badge', () => {
+    render(<ChatThreadHeader title="Test" agentName="Tutor" />);
     expect(screen.queryByTestId('typology-badge')).not.toBeInTheDocument();
   });
 

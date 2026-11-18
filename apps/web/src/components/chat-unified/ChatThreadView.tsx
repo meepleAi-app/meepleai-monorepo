@@ -46,7 +46,6 @@ import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/stores/voice/store';
 import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
 
-import { AgentSwitchDialog } from './AgentSwitchDialog';
 import { ChatInfoPanel } from './ChatInfoPanel';
 import { ChatInputArea } from './ChatInputArea';
 import { ChatMessageList, type ChatMessageItem } from './ChatMessageList';
@@ -118,9 +117,6 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'chat' | 'debug'>('chat');
 
-  const [showAgentConfirm, setShowAgentConfirm] = useState(false);
-  const [pendingAgent, setPendingAgent] = useState<AgentType | null>(null);
-
   // Derived state for info panel
   const [game, setGame] = useState<{ id: string; title: string } | null>(null);
 
@@ -144,6 +140,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const voicePrefs = useVoicePreferencesStore();
   const lastMessageWasVoiceRef = useRef(false);
   const handleSendRef = useRef<((content?: string) => void) | undefined>(undefined);
+  // #5001: a change of intent in flight. The selector waits for it, so two choices never race on the server.
+  const [isSwitchingIntent, setIsSwitchingIntent] = useState(false);
+  // The thread on screen, for a change that answers after the user moved to another thread: the page does not
+  // remount the view.
+  const shownThreadIdRef = useRef(threadId);
+  useEffect(() => {
+    shownThreadIdRef.current = threadId;
+  }, [threadId]);
 
   const {
     state: voiceState,
@@ -301,8 +305,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
         // Issue #4780: Inject welcome message when thread is new (empty) and has an agent
         if (mappedMessages.length === 0 && agentId && gameName) {
-          const welcomeContent = buildWelcomeMessage(agentTypology, gameName);
-          const followUps = getWelcomeFollowUpQuestions(agentTypology, gameName);
+          // #5001: one welcome for every intent — the intent shapes the answer, not what the chat is for.
+          const welcomeContent = buildWelcomeMessage(gameName);
+          const followUps = getWelcomeFollowUpQuestions(gameName);
           const welcomeMessage: ChatMessageItem = {
             id: 'welcome-message',
             role: 'assistant',
@@ -688,32 +693,29 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     }
   }, [threadId, router]);
 
-  // Agent switching with confirmation (Issue #4465)
-  const handleAgentChangeRequest = useCallback(
-    (newAgent: AgentType) => {
-      if (newAgent === intentOf(thread?.agentTypology)) return;
-      setPendingAgent(newAgent);
-      setShowAgentConfirm(true);
+  // #5001 (ADR-098 §5): choosing an intent tells the server at once. Changing it costs nothing and keeps the
+  // history, so the confirmation banner of #4465 — a leftover of the «distinct agents» model — is gone. On a failure
+  // the selector stays on the stored intent, because the thread is updated only after the server accepts. One change
+  // at a time, and its answer only touches the thread it was sent for.
+  const handleAgentChange = useCallback(
+    async (newAgent: AgentType) => {
+      if (!thread || isSwitchingIntent || newAgent === intentOf(thread.agentTypology)) return;
+      const switchedId = thread.id;
+      setIsSwitchingIntent(true);
+      setError(null);
+      try {
+        await api.chat.switchThreadAgent(switchedId, newAgent);
+        setThread(prev => (prev?.id === switchedId ? { ...prev, agentTypology: newAgent } : prev));
+      } catch {
+        if (shownThreadIdRef.current === switchedId) {
+          setError('Errore nel cambio del tipo di risposta');
+        }
+      } finally {
+        setIsSwitchingIntent(false);
+      }
     },
-    [thread?.agentTypology]
+    [thread, isSwitchingIntent]
   );
-
-  const handleAgentChangeConfirm = useCallback(async () => {
-    if (!pendingAgent || !thread) return;
-    setShowAgentConfirm(false);
-    try {
-      await api.chat.switchThreadAgent(thread.id, pendingAgent);
-      setThread(prev => (prev ? { ...prev, agentTypology: pendingAgent } : prev));
-    } catch {
-      setError('Errore nel cambio del tipo di risposta');
-    }
-    setPendingAgent(null);
-  }, [pendingAgent, thread]);
-
-  const handleAgentChangeCancel = useCallback(() => {
-    setShowAgentConfirm(false);
-    setPendingAgent(null);
-  }, []);
 
   // Handle question click
   const handleQuestionClick = useCallback(
@@ -784,8 +786,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80">
         <AgentSelector
           value={intentOf(thread?.agentTypology)}
-          onChange={handleAgentChangeRequest}
-          disabled={isSending || streamState.isStreaming}
+          onChange={newAgent => void handleAgentChange(newAgent)}
+          disabled={isSending || streamState.isStreaming || isSwitchingIntent}
           className="flex-1"
         />
         {streamState.connectionStatus !== 'idle' && (
@@ -829,15 +831,6 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           </div>
         )}
       </div>
-
-      {/* Agent switch confirmation dialog */}
-      {showAgentConfirm && pendingAgent && (
-        <AgentSwitchDialog
-          pendingAgentName={AGENT_NAMES[pendingAgent]}
-          onConfirm={() => void handleAgentChangeConfirm()}
-          onCancel={handleAgentChangeCancel}
-        />
-      )}
 
       {/* Error banner */}
       {error && (

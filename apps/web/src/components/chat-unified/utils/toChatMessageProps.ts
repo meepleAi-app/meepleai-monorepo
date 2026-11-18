@@ -11,7 +11,6 @@
  * - Do NOT pass citations (kept in orchestrator as RuleSourceCard to
  *   preserve RAG copyright tier handling — citation types are incompatible)
  * - Do NOT pass confidence (not available in ChatMessageItem)
- * - Do NOT pass agentType (not available in ChatMessageItem)
  * - avatar.fallback hardcoded to 'U' for user messages
  */
 
@@ -58,7 +57,7 @@ export function toChatMessageProps(
   }
 
   // NOTE: citations deliberately NOT passed — kept outside as <RuleSourceCard>
-  // NOTE: confidence/agentType not yet available from ChatMessageItem
+  // NOTE: confidence not yet available from ChatMessageItem
 
   return base;
 }

@@ -1,6 +1,9 @@
 /**
  * Agent Welcome Config Tests
- * Issue #4780: Welcome message per agent typology
+ * Issue #4780: Welcome message
+ *
+ * #5001 (ADR-098 §5): one welcome for every intent, about the rules. The same for `auto`, `tutor`, `secca` and no
+ * intent is checked through the chat page in `ChatThreadView.test.tsx`; here, what it says.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -12,96 +15,48 @@ import {
 } from '../agent-welcome';
 
 describe('agent-welcome config', () => {
-  describe('getAgentWelcome', () => {
-    it('returns Tutor config', () => {
-      const config = getAgentWelcome('Tutor');
+  describe('the welcome (#5001)', () => {
+    it('promises neither strategy nor arbitration, in any of its parts', () => {
+      const config = getAgentWelcome();
+      for (const text of [config.greeting, ...config.capabilities, ...config.followUpQuestions]) {
+        expect(text).not.toMatch(/strateg|arbitr|disput|mosse/i);
+      }
+    });
+
+    it('talks about the rules of the game', () => {
+      const config = getAgentWelcome();
       expect(config.greeting).toContain('{game}');
+      expect(config.greeting).toMatch(/regol/i);
       expect(config.capabilities.length).toBeGreaterThan(0);
-      expect(config.followUpQuestions.length).toBe(3);
-    });
-
-    it('returns Arbitro config', () => {
-      const config = getAgentWelcome('Arbitro');
-      expect(config.greeting).toContain('arbitro');
-    });
-
-    it('returns Stratega config', () => {
-      const config = getAgentWelcome('Stratega');
-      expect(config.greeting).toContain('stratega');
-    });
-
-    it('returns Narratore config', () => {
-      const config = getAgentWelcome('Narratore');
-      expect(config.greeting).toContain('Benvenuto');
-    });
-
-    it('returns default config for unknown typology', () => {
-      const config = getAgentWelcome('unknown');
-      expect(config.greeting).toContain('assistente');
-    });
-
-    it('returns default config for null', () => {
-      const config = getAgentWelcome(null);
-      expect(config.greeting).toContain('assistente');
-    });
-
-    it('returns default config for undefined', () => {
-      const config = getAgentWelcome(undefined);
-      expect(config.greeting).toContain('assistente');
+      expect(config.followUpQuestions).toHaveLength(3);
     });
   });
 
   describe('buildWelcomeMessage', () => {
     it('replaces {game} with game name', () => {
-      const message = buildWelcomeMessage('Tutor', 'Catan');
+      const message = buildWelcomeMessage('Catan');
       expect(message).toContain('Catan');
       expect(message).not.toContain('{game}');
     });
 
     it('inserts a game title containing $ sequences verbatim', () => {
       // #3226 regression: gameName was passed as the replacement string, so $$ / $& were interpreted.
-      const message = buildWelcomeMessage('Tutor', 'A$$B $& Co');
+      const message = buildWelcomeMessage('A$$B $& Co');
       expect(message).toContain('A$$B $& Co');
       expect(message).not.toContain('{game}');
     });
 
     it('includes capabilities list', () => {
-      const message = buildWelcomeMessage('Tutor', 'Catan');
+      const message = buildWelcomeMessage('Catan');
       expect(message).toContain('Cosa posso fare');
       expect(message).toContain('•');
-    });
-
-    it('builds correct Tutor message', () => {
-      const message = buildWelcomeMessage('Tutor', 'Catan');
-      expect(message).toContain('Ho studiato il regolamento di Catan');
-    });
-
-    it('builds correct Arbitro message', () => {
-      const message = buildWelcomeMessage('Arbitro', 'Catan');
-      expect(message).toContain('arbitro per Catan');
-    });
-
-    it('builds correct Stratega message', () => {
-      const message = buildWelcomeMessage('Stratega', 'Catan');
-      expect(message).toContain('mosse a Catan');
-    });
-
-    it('builds correct Narratore message', () => {
-      const message = buildWelcomeMessage('Narratore', 'Catan');
-      expect(message).toContain('mondo di Catan');
     });
   });
 
   describe('getWelcomeFollowUpQuestions', () => {
-    it('returns 3 questions per typology', () => {
-      expect(getWelcomeFollowUpQuestions('Tutor', 'Catan')).toHaveLength(3);
-      expect(getWelcomeFollowUpQuestions('Arbitro', 'Catan')).toHaveLength(3);
-      expect(getWelcomeFollowUpQuestions('Stratega', 'Catan')).toHaveLength(3);
-      expect(getWelcomeFollowUpQuestions('Narratore', 'Catan')).toHaveLength(3);
-    });
-
     it('replaces {game} in questions', () => {
-      const questions = getWelcomeFollowUpQuestions('Tutor', 'Catan');
+      const questions = getWelcomeFollowUpQuestions('Catan');
+      expect(questions).toHaveLength(3);
       for (const q of questions) {
         expect(q).not.toContain('{game}');
       }
@@ -110,17 +65,11 @@ describe('agent-welcome config', () => {
 
     it('inserts a game title containing $ sequences verbatim', () => {
       // #3226 regression.
-      const questions = getWelcomeFollowUpQuestions('Tutor', 'A$$B $& Co');
+      const questions = getWelcomeFollowUpQuestions('A$$B $& Co');
       for (const q of questions) {
         expect(q).not.toContain('{game}');
       }
       expect(questions.some(q => q.includes('A$$B $& Co'))).toBe(true);
-    });
-
-    it('returns default questions for null typology', () => {
-      const questions = getWelcomeFollowUpQuestions(null, 'Catan');
-      expect(questions).toHaveLength(3);
-      expect(questions.some(q => q.includes('Catan'))).toBe(true);
     });
   });
 });

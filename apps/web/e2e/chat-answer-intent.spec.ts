@@ -22,9 +22,34 @@
  * several GETs of the thread per visit (doubled by StrictMode in development) are not a defect of the proof.
  */
 
-import { test, expect, type Page, type Route, type TestInfo } from '@playwright/test';
+import { test as base, expect, type Page, type Route, type TestInfo } from '@playwright/test';
 
 import { seedCookieConsent } from './_helpers/seedCookieConsent';
+
+/**
+ * `fakeBackend(...)` builds the fake of a test. The check that every request had an answer runs in the teardown of
+ * the fixture, which a skipped test never creates. An `afterEach` ran on the skipped tests too — the skip below reads
+ * `isMobile`, a test fixture, so Playwright runs it as a `beforeEach` — and read a fake that did not exist: every
+ * project but desktop Chromium failed with a `TypeError` (review of #5061).
+ */
+const test = base.extend<{
+  fakeBackend: (agentType: string | null, messages?: ThreadState['messages']) => FakeBackend;
+}>({
+  // eslint-disable-next-line no-empty-pattern -- Playwright fixtures destructure their dependencies; this has none
+  fakeBackend: async ({}, use) => {
+    const created: FakeBackend[] = [];
+    await use((agentType, messages = []) => {
+      const backend = new FakeBackend(agentType, messages);
+      created.push(backend);
+      return backend;
+    });
+    for (const backend of created) {
+      expect(backend.unserved, 'every request to /api/v1/ has a route in the fake backend').toEqual(
+        []
+      );
+    }
+  },
+});
 
 test.use({ serviceWorkers: 'block' });
 // The spec sets its own viewports (1280 px and 375 px): one run on desktop Chromium, not one per device project.
@@ -333,18 +358,11 @@ async function choose(page: Page, label: string): Promise<void> {
 test.describe('the answer intent, on the desktop (#5000)', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
-  let backend: FakeBackend;
-
-  test.afterEach(() => {
-    expect(backend.unserved, 'every request to /api/v1/ has a route in the fake backend').toEqual(
-      []
-    );
-  });
-
   test('steps 1-3: Auto, then «Risposta secca» goes to the server, and a reload reads it back', async ({
     page,
+    fakeBackend,
   }, testInfo) => {
-    backend = new FakeBackend(null);
+    const backend = fakeBackend(null);
     await openThread(page, backend);
     await expect(intentSelector(page)).toContainText('Auto');
 
@@ -357,14 +375,20 @@ test.describe('the answer intent, on the desktop (#5000)', () => {
 
     await page.reload();
     await expect(intentSelector(page)).toContainText('Risposta secca');
+    await expect(intentSelector(page)).not.toContainText('Auto');
     expect(backend.thread.agentType).toBe('secca');
+    // One change, one PATCH: the poll above stops at the first match, so the list is read again here.
+    expect(backend.bodiesOf('PATCH', `/api/v1/chat-threads/${THREAD_ID}/agent`)).toEqual([
+      { agentType: 'secca' },
+    ]);
     await snapshot(page, testInfo, 'desktop-after-reload-risposta-secca', intentSelector(page));
   });
 
   test('steps 4-5: the question and its continuation both carry the thread as chatId', async ({
     page,
+    fakeBackend,
   }) => {
-    backend = new FakeBackend('tutor');
+    const backend = fakeBackend('tutor');
     await openThread(page, backend);
     await expect(intentSelector(page)).toContainText('Tutor');
 
@@ -382,8 +406,9 @@ test.describe('the answer intent, on the desktop (#5000)', () => {
 
   test('step 6: a failed change leaves the selector on the stored intent and says so', async ({
     page,
+    fakeBackend,
   }) => {
-    backend = new FakeBackend('tutor');
+    const backend = fakeBackend('tutor');
     backend.failNextIntentChange = true;
     await openThread(page, backend);
     await expect(intentSelector(page)).toContainText('Tutor');
@@ -392,6 +417,8 @@ test.describe('the answer intent, on the desktop (#5000)', () => {
 
     await expect(page.getByText('Errore nel cambio del tipo di risposta')).toBeVisible();
     await expect(intentSelector(page)).toContainText('Tutor');
+    // The trigger mirrors the whole option, description included: the negative keeps «Tutor» from matching for nothing.
+    await expect(intentSelector(page)).not.toContainText('Risposta secca');
     expect(backend.bodiesOf('PATCH', `/api/v1/chat-threads/${THREAD_ID}/agent`)).toEqual([
       { agentType: 'secca' },
     ]);
@@ -402,35 +429,41 @@ test.describe('the answer intent, on the desktop (#5000)', () => {
 test.describe('the answer intent, on the phone (#5000)', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  let backend: FakeBackend;
-
-  test.afterEach(() => {
-    expect(backend.unserved, 'every request to /api/v1/ has a route in the fake backend').toEqual(
-      []
-    );
-  });
-
   test('step 7: ChatMobile shows the intent of the thread, read-only', async ({
     page,
+    fakeBackend,
   }, testInfo) => {
-    backend = new FakeBackend('tutor');
+    const backend = fakeBackend('tutor');
     await openThread(page, backend);
 
     const intent = page.getByTestId('thread-intent');
     await expect(intent).toBeVisible();
     await expect(intent).toHaveText(/Tutor/);
-    // The only control of the header of the thread is «Torna indietro»: nothing to change the intent with.
+    // The only control of the header of the thread is «Torna indietro»: nothing to change the intent with. A select is a
+    // combobox, not a button, so the other roles of a choice are counted too, and no combobox is on screen anywhere.
     const header = page.locator('header', { has: page.getByTestId('thread-intent') });
     await expect(header.getByRole('button')).toHaveCount(1);
     await expect(header.getByRole('button', { name: 'Torna indietro' })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: /Tipo di risposta/ })).toBeHidden();
+    for (const role of [
+      'combobox',
+      'listbox',
+      'radiogroup',
+      'radio',
+      'switch',
+      'tab',
+      'menu',
+    ] as const) {
+      await expect(header.getByRole(role)).toHaveCount(0);
+    }
+    await expect(page.getByRole('combobox')).toHaveCount(0);
     await snapshot(page, testInfo, 'phone-chat-intent-read-only', intent);
   });
 
   test('step 8: the game chat, from the page of the game, shows the intent of the thread and no «Arbitro»', async ({
     page,
+    fakeBackend,
   }, testInfo) => {
-    backend = new FakeBackend('secca', [
+    const backend = fakeBackend('secca', [
       { role: 'user', content: 'Quante carte si pescano?', timestamp: NOW },
     ]);
     await backend.install(page);

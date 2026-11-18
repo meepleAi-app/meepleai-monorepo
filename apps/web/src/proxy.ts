@@ -603,7 +603,8 @@ export const config = {
      * - _next/image (image optimization)
      * - favicon.ico
      * - public folder files (*.png, *.jpg, *.svg, etc.)
+     * - self-hosted fonts (*.woff2, public/fonts/, #4997): under next/font they lived in _next/static
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2)$).*)',
   ],
 };

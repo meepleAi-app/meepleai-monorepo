@@ -294,7 +294,7 @@ checks:
     owner: frontend-dev
     override_path: exception-comment
     pre_existing_in_main_dev: false
-    notes: "e2e-cover-r2-strict.yml: the cover chain (presign, CSP, load in the browser) on a Docker stack with storage. Runs on every PR that touches its paths, PRs to main-dev included. A red outside the cover chain, in the Docker build (next/font/google in the web build, apt in the API image), does not depend on the diff: #4997. Rerun on the same SHA before triaging (green on #4972, red on #4977 on the font build, green again at the rerun)."
+    notes: "e2e-cover-r2-strict.yml: the cover chain (presign, CSP, load in the browser) on a Docker stack with storage. Runs on every PR that touches its paths, PRs to main-dev included. A red outside the cover chain, in the Docker build (apt in the API image), does not depend on the diff: #4997. The web build no longer loads fonts through next/font since #4997, so its font signature should not come back. Rerun on the same SHA before triaging (green on #4972, red on #4977 on the font build, green again at the rerun)."
 
 # ─── Fallback regex patterns (AC-9) ──────────────────────────────────────────
 # Applied when `check_name` is not found in the `checks:` list above.

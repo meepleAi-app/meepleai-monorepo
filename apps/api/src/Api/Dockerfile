@@ -82,8 +82,10 @@ WORKDIR /app
 # groupadd/useradd, non adduser (#4429): da .NET 10 le immagini sono Ubuntu 24.04 e non
 # contengono adduser, che era il comando di Debian. Stesso utente di prima: uid/gid 1001,
 # home in /home/apiuser.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl libfontconfig1 libfreetype6 \
+# #4997: Acquire::Retries, because apt-get update and install are idempotent and a short outage of the
+# archive is retried instead of failing the image.
+RUN apt-get -o Acquire::Retries=5 update \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends curl libfontconfig1 libfreetype6 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 1001 apiuser \
     && useradd --uid 1001 --gid 1001 --create-home --shell /bin/bash apiuser \

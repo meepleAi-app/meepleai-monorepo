@@ -628,6 +628,12 @@ const nextConfig = {
           },
         ],
       },
+      {
+        // #4997: self-hosted fonts (src/styles/fonts.css). public/ is served with max-age=0 by default;
+        // these names carry Google's font version, so a changed file is a new name and caching for good is safe.
+        source: '/fonts/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
     ];
   },
 

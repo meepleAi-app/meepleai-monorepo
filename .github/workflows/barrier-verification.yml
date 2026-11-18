@@ -100,8 +100,9 @@ jobs:
 
       - name: Restore + Build probe project
         working-directory: apps/api
+        # #4997: no libgdiplus here. It is a native library System.Drawing loads at run time, and this job only
+        # compiles the probe project.
         run: |
-          sudo apt-get update && sudo apt-get install -y libgdiplus
           dotnet restore tests/CodeqlBarrierSmoke/CodeqlBarrierSmoke.csproj
           dotnet build tests/CodeqlBarrierSmoke/CodeqlBarrierSmoke.csproj --no-restore -c Release
 

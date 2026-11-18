@@ -643,7 +643,86 @@ describe('ChatThreadView', () => {
       });
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
       expect(screen.queryByTestId('agent-switch-confirm')).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByTestId('agent-selector')).toHaveAttribute('data-value', 'tutor')
+      );
+    });
+
+    // From the review of #5058: with no confirmation, nothing kept two choices from racing on the server.
+    it('a second choice waits for the first: the selector is disabled while the change is in flight', async () => {
+      (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+        ...mockThread,
+        messages: [],
+        agentType: 'auto',
+      });
+      let finish!: () => void;
+      (apiMock.chat.switchThreadAgent as Mock).mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          finish = resolve;
+        })
+      );
+      await renderView();
+      const selector = await screen.findByTestId('agent-selector');
+
+      fireEvent.change(selector, { target: { value: 'tutor' } });
+      await waitFor(() => expect(screen.getByTestId('agent-selector')).toBeDisabled());
+      fireEvent.change(screen.getByTestId('agent-selector'), { target: { value: 'secca' } });
+
+      expect(apiMock.chat.switchThreadAgent).toHaveBeenCalledTimes(1);
+      finish();
+      await waitFor(() => expect(screen.getByTestId('agent-selector')).not.toBeDisabled());
       expect(screen.getByTestId('agent-selector')).toHaveAttribute('data-value', 'tutor');
+    });
+
+    it('a change that succeeds after a failed one takes the error away', async () => {
+      (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+        ...mockThread,
+        messages: [],
+        agentType: 'auto',
+      });
+      (apiMock.chat.switchThreadAgent as Mock)
+        .mockRejectedValueOnce(new Error('500'))
+        .mockResolvedValueOnce(undefined);
+      await renderView();
+      const selector = await screen.findByTestId('agent-selector');
+
+      fireEvent.change(selector, { target: { value: 'tutor' } });
+      expect(await screen.findByText('Errore nel cambio del tipo di risposta')).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByTestId('agent-selector')).not.toBeDisabled());
+
+      fireEvent.change(screen.getByTestId('agent-selector'), { target: { value: 'tutor' } });
+
+      await waitFor(() =>
+        expect(screen.getByTestId('agent-selector')).toHaveAttribute('data-value', 'tutor')
+      );
+      expect(screen.queryByText('Errore nel cambio del tipo di risposta')).not.toBeInTheDocument();
+    });
+
+    it('a change that answers after the user moved to another thread does not touch the new one', async () => {
+      (apiMock.chat.getThreadById as Mock).mockImplementation(async (id: string) => ({
+        ...mockThread,
+        id,
+        messages: [],
+        agentType: 'auto',
+      }));
+      let finish!: () => void;
+      (apiMock.chat.switchThreadAgent as Mock).mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          finish = resolve;
+        })
+      );
+      const { rerender } = await renderView('thread-1');
+      fireEvent.change(await screen.findByTestId('agent-selector'), { target: { value: 'tutor' } });
+      await waitFor(() =>
+        expect(apiMock.chat.switchThreadAgent).toHaveBeenCalledWith('thread-1', 'tutor')
+      );
+
+      rerender(<ChatThreadView threadId="thread-2" />);
+      await waitFor(() => expect(apiMock.chat.getThreadById).toHaveBeenCalledWith('thread-2'));
+      finish();
+
+      await waitFor(() => expect(screen.getByTestId('agent-selector')).not.toBeDisabled());
+      expect(screen.getByTestId('agent-selector')).toHaveAttribute('data-value', 'auto');
     });
 
     it('a failed change leaves the selector on the stored intent and says so', async () => {
@@ -675,7 +754,7 @@ describe('ChatThreadView', () => {
     await waitFor(() => {
       expect(screen.getByText('Hello!')).toBeInTheDocument();
     });
-    expect(screen.queryByText(/Ho studiato il regolamento/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sono il tuo assistente per le regole/)).not.toBeInTheDocument();
   });
 
   // --------------------------------------------------------------------------

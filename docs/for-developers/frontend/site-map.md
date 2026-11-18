@@ -2855,7 +2855,7 @@ _Route-group: `(chat)` · 4 pagine_
 - **Skeleton loading**: quando `isLoading` → 6 righe pulse nella sidebar desktop / 4 `SessionSkeleton` nella lista mobile — `apps/web/src/app/(chat)/chat/page.tsx`
 - **Alert errore ("Errore nel caricamento delle sessioni chat")**: quando `error` → Alert destructive nel main desktop / testo rosso mobile; in errore il branch <lg mostra comunque `ChatListMobile` (che rende il proprio error) — `apps/web/src/app/(chat)/chat/page.tsx`
 - **AgentGroupSection (gruppo collassabile, sidebar desktop)**: griglia mostrata quando `expanded===true` (default true, toggle per gruppo via chevron); desktop raggruppa per agentId/agentType/none, mobile per gameTitle — `apps/web/src/app/(chat)/chat/page.tsx`
-- **Etichetta gruppo agente (desktop)**: `agentName` se agentId (fallback "Agente personalizzato"); `SYSTEM_AGENT_LABELS[agentType]` (auto/tutor/arbitro/stratega/narratore) se agentType; "Chat generali" altrimenti — `apps/web/src/app/(chat)/chat/page.tsx`
+- **Etichetta gruppo agente (desktop)**: `agentName` se agentId (fallback "Agente personalizzato"); `ANSWER_INTENT_LABELS[intentOf(agentType)]` (Auto/Tutor/Risposta secca; un valore ritirato si mostra «Auto», #5001) se agentType; "Chat generali" altrimenti — `apps/web/src/app/(chat)/chat/_lib/group-sessions-by-agent.ts`
 - **ConnectionChipStrip su MeepleChatCard (desktop grid)**: 4 slot — "Messaggi"(abilitato), "Sources"(disabilitato, non implementato), "Agente"(abilitato solo se agentId), "Archivia"(disabilitato, nessun `onArchive`) — `apps/web/src/components/ui/data-display/meeple-card/nav-items/buildChatConnections.ts`
 
 ##### `/chat/[threadId]`
@@ -2864,7 +2864,6 @@ _Route-group: `(chat)` · 4 pagine_
 - **Header actions (settings/history/export/share/delete)**: passati SOLO `onTitleChange`, `onDelete`, `onSettings`(solo se agentId); History/Export/Share senza handler → bottoni non renderizzati; `AgentSettingsDrawer` montato solo se agentId; `userTier = user ? 'premium' : 'free'` — `apps/web/src/components/chat-unified/ChatThreadView.tsx`
 - **Titolo editabile inline (ChatThreadHeader)**: click sul titolo → input con Salva(Check)/Annulla(X); Enter salva, Escape annulla; salva solo se `trimmed!=title`; icona Pencil su hover se editableTitle — `apps/web/src/components/chat-unified/ChatThreadHeader.tsx`
 - **Badge stato connessione (Wifi/WifiOff)**: mostrato quando `streamState.connectionStatus !== 'idle'` (connected/connecting/reconnecting/disconnected/error) — `apps/web/src/components/chat-unified/ChatThreadView.tsx`
-- **AgentSwitchDialog (conferma cambio agente)**: mostrato quando `showAgentConfirm && pendingAgent` — `apps/web/src/components/chat-unified/AgentSwitchDialog.tsx`
 - **Tab Chat / Debug + pannello Debug (desktop)**: messaggi solo se `activeTab==='chat'`; pannello Debug solo se `activeTab==='debug'`; badge conteggio se `streamState.debugSteps.length>0`; empty-hint se 0 step — `apps/web/src/components/chat-unified/ChatThreadView.tsx`
 - **DebugStepCard showSystemPrompt (gate ruolo)**: system prompt mostrato SOLO agli admin (`showSystemPrompt={isAdmin}`, `isAdminOrAbove(user)`) — `apps/web/src/components/chat-unified/ChatThreadView.tsx`
 - **ChatMessageList (flag editor/admin + TTS)**: riceve `isEditor` (`isEditorOrAbove`) e `isAdmin` per gate di affordance; controlli TTS solo se `isTtsSupported && voicePrefs.ttsEnabled` — `apps/web/src/components/chat-unified/ChatMessageList.tsx`
@@ -2912,9 +2911,8 @@ _Route-group: `(chat)` · 4 pagine_
 | ChatNavigationContext | `apps/web/src/components/chat-unified/ChatNavigationContext.tsx` | Barra entity-nav sticky; solo link Game → `/library/{gameId}` |
 | ChatThreadHeader | `apps/web/src/components/chat-unified/ChatThreadHeader.tsx` | Header: back → `/chat/new`, titolo editabile inline, azioni (settings/delete) |
 | ChatInfoPanel | `apps/web/src/components/chat-unified/ChatInfoPanel.tsx` | Sidebar destra desktop: agent/game/citazioni/domande suggerite |
-| AgentSelector (header) | `apps/web/src/components/agent/AgentSelector.tsx` | Selettore tipologia agente (auto/tutor/arbitro/stratega/narratore) |
+| AgentSelector (header) | `apps/web/src/components/agent/AgentSelector.tsx` | Selettore d'intento della risposta (auto/tutor/secca, ADR-098 §5); la scelta manda subito il PATCH (#5001) |
 | AgentSettingsDrawer | `apps/web/src/components/agent/settings/index.ts` | Drawer impostazioni agente (solo se agentId) |
-| AgentSwitchDialog | `apps/web/src/components/chat-unified/AgentSwitchDialog.tsx` | Modal conferma cambio agente |
 | PageViewerPanel | `apps/web/src/components/chat/viewer/PageViewerPanel.tsx` | Slide-over viewer pagina PDF citazione (solo `onClose` cablato) |
 | NewChatPage → NewChatView | `apps/web/src/app/(chat)/chat/new/page.tsx` · `.../chat-unified/NewChatView.tsx` | Page Suspense + `dynamicImport(ssr:false)` → orchestratore |
 | ChatEntryOrchestrator | `apps/web/src/components/chat/entry/ChatEntryOrchestrator.tsx` | Flusso nuova chat (full vs direct game mode; auto-start; creazione thread + redirect) |

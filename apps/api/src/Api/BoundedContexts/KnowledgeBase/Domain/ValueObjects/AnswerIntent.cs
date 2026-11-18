@@ -44,14 +44,15 @@ public static class AnswerIntent
     // contradict the second and, on a refusal, turn the first into a grounded-looking answer.
     // #5001: the tutor overrides the length and the format of the style, as secca does. The default style asks for at
     // most 200 words in bullet points, and the steps plus the example do not fit there: the answer got truncated,
-    // which is where a continuation can lose the intent. Not the refusal, and not how to cite.
+    // which is where a continuation can lose the intent. Not the refusal, not how to cite, and not the style of a
+    // continuation: the tutor answer is the one most likely to be cut and continued, and it must not start again.
     private const string TutorInstruction =
         "Explain the rule step by step, the way a patient tutor teaches a new player: say what the rule is for, "
         + "walk through how it works in order, and finish with a short worked example from play. This overrides any "
-        + "length or format instruction above, but not how to cite and not the case where the context does not "
-        + "contain the answer. Everything you say must still come from the context and be cited as instructed "
-        + "above. If the context does not contain the answer, do not teach: reply as instructed above for that "
-        + "case, and nothing else.";
+        + "length or format instruction above, but not an instruction to continue a previous answer, not how to "
+        + "cite, and not the case where the context does not contain the answer. Everything you say must still come "
+        + "from the context and be cited as instructed above. If the context does not contain the answer, do not "
+        + "teach: reply as instructed above for that case, and nothing else.";
 
     private const string SeccaInstruction =
         "Answer in a single sentence. No introduction, no explanation, no example; cite only as instructed above. "

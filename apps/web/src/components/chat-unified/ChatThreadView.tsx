@@ -140,6 +140,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const voicePrefs = useVoicePreferencesStore();
   const lastMessageWasVoiceRef = useRef(false);
   const handleSendRef = useRef<((content?: string) => void) | undefined>(undefined);
+  // #5001: a change of intent in flight. The selector waits for it, so two choices never race on the server.
+  const [isSwitchingIntent, setIsSwitchingIntent] = useState(false);
+  // The thread on screen, for a change that answers after the user moved to another thread: the page does not
+  // remount the view.
+  const shownThreadIdRef = useRef(threadId);
+  useEffect(() => {
+    shownThreadIdRef.current = threadId;
+  }, [threadId]);
 
   const {
     state: voiceState,
@@ -687,18 +695,26 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
   // #5001 (ADR-098 §5): choosing an intent tells the server at once. Changing it costs nothing and keeps the
   // history, so the confirmation banner of #4465 — a leftover of the «distinct agents» model — is gone. On a failure
-  // the selector stays on the stored intent, because the thread is updated only after the server accepts.
+  // the selector stays on the stored intent, because the thread is updated only after the server accepts. One change
+  // at a time, and its answer only touches the thread it was sent for.
   const handleAgentChange = useCallback(
     async (newAgent: AgentType) => {
-      if (!thread || newAgent === intentOf(thread.agentTypology)) return;
+      if (!thread || isSwitchingIntent || newAgent === intentOf(thread.agentTypology)) return;
+      const switchedId = thread.id;
+      setIsSwitchingIntent(true);
+      setError(null);
       try {
-        await api.chat.switchThreadAgent(thread.id, newAgent);
-        setThread(prev => (prev ? { ...prev, agentTypology: newAgent } : prev));
+        await api.chat.switchThreadAgent(switchedId, newAgent);
+        setThread(prev => (prev?.id === switchedId ? { ...prev, agentTypology: newAgent } : prev));
       } catch {
-        setError('Errore nel cambio del tipo di risposta');
+        if (shownThreadIdRef.current === switchedId) {
+          setError('Errore nel cambio del tipo di risposta');
+        }
+      } finally {
+        setIsSwitchingIntent(false);
       }
     },
-    [thread]
+    [thread, isSwitchingIntent]
   );
 
   // Handle question click
@@ -771,7 +787,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         <AgentSelector
           value={intentOf(thread?.agentTypology)}
           onChange={newAgent => void handleAgentChange(newAgent)}
-          disabled={isSending || streamState.isStreaming}
+          disabled={isSending || streamState.isStreaming || isSwitchingIntent}
           className="flex-1"
         />
         {streamState.connectionStatus !== 'idle' && (

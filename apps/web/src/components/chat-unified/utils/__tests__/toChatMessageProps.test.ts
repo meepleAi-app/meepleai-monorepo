@@ -114,11 +114,6 @@ describe('toChatMessageProps', () => {
       expect(toChatMessageProps(item, baseCtx).confidence).toBeUndefined();
     });
 
-    it('does NOT set agentType (not available in ChatMessageItem)', () => {
-      const item: ChatMessageItem = { id: 'a', role: 'assistant', content: 'A' };
-      expect(toChatMessageProps(item, baseCtx).agentType).toBeUndefined();
-    });
-
     it('defaults isTyping to false when not provided', () => {
       const item: ChatMessageItem = { id: 'a', role: 'assistant', content: 'A' };
       expect(toChatMessageProps(item, baseCtx).isTyping).toBe(false);

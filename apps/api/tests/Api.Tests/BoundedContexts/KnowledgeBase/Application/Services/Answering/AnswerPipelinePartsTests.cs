@@ -209,8 +209,22 @@ public sealed class AnswerPipelinePartsTests
         instruction.Should().Contain(TutorOverridesTheStyle);
         tutor.SystemPrompt.IndexOf(TutorOverridesTheStyle, StringComparison.Ordinal)
             .Should().BeGreaterThan(tutor.SystemPrompt.IndexOf(ConciseStyleMarker, StringComparison.Ordinal));
-        instruction.Should().Contain("but not how to cite and not the case where the context does not contain the answer",
+        instruction.Should().Contain("not how to cite, and not the case where the context does not contain the answer",
             "the refusal and the citation style stay with the rest of the prompt");
+    }
+
+    [Fact]
+    public void Build_TutorContinuation_KeepsTheInstructionToContinue_AndTheTutorDoesNotOverrideIt()
+    {
+        // From the review of #5058: a tutor answer is the one most likely to be cut and continued (#4998 keeps the
+        // intent on the continuation). «Overrides any length or format instruction above» must not read as «start
+        // the explanation again».
+        var tutor = AnswerPromptBuilder.Build(
+            Content(), "it", "[Page 3] Ogni giocatore pesca due carte.", "Quante carte si pescano?", "continuation",
+            "Ogni giocatore pesca", false, intent: "tutor");
+
+        tutor.SystemPrompt.Should().Contain("Continue the previous answer from where it stopped.");
+        AnswerIntent.DefaultInstructionFor("tutor").Should().Contain("not an instruction to continue a previous answer");
     }
 
     [Fact]

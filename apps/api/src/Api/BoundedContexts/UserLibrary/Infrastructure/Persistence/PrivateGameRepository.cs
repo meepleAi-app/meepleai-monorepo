@@ -82,6 +82,49 @@ internal class PrivateGameRepository : RepositoryBase, IPrivateGameRepository
             .ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// The first key of the owner's quota lock (<see cref="LockOwnerQuotaAsync"/>): «PGQT». The second is the owner,
+    /// hashed. Two owners that hash alike only wait for each other.
+    /// </summary>
+    internal const int QuotaLockClass = 0x50_47_51_54; // "PGQT"
+
+    public async Task LockOwnerQuotaAsync(Guid ownerId, CancellationToken cancellationToken = default)
+    {
+        if (!DbContext.Database.IsNpgsql())
+        {
+            return;
+        }
+
+        // pg_advisory_xact_lock lives as long as the transaction. Taken with none open, it is released at the end of
+        // this very statement and the count that follows is as racy as without it: refused, not silent.
+        if (DbContext.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "LockOwnerQuotaAsync needs an open transaction (IUnitOfWork.ExecuteInTransactionAsync): " +
+                "a transaction-scoped advisory lock taken outside one is released immediately.");
+        }
+
+        var ownerKey = ownerId.ToString();
+        await DbContext.Database
+            .ExecuteSqlAsync($"SELECT pg_advisory_xact_lock({QuotaLockClass}, hashtext({ownerKey}))", cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public void ForgetStagedCreations()
+    {
+        // The two tables a creation writes. Reads on these paths are untracked, so what the tracker holds is what an
+        // attempt staged: Added after a SaveChanges that failed, Unchanged after one whose commit failed.
+        foreach (var entry in DbContext.ChangeTracker.Entries()
+                     .Where(e => e.Entity is PrivateGameEntity or UserLibraryEntryEntity)
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+
+        // #5030: the events go with the rows, or the next save would publish them for rows that do not exist.
+        EventCollector.Clear();
+    }
+
     public async Task<IReadOnlyList<PrivateGame>> SearchByTitleAsync(Guid ownerId, string searchTerm, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))

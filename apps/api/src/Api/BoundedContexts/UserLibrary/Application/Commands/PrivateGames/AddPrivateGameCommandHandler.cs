@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
+using Api.BoundedContexts.UserLibrary.Application.Services;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -85,26 +86,52 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
         }
 
         // #4978: the tier's MaxPrivateGames counts the private games the user has (deleted ones excluded by the
-        // query filter). This path never checked it, so a free user (3) created private games without end.
+        // query filter). This path never checked it, so a free user (3) created private games without end. #5020: the
+        // count and the insert are one atomic step, below (PrivateGameQuota).
         var limits = await _tierEnforcementService.GetLimitsAsync(command.UserId, cancellationToken).ConfigureAwait(false);
-        var ownedPrivateGames = await _privateGameRepository.CountByOwnerIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
-        if (ownedPrivateGames >= limits.MaxPrivateGames)
-        {
-            _logger.LogInformation(
-                "User {UserId} has {Count} private games, the maximum of the tier ({Max}): creation refused",
-                command.UserId,
-                ownedPrivateGames,
-                limits.MaxPrivateGames);
 
-            throw new PrivateGameQuotaExceededException(limits.MaxPrivateGames);
+        if (source == PrivateGameSource.BoardGameGeek && !command.BggId.HasValue)
+        {
+            throw new DomainException("BoardGameGeek source requires BggId");
         }
 
-        // Create private game using appropriate factory method
-        PrivateGame privateGame;
+        // #5020: the aggregates are built inside the staging, once per transaction attempt: a replayed attempt must not
+        // reuse the rows of one that did not commit (PrivateGameQuota).
+        PrivateGame? privateGame = null;
+        await PrivateGameQuota.CreateWithinQuotaAsync(
+            command.UserId,
+            limits.MaxPrivateGames,
+            async ct =>
+            {
+                privateGame = BuildPrivateGame(command, source);
 
+                // Link the private game to the user's library. AddForPrivateGameAsync sets PrivateGameId, not SharedGameId.
+                var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), command.UserId, privateGame.Id);
+
+                await _privateGameRepository.AddAsync(privateGame, ct).ConfigureAwait(false);
+                await _userLibraryRepository.AddForPrivateGameAsync(libraryEntry, ct).ConfigureAwait(false);
+            },
+            _privateGameRepository,
+            _unitOfWork,
+            _logger,
+            cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Added {Source} private game {PrivateGameId} to library for user {UserId}: {Title}",
+            source,
+            privateGame!.Id,
+            command.UserId,
+            command.Title);
+
+        return MapToDto(privateGame);
+    }
+
+    /// <summary>The private game the command describes, from BGG data or entered by hand.</summary>
+    private static PrivateGame BuildPrivateGame(AddPrivateGameCommand command, PrivateGameSource source)
+    {
         if (source == PrivateGameSource.BoardGameGeek && command.BggId.HasValue)
         {
-            privateGame = PrivateGame.CreateFromBgg(
+            return PrivateGame.CreateFromBgg(
                 ownerId: command.UserId,
                 bggId: command.BggId.Value,
                 title: command.Title,
@@ -117,52 +144,19 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
                 complexityRating: command.ComplexityRating,
                 imageUrl: null, // BGG freeze #2123 / ADR-059: no user-supplied external URLs; cover materializes later via PDF flow
                 thumbnailUrl: null);
-
-            _logger.LogInformation(
-                "Created private game from BGG {BggId} for user {UserId}: {Title}",
-                command.BggId.Value,
-                command.UserId,
-                command.Title);
-        }
-        else if (source == PrivateGameSource.Manual)
-        {
-            privateGame = PrivateGame.CreateManual(
-                ownerId: command.UserId,
-                title: command.Title,
-                minPlayers: command.MinPlayers,
-                maxPlayers: command.MaxPlayers,
-                yearPublished: command.YearPublished,
-                description: command.Description,
-                playingTimeMinutes: command.PlayingTimeMinutes,
-                minAge: command.MinAge,
-                complexityRating: command.ComplexityRating,
-                imageUrl: null); // BGG freeze #2123 / ADR-059: no user-supplied external URLs; cover materializes later via PDF flow
-
-            _logger.LogInformation(
-                "Created manual private game for user {UserId}: {Title}",
-                command.UserId,
-                command.Title);
-        }
-        else
-        {
-            throw new DomainException("BoardGameGeek source requires BggId");
         }
 
-        await _privateGameRepository.AddAsync(privateGame, cancellationToken).ConfigureAwait(false);
-
-        // Create UserLibraryEntry to link the private game to user's library
-        // Use AddForPrivateGameAsync to correctly set PrivateGameId instead of SharedGameId
-        var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), command.UserId, privateGame.Id);
-        await _userLibraryRepository.AddForPrivateGameAsync(libraryEntry, cancellationToken).ConfigureAwait(false);
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        _logger.LogInformation(
-            "Added private game {PrivateGameId} to library for user {UserId}",
-            privateGame.Id,
-            command.UserId);
-
-        return MapToDto(privateGame);
+        return PrivateGame.CreateManual(
+            ownerId: command.UserId,
+            title: command.Title,
+            minPlayers: command.MinPlayers,
+            maxPlayers: command.MaxPlayers,
+            yearPublished: command.YearPublished,
+            description: command.Description,
+            playingTimeMinutes: command.PlayingTimeMinutes,
+            minAge: command.MinAge,
+            complexityRating: command.ComplexityRating,
+            imageUrl: null); // BGG freeze #2123 / ADR-059: no user-supplied external URLs; cover materializes later via PDF flow
     }
 
     private static PrivateGameDto MapToDto(PrivateGame game)

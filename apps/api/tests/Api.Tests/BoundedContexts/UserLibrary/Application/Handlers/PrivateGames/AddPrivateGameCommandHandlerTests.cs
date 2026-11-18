@@ -45,6 +45,10 @@ public sealed class AddPrivateGameCommandHandlerTests
         _tierEnforcementServiceMock
             .Setup(s => s.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(TierLimits.FreeTier);
+        // #5020: the count and the insert run in one transaction (PrivateGameQuota); the mock runs the work.
+        _unitOfWorkMock
+            .Setup(u => u.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns((Func<CancellationToken, Task> work, CancellationToken ct) => work(ct));
         _loggerMock = new Mock<ILogger<AddPrivateGameCommandHandler>>();
 
         _handler = new AddPrivateGameCommandHandler(
@@ -194,7 +198,11 @@ public sealed class AddPrivateGameCommandHandlerTests
         _privateGameRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
             Times.Never);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _userLibraryRepositoryMock.Verify(
+            r => r.AddForPrivateGameAsync(It.IsAny<UserLibraryEntry>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        // #5020: the count that refused is the one under the owner's lock.
+        _privateGameRepositoryMock.Verify(r => r.LockOwnerQuotaAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -279,7 +287,10 @@ public sealed class AddPrivateGameCommandHandlerTests
         _privateGameRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
             Times.Once);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        // #5020: saved by the transaction that also counted, not by a SaveChangesAsync of its own.
+        _unitOfWorkMock.Verify(
+            u => u.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

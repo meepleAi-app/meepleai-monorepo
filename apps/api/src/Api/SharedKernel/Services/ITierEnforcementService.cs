@@ -58,7 +58,9 @@ public sealed record TierUsageCheck(int Current, int Max, bool CounterReadable)
 /// </summary>
 public enum TierAction
 {
-    CreatePrivateGame,
+    // Issue #5020: CreatePrivateGame stood here, a daily Redis counter of creations that a deletion never gave back.
+    // The private-game quota counts the private games the user has (PrivateGameQuota, UserLibrary), the same rule for
+    // manual creation and the BGG import; starting an improvvisata session creates no game and no longer touches it.
     UploadPdf,
     // Issue #4138: CreateAgent stood here. No caller has passed it since #4150, and the
     // per-user agent limit it checked is retired. Redis keys carry the action NAME, not its

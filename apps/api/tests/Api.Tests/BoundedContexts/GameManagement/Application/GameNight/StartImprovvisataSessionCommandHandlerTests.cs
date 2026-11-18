@@ -5,7 +5,6 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Middleware.Exceptions;
-using Api.SharedKernel.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentValidation.TestHelper;
@@ -26,7 +25,6 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILiveSessionRepository> _sessionRepoMock;
-    private readonly Mock<ITierEnforcementService> _tierEnforcementMock;
     private readonly StartImprovvisataSessionCommandHandler _sut;
 
     private static readonly Guid TestUserId = Guid.NewGuid();
@@ -37,15 +35,6 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
     {
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _sessionRepoMock = new Mock<ILiveSessionRepository>();
-        _tierEnforcementMock = new Mock<ITierEnforcementService>();
-
-        // Default: user is within quota
-        _tierEnforcementMock
-            .Setup(t => t.CanPerformAsync(It.IsAny<Guid>(), TierAction.CreatePrivateGame, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _tierEnforcementMock
-            .Setup(t => t.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
 
         // Simulate the EF-backed repository: stage a minimal entity in the DbContext so
         // the handler's subsequent SaveChangesAsync persists it for the FindAsync-based
@@ -79,7 +68,6 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         _sut = new StartImprovvisataSessionCommandHandler(
             _dbContext,
             _sessionRepoMock.Object,
-            _tierEnforcementMock.Object,
             TimeProvider.System,
             NullLogger<StartImprovvisataSessionCommandHandler>.Instance);
     }
@@ -278,54 +266,24 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         await act.Should().ThrowAsync<ForbiddenException>();
     }
 
-    // ─── Tier enforcement ────────────────────────────────────────────────────
+    // ─── Private-game quota (#5020) ──────────────────────────────────────────
 
     [Fact]
-    public async Task Handle_WhenTierQuotaExceeded_ThrowsConflictException()
+    public async Task Handle_UserWithTheMaximumOfPrivateGames_StartsASessionWithOneOfThem()
     {
-        // Arrange — tier returns false for CanPerform
-        _tierEnforcementMock
-            .Setup(t => t.CanPerformAsync(TestUserId, TierAction.CreatePrivateGame, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
-
-        _tierEnforcementMock
-            .Setup(t => t.GetUsageAsync(TestUserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new UsageSnapshot(
-                PrivateGames: 3, PrivateGamesMax: 3,
-                PdfThisMonth: 0, PdfThisMonthMax: 3,
-                AgentQueriesToday: 0, AgentQueriesTodayMax: 20,
-                SessionQueries: 0, SessionQueriesMax: 30,
-                PhotosThisSession: 0, PhotosThisSessionMax: 5,
-                SessionSaveEnabled: false,
-                CatalogProposalsThisWeek: 0, CatalogProposalsThisWeekMax: 1));
-
+        // #5020 (decision of 2026-11-18): starting a session creates no private game, so the private-game quota does
+        // not apply. It used to: a free user with 3 private games was refused a session with any of them, and the
+        // handler depended on ITierEnforcementService only for that.
         await SeedPrivateGame(TestPrivateGameId, TestUserId, "Wingspan");
+        await SeedPrivateGame(Guid.NewGuid(), TestUserId, "Azul");
+        await SeedPrivateGame(Guid.NewGuid(), TestUserId, "Cascadia");
         var command = new StartImprovvisataSessionCommand(TestUserId, TestPrivateGameId);
 
-        // Act & Assert
-        var act = () =>
-            _sut.Handle(command, CancellationToken.None);
-        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
-
-        ex.Message.Should().ContainEquivalentOf("limite di giochi privati");
-        ex.Message.Should().Contain("3/3");
-    }
-
-    [Fact]
-    public async Task Handle_WhenWithinTierQuota_SucceedsAndRecordsUsage()
-    {
-        // Arrange — default mock allows the action
-        await SeedPrivateGame(TestPrivateGameId, TestUserId, "Wingspan");
-        var command = new StartImprovvisataSessionCommand(TestUserId, TestPrivateGameId);
-
-        // Act
         var result = await _sut.Handle(command, CancellationToken.None);
 
-        // Assert — session created and usage recorded
         result.SessionId.Should().NotBe(Guid.Empty);
-        _tierEnforcementMock.Verify(
-            t => t.RecordUsageAsync(TestUserId, TierAction.CreatePrivateGame, It.IsAny<CancellationToken>()),
-            Times.Once);
+        (await _dbContext.LiveGameSessions.FindAsync(new object[] { result.SessionId }, CancellationToken.None))
+            .Should().NotBeNull();
     }
 }
 

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure.ExternalServices.BoardGameGeek;
@@ -131,47 +132,41 @@ public sealed class ImportBggGameCommandHandlerTests
         // Act
         await _sut.Handle(command, CancellationToken.None);
 
-        // Assert
+        // Assert — the save is the transaction's (#5020): the count and the insert are one step
         _unitOfWorkMock.Verify(
-            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            x => x.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task Handle_WithValidCommand_RecordsUsageAfterSave()
+    public async Task Handle_WithValidCommand_CountsUnderTheOwnersLockBeforeStaging()
     {
-        // Arrange
+        // #5020: the lock first, then the count, then the rows — inside one transaction. No Redis counter any more.
         var callOrder = new List<string>();
-
         SetupTierAllowed();
         SetupNoDuplicate();
         SetupBggDetails();
-
+        SetupRepoDefaults();
+        _privateGameRepoMock
+            .Setup(x => x.LockOwnerQuotaAsync(TestUserId, It.IsAny<CancellationToken>()))
+            .Callback(() => callOrder.Add("lock"))
+            .Returns(Task.CompletedTask);
+        _privateGameRepoMock
+            .Setup(x => x.CountByOwnerIdAsync(TestUserId, It.IsAny<CancellationToken>()))
+            .Callback(() => callOrder.Add("count"))
+            .ReturnsAsync(0);
         _privateGameRepoMock
             .Setup(x => x.AddAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()))
+            .Callback(() => callOrder.Add("add"))
             .Returns(Task.CompletedTask);
 
-        _userLibraryRepoMock
-            .Setup(x => x.AddForPrivateGameAsync(It.IsAny<UserLibraryEntry>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        await _sut.Handle(CreateCommand(), CancellationToken.None);
 
-        _unitOfWorkMock
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .Callback(() => callOrder.Add("save"))
-            .ReturnsAsync(2);
-
-        _tierEnforcementMock
-            .Setup(x => x.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
-            .Callback(() => callOrder.Add("record"))
-            .Returns(Task.CompletedTask);
-
-        var command = CreateCommand();
-
-        // Act
-        await _sut.Handle(command, CancellationToken.None);
-
-        // Assert
-        callOrder.Should().BeEquivalentTo(new[] { "save", "record" });
+        // The first count is the cheap one before the BGG call; the second, under the lock, is the guard.
+        callOrder.Should().Equal("count", "lock", "count", "add");
+        _tierEnforcementMock.Verify(
+            x => x.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -190,13 +185,6 @@ public sealed class ImportBggGameCommandHandlerTests
             .Setup(x => x.AddForPrivateGameAsync(It.IsAny<UserLibraryEntry>(), It.IsAny<CancellationToken>()))
             .Callback<UserLibraryEntry, CancellationToken>((e, _) => capturedEntry = e)
             .Returns(Task.CompletedTask);
-        _unitOfWorkMock
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(2);
-        _tierEnforcementMock
-            .Setup(x => x.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
         var command = CreateCommand();
 
         // Act
@@ -212,42 +200,57 @@ public sealed class ImportBggGameCommandHandlerTests
     #region Tier Quota Enforcement
 
     [Fact]
-    public async Task Handle_WhenQuotaExceeded_ThrowsQuotaExceededException()
+    public async Task Handle_WhenTheUserHasTheMaximum_ThrowsThe402OfThePrivateGameQuota()
     {
-        // Arrange
-        _tierEnforcementMock
-            .Setup(x => x.CanPerformAsync(It.IsAny<Guid>(), TierAction.CreatePrivateGame, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        // #5020: the same rule and the same answer as manual creation. It was a 400 from a daily Redis counter.
+        SetupTierAllowed();
+        _privateGameRepoMock
+            .Setup(x => x.CountByOwnerIdAsync(TestUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.FreeTier.MaxPrivateGames);
 
-        var command = CreateCommand();
+        var act = () => _sut.Handle(CreateCommand(), CancellationToken.None);
 
-        // Act & Assert
-        var act =
-            () => _sut.Handle(command, CancellationToken.None);
-        var ex = (await act.Should().ThrowAsync<QuotaExceededException>()).Which;
-
-        ex.QuotaType.Should().Be("PrivateGameQuota");
+        var ex = (await act.Should().ThrowAsync<PrivateGameQuotaExceededException>()).Which;
+        ex.StatusCode.Should().Be(402);
+        ex.ErrorCode.Should().Be("PRIVATE_GAME_QUOTA_EXCEEDED");
     }
 
     [Fact]
-    public async Task Handle_WhenQuotaExceeded_DoesNotCallBggApi()
+    public async Task Handle_WhenTheUserHasTheMaximum_DoesNotCallBggApi()
     {
-        // Arrange
-        _tierEnforcementMock
-            .Setup(x => x.CanPerformAsync(It.IsAny<Guid>(), TierAction.CreatePrivateGame, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        SetupTierAllowed();
+        _privateGameRepoMock
+            .Setup(x => x.CountByOwnerIdAsync(TestUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.FreeTier.MaxPrivateGames);
 
-        var command = CreateCommand();
+        var act = () => _sut.Handle(CreateCommand(), CancellationToken.None);
+        await act.Should().ThrowAsync<PrivateGameQuotaExceededException>();
 
-        // Act
-        var act =
-            () => _sut.Handle(command, CancellationToken.None);
-        await act.Should().ThrowAsync<QuotaExceededException>();
-
-        // Assert
         _bggApiClientMock.Verify(
             x => x.GetGameDetailsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheLimitIsReachedMeanwhile_TheCountUnderTheLockRefusesAndNothingIsStaged()
+    {
+        // The cheap count before the BGG call sees room; a concurrent creation fills it before the lock. The count
+        // under the lock is the one that decides.
+        SetupTierAllowed();
+        SetupNoDuplicate();
+        SetupBggDetails();
+        SetupRepoDefaults();
+        _privateGameRepoMock
+            .SetupSequence(x => x.CountByOwnerIdAsync(TestUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.FreeTier.MaxPrivateGames - 1)
+            .ReturnsAsync(TierLimits.FreeTier.MaxPrivateGames);
+
+        var act = () => _sut.Handle(CreateCommand(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<PrivateGameQuotaExceededException>();
+        _privateGameRepoMock.Verify(x => x.AddAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()), Times.Never);
+        _userLibraryRepoMock.Verify(
+            x => x.AddForPrivateGameAsync(It.IsAny<UserLibraryEntry>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     #endregion
@@ -337,7 +340,7 @@ public sealed class ImportBggGameCommandHandlerTests
             x => x.AddAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _unitOfWorkMock.Verify(
-            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            x => x.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -406,11 +409,18 @@ public sealed class ImportBggGameCommandHandlerTests
     private ImportBggGameCommand CreateCommand() =>
         new ImportBggGameCommand(UserId: TestUserId, BggId: TestBggId);
 
+    /// <summary>The free tier, an owner with no private game yet, and a transaction that runs its work (#5020).</summary>
     private void SetupTierAllowed()
     {
         _tierEnforcementMock
-            .Setup(x => x.CanPerformAsync(It.IsAny<Guid>(), TierAction.CreatePrivateGame, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(x => x.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.FreeTier);
+        _privateGameRepoMock
+            .Setup(x => x.CountByOwnerIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+        _unitOfWorkMock
+            .Setup(x => x.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns((Func<CancellationToken, Task> work, CancellationToken ct) => work(ct));
     }
 
     private void SetupNoDuplicate()
@@ -449,13 +459,6 @@ public sealed class ImportBggGameCommandHandlerTests
             .Setup(x => x.AddForPrivateGameAsync(It.IsAny<UserLibraryEntry>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        _unitOfWorkMock
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(2);
-
-        _tierEnforcementMock
-            .Setup(x => x.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
     }
 
     #endregion

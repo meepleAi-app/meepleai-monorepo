@@ -44,6 +44,14 @@ internal interface IPrivateGameRepository : IRepository<PrivateGame, Guid>
     Task<int> CountByOwnerIdAsync(Guid ownerId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #5020: takes the owner's private-game quota lock until the end of the open transaction. Two creations of the
+    /// same owner then count and insert one after the other, so concurrent requests cannot all read the same count
+    /// and all pass. Must run inside <c>IUnitOfWork.ExecuteInTransactionAsync</c>: taken with no transaction open,
+    /// it would be released at the end of its own statement.
+    /// </summary>
+    Task LockOwnerQuotaAsync(Guid ownerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Searches private games by title for a specific owner.
     /// </summary>
     /// <param name="ownerId">The owner's user ID</param>

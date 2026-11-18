@@ -5,7 +5,6 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;
-using Api.SharedKernel.Services;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -58,20 +57,17 @@ internal sealed class StartImprovvisataSessionCommandHandler
 
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILiveSessionRepository _sessionRepository;
-    private readonly ITierEnforcementService _tierEnforcementService;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<StartImprovvisataSessionCommandHandler> _logger;
 
     public StartImprovvisataSessionCommandHandler(
         MeepleAiDbContext dbContext,
         ILiveSessionRepository sessionRepository,
-        ITierEnforcementService tierEnforcementService,
         TimeProvider timeProvider,
         ILogger<StartImprovvisataSessionCommandHandler> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
-        _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -82,22 +78,11 @@ internal sealed class StartImprovvisataSessionCommandHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // 1. Check tier quota before doing any work
-        var canStart = await _tierEnforcementService
-            .CanPerformAsync(request.UserId, TierAction.CreatePrivateGame, cancellationToken)
-            .ConfigureAwait(false);
+        // #5020 (decision of 2026-11-18): starting a session from a private game the user already has creates no private
+        // game, so it neither checks nor consumes the private-game quota. It used to do both: a user at the limit could
+        // not play their own games, and an import followed by a session used the daily counter twice.
 
-        if (!canStart)
-        {
-            var usage = await _tierEnforcementService
-                .GetUsageAsync(request.UserId, cancellationToken)
-                .ConfigureAwait(false);
-
-            throw new ConflictException(
-                $"Hai raggiunto il limite di giochi privati ({usage.PrivateGames}/{usage.PrivateGamesMax}). Passa a Premium per aumentare il limite.");
-        }
-
-        // 2. Load PrivateGame — throws NotFoundException if missing
+        // 1. Load PrivateGame — throws NotFoundException if missing
         var privateGame = await _dbContext.PrivateGames
             .FirstOrDefaultAsync(g => g.Id == request.PrivateGameId && !g.IsDeleted, cancellationToken)
             .ConfigureAwait(false)
@@ -158,11 +143,6 @@ internal sealed class StartImprovvisataSessionCommandHandler
 
         // 8. Save atomically (session staged in step 5 + invite staged in step 7)
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        // 9. Record tier usage after successful creation
-        await _tierEnforcementService
-            .RecordUsageAsync(request.UserId, TierAction.CreatePrivateGame, cancellationToken)
-            .ConfigureAwait(false);
 
         // 10. Build share link
         var shareLink = $"/join/{invite.LinkToken}";

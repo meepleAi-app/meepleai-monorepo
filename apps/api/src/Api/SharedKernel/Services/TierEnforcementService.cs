@@ -302,7 +302,6 @@ internal sealed class TierEnforcementService : ITierEnforcementService
 
     private static int GetMaxForAction(TierLimits limits, TierAction action) => action switch
     {
-        TierAction.CreatePrivateGame => limits.MaxPrivateGames,
         TierAction.UploadPdf => limits.MaxPdfUploadsPerMonth,
         TierAction.AgentQuery => limits.MaxAgentQueriesPerDay,
         TierAction.SessionAgentQuery => limits.MaxSessionQueries,

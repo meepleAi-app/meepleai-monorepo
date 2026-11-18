@@ -1,10 +1,10 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.UserLibrary.Application.Services;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure.ExternalServices.BoardGameGeek;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
-using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.SharedKernel.Services;
 
@@ -46,16 +46,19 @@ internal sealed class ImportBggGameCommandHandler
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // 1. Check tier quota
-        var canImport = await _tierEnforcementService
-            .CanPerformAsync(command.UserId, TierAction.CreatePrivateGame, cancellationToken)
+        // 1. The tier's limit of private games. #5020: the same rule as manual creation — the private games the user
+        // has, counted under the owner's lock with the insert (step 6), and 402 over it. It was a daily Redis counter
+        // of creations, which a deletion never gave back, answering 400.
+        var limits = await _tierEnforcementService
+            .GetLimitsAsync(command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (!canImport)
+        // A user already at the limit is refused before the BGG call: no external call for an import that cannot be
+        // saved. This read is not the guard — the count under the lock, at the insert, is.
+        if (await _privateGameRepository.CountByOwnerIdAsync(command.UserId, cancellationToken).ConfigureAwait(false)
+            >= limits.MaxPrivateGames)
         {
-            throw new QuotaExceededException(
-                "PrivateGameQuota",
-                "You have reached the maximum number of private games allowed on your current plan.");
+            throw new PrivateGameQuotaExceededException(limits.MaxPrivateGames);
         }
 
         // 2. Check for duplicate import
@@ -100,24 +103,19 @@ internal sealed class ImportBggGameCommandHandler
             userId: command.UserId,
             gameId: privateGame.Id);
 
-        // 6. Persist both entities
-        await _privateGameRepository
-            .AddAsync(privateGame, cancellationToken)
-            .ConfigureAwait(false);
-
-        await _userLibraryRepository
-            .AddForPrivateGameAsync(libraryEntry, cancellationToken)
-            .ConfigureAwait(false);
-
-        // 7. Save all changes atomically
-        await _unitOfWork
-            .SaveChangesAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        // 8. Record usage after successful persistence
-        await _tierEnforcementService
-            .RecordUsageAsync(command.UserId, TierAction.CreatePrivateGame, cancellationToken)
-            .ConfigureAwait(false);
+        // 6. Persist both entities, within the quota, atomically
+        await PrivateGameQuota.CreateWithinQuotaAsync(
+            command.UserId,
+            limits.MaxPrivateGames,
+            async ct =>
+            {
+                await _privateGameRepository.AddAsync(privateGame, ct).ConfigureAwait(false);
+                await _userLibraryRepository.AddForPrivateGameAsync(libraryEntry, ct).ConfigureAwait(false);
+            },
+            _privateGameRepository,
+            _unitOfWork,
+            _logger,
+            cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "User {UserId} imported BGG game {BggId} as PrivateGame {PrivateGameId} with LibraryEntry {LibraryEntryId}",

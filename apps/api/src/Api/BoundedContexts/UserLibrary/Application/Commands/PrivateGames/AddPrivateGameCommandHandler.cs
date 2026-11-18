@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
+using Api.BoundedContexts.UserLibrary.Application.Services;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -85,19 +86,9 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
         }
 
         // #4978: the tier's MaxPrivateGames counts the private games the user has (deleted ones excluded by the
-        // query filter). This path never checked it, so a free user (3) created private games without end.
+        // query filter). This path never checked it, so a free user (3) created private games without end. #5020: the
+        // count and the insert are one atomic step, below (PrivateGameQuota).
         var limits = await _tierEnforcementService.GetLimitsAsync(command.UserId, cancellationToken).ConfigureAwait(false);
-        var ownedPrivateGames = await _privateGameRepository.CountByOwnerIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
-        if (ownedPrivateGames >= limits.MaxPrivateGames)
-        {
-            _logger.LogInformation(
-                "User {UserId} has {Count} private games, the maximum of the tier ({Max}): creation refused",
-                command.UserId,
-                ownedPrivateGames,
-                limits.MaxPrivateGames);
-
-            throw new PrivateGameQuotaExceededException(limits.MaxPrivateGames);
-        }
 
         // Create private game using appropriate factory method
         PrivateGame privateGame;
@@ -148,14 +139,22 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
             throw new DomainException("BoardGameGeek source requires BggId");
         }
 
-        await _privateGameRepository.AddAsync(privateGame, cancellationToken).ConfigureAwait(false);
-
         // Create UserLibraryEntry to link the private game to user's library
         // Use AddForPrivateGameAsync to correctly set PrivateGameId instead of SharedGameId
         var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), command.UserId, privateGame.Id);
-        await _userLibraryRepository.AddForPrivateGameAsync(libraryEntry, cancellationToken).ConfigureAwait(false);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await PrivateGameQuota.CreateWithinQuotaAsync(
+            command.UserId,
+            limits.MaxPrivateGames,
+            async ct =>
+            {
+                await _privateGameRepository.AddAsync(privateGame, ct).ConfigureAwait(false);
+                await _userLibraryRepository.AddForPrivateGameAsync(libraryEntry, ct).ConfigureAwait(false);
+            },
+            _privateGameRepository,
+            _unitOfWork,
+            _logger,
+            cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Added private game {PrivateGameId} to library for user {UserId}",

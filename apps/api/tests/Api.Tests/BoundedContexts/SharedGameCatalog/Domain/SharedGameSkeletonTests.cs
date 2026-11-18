@@ -247,6 +247,27 @@ public class SharedGameSkeletonTests
         act.Should().Throw<ArgumentException>();
     }
 
+    // #5069 made the image URLs optional on Create; enrichment from BGG keeps requiring them.
+    [Theory]
+    [InlineData("", "https://example.com/thumb.jpg", "ImageUrl is required")]
+    [InlineData("https://example.com/img.jpg", "", "ThumbnailUrl is required")]
+    public void EnrichFromBgg_WithEmptyImageUrl_ShouldThrowValidation(
+        string imageUrl, string thumbnailUrl, string message)
+    {
+        var game = CreateGameInStatus(GameDataStatus.Enriching);
+
+        var act = () =>
+            game.EnrichFromBgg(
+                description: "desc", yearPublished: 2020,
+                minPlayers: 2, maxPlayers: 4,
+                playingTimeMinutes: 60, minAge: 8,
+                complexityRating: null, averageRating: null,
+                imageUrl: imageUrl,
+                thumbnailUrl: thumbnailUrl,
+                rulebookUrl: null);
+        act.Should().Throw<ArgumentException>().WithMessage($"{message}*");
+    }
+
     #endregion
 
     #region EnrichFromProvenance (Issues #3147, #3154)

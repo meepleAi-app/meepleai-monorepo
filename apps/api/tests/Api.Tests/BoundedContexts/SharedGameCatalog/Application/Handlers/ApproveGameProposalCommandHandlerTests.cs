@@ -473,8 +473,9 @@ public class ApproveGameProposalCommandHandlerTests
     [InlineData(ProposalApprovalAction.ApproveAsVariant)]
     public async Task Handle_PrivateGameWithoutImages_CreatesTheSharedGame(ProposalApprovalAction action)
     {
-        // A private game created by hand has no image, and since #5070 neither has one imported from BGG. Approving its
-        // proposal answered 400: SharedGame.Create required the image URLs.
+        // Since #5070 a private game imported from BGG has no image (the fixture is one, with a description). Approving
+        // its proposal answered 400: SharedGame.Create required the image URLs. A game created by hand without a
+        // description still answers 400 here, for the description: that is #5074, not this test.
         var shared = await ApproveAsync(action, CreatePrivateGame(imageUrl: null, thumbnailUrl: null));
 
         shared.ImageUrl.Should().BeEmpty();

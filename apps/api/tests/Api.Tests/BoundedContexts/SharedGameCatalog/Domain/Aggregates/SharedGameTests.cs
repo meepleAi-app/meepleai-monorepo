@@ -301,19 +301,32 @@ public sealed class SharedGameTests
     }
 
     /// <summary>
-    /// #5069: like UpdateInfo since #4090, Create accepts empty image URLs. The columns are a deprecation tombstone
-    /// (covers come from CoverUrlResolver), and the paths that create a game without a URL to give (approving a proposal
-    /// of a private game, creating from a PDF without BGG details) answered 400. The HTTP create validator stays strict.
+    /// #5069: like UpdateInfo since #4090, Create accepts empty image URLs, each field on its own. The columns are a
+    /// deprecation tombstone (covers come from CoverUrlResolver), and approving the proposal of a private game without
+    /// an image answered 400. The HTTP create validator and EnrichFromBgg stay strict.
     /// </summary>
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Create_WithEmptyImageUrls_Succeeds(string url)
+    [InlineData("", "")]
+    [InlineData("   ", "   ")]
+    [InlineData("", "https://example.com/thumb.jpg")]
+    [InlineData("https://example.com/image.jpg", "")]
+    public void Create_WithEmptyImageUrls_Succeeds(string imageUrl, string thumbnailUrl)
     {
-        var game = CreateValidGame(imageUrl: url, thumbnailUrl: url);
+        var game = CreateValidGame(imageUrl: imageUrl, thumbnailUrl: thumbnailUrl);
 
-        game.ImageUrl.Should().Be(url);
-        game.ThumbnailUrl.Should().Be(url);
+        game.ImageUrl.Should().Be(imageUrl);
+        game.ThumbnailUrl.Should().Be(thumbnailUrl);
+    }
+
+    [Theory]
+    [InlineData("not-a-url")]
+    [InlineData("relative/thumb.jpg")]
+    public void Create_WithInvalidThumbnailUrl_ThrowsArgumentException(string thumbnailUrl)
+    {
+        var action = () => CreateValidGame(thumbnailUrl: thumbnailUrl);
+
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*ThumbnailUrl must be a valid URL*");
     }
 
     [Fact]

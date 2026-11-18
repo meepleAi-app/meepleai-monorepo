@@ -7,7 +7,8 @@
 # ============================================================
 FROM python:3.11-slim AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# #4997: apt-get update and install are idempotent, so a short outage of the archive is retried.
+RUN apt-get -o Acquire::Retries=5 update && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
     build-essential \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -53,11 +54,29 @@ WORKDIR /app
 # DEBIAN_FRONTEND=noninteractive prevents `python3.11-distutils` (pulled via
 # deadsnakes) from blocking on the `tzdata` geographic-area prompt. Verified
 # locally 2026-06-10: without it the build hung at `Geographic area:`.
+#
+# #4997: the PPA is a fixed apt source, with its signing key in the repository
+# (apt/deadsnakes-ppa.asc). `add-apt-repository` asked the Launchpad API for the
+# key on every build, and that call failed (503, timeouts, closed connections),
+# turning red every PR that rebuilds this image. The key is the one Launchpad
+# publishes for ~deadsnakes/+archive/ubuntu/ppa, fingerprint
+# F23C 5A6C F475 9775 95C8  9F51 BA69 3236 6A75 5776 (check with
+# `gpg --show-keys apt/deadsnakes-ppa.asc`); the sha256 below pins the file, so a
+# changed key is a deliberate edit of both. ca-certificates comes first, from the
+# Ubuntu archive, because the PPA is served over https.
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    && add-apt-repository -y ppa:deadsnakes/ppa \
-    && apt-get update && apt-get install -y --no-install-recommends \
+COPY apt/deadsnakes-ppa.asc /etc/apt/keyrings/deadsnakes-ppa.asc
+RUN printf '%s  %s\n' ee12f00ee17b7de1c3529279e12cd025731be85ac4404bbaeea08a12d4f9da23 \
+        /etc/apt/keyrings/deadsnakes-ppa.asc > /tmp/deadsnakes-ppa.sha256 \
+    && sha256sum -c /tmp/deadsnakes-ppa.sha256 \
+    && rm /tmp/deadsnakes-ppa.sha256 \
+    && apt-get -o Acquire::Retries=5 update \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/etc/apt/keyrings/deadsnakes-ppa.asc] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu ${VERSION_CODENAME} main" \
+        > /etc/apt/sources.list.d/deadsnakes-ppa.list \
+    && apt-get -o Acquire::Retries=5 update \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
     # Python 3.11 (deadsnakes — current 3.11.x, not Ubuntu's stale rc1)
     python3.11 \
     python3.11-distutils \

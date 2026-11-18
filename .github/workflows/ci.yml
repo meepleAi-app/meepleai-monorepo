@@ -95,7 +95,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install PDF Dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+        run: sudo apt-get -o Acquire::Retries=5 update && sudo apt-get -o Acquire::Retries=5 install -y libgdiplus
 
       - name: Setup Backend
         uses: ./.github/actions/setup-backend
@@ -575,7 +575,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install PDF Dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+        run: sudo apt-get -o Acquire::Retries=5 update && sudo apt-get -o Acquire::Retries=5 install -y libgdiplus
 
       # #3632 — qui c'era `actions/setup-dotnet` nudo, senza restore né cache NuGet: era LA causa
       # del gate vuoto. L'artifact porta bin/ e obj/, ma `obj/project.nuget.g.props` importa
@@ -791,7 +791,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install PDF Dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+        run: sudo apt-get -o Acquire::Retries=5 update && sudo apt-get -o Acquire::Retries=5 install -y libgdiplus
 
       # #3632 — qui c'era `actions/setup-dotnet` nudo, senza restore né cache NuGet: era LA causa
       # del gate vuoto. L'artifact porta bin/ e obj/, ma `obj/project.nuget.g.props` importa
@@ -842,7 +842,7 @@ jobs:
           fi
 
       - name: Install Redis CLI
-        run: sudo apt-get update && sudo apt-get install -y redis-tools
+        run: sudo apt-get -o Acquire::Retries=5 update && sudo apt-get -o Acquire::Retries=5 install -y redis-tools
 
       - name: Wait for Services
         timeout-minutes: 3

@@ -119,6 +119,25 @@ describe('GamebookCard', () => {
     expect(meta!.textContent).toContain('2019');
   });
 
+  // #5069: a BGG cover (#2123, ADR-059 §5) is treated as no cover: the gradient. jsdom drops an invalid CSS value
+  // just as a browser does, so the check is "same background as no cover", not "no BGG string in the DOM".
+  it('treats a BGG cover as no cover: the fallback gradient', () => {
+    const coverStyle = (cover: string | null) => {
+      const { unmount } = render(
+        <GamebookCard gamebook={{ ...READY_GAMEBOOK, cover }} onClick={vi.fn()} labels={LABELS} />
+      );
+      const style = document
+        .querySelector('[data-slot="gamebook-card-cover"]')!
+        .getAttribute('style');
+      unmount();
+      return style;
+    };
+
+    const noCover = coverStyle(null);
+    expect(noCover).toMatch(/linear-gradient/);
+    expect(coverStyle('https://cf.geekdo-images.com/abc/pic1.jpg')).toBe(noCover);
+  });
+
   it('renders cover with emoji fallback and "X/Y pag" label', () => {
     render(<GamebookCard gamebook={READY_GAMEBOOK} onClick={vi.fn()} labels={LABELS} />);
     const cover = document.querySelector('[data-slot="gamebook-card-cover"]');

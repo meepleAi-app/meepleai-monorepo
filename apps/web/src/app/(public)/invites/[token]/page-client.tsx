@@ -40,6 +40,7 @@ import { useGameNightInvitation } from '@/hooks/useGameNightInvitation';
 import { useRespondToInvitation } from '@/hooks/useRespondToInvitation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { type PublicGameNightInvitation, type RsvpAction } from '@/lib/api/game-night-invitations';
+import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
 import { deriveState, parseStateOverride } from '@/lib/invites/derive-state';
 import { inviteSubject } from '@/lib/invites/invite-subject';
 
@@ -448,7 +449,10 @@ function PendingSurface({
       />
       <div className="flex flex-col gap-3.5 px-4 pb-5">
         {/* Game thumbnail INLINE per YAGNI (32px square) — appears only when image present. */}
-        {invitation.primaryGameImageUrl && invitation.primaryGameName ? (
+        {/* #5069: `unoptimized` skips the image loader and its BGG check (#2123, ADR-059 §5). */}
+        {invitation.primaryGameImageUrl &&
+        !shouldUsePlaceholder(invitation.primaryGameImageUrl) &&
+        invitation.primaryGameName ? (
           <div
             data-slot="invites-token-game-thumb"
             className="flex items-center gap-2.5 rounded-md border border-[hsl(var(--border-light))] bg-[hsl(var(--bg-muted))] px-3 py-2"

@@ -127,6 +127,30 @@ describe('InvitesTokenPageClient — what the invitation is to', () => {
   });
 });
 
+// #5069: the thumbnail is a next/image with `unoptimized`, which skips the custom loader and its BGG check
+// (#2123, ADR-059 §5). A presigned storage URL must still render.
+describe('InvitesTokenPageClient — game thumbnail', () => {
+  const thumb = () => document.querySelector('[data-slot="invites-token-game-thumb"]');
+
+  it('does not request a BGG image: the thumbnail is left out', () => {
+    renderPage({
+      ...NIGHT_WITH_GAME,
+      primaryGameImageUrl: 'https://cf.geekdo-images.com/abc/pic1.jpg',
+    });
+
+    expect(thumb()).toBeNull();
+    expect(document.body.innerHTML).not.toMatch(/geekdo/);
+  });
+
+  it('renders an allowed thumbnail', () => {
+    const cover =
+      'https://acc0unt.r2.cloudflarestorage.com/meepleai/covers/catan.webp?X-Amz-Signature=abc123';
+    renderPage({ ...NIGHT_WITH_GAME, primaryGameImageUrl: cover });
+
+    expect(thumb()?.querySelector('img')?.getAttribute('src')).toBe(cover);
+  });
+});
+
 describe('InvitesTokenPageClient — landmarks', () => {
   it.each([null, 'accepted-success', 'declined', 'token-expired', 'token-invalid'])(
     'does not open a <main> of its own (state %j): the public layout owns it',

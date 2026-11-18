@@ -519,8 +519,11 @@ public sealed class SharedGame : AggregateRoot<Guid>
         ValidateMinAge(minAge);
         ValidateComplexityRating(complexityRating);
         ValidateAverageRating(averageRating);
-        ValidateImageUrl(imageUrl);
-        ValidateThumbnailUrl(thumbnailUrl);
+        // #5069: optional, as on UPDATE since #4090 (these columns are a deprecation tombstone; covers come from
+        // CoverUrlResolver). Approving a proposal of a private game without an image, or creating from a PDF without
+        // BGG details, has no URL to give and answered 400. The HTTP create validator stays strict (#4090).
+        ValidateOptionalImageUrl(imageUrl);
+        ValidateOptionalThumbnailUrl(thumbnailUrl);
 
         if (createdBy == Guid.Empty)
             throw new ArgumentException("CreatedBy cannot be empty", nameof(createdBy));
@@ -1104,7 +1107,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         ValidateMinAge(minAge);
         ValidateComplexityRating(complexityRating);
         ValidateAverageRating(averageRating);
-        // #4090: optional on update, required on create — see ValidateOptionalImageUrl.
+        // #4090: optional on update; #5069: optional on Create too. EnrichFromBgg still requires them.
         ValidateOptionalImageUrl(imageUrl);
         ValidateOptionalThumbnailUrl(thumbnailUrl);
 

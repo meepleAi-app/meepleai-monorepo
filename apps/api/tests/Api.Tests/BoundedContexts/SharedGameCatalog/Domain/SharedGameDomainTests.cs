@@ -193,7 +193,7 @@ public class SharedGameDomainTests
     [Theory]
     [InlineData("not-a-url")]
     [InlineData("relative/path.jpg")]
-    [InlineData("")]
+    // "" left this list with #5069: Create accepts an empty URL (SharedGameTests.Create_WithEmptyImageUrls_Succeeds).
     public void Create_WithInvalidImageUrl_ThrowsArgumentException(string url)
     {
         // Act & Assert

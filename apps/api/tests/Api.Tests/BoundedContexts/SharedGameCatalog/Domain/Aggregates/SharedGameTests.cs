@@ -300,6 +300,22 @@ public sealed class SharedGameTests
             .WithMessage("*ImageUrl must be a valid URL*");
     }
 
+    /// <summary>
+    /// #5069: like UpdateInfo since #4090, Create accepts empty image URLs. The columns are a deprecation tombstone
+    /// (covers come from CoverUrlResolver), and the paths that create a game without a URL to give (approving a proposal
+    /// of a private game, creating from a PDF without BGG details) answered 400. The HTTP create validator stays strict.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Create_WithEmptyImageUrls_Succeeds(string url)
+    {
+        var game = CreateValidGame(imageUrl: url, thumbnailUrl: url);
+
+        game.ImageUrl.Should().Be(url);
+        game.ThumbnailUrl.Should().Be(url);
+    }
+
     [Fact]
     public void Create_WithEmptyCreatedBy_ThrowsArgumentException()
     {

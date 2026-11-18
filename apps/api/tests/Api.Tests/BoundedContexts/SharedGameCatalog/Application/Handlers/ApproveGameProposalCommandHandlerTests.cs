@@ -442,6 +442,89 @@ public class ApproveGameProposalCommandHandlerTests
         await act.Should().ThrowAsync<NotFoundException>();
     }
 
+    // #5069: a private game imported from BGG before #5070 carries BGG's image URLs; approving it must not copy
+    // them into the shared catalog (#2123, ADR-059 §5). An allowed image is still copied.
+    private const string BggImage = "https://cf.geekdo-images.com/abc/pic123.jpg";
+    private const string BggThumb = "https://cf.geekdo-images.com/abc/pic123_t.jpg";
+
+    [Theory]
+    [InlineData(ProposalApprovalAction.ApproveAsNew)]
+    [InlineData(ProposalApprovalAction.ApproveAsVariant)]
+    public async Task Handle_PrivateGameWithBggImages_DoesNotCopyThemToTheSharedGame(ProposalApprovalAction action)
+    {
+        var shared = await ApproveAsync(action, CreatePrivateGame(BggImage, BggThumb));
+
+        shared.ImageUrl.Should().BeNullOrEmpty();
+        shared.ThumbnailUrl.Should().BeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_PrivateGameWithBggThumbnailOnly_KeepsTheAllowedImage()
+    {
+        var shared = await ApproveAsync(
+            ProposalApprovalAction.ApproveAsNew, CreatePrivateGame("https://example.com/image.jpg", BggThumb));
+
+        shared.ImageUrl.Should().Be("https://example.com/image.jpg");
+        shared.ThumbnailUrl.Should().BeNullOrEmpty();
+    }
+
+    [Theory]
+    [InlineData(ProposalApprovalAction.ApproveAsNew)]
+    [InlineData(ProposalApprovalAction.ApproveAsVariant)]
+    public async Task Handle_PrivateGameWithoutImages_CreatesTheSharedGame(ProposalApprovalAction action)
+    {
+        // A private game created by hand has no image, and since #5070 neither has one imported from BGG. Approving its
+        // proposal answered 400: SharedGame.Create required the image URLs.
+        var shared = await ApproveAsync(action, CreatePrivateGame(imageUrl: null, thumbnailUrl: null));
+
+        shared.ImageUrl.Should().BeEmpty();
+        shared.ThumbnailUrl.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_PrivateGameWithAllowedImages_CopiesThem()
+    {
+        var shared = await ApproveAsync(ProposalApprovalAction.ApproveAsNew, CreatePrivateGame());
+
+        shared.ImageUrl.Should().Be("https://example.com/image.jpg");
+        shared.ThumbnailUrl.Should().Be("https://example.com/thumb.jpg");
+    }
+
+    /// <summary>Approves a proposal of <paramref name="privateGame"/> and returns the shared game it created.</summary>
+    private async Task<SharedGame> ApproveAsync(ProposalApprovalAction action, PrivateGame privateGame)
+    {
+        var shareRequest = CreateShareRequestInReview();
+        await SeedLibraryEntryAsync(shareRequest.SourceGameId);
+        var baseGame = SharedGame.Create("Base Game", 2020, "A base game", 2, 4, 60, 10, 2.5m, null, "https://example.com/image.jpg", "https://example.com/thumb.jpg", null, TestUserId, null);
+
+        _shareRequestRepoMock
+            .Setup(r => r.GetByIdForUpdateAsync(shareRequest.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(shareRequest);
+        _privateGameRepoMock
+            .Setup(r => r.GetByIdAsync(TestPrivateGameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(privateGame);
+        _sharedGameRepoMock
+            .Setup(r => r.GetByIdAsync(baseGame.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(baseGame);
+        SharedGame? captured = null;
+        _sharedGameRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
+            .Callback<SharedGame, CancellationToken>((g, _) => captured = g)
+            .Returns(Task.CompletedTask);
+
+        await _handler.Handle(
+            new ApproveGameProposalCommand(
+                ShareRequestId: shareRequest.Id,
+                AdminId: TestAdminId,
+                ApprovalAction: action,
+                TargetSharedGameId: action == ProposalApprovalAction.ApproveAsVariant ? baseGame.Id : null,
+                AdminNotes: null),
+            TestContext.Current.CancellationToken);
+
+        captured.Should().NotBeNull();
+        return captured!;
+    }
+
     // Note: Document copying is tested in integration tests where we can properly seed the database
 
     private static ShareRequest CreateShareRequestInReview()
@@ -455,7 +538,9 @@ public class ApproveGameProposalCommandHandlerTests
         return shareRequest;
     }
 
-    private static PrivateGame CreatePrivateGame()
+    private static PrivateGame CreatePrivateGame(
+        string? imageUrl = "https://example.com/image.jpg",
+        string? thumbnailUrl = "https://example.com/thumb.jpg")
     {
         return PrivateGame.CreateFromBgg(
             ownerId: TestUserId,
@@ -463,8 +548,8 @@ public class ApproveGameProposalCommandHandlerTests
             title: "Test Private Game",
             description: "A test game",
             yearPublished: 2020,
-            imageUrl: "https://example.com/image.jpg",
-            thumbnailUrl: "https://example.com/thumb.jpg",
+            imageUrl: imageUrl,
+            thumbnailUrl: thumbnailUrl,
             minPlayers: 2,
             maxPlayers: 4,
             playingTimeMinutes: 60,

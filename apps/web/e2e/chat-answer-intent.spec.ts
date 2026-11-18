@@ -22,7 +22,9 @@
  * several GETs of the thread per visit (doubled by StrictMode in development) are not a defect of the proof.
  */
 
-import { test, expect, type Page, type Route } from '@playwright/test';
+import { test, expect, type Page, type Route, type TestInfo } from '@playwright/test';
+
+import { seedCookieConsent } from './_helpers/seedCookieConsent';
 
 test.use({ serviceWorkers: 'block' });
 // The spec sets its own viewports (1280 px and 375 px): one run on desktop Chromium, not one per device project.
@@ -64,6 +66,8 @@ class FakeBackend {
   }
 
   async install(page: Page): Promise<void> {
+    // The consent banner covers the bottom of every page: answered before the first load.
+    await seedCookieConsent(page);
     await page.context().addCookies([
       { name: 'meepleai_session', value: 'fake-session', domain: 'localhost', path: '/' },
       { name: 'meepleai_user_role', value: 'user', domain: 'localhost', path: '/' },
@@ -291,6 +295,22 @@ class FakeBackend {
   }
 }
 
+/**
+ * A screenshot in the report of the run, for the PR (#5000): nothing is written into the repository. The element the
+ * screenshot is about is scrolled into view first: `toBeVisible` does not mean «on screen».
+ */
+async function snapshot(
+  page: Page,
+  testInfo: TestInfo,
+  name: string,
+  subject: ReturnType<Page['locator']>
+): Promise<void> {
+  await subject.scrollIntoViewIfNeeded();
+  const path = testInfo.outputPath(`${name}.png`);
+  await page.screenshot({ path });
+  await testInfo.attach(name, { path, contentType: 'image/png' });
+}
+
 async function openThread(page: Page, backend: FakeBackend): Promise<void> {
   await backend.install(page);
   await page.goto(`/chat/${THREAD_ID}`);
@@ -323,7 +343,7 @@ test.describe('the answer intent, on the desktop (#5000)', () => {
 
   test('steps 1-3: Auto, then «Risposta secca» goes to the server, and a reload reads it back', async ({
     page,
-  }) => {
+  }, testInfo) => {
     backend = new FakeBackend(null);
     await openThread(page, backend);
     await expect(intentSelector(page)).toContainText('Auto');
@@ -338,6 +358,7 @@ test.describe('the answer intent, on the desktop (#5000)', () => {
     await page.reload();
     await expect(intentSelector(page)).toContainText('Risposta secca');
     expect(backend.thread.agentType).toBe('secca');
+    await snapshot(page, testInfo, 'desktop-after-reload-risposta-secca', intentSelector(page));
   });
 
   test('steps 4-5: the question and its continuation both carry the thread as chatId', async ({
@@ -389,7 +410,9 @@ test.describe('the answer intent, on the phone (#5000)', () => {
     );
   });
 
-  test('step 7: ChatMobile shows the intent of the thread, read-only', async ({ page }) => {
+  test('step 7: ChatMobile shows the intent of the thread, read-only', async ({
+    page,
+  }, testInfo) => {
     backend = new FakeBackend('tutor');
     await openThread(page, backend);
 
@@ -401,11 +424,12 @@ test.describe('the answer intent, on the phone (#5000)', () => {
     await expect(header.getByRole('button')).toHaveCount(1);
     await expect(header.getByRole('button', { name: 'Torna indietro' })).toBeVisible();
     await expect(page.getByRole('combobox', { name: /Tipo di risposta/ })).toBeHidden();
+    await snapshot(page, testInfo, 'phone-chat-intent-read-only', intent);
   });
 
   test('step 8: the game chat, from the page of the game, shows the intent of the thread and no «Arbitro»', async ({
     page,
-  }) => {
+  }, testInfo) => {
     backend = new FakeBackend('secca', [
       { role: 'user', content: 'Quante carte si pescano?', timestamp: NOW },
     ]);
@@ -416,12 +440,15 @@ test.describe('the answer intent, on the phone (#5000)', () => {
     // The desktop layout of the page is mounted too, hidden by CSS: the visible header is the drawer's.
     const header = page.locator('[data-testid="game-chat-header"]:visible');
     await expect(header).toBeVisible();
+    // No «Arbitro» anywhere in the page, hidden layouts included: before #4999 the switch sat in the desktop
+    // sidebar, mounted under the drawer.
+    await expect(page.getByText(/arbitro/i)).toHaveCount(0);
     await expect(header).toHaveAttribute('data-intent', 'secca');
     await expect(header).toContainText('Risposta secca');
     await expect(
       page.getByText('Quante carte si pescano?').filter({ visible: true })
     ).toBeVisible();
-    await expect(page.getByText(/arbitro/i)).toHaveCount(0);
     await expect(header.getByRole('button')).toHaveCount(0);
+    await snapshot(page, testInfo, 'phone-game-chat-no-arbitro', header);
   });
 });

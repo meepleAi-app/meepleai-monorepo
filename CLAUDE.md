@@ -347,6 +347,13 @@ Spec: [`2026-10-02-test-dependency-tiers-and-observable-skips.md`](./docs/for-de
 
 **BGG user-side asset ban — 2026-06-10** ([#2123](https://github.com/meepleAi-app/meepleai-monorepo/issues/2123)) — Hard ban on browser requests to `cf.geekdo-images.com`, `*.boardgamegeek.com`, `images.geekdo.com`, `geekdo-images.com`. Three-layer enforcement: (1) data plane (seed manifests + `SeedManifestGame` stripped of image props + nullify migration `20260610152201`); (2) resolution plane (`SharedGameDto.CoverUrl` single FE source, placeholder fallback via `cover-utils.ts`); (3) network plane (`next.config.js` explicit allowlist, no `**` catch-all + ESLint `local/no-bgg-host` + `pnpm lint:bgg` gate). Prometheus `meepleai_bgg_url_attempted_render_total` SLO=0; any nonzero = P1. See [ADR-059 §5](./docs/for-claude/architecture/adr/adr-059-catalog-seed-legal-posture.md). Admin server-to-server BGG paths (`apps/web/src/app/admin/**`, `components/admin/**`) remain legitimate per ADR-059 §2.
 
+The guard is central, since #5072 (ADR-059 §5.6):
+- every `<img>`, and every `unoptimized` `next/image`, with a variable `src` goes through `SafeImg` (`components/ui/data-display/safe-img.tsx`);
+- every image URL put into CSS goes through `cssImageUrl` (`lib/images/css-image-url.ts`);
+- `local/no-unguarded-img` (error) enforces the `<img>` and `next/image` rules. It cannot see a CSS background: check `url(` by hand.
+
+The only written exception is `<SafeImg allowBggHost>`: the BGG thumbnails in the admin BGG search panels. ESLint accepts it only under the two admin paths.
+
 > A11y AA: any axe color-contrast/ARIA fail = real regression (gate is blocking) — investigate, never skip.
 
 ### Domain Model — GameNight / Session

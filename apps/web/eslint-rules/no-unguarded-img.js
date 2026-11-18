@@ -20,6 +20,10 @@
  *   - a direct `URL.createObjectURL(…)` call.
  * A spread (`{...props}`) on an `<img>` may carry any `src`, so it is reported. A preview kept in state is not
  * constant to the rule: it goes through `SafeImg`, which lets `blob:` and `data:` through unchanged.
+ * `srcSet` counts like `src`, on `<img>` and on `<source>`: a browser prefers it, and `SafeImg` does not take it.
+ *
+ * Not seen by the rule: a CSS background (use `cssImageUrl`), an image rendered from Markdown, and an
+ * `allowBggHost` that reaches `SafeImg` through a spread, an alias or a wrapper.
  *
  * **References:**
  * - Issue #5072, #2123
@@ -109,6 +113,8 @@ module.exports = {
     },
     messages: {
       img: 'A plain <img> with a variable src skips the BGG guard (#5072, ADR-059 §5). Use <SafeImg> from @/components/ui/data-display/safe-img.',
+      source:
+        'A <source> with a variable srcSet skips the BGG guard (#5072, ADR-059 §5). Use <SafeImg> from @/components/ui/data-display/safe-img.',
       unoptimized:
         'next/image with `unoptimized` skips the loader and its BGG guard (#5072, ADR-059 §5). Drop `unoptimized`, or use <SafeImg> from @/components/ui/data-display/safe-img.',
       allowBggHost:
@@ -151,8 +157,19 @@ module.exports = {
         if (!name) return;
 
         if (name === 'img') {
-          if (hasSpread(node) || !isConstantSrc(attribute(node, 'src'))) {
+          if (
+            hasSpread(node) ||
+            !isConstantSrc(attribute(node, 'src')) ||
+            !isConstantSrc(attribute(node, 'srcSet'))
+          ) {
             context.report({ node, messageId: 'img' });
+          }
+          return;
+        }
+
+        if (name === 'source') {
+          if (hasSpread(node) || !isConstantSrc(attribute(node, 'srcSet'))) {
+            context.report({ node, messageId: 'source' });
           }
           return;
         }

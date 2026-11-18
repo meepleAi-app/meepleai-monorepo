@@ -238,6 +238,11 @@ References:
 
   A constant is a literal, a `data:`/`blob:` template, or `URL.createObjectURL(…)`.
 
+  `srcSet` counts like `src`, on `<img>` and on `<source>`; `SafeImg` does not accept it. The rule does not see:
+  - a CSS background (use `cssImageUrl`);
+  - an image rendered from Markdown;
+  - an `allowBggHost` passed through a spread, an alias or a wrapper.
+
 **The admin exception.** The admin BGG search panels show the thumbnails of BGG's search results, so the admin can tell editions apart:
 
 - `components/admin/games/wizard/steps/BggSearchStep.tsx` and `GameDetailsStep.tsx`;
@@ -245,7 +250,8 @@ References:
 
 This is a request from the admin's browser to a BGG host. §2 only covers server-to-server paths, and the ban above is about browser requests, so it needed a decision. The owner's decision (2026-11-18, #5072) is that the admin keeps seeing those thumbnails, as a **written exception**:
 
-- `<SafeImg allowBggHost>` renders a BGG URL without blocking it and without the beacon. So the SLO counter keeps measuring user-side attempts only.
+- `<SafeImg allowBggHost>` renders a BGG URL without blocking it and without the beacon. So the SLO counter does not count the exception.
+  - Any other admin screen gets no exception: blocking and the beacon apply as they do on user pages. A BGG URL pasted into an admin form preview (`GameForm`, `ImageUpload`) is blocked and counted. Before #5072 that preview loaded it unmeasured.
 - `local/no-unguarded-img` accepts `allowBggHost` only under `src/app/admin/` and `src/components/admin/`, the paths the `local/no-bgg-host` override already exempts.
 - The exception is limited to what BGG's search returns in admin-only UI. A cover shown to users still comes from `SharedGameDto.CoverUrl` (§5.2), re-hosted on R2 by the server (`ReuploadBggCoverCommand`).
 

@@ -141,7 +141,7 @@ export function ShelfCard({
       {/* ------------------------------------------------------------------ */}
       <div className="relative h-[100px] overflow-hidden" style={coverStyle}>
         {/* Fallback cover icon when no image */}
-        {!imageUrl && coverIcon && (
+        {!coverImage && coverIcon && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-3xl select-none" aria-hidden="true">
               {coverIcon}

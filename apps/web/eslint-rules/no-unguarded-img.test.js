@@ -34,6 +34,10 @@ test('no-unguarded-img', () => {
       { code: `<img src={\`/icons/dice.svg\`} alt="" />` },
       { code: `<img src={undefined} alt="" />` },
       { code: `<img alt="" />` },
+      { code: `<img src="/a.png" srcSet="/a.png 1x, /a@2x.png 2x" alt="" />` },
+      {
+        code: `<picture><source srcSet="/a.webp" type="image/webp" /><img src="/a.png" alt="" /></picture>`,
+      },
       // Local previews the code itself builds.
       { code: `<img src={\`data:image/png;base64,\${b64}\`} alt="" />` },
       { code: `<img src={\`blob:\${id}\`} alt="" />` },
@@ -68,6 +72,10 @@ test('no-unguarded-img', () => {
       // A spread may carry any src.
       { code: `<img {...props} />`, errors: [{ messageId: 'img' }] },
       { code: `<img src="/x.svg" {...props} />`, errors: [{ messageId: 'img' }] },
+      // A browser prefers srcSet to src, so it counts the same.
+      { code: `<img src="/x.svg" srcSet={game.srcSet} alt="" />`, errors: [{ messageId: 'img' }] },
+      { code: `<source srcSet={game.coverUrl} />`, errors: [{ messageId: 'source' }] },
+      { code: `<source {...props} />`, errors: [{ messageId: 'source' }] },
       {
         code: `import Image from 'next/image'; <Image src={invitation.imageUrl} unoptimized alt="" />`,
         errors: [{ messageId: 'unoptimized' }],

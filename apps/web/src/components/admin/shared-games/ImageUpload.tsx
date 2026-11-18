@@ -23,6 +23,7 @@ import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { isBlockedImageHost } from '@/lib/games/cover-utils';
 import { cn } from '@/lib/utils';
 
 // Validation constants
@@ -234,7 +235,8 @@ export function ImageUpload({
   );
 
   const hasErrors = validationErrors.length > 0;
-  const showPreview = preview || (currentImageUrl && !file);
+  // #5072: a BGG current image is not rendered, so the dropzone shows its prompt instead of a blank preview.
+  const showPreview = preview || (currentImageUrl && !file && !isBlockedImageHost(currentImageUrl));
   const previewSrc = preview || currentImageUrl || '';
   const recommendedSize = imageTypeHint === 'icon' ? '128×128 or 256×256' : '800×600 or larger';
 

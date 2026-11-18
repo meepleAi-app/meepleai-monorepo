@@ -18,8 +18,11 @@ import { useEffect, type ComponentPropsWithRef, type JSX, type ReactNode } from 
 import { isBlockedImageHost } from '@/lib/games/cover-utils';
 import { reportBggAttempt } from '@/lib/images/bgg-attempt-beacon';
 
-export type SafeImgProps = Omit<ComponentPropsWithRef<'img'>, 'src'> & {
+// `srcSet` is left out: a browser prefers it to `src`, and its candidates would skip the check (#5072).
+export type SafeImgProps = Omit<ComponentPropsWithRef<'img'>, 'src' | 'srcSet' | 'alt'> & {
   src: string | null | undefined;
+  /** Required, as on an `<img>`: `""` for a decorative image. */
+  alt: string;
   /** Rendered instead of the image when `src` is missing or names a BGG host. */
   fallback?: ReactNode;
   /** Admin BGG search only (#5072, ADR-059 §5.6). */

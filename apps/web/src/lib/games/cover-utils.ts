@@ -39,6 +39,15 @@ const BLOCKED_IMAGE_HOSTS: readonly string[] = [
 const SAME_ORIGIN_BASE = 'https://same-origin.invalid/';
 
 /**
+ * #5072: the page can be https (production) or http (local dev, E2E). `https:host/…` is a path on an https page and
+ * another host on an http one, so a URL is resolved against both, and either reading counts.
+ */
+const PAGE_BASES: readonly string[] = [SAME_ORIGIN_BASE, 'http://same-origin.invalid/'];
+
+/** A local preview: no request leaves the browser, and a data URL can be megabytes long (#5072). */
+const LOCAL_PREVIEW = /^\s*(?:data|blob):/i;
+
+/**
  * True for a path on this origin: a single leading "/". `//host/…` is protocol-relative and `/\host/…` is read
  * the same way by browsers (backslash as slash), so both name another host (#5066).
  */
@@ -97,15 +106,17 @@ function isBggImageHostname(host: string): boolean {
  * SSR-safe.
  */
 export function isBlockedImageHost(imageUrl: string | null | undefined): boolean {
-  const trimmed = imageUrl?.trim();
+  if (!imageUrl || LOCAL_PREVIEW.test(imageUrl)) return false;
+  const trimmed = imageUrl.trim();
   if (!trimmed) return false;
 
-  try {
-    const host = new URL(trimmed, SAME_ORIGIN_BASE).hostname.toLowerCase().replace(/\.+$/, '');
-    return isBggImageHostname(host);
-  } catch {
-    return false;
-  }
+  return PAGE_BASES.some(base => {
+    try {
+      return isBggImageHostname(new URL(trimmed, base).hostname.toLowerCase().replace(/\.+$/, ''));
+    } catch {
+      return false;
+    }
+  });
 }
 
 /**

@@ -270,23 +270,22 @@ function EntityTableRow({ card, onRowClick, isLast }: EntityTableRowProps) {
       {/* Titolo */}
       <td className={`px-3.5 py-2.5 ${borderBottomClass}`}>
         <div className="flex items-center gap-2.5">
-          {card.imageUrl ? (
-            // Same convention as Cover.tsx: plain <img> for arbitrary remote URLs.
-            <SafeImg
-              src={card.imageUrl}
-              alt=""
-              className="h-8 w-8 flex-shrink-0 rounded-md object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div
-              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-sm"
-              style={{ background: entityHsl(card.entity, 0.15), color }}
-              aria-hidden
-            >
-              {entityIcon[card.entity]}
-            </div>
-          )}
+          {/* Same convention as Cover.tsx: an <img> for arbitrary remote URLs, guarded by SafeImg (#5072). */}
+          <SafeImg
+            src={card.imageUrl}
+            alt=""
+            className="h-8 w-8 flex-shrink-0 rounded-md object-cover"
+            loading="lazy"
+            fallback={
+              <div
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-sm"
+                style={{ background: entityHsl(card.entity, 0.15), color }}
+                aria-hidden
+              >
+                {entityIcon[card.entity]}
+              </div>
+            }
+          />
           <div className="min-w-0">
             <div className="truncate font-[var(--font-quicksand)] text-[0.85rem] font-bold text-[var(--mc-text-primary)]">
               {card.title}

@@ -37,6 +37,8 @@ import type { JSX } from 'react';
 
 import Link from 'next/link';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
+
 import { DashboardSection } from './DashboardSection';
 import { SectionSkeleton } from './SectionSkeleton';
 
@@ -134,22 +136,20 @@ export function SuggestedSection({ state, games }: SuggestedSectionProps): JSX.E
                 }}
                 data-testid={`suggested-cover-${g.id}`}
               >
-                {g.coverImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- avoid Next/Image domain config for community-provided BGG URLs (alignment with GamesCarousel:86)
-                  <img
-                    src={g.coverImageUrl}
-                    alt=""
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                ) : (
-                  <span
-                    className="text-[36px]"
-                    style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}
-                  >
-                    🎲
-                  </span>
-                )}
+                <SafeImg
+                  src={g.coverImageUrl}
+                  alt=""
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  fallback={
+                    <span
+                      className="text-[36px]"
+                      style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}
+                    >
+                      🎲
+                    </span>
+                  }
+                />
               </div>
               <div className="flex flex-col gap-1 px-3 pb-3 pt-1">
                 <h3 className="line-clamp-2 font-quicksand text-[13px] font-extrabold text-foreground">

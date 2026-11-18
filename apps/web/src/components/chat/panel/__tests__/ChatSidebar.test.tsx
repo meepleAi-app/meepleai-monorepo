@@ -4,6 +4,12 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { ChatSidebar } from '../ChatSidebar';
 
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
+const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+const ALLOWED = 'https://covers.meepleai.app/abc/cover.webp';
+
 describe('ChatSidebar', () => {
   const chats = [
     { id: 'c1', emoji: '🎨', title: 'Azul · Turno finale', timestamp: 'Oggi, 14:32', active: true },
@@ -109,5 +115,27 @@ describe('ChatSidebar', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Everdell' }));
     expect(onSelectGame).toHaveBeenCalledWith('everd');
+  });
+
+  it('shows the dice instead of a BGG game image, and an allowed one as an <img> (#5072)', () => {
+    reportBggAttempt.mockClear();
+    const { container } = render(
+      <ChatSidebar
+        chats={chats}
+        kbGames={[
+          { id: 'azul', name: 'Azul', status: 'ready', imageUrl: BGG },
+          { id: 'wings', name: 'Wingspan', status: 'ready', imageUrl: ALLOWED },
+        ]}
+        onNewChat={() => {}}
+        onSelectChat={() => {}}
+        onSelectGame={() => {}}
+      />
+    );
+
+    const srcs = Array.from(container.querySelectorAll('img'), img => img.getAttribute('src'));
+    expect(srcs.some(src => src?.includes('geekdo-images'))).toBe(false);
+    expect(srcs).toEqual([ALLOWED]);
+    expect(screen.getByRole('button', { name: 'Azul' })).toHaveTextContent('🎲');
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
   });
 });

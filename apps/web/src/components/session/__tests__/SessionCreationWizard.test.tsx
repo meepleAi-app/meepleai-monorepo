@@ -5,7 +5,7 @@
  * - #4156: after "Crea Sessione" the wizard lands on the live page of the session it created.
  */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, onTestFinished, vi } from 'vitest';
 
 import { SessionCreationWizard } from '../SessionCreationWizard';
 
@@ -21,6 +21,15 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/lib/api', () => ({ api: { liveSessions: { createSession, addPlayer, startSession } } }));
+
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
+const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+const ALLOWED = 'https://covers.meepleai.app/abc/cover.webp';
+
+// The cover of the game the mocked picker selects; undefined unless a test sets it.
+const pickedImageUrl = vi.hoisted(() => ({ value: undefined as string | undefined }));
 
 // #4750: chi crea la sessione è il primo giocatore. L'utente corrente arriva da questo hook.
 type TestUser = { id: string; email: string; displayName?: string | null; role: string };
@@ -43,9 +52,14 @@ vi.mock('@/components/features/game-picker', () => ({
   GamePicker: ({
     onChange,
   }: {
-    onChange: (game: { id: string; title: string; manual: boolean }) => void;
+    onChange: (game: { id: string; title: string; manual: boolean; imageUrl?: string }) => void;
   }) => (
-    <button type="button" onClick={() => onChange({ id: 'g1', title: 'Test Game', manual: true })}>
+    <button
+      type="button"
+      onClick={() =>
+        onChange({ id: 'g1', title: 'Test Game', manual: true, imageUrl: pickedImageUrl.value })
+      }
+    >
       mock-select-game
     </button>
   ),
@@ -87,6 +101,35 @@ describe('SessionCreationWizard', () => {
 
     await waitFor(() => expect(push).toHaveBeenCalledWith('/sessions/live-1/live'));
     expect(startSession).toHaveBeenCalledWith('live-1');
+  });
+
+  it('never renders a BGG cover in the review step, and renders an allowed one (#5072)', () => {
+    onTestFinished(() => {
+      pickedImageUrl.value = undefined;
+    });
+    const reviewImgSrcs = (imageUrl: string) => {
+      pickedImageUrl.value = imageUrl;
+      const { container, unmount } = render(<SessionCreationWizard />);
+      fireEvent.click(screen.getByText('mock-select-game'));
+      fireEvent.click(screen.getByText('Avanti')); // game → scoring
+      fireEvent.click(screen.getByText('Avanti')); // scoring → players
+      fireEvent.change(screen.getByPlaceholderText('Nome giocatore'), {
+        target: { value: 'Marco' },
+      });
+      fireEvent.click(screen.getByText('Aggiungi'));
+      fireEvent.click(screen.getByText('Avanti')); // players → review
+      expect(screen.getByText('Riepilogo')).toBeInTheDocument();
+      expect(screen.getByText('Test Game')).toBeInTheDocument();
+      const srcs = Array.from(container.querySelectorAll('img'), img => img.getAttribute('src'));
+      unmount();
+      return srcs;
+    };
+
+    const bggSrcs = reviewImgSrcs(BGG);
+    expect(bggSrcs.some(src => src?.includes('geekdo-images'))).toBe(false);
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
+
+    expect(reviewImgSrcs(ALLOWED)).toEqual([ALLOWED]);
   });
 });
 

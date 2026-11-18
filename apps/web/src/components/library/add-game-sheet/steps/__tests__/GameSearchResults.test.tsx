@@ -3,9 +3,19 @@
  * Issue #4819: AddGameSheet Step 1 - Game Source
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GameSearchResults, type GameSearchResultItem } from '../GameSearchResults';
+
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
+const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+const ALLOWED = 'https://covers.meepleai.app/abc/cover.webp';
+
+beforeEach(() => {
+  reportBggAttempt.mockClear();
+});
 
 const mockResults: GameSearchResultItem[] = [
   {
@@ -87,5 +97,25 @@ describe('GameSearchResults', () => {
     ];
     render(<GameSearchResults results={samePlayerGame} loading={false} onSelect={vi.fn()} />);
     expect(screen.getByText('1 giocatori')).toBeInTheDocument();
+  });
+
+  it('never renders a BGG thumbnail: the 🎲 placeholder instead, and the beacon fires (#5072)', () => {
+    const { container } = render(
+      <GameSearchResults
+        results={[
+          { ...mockResults[0], thumbnailUrl: BGG },
+          { ...mockResults[1], thumbnailUrl: ALLOWED },
+        ]}
+        loading={false}
+        onSelect={vi.fn()}
+      />
+    );
+
+    const [bggRow, allowedRow] = screen.getAllByRole('button');
+    expect(container.querySelector('img[src*="geekdo-images"]')).toBeNull();
+    expect(bggRow.querySelector('img')).toBeNull();
+    expect(bggRow).toHaveTextContent('🎲');
+    expect(allowedRow.querySelector('img')).toHaveAttribute('src', ALLOWED);
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
   });
 });

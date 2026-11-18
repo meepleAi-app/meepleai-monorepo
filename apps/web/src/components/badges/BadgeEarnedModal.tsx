@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Confetti from 'react-confetti';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
@@ -140,16 +141,12 @@ export function BadgeEarnedModal({ badge, onClose, onShare }: BadgeEarnedModalPr
                   }}
                 >
                   <div className="flex h-full w-full items-center justify-center rounded-full bg-background">
-                    {badge.iconUrl ? (
-                      /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
-                      <img
-                        src={badge.iconUrl}
-                        alt={badge.name}
-                        className="h-20 w-20 object-contain"
-                      />
-                    ) : (
-                      <span className="text-6xl">{getTierIcon(badge.tier)}</span>
-                    )}
+                    <SafeImg
+                      src={badge.iconUrl}
+                      alt={badge.name}
+                      className="h-20 w-20 object-contain"
+                      fallback={<span className="text-6xl">{getTierIcon(badge.tier)}</span>}
+                    />
                   </div>
                 </motion.div>
               </motion.div>

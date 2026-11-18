@@ -18,6 +18,7 @@
 import { useState } from 'react';
 import type { JSX } from 'react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -80,8 +81,7 @@ export function CoverPagePicker({
       {pdfDocumentId && (
         // Dynamic API-served page preview (not a static/optimizable asset);
         // matches CoverImagePicker.tsx's PDF-page-preview pattern.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <SafeImg
           src={api.sharedGames.getPdfPageImageUrl(pdfDocumentId, page)}
           alt={`Anteprima pagina ${page}`}
           className="max-h-48 rounded border border-border object-contain"

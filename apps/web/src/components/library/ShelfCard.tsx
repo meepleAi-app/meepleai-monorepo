@@ -16,6 +16,7 @@ import React from 'react';
 import { Plus, Check } from 'lucide-react';
 
 import { entityHsl } from '@/components/ui/data-display/meeple-card';
+import { cssImageUrl } from '@/lib/images/css-image-url';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -98,8 +99,10 @@ export function ShelfCard({
   // ------------------------------------------------------------------
   // Cover background style
   // ------------------------------------------------------------------
-  const coverStyle: React.CSSProperties = imageUrl
-    ? { backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+  // #5072: a BGG cover (#2123, ADR-059 §5) counts as no cover.
+  const coverImage = cssImageUrl(imageUrl);
+  const coverStyle: React.CSSProperties = coverImage
+    ? { backgroundImage: coverImage, backgroundSize: 'cover', backgroundPosition: 'center' }
     : coverGradient
       ? { background: coverGradient }
       : { background: 'linear-gradient(135deg, hsl(220 15% 20%), hsl(220 15% 30%))' };
@@ -138,7 +141,7 @@ export function ShelfCard({
       {/* ------------------------------------------------------------------ */}
       <div className="relative h-[100px] overflow-hidden" style={coverStyle}>
         {/* Fallback cover icon when no image */}
-        {!imageUrl && coverIcon && (
+        {!coverImage && coverIcon && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-3xl select-none" aria-hidden="true">
               {coverIcon}

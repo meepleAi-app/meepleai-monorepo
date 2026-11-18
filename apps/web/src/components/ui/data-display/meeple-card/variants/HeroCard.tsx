@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
 
 import { GameCoverPlaceholder } from '../parts/GameCoverPlaceholder';
@@ -60,7 +61,7 @@ export function HeroCard(props: MeepleCardProps) {
           </div>
         )
       ) : (
-        <img
+        <SafeImg
           src={imageUrl}
           alt={title}
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
@@ -117,7 +118,11 @@ export function HeroCard(props: MeepleCardProps) {
           >
             {metadata.map((entry, idx) => (
               <span key={`${entry.label}-${idx}`} className="flex items-center gap-2">
-                {idx > 0 && <span aria-hidden="true" className="text-white/40">·</span>}
+                {idx > 0 && (
+                  <span aria-hidden="true" className="text-white/40">
+                    ·
+                  </span>
+                )}
                 <span>{entry.label}</span>
               </span>
             ))}

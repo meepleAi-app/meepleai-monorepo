@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 
 import { Gamepad2, Sparkles } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { cn } from '@/lib/utils';
 import type { GameNightGame } from '@/stores/game-night';
 
@@ -72,15 +73,12 @@ export function InlineGamePicker({
             </span>
           )}
           <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center">
-            {game.thumbnailUrl ? (
-              <img
-                src={game.thumbnailUrl}
-                alt={game.title}
-                className="h-full w-full rounded-lg object-cover"
-              />
-            ) : (
-              <Gamepad2 className="h-6 w-6 text-muted-foreground" />
-            )}
+            <SafeImg
+              src={game.thumbnailUrl}
+              alt={game.title}
+              className="h-full w-full rounded-lg object-cover"
+              fallback={<Gamepad2 className="h-6 w-6 text-muted-foreground" />}
+            />
           </div>
           <span className="text-xs font-medium text-foreground text-center line-clamp-2">
             {game.title}

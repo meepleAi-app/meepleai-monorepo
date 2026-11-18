@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 
 import clsx from 'clsx';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { GameNightPhotoDto } from '@/lib/api/schemas/game-nights.schemas';
@@ -114,8 +115,7 @@ export function GameNightPhotoGallery({
                 aria-label={alt}
                 className="h-full w-full overflow-hidden rounded-md border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- thumbnail tile */}
-                <img
+                <SafeImg
                   src={p.thumbnailUrl ?? p.photoUrl}
                   alt=""
                   aria-hidden="true"
@@ -143,8 +143,7 @@ export function GameNightPhotoGallery({
           <DialogTitle className="sr-only">{active?.caption ?? fallbackAlt}</DialogTitle>
           {active && (
             <div className="flex flex-col gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element -- full-res lightbox */}
-              <img
+              <SafeImg
                 src={active.photoUrl}
                 alt={active.caption ?? fallbackAlt}
                 className="max-h-[70vh] w-full rounded-md object-contain"

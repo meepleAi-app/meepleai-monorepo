@@ -11,6 +11,7 @@ import { useState, useCallback, useMemo } from 'react';
 
 import { Save, Loader2, AlertCircle, Tag } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
@@ -221,7 +222,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
       {/* Image preview + source */}
       {selectedGame?.imageUrl && (
         <div className="flex items-center gap-3">
-          <img
+          <SafeImg
             src={selectedGame.thumbnailUrl ?? selectedGame.imageUrl}
             alt={selectedGame.title}
             className="h-16 w-16 rounded-lg object-cover bg-card"

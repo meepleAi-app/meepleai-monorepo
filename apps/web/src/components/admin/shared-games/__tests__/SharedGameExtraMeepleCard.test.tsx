@@ -101,6 +101,9 @@ const baseData: SharedGameDetailData = {
   ],
 };
 
+const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+const ALLOWED = 'https://covers.meepleai.app/abc/cover.webp';
+
 const emptyData: SharedGameDetailData = {
   ...baseData,
   documents: [],
@@ -290,6 +293,26 @@ describe('SharedGameExtraMeepleCard', () => {
     await user.click(screen.getByRole('tab', { name: /kb cards/i }));
 
     expect(screen.getByText('Nessuna KB card generata')).toBeInTheDocument();
+  });
+
+  // #5072: a BGG cover (#2123, ADR-059 §5) is treated as no cover: the plain hsl header.
+  it('treats a BGG cover as no cover: the plain header (#5072)', () => {
+    const header = (imageUrl: string | undefined) => {
+      const { unmount } = render(
+        <SharedGameExtraMeepleCard data={{ ...baseData, imageUrl }} data-testid="sgcard" />
+      );
+      const area = screen.getByTestId('sgcard').firstElementChild!;
+      const html = area.outerHTML;
+      const coverStyle = area.firstElementChild!.getAttribute('style');
+      unmount();
+      return { html, coverStyle };
+    };
+
+    const noCover = header(undefined);
+    expect(header(BGG).html).toBe(noCover.html);
+    expect(header(ALLOWED).coverStyle).toContain(
+      'url("https://covers.meepleai.app/abc/cover.webp")'
+    );
   });
 
   // ---------- Misc ----------

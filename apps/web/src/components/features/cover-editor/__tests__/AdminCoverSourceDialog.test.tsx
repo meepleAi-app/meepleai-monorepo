@@ -9,6 +9,9 @@ vi.mock('@/hooks/admin/useAssignCover', () => ({ useAssignCover: vi.fn() }));
 vi.mock('@/hooks/admin/useRemoveCoverAssignment', () => ({ useRemoveCoverAssignment: vi.fn() }));
 vi.mock('@/hooks/admin/useSetManualCover', () => ({ useSetManualCover: vi.fn() }));
 
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
 import { useCoverCandidates } from '@/hooks/admin/useCoverCandidates';
 import { useAssignCover } from '@/hooks/admin/useAssignCover';
 import { useRemoveCoverAssignment } from '@/hooks/admin/useRemoveCoverAssignment';
@@ -17,6 +20,8 @@ import { useSetManualCover } from '@/hooks/admin/useSetManualCover';
 import { AdminCoverSourceDialog } from '../AdminCoverSourceDialog';
 
 const GID = '550e8400-e29b-41d4-a716-446655440000';
+const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+const ALLOWED = 'https://covers.meepleai.app/abc/cover.webp';
 
 const mockUseCandidates = useCoverCandidates as unknown as ReturnType<typeof vi.fn>;
 const mockUseAssign = useAssignCover as unknown as ReturnType<typeof vi.fn>;
@@ -276,5 +281,32 @@ describe('AdminCoverSourceDialog', () => {
       'aria-pressed',
       'false'
     );
+  });
+
+  it('never renders a BGG candidate thumbnail, and renders an allowed one (#5072)', () => {
+    // Wikidata (BGG) is not the selected source, so the focal picker below never receives it.
+    const [pdf, wiki] = candidatesData.candidates;
+    setCandidates({
+      data: {
+        ...candidatesData,
+        candidates: [
+          { ...pdf, previewUrl: ALLOWED },
+          { ...wiki, previewUrl: BGG },
+        ],
+      },
+    });
+    renderDialog();
+
+    const srcs = Array.from(screen.getByRole('dialog').querySelectorAll('img'), img =>
+      img.getAttribute('src')
+    );
+    expect(srcs.some(src => src?.includes('geekdo-images'))).toBe(false);
+    const wikiCard = screen.getByRole('button', { name: /wikidata/i });
+    expect(within(wikiCard).queryByRole('img')).not.toBeInTheDocument();
+    expect(within(wikiCard).getByText('CC BY-SA 4.0')).toBeInTheDocument();
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
+    expect(
+      within(screen.getByRole('button', { name: /Copertina PDF/i })).getByRole('img')
+    ).toHaveAttribute('src', ALLOWED);
   });
 });

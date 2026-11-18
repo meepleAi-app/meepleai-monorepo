@@ -29,6 +29,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/data-display/card';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Separator } from '@/components/ui/navigation/separator';
 import {
   Select,
@@ -484,22 +485,20 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
               )}
               {/* Image Preview */}
               <div className="mt-2 border rounded-lg p-2 bg-muted/50">
-                {imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={imageUrl}
-                    alt="Preview"
-                    className="w-full h-40 object-contain rounded"
-                    onError={e => {
-                      (e.target as HTMLImageElement).src = '';
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-40 flex items-center justify-center text-muted-foreground">
-                    <ImageIcon className="h-12 w-12" />
-                  </div>
-                )}
+                <SafeImg
+                  src={imageUrl}
+                  alt="Preview"
+                  className="w-full h-40 object-contain rounded"
+                  onError={e => {
+                    (e.target as HTMLImageElement).src = '';
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                  fallback={
+                    <div className="w-full h-40 flex items-center justify-center text-muted-foreground">
+                      <ImageIcon className="h-12 w-12" />
+                    </div>
+                  }
+                />
               </div>
             </div>
 
@@ -517,22 +516,20 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
               )}
               {/* Thumbnail Preview */}
               <div className="mt-2 border rounded-lg p-2 bg-muted/50">
-                {thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={thumbnailUrl}
-                    alt="Thumbnail Preview"
-                    className="w-full h-40 object-contain rounded"
-                    onError={e => {
-                      (e.target as HTMLImageElement).src = '';
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-40 flex items-center justify-center text-muted-foreground">
-                    <ImageIcon className="h-12 w-12" />
-                  </div>
-                )}
+                <SafeImg
+                  src={thumbnailUrl}
+                  alt="Thumbnail Preview"
+                  className="w-full h-40 object-contain rounded"
+                  onError={e => {
+                    (e.target as HTMLImageElement).src = '';
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                  fallback={
+                    <div className="w-full h-40 flex items-center justify-center text-muted-foreground">
+                      <ImageIcon className="h-12 w-12" />
+                    </div>
+                  }
+                />
               </div>
             </div>
           </div>

@@ -8,6 +8,7 @@
 'use client';
 
 import { Badge } from '@/components/ui/data-display/badge';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 
 export interface GameSearchResultItem {
@@ -53,16 +54,15 @@ export function GameSearchResults({ results, loading, onSelect }: GameSearchResu
         >
           {/* Thumbnail */}
           <div className="w-12 h-12 rounded-lg bg-card overflow-hidden flex-shrink-0">
-            {game.thumbnailUrl ? (
-              <img
-                src={game.thumbnailUrl}
-                alt=""
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-xl">🎲</div>
-            )}
+            <SafeImg
+              src={game.thumbnailUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              loading="lazy"
+              fallback={
+                <div className="w-full h-full flex items-center justify-center text-xl">🎲</div>
+              }
+            />
           </div>
 
           {/* Info */}

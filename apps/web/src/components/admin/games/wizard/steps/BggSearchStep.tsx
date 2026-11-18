@@ -10,9 +10,9 @@
 import { useState, useDeferredValue } from 'react';
 
 import { SearchIcon, CalendarIcon, LoaderCircleIcon, AlertTriangleIcon } from 'lucide-react';
-import Image from 'next/image';
 
 import { Card, CardContent } from '@/components/ui/data-display/card';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Input } from '@/components/ui/primitives/input';
 import { useSearchBggGames } from '@/hooks/queries/useSearchBggGames';
 import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
@@ -125,12 +125,13 @@ function BggGameCard({
       <CardContent className="flex items-center gap-3 p-3">
         {/* Thumbnail */}
         {game.thumbnailUrl ? (
-          <Image
+          // BGG's own thumbnail, in the admin's browser only: the exception of #5072 (ADR-059 §5.6).
+          <SafeImg
             src={game.thumbnailUrl}
             alt={game.name}
             width={64}
             height={64}
-            unoptimized
+            allowBggHost
             className="h-16 w-16 rounded-lg object-cover shrink-0 bg-muted dark:bg-zinc-700"
           />
         ) : (

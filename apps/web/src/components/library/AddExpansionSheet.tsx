@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { CheckCircle, Loader2, Search, X } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -257,18 +258,17 @@ export function AddExpansionSheet({
                     >
                       {/* Thumbnail */}
                       <div className="w-10 h-10 rounded bg-card overflow-hidden flex-shrink-0">
-                        {result.thumbnailUrl ? (
-                          <img
-                            src={result.thumbnailUrl}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-lg">
-                            🎲
-                          </div>
-                        )}
+                        <SafeImg
+                          src={result.thumbnailUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          fallback={
+                            <div className="w-full h-full flex items-center justify-center text-lg">
+                              🎲
+                            </div>
+                          }
+                        />
                       </div>
 
                       {/* Info */}

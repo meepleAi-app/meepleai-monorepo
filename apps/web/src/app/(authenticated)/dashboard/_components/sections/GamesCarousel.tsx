@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import type { Game } from '@/lib/api/schemas/games.schemas';
 
 import { DashboardSection } from './DashboardSection';
@@ -81,22 +82,20 @@ export function GamesCarousel({
                     background: coverGradient(g.id),
                   }}
                 >
-                  {cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- avoid Next/Image domain config for community-provided BGG URLs
-                    <img
-                      src={cover}
-                      alt=""
-                      loading="lazy"
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span
-                      className="text-[36px]"
-                      style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}
-                    >
-                      🎲
-                    </span>
-                  )}
+                  <SafeImg
+                    src={cover}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                    fallback={
+                      <span
+                        className="text-[36px]"
+                        style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))' }}
+                      >
+                        🎲
+                      </span>
+                    }
+                  />
                 </div>
                 <div className="px-2 pb-2 pt-0.5">
                   <div className="line-clamp-1 font-quicksand text-xs font-extrabold text-foreground">

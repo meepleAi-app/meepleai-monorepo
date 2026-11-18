@@ -23,6 +23,7 @@ import type { JSX } from 'react';
 
 import Link from 'next/link';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { useCascadeNavigationStore } from '@/lib/stores/cascade-navigation-store';
 
 import { DashboardSection } from './DashboardSection';
@@ -175,8 +176,7 @@ export function RecentiSection({
                         key={`${gn.id}-thumb-${i}`}
                         className="h-8 w-8 overflow-hidden rounded-sm border border-border bg-muted"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element -- avoid Next/Image domain config for community-provided BGG URLs (alignment with GamesCarousel:86) */}
-                        <img src={url} alt="" className="h-full w-full object-cover" />
+                        <SafeImg src={url} alt="" className="h-full w-full object-cover" />
                       </li>
                     ))}
                   </ul>

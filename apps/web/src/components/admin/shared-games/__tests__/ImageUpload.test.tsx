@@ -37,12 +37,7 @@ describe('ImageUpload', () => {
   });
 
   it('renders with custom label', () => {
-    render(
-      <ImageUpload
-        onFileChange={mockOnFileChange}
-        label="Game Icon"
-      />
-    );
+    render(<ImageUpload onFileChange={mockOnFileChange} label="Game Icon" />);
 
     expect(screen.getByText('Game Icon')).toBeInTheDocument();
   });
@@ -55,12 +50,7 @@ describe('ImageUpload', () => {
   });
 
   it('switches between file and URL modes', async () => {
-    render(
-      <ImageUpload
-        onFileChange={mockOnFileChange}
-        onUrlChange={mockOnUrlChange}
-      />
-    );
+    render(<ImageUpload onFileChange={mockOnFileChange} onUrlChange={mockOnUrlChange} />);
 
     // Initially in file mode
     expect(screen.getByText(/Drop image or click to upload/)).toBeInTheDocument();
@@ -149,12 +139,7 @@ describe('ImageUpload', () => {
   });
 
   it('handles URL input change', async () => {
-    render(
-      <ImageUpload
-        onFileChange={mockOnFileChange}
-        onUrlChange={mockOnUrlChange}
-      />
-    );
+    render(<ImageUpload onFileChange={mockOnFileChange} onUrlChange={mockOnUrlChange} />);
 
     // Switch to URL mode
     fireEvent.click(screen.getByRole('button', { name: /url/i }));
@@ -166,13 +151,7 @@ describe('ImageUpload', () => {
   });
 
   it('shows upload progress when isUploading', () => {
-    render(
-      <ImageUpload
-        onFileChange={mockOnFileChange}
-        isUploading={true}
-        uploadProgress={50}
-      />
-    );
+    render(<ImageUpload onFileChange={mockOnFileChange} isUploading={true} uploadProgress={50} />);
 
     expect(screen.getByText(/Uploading... 50%/)).toBeInTheDocument();
   });
@@ -189,13 +168,21 @@ describe('ImageUpload', () => {
     expect(img).toHaveAttribute('src', 'https://example.com/existing.jpg');
   });
 
-  it('disables input when disabled prop is true', () => {
+  // #5072: a BGG current image (#2123, ADR-059 §5) is not rendered; the dropzone shows its prompt, not a blank preview.
+  it('shows the upload prompt instead of a BGG current image (#5072)', () => {
     render(
       <ImageUpload
         onFileChange={mockOnFileChange}
-        disabled={true}
+        currentImageUrl="https://cf.geekdo-images.com/abc/pic1.jpg"
       />
     );
+
+    expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
+    expect(screen.getByText('Drop image or click to upload')).toBeInTheDocument();
+  });
+
+  it('disables input when disabled prop is true', () => {
+    render(<ImageUpload onFileChange={mockOnFileChange} disabled={true} />);
 
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     expect(input).toBeDisabled();
@@ -224,23 +211,13 @@ describe('ImageUpload', () => {
   });
 
   it('shows recommended size for icon type', () => {
-    render(
-      <ImageUpload
-        onFileChange={mockOnFileChange}
-        imageTypeHint="icon"
-      />
-    );
+    render(<ImageUpload onFileChange={mockOnFileChange} imageTypeHint="icon" />);
 
     expect(screen.getByText(/128×128 or 256×256/)).toBeInTheDocument();
   });
 
   it('shows recommended size for cover type', () => {
-    render(
-      <ImageUpload
-        onFileChange={mockOnFileChange}
-        imageTypeHint="cover"
-      />
-    );
+    render(<ImageUpload onFileChange={mockOnFileChange} imageTypeHint="cover" />);
 
     expect(screen.getByText(/800×600 or larger/)).toBeInTheDocument();
   });

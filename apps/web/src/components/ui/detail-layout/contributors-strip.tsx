@@ -20,6 +20,8 @@ import type { JSX } from 'react';
 
 import clsx from 'clsx';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
+
 export interface ContributorAvatar {
   readonly id: string;
   readonly name: string;
@@ -96,16 +98,12 @@ export function ContributorsStrip({
               }}
               title={c.name}
             >
-              {c.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={c.avatarUrl}
-                  alt={c.name}
-                  className="h-full w-full rounded-full object-cover"
-                />
-              ) : (
-                <span aria-label={c.name}>{initials(c.name)}</span>
-              )}
+              <SafeImg
+                src={c.avatarUrl}
+                alt={c.name}
+                className="h-full w-full rounded-full object-cover"
+                fallback={<span aria-label={c.name}>{initials(c.name)}</span>}
+              />
             </li>
           ))}
           {overflow > 0 ? (

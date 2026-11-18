@@ -15,7 +15,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect } from 'vitest';
 
 import { vi } from 'vitest';
 
@@ -32,7 +32,14 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
 import { SuggestedSection, type SuggestedGameCard } from '../SuggestedSection';
+
+beforeEach(() => {
+  reportBggAttempt.mockClear();
+});
 
 const baseGames: readonly SuggestedGameCard[] = [
   {
@@ -93,6 +100,18 @@ describe('SuggestedSection', () => {
     expect(cover.querySelector('img')).toBeNull();
     // The placeholder is the dice emoji `🎲` rendered inside the cover.
     expect(cover.textContent).toContain('🎲');
+  });
+
+  it('never renders a BGG cover: the 🎲 placeholder instead, and the beacon fires (#5072)', () => {
+    const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+    const { container } = render(
+      <SuggestedSection state="default" games={[{ ...baseGames[0], coverImageUrl: BGG }]} />
+    );
+    const cover = screen.getByTestId('suggested-cover-g-1');
+    expect(container.querySelector('img[src*="geekdo-images"]')).toBeNull();
+    expect(cover.querySelector('img')).toBeNull();
+    expect(cover.textContent).toContain('🎲');
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
   });
 
   it('links each card to /library/[id]', () => {

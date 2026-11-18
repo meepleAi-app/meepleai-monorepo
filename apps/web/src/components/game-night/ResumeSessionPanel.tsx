@@ -12,6 +12,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Camera, Clock, Play, Trophy, Users } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { SessionResumeContext } from '@/lib/api/schemas/save-resume.schemas';
@@ -109,7 +110,7 @@ export function ResumeSessionPanel({ sessionId, onResume, className }: ResumeSes
                 className="h-10 w-10 rounded bg-muted dark:bg-card overflow-hidden"
               >
                 {photo.thumbnailUrl && (
-                  <img
+                  <SafeImg
                     src={photo.thumbnailUrl}
                     alt={photo.caption ?? 'Foto sessione'}
                     className="h-full w-full object-cover"

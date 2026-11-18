@@ -10,6 +10,7 @@ import { useState, useRef, useCallback } from 'react';
 
 import { Upload, X, ImagePlus } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { cn } from '@/lib/utils';
 
 interface SnapshotUploadDialogProps {
@@ -84,9 +85,7 @@ export function SnapshotUploadDialog({
       <div className="mx-4 w-full max-w-md rounded-2xl border border-[var(--border)] bg-card p-5 shadow-xl">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-quicksand text-lg font-bold text-[var(--text)]">
-            Nuovo Snapshot
-          </h3>
+          <h3 className="font-quicksand text-lg font-bold text-[var(--text)]">Nuovo Snapshot</h3>
           <button
             type="button"
             onClick={handleClose}
@@ -129,7 +128,7 @@ export function SnapshotUploadDialog({
           <div className="mb-4 flex flex-wrap gap-2">
             {previews.map((p, idx) => (
               <div key={p.url} className="group relative">
-                <img
+                <SafeImg
                   src={p.url}
                   alt={`Anteprima ${idx + 1}`}
                   className="h-16 w-20 rounded-lg border border-border object-cover"

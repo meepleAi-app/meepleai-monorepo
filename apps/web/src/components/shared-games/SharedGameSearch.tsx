@@ -22,6 +22,7 @@ import { Search, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -309,17 +310,15 @@ function SharedGameSearchResultItem({ game, onClick }: SharedGameSearchResultIte
     >
       {/* Thumbnail */}
       <div className="w-12 h-12 rounded-md bg-muted overflow-hidden flex-shrink-0">
-        {game.thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={game.thumbnailUrl}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl">🎲</div>
-        )}
+        <SafeImg
+          src={game.thumbnailUrl}
+          alt=""
+          className="w-full h-full object-cover"
+          loading="lazy"
+          fallback={
+            <div className="w-full h-full flex items-center justify-center text-2xl">🎲</div>
+          }
+        />
       </div>
 
       {/* Info */}

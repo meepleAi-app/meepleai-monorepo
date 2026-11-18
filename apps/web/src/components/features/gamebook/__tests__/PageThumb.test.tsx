@@ -208,6 +208,21 @@ describe('PageThumb — thumbnail rendering', () => {
     expect(img.style.background).toContain('blob:abc-123');
   });
 
+  // #5072: a BGG thumbnail (#2123, ADR-059 §5) is treated as none: the placeholder gradient.
+  it('treats a BGG thumbnailUrl as none: the placeholder gradient (#5072)', () => {
+    const background = (thumbnailUrl: string | null) => {
+      const { unmount } = renderThumb({ thumbnailUrl, processing: false });
+      const value = (document.querySelector('[data-slot="page-thumb-img"]') as HTMLElement).style
+        .background;
+      unmount();
+      return value;
+    };
+
+    const none = background(null);
+    expect(none).toContain('linear-gradient');
+    expect(background('https://cf.geekdo-images.com/abc/pic1.jpg')).toBe(none);
+  });
+
   it('renders deterministic placeholder gradient when thumbnailUrl=null AND !processing', () => {
     renderThumb({ thumbnailUrl: null, processing: false });
     const img = document.querySelector('[data-slot="page-thumb-img"]') as HTMLElement;

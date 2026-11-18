@@ -184,6 +184,32 @@ describe('GameSearchCard (catalog source)', () => {
     const cover = document.querySelector('[data-slot="game-search-card-cover"]');
     expect(cover?.textContent?.trim().length).toBeGreaterThan(0);
   });
+
+  // #5072: a BGG cover (#2123, ADR-059 §5) is treated as no cover: the gradient and the emoji. The whole cover
+  // block is compared, not only its style, so a missing emoji counts as a difference.
+  it('treats a BGG cover as no cover: the gradient and the emoji (#5072)', () => {
+    const coverBlock = (coverImageUrl: string | null) => {
+      const { unmount } = render(
+        <GameSearchCard
+          game={{ ...CATALOG_GAME, coverImageUrl }}
+          source="catalog"
+          isSelected={false}
+          onClick={vi.fn()}
+          labels={LABELS}
+        />
+      );
+      const html = document.querySelector('[data-slot="game-search-card-cover"]')!.outerHTML;
+      unmount();
+      return html;
+    };
+
+    const noCover = coverBlock(null);
+    expect(noCover).toMatch(/linear-gradient/);
+    expect(coverBlock('https://cf.geekdo-images.com/abc/pic1.jpg')).toBe(noCover);
+    expect(coverBlock('https://covers.meepleai.app/abc/cover.webp')).toContain(
+      'url(&quot;https://covers.meepleai.app/abc/cover.webp&quot;)'
+    );
+  });
 });
 
 describe('GameSearchCard selection state', () => {

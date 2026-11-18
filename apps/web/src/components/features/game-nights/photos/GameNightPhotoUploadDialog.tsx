@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { toast } from 'sonner';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import {
   Dialog,
   DialogContent,
@@ -111,8 +112,7 @@ export function GameNightPhotoUploadDialog({
         </label>
 
         {previewUrl && (
-          // eslint-disable-next-line @next/next/no-img-element -- local object-URL preview
-          <img
+          <SafeImg
             src={previewUrl}
             alt={t('gameNightDetail.photos.previewAlt')}
             className="max-h-48 w-full rounded-md object-contain"

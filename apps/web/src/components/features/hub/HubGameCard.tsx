@@ -11,6 +11,7 @@
 
 import Link from 'next/link';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
 import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
@@ -53,8 +54,7 @@ export function HubGameCard({ game, onClick }: HubGameCardProps) {
         className="relative flex aspect-[5/3] items-center justify-center bg-gradient-to-br from-[hsl(var(--c-game)/0.18)] to-[hsl(var(--c-game)/0.04)] text-4xl"
       >
         {showImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverSrc} alt="" className="h-full w-full object-cover" />
+          <SafeImg src={coverSrc} alt="" className="h-full w-full object-cover" />
         ) : (
           <span>🎲</span>
         )}

@@ -1,5 +1,6 @@
 'use client';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { useCascadeNavigationStore } from '@/lib/stores/cascade-navigation-store';
 
 interface GameNightPlayer {
@@ -95,7 +96,7 @@ export function GameNightDrawerContent({
               >
                 <div className="h-8 w-8 rounded-full bg-muted" aria-hidden>
                   {player.avatar && (
-                    <img
+                    <SafeImg
                       src={player.avatar}
                       alt=""
                       className="h-full w-full rounded-full object-cover"

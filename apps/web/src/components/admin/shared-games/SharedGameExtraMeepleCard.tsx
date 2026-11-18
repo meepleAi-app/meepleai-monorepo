@@ -31,6 +31,7 @@ import type {
   SharedGameExtraMeepleCardTab,
 } from '@/components/ui/data-display/extra-meeple-card/types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/navigation/tabs';
+import { cssImageUrl } from '@/lib/images/css-image-url';
 import { cn } from '@/lib/utils';
 
 import { PdfIndexingStatus } from './PdfIndexingStatus';
@@ -425,10 +426,10 @@ export const SharedGameExtraMeepleCard = React.memo(function SharedGameExtraMeep
     >
       {/* Header */}
       <div className="relative h-[140px] overflow-hidden">
-        {data.imageUrl ? (
+        {cssImageUrl(data.imageUrl) ? (
           <div
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${data.imageUrl})` }}
+            style={{ backgroundImage: cssImageUrl(data.imageUrl) }}
           />
         ) : (
           <div className="absolute inset-0" style={{ background: `hsl(${COLORS.hsl})` }} />

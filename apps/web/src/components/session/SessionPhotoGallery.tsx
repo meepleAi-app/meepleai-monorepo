@@ -19,6 +19,7 @@ import {
   User,
 } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   AlertDialog,
@@ -109,18 +110,17 @@ function PhotoAttachmentCard({ attachment, onClick, canDelete, onDelete }: Photo
           }
         }}
       >
-        {attachment.thumbnailUrl ? (
-          <img
-            src={attachment.thumbnailUrl}
-            alt={attachment.caption || 'Session photo'}
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <ImageIcon className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-          </div>
-        )}
+        <SafeImg
+          src={attachment.thumbnailUrl}
+          alt={attachment.caption || 'Session photo'}
+          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+          loading="lazy"
+          fallback={
+            <div className="flex h-full w-full items-center justify-center">
+              <ImageIcon className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            </div>
+          }
+        />
       </div>
 
       {/* Type badge (top-right) */}
@@ -362,7 +362,7 @@ export function SessionPhotoGallery({
                 {lightboxLoading ? (
                   <Skeleton className="h-64 w-full" />
                 ) : (
-                  <img
+                  <SafeImg
                     src={
                       lightboxDetail?.downloadUrl ||
                       currentLightboxAttachment.thumbnailUrl ||

@@ -220,6 +220,41 @@ References:
 - Plan: [`docs/superpowers/plans/2026-06-10-issue-2123-bgg-tos-compliance.md`](../../../superpowers/plans/2026-06-10-issue-2123-bgg-tos-compliance.md)
 - Operations runbook: [`docs/for-developers/operations/operations-manual.md`](../../../for-developers/operations/operations-manual.md) § Catalog covers — BGG ToS compliance
 
+### 5.6 Amendment 2026-11-18 — Central guard, and the admin BGG search exception (issue #5072)
+
+§5.3 enforced the ban for `next/image` through the custom loader. Three forms skipped it: a plain `<img>`, an `<Image unoptimized>`, and a CSS background built from a URL. Each component had to call `shouldUsePlaceholder` on its own, and several did not (inventory in #5072).
+
+**The guard is now central:**
+
+- `SafeImg` (`apps/web/src/components/ui/data-display/safe-img.tsx`) is the guarded `<img>`.
+  - It blocks a URL that a browser would send to a BGG host. `isBlockedImageHost` resolves the URL against the page, as the browser does.
+  - It fires the same SLO beacon as the loader, and renders its `fallback` instead.
+  - Anything else passes unchanged, including local previews (`blob:`, `data:`).
+- `AvatarImage` applies the same check. Radix then shows `AvatarFallback`.
+- `cssImageUrl` (`apps/web/src/lib/images/css-image-url.ts`) is the guarded way to put an image URL into CSS. It has no beacon, because it is a pure function.
+- The ESLint rule `local/no-unguarded-img` (error, `apps/web/src/**`, tests and stories excluded) reports:
+  - an `<img>` whose `src` is not a constant;
+  - a `next/image` with `unoptimized` whose `src` is not a constant.
+
+  A constant is a literal, a `data:`/`blob:` template, or `URL.createObjectURL(…)`.
+
+  `srcSet` counts like `src`, on `<img>` and on `<source>`; `SafeImg` does not accept it. The rule does not see:
+  - a CSS background (use `cssImageUrl`);
+  - an image rendered from Markdown;
+  - an `allowBggHost` passed through a spread, an alias or a wrapper.
+
+**The admin exception.** The admin BGG search panels show the thumbnails of BGG's search results, so the admin can tell editions apart:
+
+- `components/admin/games/wizard/steps/BggSearchStep.tsx` and `GameDetailsStep.tsx`;
+- `components/admin/shared-games/BggSearchPanel.tsx`.
+
+This is a request from the admin's browser to a BGG host. §2 only covers server-to-server paths, and the ban above is about browser requests, so it needed a decision. The owner's decision (2026-11-18, #5072) is that the admin keeps seeing those thumbnails, as a **written exception**:
+
+- `<SafeImg allowBggHost>` renders a BGG URL without blocking it and without the beacon. So the SLO counter does not count the exception.
+  - Any other admin screen gets no exception: blocking and the beacon apply as they do on user pages. A BGG URL pasted into an admin form preview (`GameForm`, `ImageUpload`) is blocked and counted. Before #5072 that preview loaded it unmeasured.
+- `local/no-unguarded-img` accepts `allowBggHost` only under `src/app/admin/` and `src/components/admin/`, the paths the `local/no-bgg-host` override already exempts.
+- The exception is limited to what BGG's search returns in admin-only UI. A cover shown to users still comes from `SharedGameDto.CoverUrl` (§5.2), re-hosted on R2 by the server (`ReuploadBggCoverCommand`).
+
 ## 6. Amendment 2026-06-20 — IT seed translations (issue #2339 sub-PR 3/3)
 
 ### 6.1 Scope

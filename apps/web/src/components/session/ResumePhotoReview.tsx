@@ -11,6 +11,7 @@ import { useState, useMemo, useCallback } from 'react';
 
 import { Play, X, ChevronDown, ChevronRight, User, Clock, ImageIcon } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 
@@ -207,21 +208,20 @@ export function ResumePhotoReview({
                           }}
                           data-testid={`review-photo-${photo.id}`}
                         >
-                          {photo.thumbnailUrl ? (
-                            <img
-                              src={photo.thumbnailUrl}
-                              alt={photo.caption || 'Session photo'}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center">
-                              <ImageIcon
-                                className="h-6 w-6 text-muted-foreground"
-                                aria-hidden="true"
-                              />
-                            </div>
-                          )}
+                          <SafeImg
+                            src={photo.thumbnailUrl}
+                            alt={photo.caption || 'Session photo'}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            fallback={
+                              <div className="flex h-full w-full items-center justify-center">
+                                <ImageIcon
+                                  className="h-6 w-6 text-muted-foreground"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                            }
+                          />
                           {photo.caption && (
                             <div className="absolute inset-x-0 bottom-0 bg-foreground/50 px-1.5 py-0.5">
                               <p className="text-[10px] text-white line-clamp-1">{photo.caption}</p>
@@ -271,7 +271,7 @@ export function ResumePhotoReview({
           <DialogTitle className="sr-only">Photo viewer</DialogTitle>
           {lightboxUrl && (
             <div className="relative bg-foreground flex items-center justify-center min-h-[300px]">
-              <img
+              <SafeImg
                 src={lightboxUrl}
                 alt="Session photo"
                 className="max-h-[70vh] w-auto object-contain"

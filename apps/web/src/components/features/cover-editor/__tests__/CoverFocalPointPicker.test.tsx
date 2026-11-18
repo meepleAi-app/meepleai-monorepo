@@ -6,6 +6,12 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { CoverFocalPointPicker } from '../CoverFocalPointPicker';
 
+const reportBggAttempt = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/images/bgg-attempt-beacon', () => ({ reportBggAttempt }));
+
+const BGG = 'https://cf.geekdo-images.com/abc/pic1.jpg';
+const ALLOWED = 'https://covers.meepleai.app/abc/cover.webp';
+
 function renderPicker(overrides: Partial<React.ComponentProps<typeof CoverFocalPointPicker>> = {}) {
   const onChange = vi.fn();
   const props = {
@@ -91,5 +97,23 @@ describe('CoverFocalPointPicker', () => {
     const area = screen.getByTestId('focal-area');
     fireEvent.pointerDown(area, { clientX: 10, clientY: 10 });
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('shows «Nessuna anteprima» instead of a BGG preview, and an allowed one as an <img> (#5072)', () => {
+    reportBggAttempt.mockClear();
+    const { container, unmount } = renderPicker({ imageUrl: BGG });
+
+    const srcs = Array.from(container.querySelectorAll('img'), img => img.getAttribute('src'));
+    expect(srcs.some(src => src?.includes('geekdo-images'))).toBe(false);
+    expect(screen.getByText('Nessuna anteprima')).toBeInTheDocument();
+    expect(reportBggAttempt).toHaveBeenCalledWith(BGG);
+    unmount();
+
+    renderPicker({ imageUrl: ALLOWED });
+    expect(screen.getByRole('img', { name: 'Anteprima candidato' })).toHaveAttribute(
+      'src',
+      ALLOWED
+    );
+    expect(screen.queryByText('Nessuna anteprima')).not.toBeInTheDocument();
   });
 });

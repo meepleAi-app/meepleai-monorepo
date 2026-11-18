@@ -4,6 +4,7 @@ import React from 'react';
 
 import { LockIcon, BookOpenIcon, PlusCircleIcon } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -60,7 +61,7 @@ export const SourceReference = React.memo<SourceReferenceProps>(
 
           {/* Image content */}
           {source.imageUrl && (
-            <img
+            <SafeImg
               src={source.imageUrl}
               alt={`Source from ${source.reference}`}
               className="mt-2 max-h-48 rounded object-contain"

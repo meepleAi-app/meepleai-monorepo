@@ -1,5 +1,6 @@
 import { Info } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import type { UserLibraryEntry } from '@/lib/api';
 
@@ -19,18 +20,16 @@ export function Step1GamePreview({ game, existingInCatalog }: Step1GamePreviewPr
       {/* Game Card Preview */}
       <div className="flex gap-4 rounded-lg border bg-card p-4">
         <div className="relative h-24 w-24 flex-shrink-0">
-          {game.gameIconUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element -- External user-provided game icon URL */
-            <img
-              src={game.gameIconUrl}
-              alt={game.gameTitle}
-              className="h-full w-full rounded-md object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center rounded-md bg-muted text-2xl font-bold text-muted-foreground">
-              {game.gameTitle.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <SafeImg
+            src={game.gameIconUrl}
+            alt={game.gameTitle}
+            className="h-full w-full rounded-md object-cover"
+            fallback={
+              <div className="flex h-full w-full items-center justify-center rounded-md bg-muted text-2xl font-bold text-muted-foreground">
+                {game.gameTitle.charAt(0).toUpperCase()}
+              </div>
+            }
+          />
         </div>
 
         <div className="flex-1 space-y-1">

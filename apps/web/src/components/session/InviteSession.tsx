@@ -10,6 +10,7 @@ import { useState, useCallback } from 'react';
 
 import { Check, Copy, Link2, Loader2, RefreshCw, Share2, Users } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import {
   Dialog,
   DialogContent,
@@ -214,7 +215,7 @@ export function InviteSession({
               {/* QR Code - using <img> for data URL, next/image doesn't optimize data URLs */}
               <div className="flex justify-center">
                 <div className="rounded-lg border bg-card p-4">
-                  <img
+                  <SafeImg
                     src={inviteData.qrCodeDataUrl}
                     alt="QR Code"
                     data-testid="invite-qr-code"

@@ -6,6 +6,8 @@ import { entityIcon } from '../../tokens';
 
 vi.mock('@/lib/games/cover-utils', () => ({
   shouldUsePlaceholder: (url?: string) => !url || url.includes('boardgamegeek'),
+  // #5072: SafeImg, which renders the <img>, asks this one.
+  isBlockedImageHost: (url?: string) => !!url && url.includes('boardgamegeek'),
   hashToHue: () => 100,
   extractInitials: (t: string) => t.charAt(0) || '?',
 }));

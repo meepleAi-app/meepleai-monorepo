@@ -14,6 +14,7 @@ import Image from 'next/image';
 import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
 import { Card } from '@/components/ui/data-display/card';
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -305,13 +306,10 @@ export function GameCreationStep({
             {iconPreview && (
               <div className="flex justify-center">
                 <div className="relative w-16 h-16 rounded-lg border overflow-hidden">
-                  <Image
+                  <SafeImg
                     src={iconPreview}
                     alt="Icon preview"
-                    fill
-                    className="object-cover"
-                    sizes="64px"
-                    unoptimized
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
                 </div>
               </div>
@@ -359,13 +357,10 @@ export function GameCreationStep({
               {imagePreview && (
                 <div className="flex justify-center">
                   <div className="relative max-w-xs h-48 rounded-lg border overflow-hidden">
-                    <Image
+                    <SafeImg
                       src={imagePreview}
                       alt="Cover preview"
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 384px"
-                      unoptimized
+                      className="absolute inset-0 h-full w-full object-cover"
                     />
                   </div>
                 </div>

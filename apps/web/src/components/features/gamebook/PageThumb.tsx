@@ -55,6 +55,7 @@ import {
   type ConfidenceBadgeLabels,
 } from '@/components/features/gamebook/ConfidenceBadge';
 import type { ConfidenceLevel } from '@/lib/gamebook-upload';
+import { cssImageUrl } from '@/lib/images/css-image-url';
 
 export interface PageThumbLabels {
   /** Pre-resolved screenreader text "Pagina {n}" — orchestrator interpolates. */
@@ -133,8 +134,8 @@ export function PageThumb({
         aria-hidden="true"
         className="flex aspect-[3/4] items-center justify-center"
         style={{
-          background: thumbnailUrl
-            ? `url("${thumbnailUrl}") center/cover no-repeat`
+          background: cssImageUrl(thumbnailUrl)
+            ? `${cssImageUrl(thumbnailUrl)} center/cover no-repeat`
             : processing
               ? 'hsl(215, 16%, 92%)'
               : pagePlaceholderGradient(pageNumber),

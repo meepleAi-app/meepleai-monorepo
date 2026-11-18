@@ -21,6 +21,7 @@ import {
   User,
 } from 'lucide-react';
 
+import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
@@ -244,17 +245,16 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
               {/* Compact game card */}
               {data.gameName && (
                 <div className="flex items-center gap-3 rounded-lg bg-card/60 border border-border/40 p-3">
-                  {data.gameThumbnailUrl ? (
-                    <img
-                      src={data.gameThumbnailUrl}
-                      alt={data.gameName}
-                      className="h-10 w-10 rounded-lg object-cover shrink-0"
-                    />
-                  ) : (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100">
-                      <Gamepad2 className="h-5 w-5 text-orange-600" aria-hidden="true" />
-                    </div>
-                  )}
+                  <SafeImg
+                    src={data.gameThumbnailUrl}
+                    alt={data.gameName}
+                    className="h-10 w-10 rounded-lg object-cover shrink-0"
+                    fallback={
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+                        <Gamepad2 className="h-5 w-5 text-orange-600" aria-hidden="true" />
+                      </div>
+                    }
+                  />
                   <div className="min-w-0">
                     <p className="font-nunito text-[10px] text-muted-foreground uppercase tracking-wider">
                       Gioco

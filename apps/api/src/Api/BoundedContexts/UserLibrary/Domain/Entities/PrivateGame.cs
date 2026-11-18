@@ -271,41 +271,8 @@ public sealed class PrivateGame : AggregateRoot<Guid>
         UpdatedAt = DateTime.UtcNow;
     }
 
-    /// <summary>
-    /// Syncs the game data from BGG (only for BGG-sourced games).
-    /// </summary>
-    public void SyncFromBgg(
-        string title,
-        int? yearPublished,
-        string? description,
-        int minPlayers,
-        int maxPlayers,
-        int? playingTimeMinutes,
-        int? minAge,
-        decimal? complexityRating,
-        string? imageUrl,
-        string? thumbnailUrl)
-    {
-        if (Source != PrivateGameSource.BoardGameGeek)
-            throw new InvalidOperationException("Cannot sync BGG data for a manually created game");
-
-        ValidateTitle(title);
-        ValidatePlayers(minPlayers, maxPlayers);
-        ValidateComplexityRating(complexityRating);
-
-        Title = title;
-        YearPublished = yearPublished;
-        Description = description;
-        MinPlayers = minPlayers;
-        MaxPlayers = maxPlayers;
-        PlayingTimeMinutes = playingTimeMinutes;
-        MinAge = minAge;
-        ComplexityRating = complexityRating;
-        ImageUrl = imageUrl;
-        ThumbnailUrl = thumbnailUrl;
-        BggSyncedAt = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
-    }
+    // #5069: SyncFromBgg stood here. Nothing called it, and it wrote BGG's image URLs into the game, which the
+    // BGG asset freeze (#2123, ADR-059 §5) forbids.
 
     /// <summary>
     /// Soft deletes the private game.

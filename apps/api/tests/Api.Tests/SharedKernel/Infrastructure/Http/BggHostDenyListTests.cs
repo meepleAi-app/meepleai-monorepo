@@ -48,4 +48,24 @@ public sealed class BggHostDenyListTests
         BggHostDenyList.IsBanned("not-a-url").Should().BeFalse();
         BggHostDenyList.IsBanned(null).Should().BeFalse();
     }
+
+    // #5069: "//host/…" is protocol-relative, and browsers read "/\host/…" the same way. Uri.TryCreate with
+    // UriKind.Absolute reads both as a file URI whose host is that host, on Windows and on Linux (checked with
+    // dotnet fsi on Ubuntu 24.04, .NET 10), so IsBanned already refuses them. These cases pin it.
+    [Theory]
+    [InlineData("//cf.geekdo-images.com/x/cover.jpg")]
+    [InlineData("/\\cf.geekdo-images.com/x/cover.jpg")]
+    [InlineData("  https://cf.geekdo-images.com/x/cover.jpg  ")]
+    public void IsBanned_ProtocolRelativeOrPaddedBggUrl_ReturnsTrue(string url)
+    {
+        BggHostDenyList.IsBanned(url).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("/uploads/covers/abc.webp")]
+    [InlineData("//covers.meepleai.app/abc/cover.webp")]
+    public void IsBanned_SameOriginPathOrOtherHost_ReturnsFalse(string url)
+    {
+        BggHostDenyList.IsBanned(url).Should().BeFalse();
+    }
 }

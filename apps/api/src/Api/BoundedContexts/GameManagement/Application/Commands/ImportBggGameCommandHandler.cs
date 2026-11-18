@@ -82,33 +82,34 @@ internal sealed class ImportBggGameCommandHandler
             throw new NotFoundException("BggGame", command.BggId.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
 
-        // 4. Create PrivateGame from BGG data
-        var privateGame = PrivateGame.CreateFromBgg(
-            ownerId: command.UserId,
-            bggId: bggDetails.BggId,
-            title: bggDetails.Title,
-            yearPublished: bggDetails.YearPublished,
-            description: bggDetails.Description,
-            minPlayers: bggDetails.MinPlayers ?? 1,
-            maxPlayers: bggDetails.MaxPlayers ?? 4,
-            playingTimeMinutes: bggDetails.PlayingTimeMinutes,
-            minAge: null,
-            complexityRating: bggDetails.ComplexityRating,
-            imageUrl: bggDetails.ImageUrl,
-            thumbnailUrl: bggDetails.ThumbnailUrl);
-
-        // 5. Create UserLibraryEntry for the private game
-        var libraryEntry = new UserLibraryEntry(
-            id: Guid.NewGuid(),
-            userId: command.UserId,
-            gameId: privateGame.Id);
-
-        // 6. Persist both entities, within the quota, atomically
+        // 4-6. Create the PrivateGame and its library entry, within the quota, atomically. #5020: built inside the
+        // staging, once per transaction attempt: a replayed attempt must not reuse the rows of one that did not commit.
+        PrivateGame? privateGame = null;
+        UserLibraryEntry? libraryEntry = null;
         await PrivateGameQuota.CreateWithinQuotaAsync(
             command.UserId,
             limits.MaxPrivateGames,
             async ct =>
             {
+                privateGame = PrivateGame.CreateFromBgg(
+                    ownerId: command.UserId,
+                    bggId: bggDetails.BggId,
+                    title: bggDetails.Title,
+                    yearPublished: bggDetails.YearPublished,
+                    description: bggDetails.Description,
+                    minPlayers: bggDetails.MinPlayers ?? 1,
+                    maxPlayers: bggDetails.MaxPlayers ?? 4,
+                    playingTimeMinutes: bggDetails.PlayingTimeMinutes,
+                    minAge: null,
+                    complexityRating: bggDetails.ComplexityRating,
+                    imageUrl: bggDetails.ImageUrl,
+                    thumbnailUrl: bggDetails.ThumbnailUrl);
+
+                libraryEntry = new UserLibraryEntry(
+                    id: Guid.NewGuid(),
+                    userId: command.UserId,
+                    gameId: privateGame.Id);
+
                 await _privateGameRepository.AddAsync(privateGame, ct).ConfigureAwait(false);
                 await _userLibraryRepository.AddForPrivateGameAsync(libraryEntry, ct).ConfigureAwait(false);
             },
@@ -119,7 +120,7 @@ internal sealed class ImportBggGameCommandHandler
 
         _logger.LogInformation(
             "User {UserId} imported BGG game {BggId} as PrivateGame {PrivateGameId} with LibraryEntry {LibraryEntryId}",
-            command.UserId, command.BggId, privateGame.Id, libraryEntry.Id);
+            command.UserId, command.BggId, privateGame!.Id, libraryEntry!.Id);
 
         return new ImportBggGameResult(
             PrivateGameId: privateGame.Id,

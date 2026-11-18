@@ -11,8 +11,9 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.UserLibrary.Application.Services;
 
 /// <summary>
-/// #5020: <see cref="PrivateGameQuota"/> — the count under the owner's lock decides, and a replayed transaction stages
-/// the rows once. The concurrency itself is proven against PostgreSQL in PrivateGameQuotaConcurrencyIntegrationTests.
+/// #5020: <see cref="PrivateGameQuota"/> — the count under the owner's lock decides, and a replayed transaction forgets
+/// what the previous attempt staged and stages anew. The concurrency, and the replay against a real change tracker,
+/// are proven against PostgreSQL in PrivateGameQuotaConcurrencyIntegrationTests.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "UserLibrary")]
@@ -64,6 +65,7 @@ public sealed class PrivateGameQuotaTests
 
         order.Should().Equal("lock", "count");
         _staged.Should().Be(1);
+        _privateGames.Verify(r => r.ForgetStagedCreations(), Times.Never, "a first attempt has nothing to forget");
     }
 
     [Fact]
@@ -79,17 +81,22 @@ public sealed class PrivateGameQuotaTests
     }
 
     [Fact]
-    public async Task AReplayedAttempt_CountsAgainButStagesOnce()
+    public async Task AReplayedAttempt_ForgetsThePreviousOneThenCountsAndStagesAgain()
     {
-        // After a rollback the change tracker still holds the staged rows as Added: staging them again would insert
-        // them twice. The count is taken again, under the lock, on every attempt.
+        // A replay can follow a SaveChanges that failed (rows still Added: staging again would insert them twice) or a
+        // SaveChanges that succeeded and a commit that failed (rows already accepted: not staging again would insert
+        // nothing). Forgetting and staging anew covers both, and the count is taken again under the lock.
+        var order = new List<string>();
         TransactionRuns(2);
-        _privateGames.Setup(r => r.CountByOwnerIdAsync(Owner, It.IsAny<CancellationToken>())).ReturnsAsync(0);
+        _privateGames.Setup(r => r.ForgetStagedCreations()).Callback(() => order.Add("forget"));
+        _privateGames.Setup(r => r.LockOwnerQuotaAsync(Owner, It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("lock")).Returns(Task.CompletedTask);
+        _privateGames.Setup(r => r.CountByOwnerIdAsync(Owner, It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("count")).ReturnsAsync(0);
 
         await CreateAsync();
 
-        _staged.Should().Be(1);
-        _privateGames.Verify(r => r.LockOwnerQuotaAsync(Owner, It.IsAny<CancellationToken>()), Times.Exactly(2));
-        _privateGames.Verify(r => r.CountByOwnerIdAsync(Owner, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        order.Should().Equal("lock", "count", "forget", "lock", "count");
+        _staged.Should().Be(2);
     }
 }

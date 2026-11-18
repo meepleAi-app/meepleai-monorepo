@@ -110,6 +110,21 @@ internal class PrivateGameRepository : RepositoryBase, IPrivateGameRepository
             .ConfigureAwait(false);
     }
 
+    public void ForgetStagedCreations()
+    {
+        // The two tables a creation writes. Reads on these paths are untracked, so what the tracker holds is what an
+        // attempt staged: Added after a SaveChanges that failed, Unchanged after one whose commit failed.
+        foreach (var entry in DbContext.ChangeTracker.Entries()
+                     .Where(e => e.Entity is PrivateGameEntity or UserLibraryEntryEntity)
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+
+        // #5030: the events go with the rows, or the next save would publish them for rows that do not exist.
+        EventCollector.Clear();
+    }
+
     public async Task<IReadOnlyList<PrivateGame>> SearchByTitleAsync(Guid ownerId, string searchTerm, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))

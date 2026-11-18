@@ -39,6 +39,7 @@ internal static class GameNightImprovvisataEndpoints
             .Produces<ImportBggGameResult>(201)
             .Produces(400)
             .Produces(401)
+            .Produces(402) // #5020: PRIVATE_GAME_QUOTA_EXCEEDED
             .Produces(403)
             .Produces(409)
             .Produces(429)

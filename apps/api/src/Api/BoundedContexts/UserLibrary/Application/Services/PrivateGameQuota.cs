@@ -21,15 +21,18 @@ namespace Api.BoundedContexts.UserLibrary.Application.Services;
 /// </para>
 /// <para>
 /// The transaction runs under the retrying execution strategy, which can run the delegate again after a transient
-/// error. The rows are staged once: after a rollback the change tracker still holds them as Added, so the replayed
-/// attempt saves them without staging them twice. The count is taken again, under the lock, on every attempt.
+/// error — also after a SaveChanges that succeeded and a commit that failed, when the staged rows are already accepted
+/// (Unchanged) and a second SaveChanges would write nothing. So every attempt stages the creation anew, with fresh
+/// aggregates, after forgetting what the previous attempt staged (<c>IPrivateGameRepository.ForgetStagedCreations</c>).
+/// The count is taken again, under the lock, on every attempt.
 /// </para>
 /// </remarks>
 internal static class PrivateGameQuota
 {
     /// <summary>
     /// Stages the creation through <paramref name="stage"/> and saves it if the owner is under
-    /// <paramref name="maxPrivateGames"/>, atomically.
+    /// <paramref name="maxPrivateGames"/>, atomically. <paramref name="stage"/> runs once per attempt and must build the
+    /// aggregates it adds, not reuse ones built before.
     /// </summary>
     /// <exception cref="PrivateGameQuotaExceededException">The owner already has the maximum.</exception>
     public static async Task CreateWithinQuotaAsync(
@@ -46,9 +49,14 @@ internal static class PrivateGameQuota
         ArgumentNullException.ThrowIfNull(unitOfWork);
         ArgumentNullException.ThrowIfNull(logger);
 
-        var staged = false;
+        var attempt = 0;
         await unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
+            if (attempt++ > 0)
+            {
+                privateGames.ForgetStagedCreations();
+            }
+
             await privateGames.LockOwnerQuotaAsync(ownerId, ct).ConfigureAwait(false);
 
             var owned = await privateGames.CountByOwnerIdAsync(ownerId, ct).ConfigureAwait(false);
@@ -63,11 +71,7 @@ internal static class PrivateGameQuota
                 throw new PrivateGameQuotaExceededException(maxPrivateGames);
             }
 
-            if (!staged)
-            {
-                await stage(ct).ConfigureAwait(false);
-                staged = true;
-            }
+            await stage(ct).ConfigureAwait(false);
         }, cancellationToken).ConfigureAwait(false);
     }
 }

@@ -7,6 +7,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.UserLibrary;
 using Api.Infrastructure.ExternalServices.BoardGameGeek;
 using Api.Infrastructure.ExternalServices.BoardGameGeek.Models;
 using Api.Middleware.Exceptions;
@@ -16,8 +17,11 @@ using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using Npgsql;
+using System.Data.Common;
 using Xunit;
 
 namespace Api.Tests.Integration.UserLibrary;
@@ -26,7 +30,9 @@ namespace Api.Tests.Integration.UserLibrary;
 /// #5020: the two paths that create a private game — manual creation and the BGG import — count the private games the
 /// user has against the tier's limit, and the count and the insert are one atomic step. Before, the count and the
 /// insert were two steps: concurrent requests of one user all read the same count and all passed. Runs against
-/// PostgreSQL (Testcontainers), with requests released together by a barrier.
+/// PostgreSQL (Testcontainers), with requests released together by a barrier. The transaction runs under the retrying
+/// execution strategy: the replay tests inject a transient failure at the save and at the commit, and each must still
+/// end in exactly one game.
 /// </summary>
 [Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
@@ -38,6 +44,7 @@ public sealed class PrivateGameQuotaConcurrencyIntegrationTests : IAsyncLifetime
     private const int Concurrent = 6;
 
     private readonly SharedTestcontainersFixture _fixture;
+    private readonly TransientFaults _faults = new();
     private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
@@ -83,6 +90,7 @@ public sealed class PrivateGameQuotaConcurrencyIntegrationTests : IAsyncLifetime
                 MaxPlayers = 4,
             });
         services.AddScoped<IBggApiClient>(_ => bgg.Object);
+        services.ConfigureDbContext<MeepleAiDbContext>(options => options.AddInterceptors(_faults.Save, _faults.Commit));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -151,6 +159,66 @@ public sealed class PrivateGameQuotaConcurrencyIntegrationTests : IAsyncLifetime
         await AssertTheLimitHeldAsync(results);
     }
 
+    [Fact]
+    public async Task ATransientFailureAtTheSave_IsReplayedIntoOneGame()
+    {
+        _faults.Save.Armed = true;
+
+        await SendAsync(new AddPrivateGameCommand(TestUserId, "Manual", null, "Replayed at the save", 2, 4));
+
+        _faults.Save.Tripped.Should().BeTrue("the first save failed and the strategy ran the transaction again");
+        await AssertOneGameAsync("Replayed at the save");
+    }
+
+    [Fact]
+    public async Task ATransientFailureAtTheCommit_IsReplayedIntoOneGame()
+    {
+        // From the review of #5067: the save had already accepted the rows (Unchanged) when the commit failed. Staging
+        // them only once, the replay saved nothing and the handler answered success for a game that did not exist.
+        _faults.Commit.Armed = true;
+
+        await SendAsync(new AddPrivateGameCommand(TestUserId, "Manual", null, "Replayed at the commit", 2, 4));
+
+        _faults.Commit.Tripped.Should().BeTrue("the first commit failed and the strategy ran the transaction again");
+        await AssertOneGameAsync("Replayed at the commit");
+    }
+
+    [Fact]
+    public async Task ADeletedPrivateGame_GivesItsPlaceBack()
+    {
+        for (var i = 1; i <= MaxPrivateGames; i++)
+        {
+            await SendAsync(new AddPrivateGameCommand(TestUserId, "Manual", null, $"Game {i}", 2, 4));
+        }
+
+        var deletedId = await _dbContext!.PrivateGames.AsNoTracking()
+            .Where(g => g.OwnerId == TestUserId).Select(g => g.Id).FirstAsync(TestCancellationToken);
+        await SendAsync(new DeletePrivateGameCommand(deletedId, TestUserId));
+
+        var create = () => SendAsync(new AddPrivateGameCommand(TestUserId, "Manual", null, "After a deletion", 2, 4));
+
+        await create.Should().NotThrowAsync("a deleted private game does not count against the limit");
+    }
+
+    private async Task SendAsync(IBaseRequest command)
+    {
+        using var scope = _serviceProvider!.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<IMediator>().Send((object)command, TestCancellationToken);
+    }
+
+    private async Task AssertOneGameAsync(string title)
+    {
+        var games = await _dbContext!.PrivateGames.AsNoTracking()
+            .Where(g => g.OwnerId == TestUserId)
+            .Select(g => new { g.Id, g.Title })
+            .ToListAsync(TestCancellationToken);
+        games.Should().ContainSingle("one creation, replayed, is one game").Which.Title.Should().Be(title);
+
+        var entries = await _dbContext.UserLibraryEntries.AsNoTracking()
+            .CountAsync(e => e.UserId == TestUserId && e.PrivateGameId == games[0].Id, TestCancellationToken);
+        entries.Should().Be(1, "and one library entry");
+    }
+
     /// <summary>Sends every command from its own scope, released together, and returns what each one threw.</summary>
     private async Task<IReadOnlyList<Exception?>> RaceAsync(IEnumerable<IBaseRequest> commands)
     {
@@ -161,7 +229,8 @@ public sealed class PrivateGameQuotaConcurrencyIntegrationTests : IAsyncLifetime
         {
             using var scope = _serviceProvider!.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            barrier.SignalAndWait(TimeSpan.FromSeconds(10));
+            // Not released together means not concurrent: a run that timed out on the barrier proves nothing.
+            barrier.SignalAndWait(TimeSpan.FromSeconds(10)).Should().BeTrue("all the requests are released together");
             try
             {
                 await mediator.Send((object)command, TestCancellationToken);
@@ -191,5 +260,57 @@ public sealed class PrivateGameQuotaConcurrencyIntegrationTests : IAsyncLifetime
         var libraryEntries = await _dbContext.UserLibraryEntries.AsNoTracking()
             .CountAsync(e => e.UserId == TestUserId && e.PrivateGameId != null, TestCancellationToken);
         libraryEntries.Should().Be(MaxPrivateGames, "every created game has its library entry, and no refused one does");
+    }
+
+    /// <summary>
+    /// One transient Npgsql failure, the kind the retrying execution strategy replays, at the save of a private game or
+    /// just before the commit of its transaction. Armed per test, tripped once.
+    /// </summary>
+    private sealed class TransientFaults
+    {
+        public SaveFault Save { get; } = new();
+        public CommitFault Commit { get; } = new();
+
+        private static NpgsqlException Transient(string where) =>
+            new($"transient failure at the {where}, injected by the test", new TimeoutException());
+
+        public sealed class SaveFault : SaveChangesInterceptor
+        {
+            public volatile bool Armed;
+            public volatile bool Tripped;
+
+            public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+                DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+            {
+                if (Armed && eventData.Context!.ChangeTracker.Entries<PrivateGameEntity>().Any(e => e.State == EntityState.Added))
+                {
+                    Armed = false;
+                    Tripped = true;
+                    throw Transient("save");
+                }
+
+                return base.SavingChangesAsync(eventData, result, cancellationToken);
+            }
+        }
+
+        public sealed class CommitFault : DbTransactionInterceptor
+        {
+            public volatile bool Armed;
+            public volatile bool Tripped;
+
+            public override ValueTask<InterceptionResult> TransactionCommittingAsync(
+                DbTransaction transaction, TransactionEventData eventData, InterceptionResult result,
+                CancellationToken cancellationToken = default)
+            {
+                if (Armed && eventData.Context!.ChangeTracker.Entries<PrivateGameEntity>().Any())
+                {
+                    Armed = false;
+                    Tripped = true;
+                    throw Transient("commit");
+                }
+
+                return base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
+            }
+        }
     }
 }

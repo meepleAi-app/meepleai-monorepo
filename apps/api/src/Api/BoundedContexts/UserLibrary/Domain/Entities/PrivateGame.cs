@@ -37,6 +37,12 @@ public sealed class PrivateGame : AggregateRoot<Guid>
     public string? Description { get; private set; }
 
     /// <summary>
+    /// Whether the owner can propose this game to the shared catalog. #5074, decision of 2026-11-19: the catalog
+    /// requires a description (<c>SharedGame.Create</c>), so the proposal does too, and the owner writes it first.
+    /// </summary>
+    public bool CanBeProposedToCatalog => !string.IsNullOrWhiteSpace(Description);
+
+    /// <summary>
     /// Minimum number of players.
     /// </summary>
     public int MinPlayers { get; private set; }

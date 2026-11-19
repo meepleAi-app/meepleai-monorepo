@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -42,6 +43,14 @@ internal sealed class ApproveShareRequestCommandHandler : ICommandHandler<Approv
         if (shareRequest == null)
         {
             throw new NotFoundException("ShareRequest", command.ShareRequestId.ToString());
+        }
+
+        // #5074: a NewGameProposal has no shared game yet; approving it here would mark it approved without
+        // creating one. It goes through approve-game-proposal (ApproveAsNew, ApproveAsVariant, MergeKnowledgeBase).
+        if (shareRequest.ContributionType == ContributionType.NewGameProposal)
+        {
+            throw new ConflictException(
+                $"ShareRequest {shareRequest.Id} is a NewGameProposal: approve it with approve-game-proposal");
         }
 
         // 2. Approve the request (domain validates state and raises events)

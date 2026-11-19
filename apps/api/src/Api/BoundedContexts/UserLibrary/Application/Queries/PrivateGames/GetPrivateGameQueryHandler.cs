@@ -66,7 +66,7 @@ internal sealed class GetPrivateGameQueryHandler : IQueryHandler<GetPrivateGameQ
             CreatedAt: game.CreatedAt,
             UpdatedAt: game.UpdatedAt,
             BggSyncedAt: game.BggSyncedAt,
-            CanProposeToCatalog: game.BggId.HasValue
+            CanProposeToCatalog: game.CanBeProposedToCatalog // #5074: a description, not a BGG origin
         );
     }
 }

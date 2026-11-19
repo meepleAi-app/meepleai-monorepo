@@ -25,6 +25,7 @@ internal static class PrivateGameEndpoints
         MapGetPrivateGameEndpoint(group);
         MapUpdatePrivateGameEndpoint(group);
         MapDeletePrivateGameEndpoint(group);
+        MapProposePrivateGameEndpoint(group); // Issue #3665, restored by #5074
         // Issue #4138: link-agent / unlink-agent (Issue #4228) are retired — one system agent
         // for every game (ADR-094). EndpointContractTests.RetiredRoutes keeps them off.
         MapKnowledgeBaseStatusEndpoint(group); // Issue #3664
@@ -214,6 +215,51 @@ internal static class PrivateGameEndpoints
     }
 
     /// <summary>
+    /// POST /api/v1/private-games/{id}/propose-to-catalog - Propose a private game to the shared catalog.
+    /// Issue #3665; removed with #1423, restored by #5074, where the game needs a description (422 without).
+    /// </summary>
+    private static void MapProposePrivateGameEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/private-games/{id:guid}/propose-to-catalog", async (
+            Guid id,
+            [FromBody] ProposePrivateGameRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new ProposePrivateGameCommand(
+                UserId: userId,
+                PrivateGameId: id,
+                Notes: request.Notes);
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/v1/share-requests/{result.ShareRequestId}", result);
+        })
+        .RequireAuthorization()
+        .RequireRateLimiting("ProposePrivateGame")
+        .WithName("ProposePrivateGameToCatalog")
+        .WithTags("PrivateGames")
+        .WithSummary("Propose a private game to the shared catalog")
+        .WithDescription("Submits your private game for review by the admins. The game needs a description. " +
+            "One pending proposal per game; rate limited to 2 requests per minute.")
+        .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity)
+        .Produces<Api.BoundedContexts.SharedGameCatalog.Application.Commands.CreateShareRequestResponse>(StatusCodes.Status201Created)
+        .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+        .Produces<ProblemDetails>(StatusCodes.Status403Forbidden)
+        .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
+        .Produces(StatusCodes.Status429TooManyRequests);
+    }
+
+    /// <summary>
     /// DELETE /api/v1/private-games/{id} - Soft-delete a private game
     /// </summary>
     private static void MapDeletePrivateGameEndpoint(RouteGroupBuilder group)
@@ -306,6 +352,11 @@ internal static class PrivateGameEndpoints
         return false;
     }
 }
+
+/// <summary>
+/// Request DTO for proposing a private game to the shared catalog (#3665, restored by #5074).
+/// </summary>
+internal record ProposePrivateGameRequest(string? Notes = null);
 
 /// <summary>
 /// Request DTO for adding a private game.

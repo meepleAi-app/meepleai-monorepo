@@ -8,7 +8,11 @@ public class ShareRequestEntity
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
-    public Guid SourceGameId { get; set; }
+    /// <summary>
+    /// The shared game the request is about. Null for a NewGameProposal, which is about a private game
+    /// (<see cref="SourcePrivateGameId"/>): there is no shared game yet (#5074).
+    /// </summary>
+    public Guid? SourceGameId { get; set; }
     public Guid? TargetSharedGameId { get; set; }
 
     /// <summary>
@@ -69,7 +73,7 @@ public class ShareRequestEntity
     public Guid? SourcePdfDocumentId { get; set; }
 
     // Navigation properties
-    public SharedGameEntity SourceGame { get; set; } = default!;
+    public SharedGameEntity? SourceGame { get; set; }
     public SharedGameEntity? TargetSharedGame { get; set; }
 
     /// <summary>

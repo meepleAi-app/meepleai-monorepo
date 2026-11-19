@@ -24,9 +24,10 @@ internal sealed class ShareRequestEntityConfiguration : IEntityTypeConfiguration
             .HasColumnName("user_id")
             .IsRequired();
 
+        // #5074: null for a NewGameProposal, which has no shared game yet (SourcePrivateGameId names the game).
         builder.Property(e => e.SourceGameId)
             .HasColumnName("source_game_id")
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(e => e.TargetSharedGameId)
             .HasColumnName("target_shared_game_id");

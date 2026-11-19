@@ -85,9 +85,6 @@ export function useRateLimitStatus(
 }
 
 /**
- * Create a new share request
- */
-/**
  * Propose a private game to the shared catalog (#5074). The game needs a description; the server answers 422
  * without one, and 409 when a proposal for it is already pending.
  */
@@ -103,10 +100,15 @@ export function useProposePrivateGame(): UseMutationResult<
       api.shareRequests.proposePrivateGame(privateGameId, notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: shareRequestsKeys.lists() });
+      // A proposal counts toward the user's pending and monthly share-request limits
+      queryClient.invalidateQueries({ queryKey: shareRequestsKeys.rateLimit() });
     },
   });
 }
 
+/**
+ * Create a new share request
+ */
 export function useCreateShareRequest(): UseMutationResult<
   CreateShareRequestResponse,
   Error,

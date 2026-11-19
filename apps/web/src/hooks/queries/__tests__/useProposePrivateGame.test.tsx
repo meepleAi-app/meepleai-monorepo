@@ -16,11 +16,7 @@ vi.mock('@/lib/api', () => ({
   api: { shareRequests: { proposePrivateGame, createShareRequest } },
 }));
 
-import { useProposePrivateGame } from '../useShareRequests';
-
-function wrapper({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={createTestQueryClient()}>{children}</QueryClientProvider>;
-}
+import { shareRequestsKeys, useProposePrivateGame } from '../useShareRequests';
 
 describe('useProposePrivateGame (#5074)', () => {
   it('calls the private game proposal route, not CreateShareRequest', async () => {
@@ -31,6 +27,11 @@ describe('useProposePrivateGame (#5074)', () => {
       createdAt: '2026-11-19T08:00:00Z',
     };
     proposePrivateGame.mockResolvedValue(reply);
+    const queryClient = createTestQueryClient();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
     const { result } = renderHook(() => useProposePrivateGame(), { wrapper });
 
     let answer: unknown;
@@ -44,5 +45,8 @@ describe('useProposePrivateGame (#5074)', () => {
     expect(proposePrivateGame).toHaveBeenCalledWith('game-1', 'Please add it');
     expect(createShareRequest).not.toHaveBeenCalled();
     expect(answer).toEqual(reply);
+    // A proposal is a share request: it changes the lists and the user's pending and monthly counts
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: shareRequestsKeys.lists() });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: shareRequestsKeys.rateLimit() });
   });
 });

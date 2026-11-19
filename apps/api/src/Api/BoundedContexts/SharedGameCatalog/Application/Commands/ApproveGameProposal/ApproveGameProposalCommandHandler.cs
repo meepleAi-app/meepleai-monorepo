@@ -6,12 +6,10 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
-using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.ApproveGameProposal;
 
@@ -25,7 +23,6 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
     private readonly IPrivateGameRepository _privateGameRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IShareRequestDocumentService _documentService;
-    private readonly MeepleAiDbContext _context;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ApproveGameProposalCommandHandler> _logger;
 
@@ -34,7 +31,6 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
         IPrivateGameRepository privateGameRepository,
         ISharedGameRepository sharedGameRepository,
         IShareRequestDocumentService documentService,
-        MeepleAiDbContext context,
         IUnitOfWork unitOfWork,
         ILogger<ApproveGameProposalCommandHandler> logger)
     {
@@ -42,7 +38,6 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
         _privateGameRepository = privateGameRepository ?? throw new ArgumentNullException(nameof(privateGameRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _documentService = documentService ?? throw new ArgumentNullException(nameof(documentService));
-        _context = context ?? throw new ArgumentNullException(nameof(context));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -85,33 +80,16 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
                 $"ShareRequest {shareRequest.Id} is not a NewGameProposal (type: {shareRequest.ContributionType})");
         }
 
-        // 4. Get the private game from the UserLibraryEntry
-        // For NewGameProposal, SourceGameId references UserLibraryEntry.Id
-        // Note: Using DbContext directly for cross-context access (UserLibrary domain entity doesn't expose PrivateGameId)
-        var libraryEntry = await _context.UserLibraryEntries
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == shareRequest.SourceGameId, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (libraryEntry == null)
+        // 4. #5076: the proposed game is the proposal's private game (ShareRequest.CreateGameProposal). This used to
+        // read a UserLibraryEntry at SourceGameId, a model no producer writes: every real proposal got 404.
+        if (shareRequest.SourcePrivateGameId is not { } privateGameId || privateGameId == Guid.Empty)
         {
-            throw new NotFoundException("UserLibraryEntry", shareRequest.SourceGameId.ToString());
+            throw new ConflictException($"ShareRequest {shareRequest.Id} has no proposed private game");
         }
 
-        if (!libraryEntry.PrivateGameId.HasValue || libraryEntry.PrivateGameId.Value == Guid.Empty)
-        {
-            throw new ConflictException(
-                $"UserLibraryEntry {libraryEntry.Id} has no valid PrivateGameId");
-        }
-
-        var privateGame = await _privateGameRepository.GetByIdAsync(
-            libraryEntry.PrivateGameId.Value,
-            cancellationToken).ConfigureAwait(false);
-
-        if (privateGame == null)
-        {
-            throw new NotFoundException("PrivateGame", libraryEntry.PrivateGameId.Value.ToString());
-        }
+        var privateGame = await _privateGameRepository.GetByIdAsync(privateGameId, cancellationToken)
+                .ConfigureAwait(false)
+            ?? throw new NotFoundException("PrivateGame", privateGameId.ToString());
 
         // 5. Execute approval action based on type
         Guid targetSharedGameId = command.ApprovalAction switch

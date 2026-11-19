@@ -54,8 +54,9 @@ describe('AdminShareRequestsClient - Issue #3026', () => {
       const result = await client.getAll();
 
       expect(result).toEqual(mockResponse);
+      // #5076: pageNumber, sortBy and sortDirection are required by the backend: without them it answers 400.
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/admin/share-requests?',
+        '/api/v1/admin/share-requests?pageNumber=1&pageSize=20&sortBy=CreatedAt&sortDirection=Descending',
         expect.any(Object)
       );
     });
@@ -79,14 +80,19 @@ describe('AdminShareRequestsClient - Issue #3026', () => {
         sortDirection: 'Descending',
       });
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('status=InReview'),
-        expect.any(Object)
-      );
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('searchTerm=catan'),
-        expect.any(Object)
-      );
+      // #5076: the names the backend binds (pageNumber, type, search). It ignored page, contributionType and
+      // searchTerm, and answered 400 for the missing pageNumber.
+      const url = vi.mocked(mockHttpClient.get).mock.calls[0][0] as string;
+      const query = Object.fromEntries(new URLSearchParams(url.split('?')[1]));
+      expect(query).toEqual({
+        pageNumber: '2',
+        pageSize: '10',
+        sortBy: 'CreatedAt',
+        sortDirection: 'Descending',
+        status: 'InReview',
+        type: 'AdditionalContent',
+        search: 'catan',
+      });
     });
 
     it('should return empty response when API returns null', async () => {
@@ -220,20 +226,15 @@ describe('AdminShareRequestsClient - Issue #3026', () => {
       );
     });
 
-    it('should approve request with modifications', async () => {
+    it('should approve request with admin notes', async () => {
       vi.mocked(mockHttpClient.post).mockResolvedValue(undefined);
 
       const client = createAdminShareRequestsClient(mockHttpClient);
-      await client.approve('req-123', {
-        modifiedTitle: 'Corrected Title',
-        modifiedDescription: 'Updated description',
-        documentsToInclude: ['doc-1', 'doc-2'],
-        adminNotes: 'Approved with minor edits',
-      });
+      await client.approve('req-123', { adminNotes: 'Approved with minor edits' });
 
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/api/v1/admin/share-requests/req-123/approve',
-        expect.objectContaining({ modifiedTitle: 'Corrected Title' })
+        { adminNotes: 'Approved with minor edits' }
       );
     });
 
@@ -245,6 +246,47 @@ describe('AdminShareRequestsClient - Issue #3026', () => {
       const client = createAdminShareRequestsClient(mockHttpClient);
 
       await expect(client.approve('req-123')).rejects.toThrow('not locked');
+    });
+  });
+
+  // #5076: a NewGameProposal and a CoverChange are approved through approve-game-proposal.
+  describe('approveGameProposal', () => {
+    it('posts the action, the target and the notes, and returns the approval', async () => {
+      const approval = {
+        shareRequestId: '11111111-1111-4111-8111-111111111111',
+        status: 'Approved',
+        targetSharedGameId: '22222222-2222-4222-8222-222222222222',
+        resolvedAt: '2026-11-19T10:00:00Z',
+      };
+      vi.mocked(mockHttpClient.post).mockResolvedValue(approval);
+
+      const client = createAdminShareRequestsClient(mockHttpClient);
+      const result = await client.approveGameProposal('req-123', {
+        approvalAction: 'ApproveAsVariant',
+        targetSharedGameId: '22222222-2222-4222-8222-222222222222',
+        adminNotes: 'Second edition',
+      });
+
+      expect(result).toEqual(approval);
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        '/api/v1/admin/share-requests/req-123/approve-game-proposal',
+        {
+          approvalAction: 'ApproveAsVariant',
+          targetSharedGameId: '22222222-2222-4222-8222-222222222222',
+          adminNotes: 'Second edition',
+        },
+        expect.any(Object)
+      );
+    });
+
+    it('throws when the response is empty', async () => {
+      vi.mocked(mockHttpClient.post).mockResolvedValue(null);
+
+      const client = createAdminShareRequestsClient(mockHttpClient);
+
+      await expect(
+        client.approveGameProposal('req-123', { approvalAction: 'ApproveAsNew' })
+      ).rejects.toThrow('Failed to approve the proposal');
     });
   });
 

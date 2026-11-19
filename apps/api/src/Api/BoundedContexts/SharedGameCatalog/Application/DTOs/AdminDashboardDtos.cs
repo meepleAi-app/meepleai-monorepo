@@ -124,6 +124,7 @@ public sealed record ShareRequestDetailsDto(
 public sealed record GameDetailsDto(
     Guid Id,
     string Title,
+    int? YearPublished, // #5076: the review shows the proposed game's year
     string? Description,
     string? ThumbnailUrl,
     int? BggId,

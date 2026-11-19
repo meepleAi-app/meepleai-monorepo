@@ -178,7 +178,10 @@ internal sealed class GetPendingShareRequestsQueryHandler : IRequestHandler<GetP
             // Game preview
             SourceGameId: request.SourceGameId ?? Guid.Empty,
             GameTitle: request.SourceGame?.Title ?? request.PrivateGame?.Title ?? "Unknown Game",
-            GameThumbnailUrl: request.SourceGame?.ThumbnailUrl ?? AllowedThumbnail(request.PrivateGame?.ThumbnailUrl),
+            // #5076: the shared game's thumbnail goes through the deny list too, as the private game's does.
+            GameThumbnailUrl: request.SourceGame != null
+                ? AllowedThumbnail(request.SourceGame.ThumbnailUrl)
+                : AllowedThumbnail(request.PrivateGame?.ThumbnailUrl),
             BggId: request.SourceGame?.BggId ?? request.PrivateGame?.BggId,
 
             // Contributor info

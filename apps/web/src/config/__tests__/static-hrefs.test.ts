@@ -40,7 +40,7 @@ const STATIC_HREF = /href:\s*'(\/[^']*)'/g;
 /**
  * Known debt, tracked and deliberately not fixed here.
  *
- * `admin-navigation.ts` declares **36** hrefs to routes that do not exist — the
+ * `admin-navigation.ts` declares **35** hrefs to routes that do not exist — the
  * admin console was reorganised and its navigation config was not. That is a real
  * defect, but the admin surface is out of scope for epic #3916, and fixing them
  * destinations in this PR would bury a settings change under an unrelated
@@ -48,11 +48,12 @@ const STATIC_HREF = /href:\s*'(\/[^']*)'/g;
  *
  * This is an exclusion, not a silence: the count is asserted below, so the debt
  * cannot grow unnoticed, and shrinking it forces an update here. (#4449 removed one:
- * `/admin/configuration/pdf-upload-limits`, the PDF upload limits page of a removed setting.)
+ * `/admin/configuration/pdf-upload-limits`, the PDF upload limits page of a removed setting. #5076 another:
+ * `/admin/share-requests`, whose review page is back.)
  */
 const KNOWN_BROKEN = {
   file: 'admin-navigation.ts',
-  count: 36,
+  count: 35,
 } as const;
 
 /**

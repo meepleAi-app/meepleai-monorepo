@@ -25,8 +25,10 @@ internal sealed class LocalStorageService : IStorageService
             ?? "http://localhost:8080/storage";
 #pragma warning restore S1075
 
-        // Ensure base directory exists
-        Directory.CreateDirectory(_baseStoragePath);
+        // #5076: no I/O here. The constructor created the base directory, and the API image runs as a user that
+        // cannot write /app: every request resolving this service (approve-game-proposal among them) failed
+        // building it, with an UnauthorizedAccessException the middleware answers as 403. CopyFile, the only
+        // write, creates the directory it needs.
     }
 
     public async Task<string> CopyFile(

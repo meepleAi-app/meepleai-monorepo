@@ -46,7 +46,6 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
     private Guid _userId;
     private Guid _adminId;
     private Guid _privateGameId;
-    private Guid _libraryEntryId;
     private int _bggId;
 
     public async ValueTask InitializeAsync()
@@ -67,7 +66,6 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
             _privateGameRepo,
             _sharedGameRepo,
             _documentServiceMock.Object,
-            _dbContext,
             _unitOfWork,
             commandLogger.Object);
 
@@ -92,7 +90,6 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
         _userId = Guid.NewGuid();
         _adminId = Guid.NewGuid();
         _privateGameId = Guid.NewGuid();
-        _libraryEntryId = Guid.NewGuid();
         _bggId = 12345;
 
         // User
@@ -143,16 +140,6 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
         };
         _dbContext.PrivateGames.Add(privateGame);
 
-        // UserLibraryEntry linking to PrivateGame
-        var libraryEntry = new UserLibraryEntryEntity
-        {
-            Id = _libraryEntryId,
-            UserId = _userId,
-            PrivateGameId = _privateGameId,
-            AddedAt = DateTime.UtcNow
-        };
-        _dbContext.UserLibraryEntries.Add(libraryEntry);
-
         await _dbContext.SaveChangesAsync();
     }
 
@@ -160,11 +147,7 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
     public async Task ApproveAsNew_CreatesNewSharedGameAndProposalMigration()
     {
         // Arrange
-        var shareRequest = ShareRequest.Create(
-            _userId,
-            _libraryEntryId,
-            ContributionType.NewGameProposal,
-            "Proposing my private game");
+        var shareRequest = ShareRequest.CreateGameProposal(_userId, _privateGameId, "Proposing my private game");
         shareRequest.StartReview(_adminId);
         await _shareRequestRepo.AddAsync(shareRequest, TestContext.Current.CancellationToken);
         await _unitOfWork.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -214,11 +197,7 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
         // Create existing SharedGame
         var existingSharedGame = await CreateExistingSharedGameAsync();
 
-        var shareRequest = ShareRequest.Create(
-            _userId,
-            _libraryEntryId,
-            ContributionType.NewGameProposal,
-            "Proposing PDFs for existing game");
+        var shareRequest = ShareRequest.CreateGameProposal(_userId, _privateGameId, "Proposing PDFs for existing game");
         shareRequest.StartReview(_adminId);
         await _shareRequestRepo.AddAsync(shareRequest, TestContext.Current.CancellationToken);
         await _unitOfWork.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -257,11 +236,7 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
         // Arrange
         var baseGame = await CreateExistingSharedGameAsync();
 
-        var shareRequest = ShareRequest.Create(
-            _userId,
-            _libraryEntryId,
-            ContributionType.NewGameProposal,
-            "Proposing variant edition");
+        var shareRequest = ShareRequest.CreateGameProposal(_userId, _privateGameId, "Proposing variant edition");
         shareRequest.StartReview(_adminId);
         await _shareRequestRepo.AddAsync(shareRequest, TestContext.Current.CancellationToken);
         await _unitOfWork.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -341,11 +316,7 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
     public async Task MergeKnowledgeBase_WithNonExistentTargetGame_ThrowsNotFoundException()
     {
         // Arrange
-        var shareRequest = ShareRequest.Create(
-            _userId,
-            _libraryEntryId,
-            ContributionType.NewGameProposal,
-            "Proposing merge");
+        var shareRequest = ShareRequest.CreateGameProposal(_userId, _privateGameId, "Proposing merge");
         shareRequest.StartReview(_adminId);
         await _shareRequestRepo.AddAsync(shareRequest, TestContext.Current.CancellationToken);
         await _unitOfWork.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -366,11 +337,7 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
     public async Task ApproveAsVariant_WithNonExistentBaseGame_ThrowsNotFoundException()
     {
         // Arrange
-        var shareRequest = ShareRequest.Create(
-            _userId,
-            _libraryEntryId,
-            ContributionType.NewGameProposal,
-            "Proposing variant");
+        var shareRequest = ShareRequest.CreateGameProposal(_userId, _privateGameId, "Proposing variant");
         shareRequest.StartReview(_adminId);
         await _shareRequestRepo.AddAsync(shareRequest, TestContext.Current.CancellationToken);
         await _unitOfWork.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -401,11 +368,7 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
         duplicateResult.RecommendedAction.Should().Be(ProposalApprovalAction.MergeKnowledgeBase);
 
         // Step 2: Create and approve ShareRequest using recommended action
-        var shareRequest = ShareRequest.Create(
-            _userId,
-            _libraryEntryId,
-            ContributionType.NewGameProposal,
-            "Following duplicate check recommendation");
+        var shareRequest = ShareRequest.CreateGameProposal(_userId, _privateGameId, "Following duplicate check recommendation");
         shareRequest.StartReview(_adminId);
         await _shareRequestRepo.AddAsync(shareRequest, TestContext.Current.CancellationToken);
         await _unitOfWork.SaveChangesAsync(TestContext.Current.CancellationToken);

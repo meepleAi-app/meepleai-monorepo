@@ -1,12 +1,20 @@
-import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+  type UseQueryOptions,
+} from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { api } from '@/lib/api';
+import { ApiError } from '@/lib/api/core/errors';
 import type {
   ShareRequestDetailsDto,
   PaginatedAdminShareRequestsResponse,
   GetAdminShareRequestsParams,
   ApproveRequestData,
+  ApproveGameProposalData,
   RejectRequestData,
   RequestChangesData,
   ActiveReviewDto,
@@ -46,6 +54,35 @@ export const adminShareRequestsKeys = {
 };
 
 /**
+ * #5076: the HTTP status of a failed request. The client throws ApiError, whose status is `statusCode`; these
+ * hooks read `error.status`, which it does not have, so their 409 and 403 messages never showed.
+ */
+function statusOf(error: Error): number | undefined {
+  return error instanceof ApiError ? error.statusCode : undefined;
+}
+
+/**
+ * #5076: after a refused review action the request is refetched, so the panel shows its real state (a lock that
+ * expired or was released, a status that changed) instead of offering the same refused forms again.
+ */
+function refreshReview(queryClient: QueryClient, shareRequestId: string): void {
+  queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.lists() });
+  queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.detail(shareRequestId) });
+  queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.myReviews() });
+}
+
+/**
+ * #5076: the validators of approve, reject and request-changes refuse an admin who no longer holds the review (the
+ * lock expired and was released): 400 or 422, which "try again" cannot fix.
+ */
+function isLostReview(error: Error): boolean {
+  const status = statusOf(error);
+  return status === 400 || status === 422;
+}
+
+const LOST_REVIEW = 'La revisione non è più tua: la pagina mostra lo stato aggiornato.';
+
+/**
  * Get paginated list of share requests with filters.
  *
  * Features:
@@ -71,10 +108,7 @@ export const adminShareRequestsKeys = {
  */
 export function useAdminShareRequests(
   params?: GetAdminShareRequestsParams,
-  options?: Omit<
-    UseQueryOptions<PaginatedAdminShareRequestsResponse>,
-    'queryKey' | 'queryFn'
-  >
+  options?: Omit<UseQueryOptions<PaginatedAdminShareRequestsResponse>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
     queryKey: adminShareRequestsKeys.list(params),
@@ -187,15 +221,18 @@ export function useStartReview() {
       // Invalidate my reviews
       queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.myReviews() });
 
-      toast.success('Review started. You have 30 minutes to complete the review.');
+      toast.success('Revisione avviata: hai 30 minuti per completarla.');
     },
-    onError: (error: Error & { status?: number; data?: unknown }) => {
-      if (error.status === 409) {
-        toast.error('This request is already being reviewed by another admin.');
-      } else if (error.status === 403) {
-        toast.error('You are not authorized to review this request.');
+    onError: (error: Error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
+      if (statusOf(error) === 409) {
+        toast.error(
+          'Revisione non avviata: un altro admin la sta rivedendo, o la richiesta è cambiata.'
+        );
+      } else if (statusOf(error) === 403) {
+        toast.error('Non hai i permessi per rivedere questa richiesta.');
       } else {
-        toast.error('Failed to start review. Please try again.');
+        toast.error('Non è stato possibile avviare la revisione. Riprova.');
       }
     },
   });
@@ -232,28 +269,21 @@ export function useReleaseReview() {
       });
       queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.myReviews() });
 
-      toast.success('Review released. Other admins can now review this request.');
+      toast.success('Revisione rilasciata: altri admin possono riprenderla.');
     },
-    onError: () => {
-      toast.error('Failed to release review. Please try again.');
+    onError: (_error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
+      toast.error('Non è stato possibile rilasciare la revisione. Riprova.');
     },
   });
 }
 
 /**
- * Approve a share request and optionally modify game details.
+ * Approve a share request, with optional admin notes.
  *
- * Optional modifications:
- * - Override game title
- * - Override game description
- * - Select specific documents to include
- * - Add internal admin notes
- *
- * On success:
- * - Request status changes to Approved
- * - Game is added/updated in shared catalog
- * - Contributor receives approval notification
- * - Badge progress may be updated
+ * On success the request status changes to Approved. It refuses a NewGameProposal and a CoverChange (409):
+ * approve those with {@link useApproveGameProposal}. No notification or badge follows today: ShareRequest's
+ * domain events reach no handler (#5078).
  *
  * @example
  * ```typescript
@@ -262,9 +292,6 @@ export function useReleaseReview() {
  * const handleApprove = () => {
  *   approve({
  *     shareRequestId: id,
- *     modifiedTitle: editedTitle,
- *     modifiedDescription: editedDescription,
- *     documentsToInclude: selectedDocIds,
  *     adminNotes: 'Great contribution!',
  *   });
  * };
@@ -274,10 +301,7 @@ export function useApproveRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      shareRequestId,
-      ...data
-    }: { shareRequestId: string } & ApproveRequestData) =>
+    mutationFn: ({ shareRequestId, ...data }: { shareRequestId: string } & ApproveRequestData) =>
       api.adminShareRequests.approve(shareRequestId, data),
     onSuccess: (_, variables) => {
       // Invalidate all related queries
@@ -287,15 +311,62 @@ export function useApproveRequest() {
       });
       queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.myReviews() });
 
-      toast.success('Share request approved! Contributor will be notified.');
+      toast.success('Richiesta approvata.');
     },
-    onError: (error: Error & { status?: number; data?: unknown }) => {
-      if (error.status === 409) {
-        toast.error('Cannot approve: request is locked by another admin or status changed.');
-      } else if (error.status === 403) {
-        toast.error('You are not authorized to approve this request.');
+    onError: (error: Error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
+      if (statusOf(error) === 409) {
+        toast.error('Non approvabile: la revisione non è tua, è scaduta, o lo stato è cambiato.');
+      } else if (isLostReview(error)) {
+        toast.error(LOST_REVIEW);
+      } else if (statusOf(error) === 403) {
+        toast.error('Non hai i permessi per approvare questa richiesta.');
       } else {
-        toast.error('Failed to approve request. Please try again.');
+        toast.error('Non è stato possibile approvare la richiesta. Riprova.');
+      }
+    },
+  });
+}
+
+/**
+ * #5076: approve a NewGameProposal or a CoverChange through approve-game-proposal.
+ *
+ * - ApproveAsNew creates a shared game from the proposed private game
+ * - ApproveAsVariant creates it as a variant of `targetSharedGameId`
+ * - MergeKnowledgeBase adds the documents to `targetSharedGameId`, creating no game
+ * - UpdateCover promotes a CoverChange's pending cover onto its game
+ */
+export function useApproveGameProposal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      shareRequestId,
+      ...data
+    }: { shareRequestId: string } & ApproveGameProposalData) =>
+      api.adminShareRequests.approveGameProposal(shareRequestId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: adminShareRequestsKeys.detail(variables.shareRequestId),
+      });
+      queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.myReviews() });
+
+      toast.success('Proposta approvata.');
+    },
+    onError: (error: Error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
+      const status = statusOf(error);
+      if (status === 409) {
+        toast.error('Non approvabile: la revisione non è tua, è scaduta, o lo stato è cambiato.');
+      } else if (status === 404) {
+        toast.error('Il gioco proposto o il gioco di destinazione non esiste più.');
+      } else if (isLostReview(error)) {
+        toast.error(LOST_REVIEW);
+      } else if (status === 403) {
+        toast.error('Non hai i permessi per approvare questa proposta.');
+      } else {
+        toast.error('Non è stato possibile approvare la proposta. Riprova.');
       }
     },
   });
@@ -307,10 +378,8 @@ export function useApproveRequest() {
  * Required:
  * - Rejection reason (min 10 characters)
  *
- * On success:
- * - Request status changes to Rejected
- * - Contributor receives rejection notification with reason
- * - Review lock is automatically released
+ * On success the request status changes to Rejected and the review lock is released. No notification
+ * follows today (#5078).
  *
  * @example
  * ```typescript
@@ -338,15 +407,18 @@ export function useRejectRequest() {
       });
       queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.myReviews() });
 
-      toast.success('Share request rejected. Contributor will be notified.');
+      toast.success('Richiesta rifiutata.');
     },
-    onError: (error: Error & { status?: number; data?: unknown }) => {
-      if (error.status === 409) {
-        toast.error('Cannot reject: request is locked by another admin or status changed.');
-      } else if (error.status === 403) {
-        toast.error('You are not authorized to reject this request.');
+    onError: (error: Error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
+      if (statusOf(error) === 409) {
+        toast.error('Non rifiutabile: la revisione non è tua, è scaduta, o lo stato è cambiato.');
+      } else if (isLostReview(error)) {
+        toast.error(LOST_REVIEW);
+      } else if (statusOf(error) === 403) {
+        toast.error('Non hai i permessi per rifiutare questa richiesta.');
       } else {
-        toast.error('Failed to reject request. Please try again.');
+        toast.error('Non è stato possibile rifiutare la richiesta. Riprova.');
       }
     },
   });
@@ -358,11 +430,8 @@ export function useRejectRequest() {
  * Required:
  * - Detailed feedback for user (min 10 characters)
  *
- * On success:
- * - Request status changes to ChangesRequested
- * - Contributor receives notification with feedback
- * - Review lock is automatically released
- * - User can resubmit after making changes
+ * On success the request status changes to ChangesRequested and the review lock is released; the user can
+ * resubmit after making changes. No notification follows today (#5078).
  *
  * @example
  * ```typescript
@@ -380,10 +449,7 @@ export function useRequestChanges() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      shareRequestId,
-      ...data
-    }: { shareRequestId: string } & RequestChangesData) =>
+    mutationFn: ({ shareRequestId, ...data }: { shareRequestId: string } & RequestChangesData) =>
       api.adminShareRequests.requestChanges(shareRequestId, data),
     onSuccess: (_, variables) => {
       // Invalidate all related queries
@@ -393,17 +459,20 @@ export function useRequestChanges() {
       });
       queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.myReviews() });
 
-      toast.success('Changes requested. Contributor will be notified.');
+      toast.success('Modifiche richieste.');
     },
-    onError: (error: Error & { status?: number; data?: unknown }) => {
-      if (error.status === 409) {
+    onError: (error: Error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
+      if (statusOf(error) === 409) {
         toast.error(
-          'Cannot request changes: request is locked by another admin or status changed.'
+          'Modifiche non richiedibili: la revisione non è tua, è scaduta, o lo stato è cambiato.'
         );
-      } else if (error.status === 403) {
-        toast.error('You are not authorized to request changes for this request.');
+      } else if (isLostReview(error)) {
+        toast.error(LOST_REVIEW);
+      } else if (statusOf(error) === 403) {
+        toast.error('Non hai i permessi per chiedere modifiche a questa richiesta.');
       } else {
-        toast.error('Failed to request changes. Please try again.');
+        toast.error('Non è stato possibile chiedere le modifiche. Riprova.');
       }
     },
   });

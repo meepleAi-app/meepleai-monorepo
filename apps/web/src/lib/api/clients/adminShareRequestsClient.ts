@@ -3,6 +3,8 @@ import {
   type PaginatedAdminShareRequestsResponse,
   type GetAdminShareRequestsParams,
   type ApproveRequestData,
+  type ApproveGameProposalData,
+  type ApproveShareRequestResponse,
   type RejectRequestData,
   type RequestChangesData,
   type StartReviewResponse,
@@ -11,6 +13,7 @@ import {
   ShareRequestDetailsDtoSchema,
   StartReviewResponseSchema,
   ActiveReviewDtoSchema,
+  ApproveShareRequestResponseSchema,
 } from '../schemas/admin-share-requests.schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -27,6 +30,7 @@ import type { HttpClient } from '../core/httpClient';
  * - POST /api/v1/admin/share-requests/{id}/release - Release lock
  * - GET /api/v1/admin/share-requests/my-reviews - Get active reviews
  * - POST /api/v1/admin/share-requests/{id}/approve - Approve request
+ * - POST /api/v1/admin/share-requests/{id}/approve-game-proposal - Approve a proposal or a cover change
  * - POST /api/v1/admin/share-requests/{id}/reject - Reject with reason
  * - POST /api/v1/admin/share-requests/{id}/request-changes - Request modifications
  *
@@ -38,14 +42,16 @@ export interface AdminShareRequestsClient {
   /**
    * Get paginated list of share requests with filters.
    *
-   * Query parameters:
-   * - page: Page number (default: 1)
-   * - pageSize: Items per page (default: 20, max: 100)
-   * - status: Filter by status (Pending, InReview, etc.)
-   * - contributionType: Filter by type (NewGame, AdditionalContent)
-   * - searchTerm: Search game title or contributor name
-   * - sortBy: Sort field (CreatedAt, GameTitle, ContributorName, Status)
-   * - sortDirection: Ascending or Descending
+   * Parameters, and the query names the backend binds:
+   * - page → pageNumber (default: 1)
+   * - pageSize → pageSize (default: 20, max: 100)
+   * - status → status (Pending, InReview, ChangesRequested: the queue lists open requests only; any other is a 400)
+   * - contributionType → type
+   * - searchTerm → search (game title or the contributor's notes)
+   * - sortBy → sortBy (CreatedAt, GameTitle, ContributorName, Status; default CreatedAt)
+   * - sortDirection → sortDirection (default Descending)
+   *
+   * #5076: pageNumber, sortBy and sortDirection are required by the backend (400 without them).
    */
   getAll(params?: GetAdminShareRequestsParams): Promise<PaginatedAdminShareRequestsResponse>;
 
@@ -92,6 +98,20 @@ export interface AdminShareRequestsClient {
   approve(shareRequestId: string, data?: ApproveRequestData): Promise<void>;
 
   /**
+   * #5076: approve a NewGameProposal (ApproveAsNew, ApproveAsVariant, MergeKnowledgeBase) or a
+   * CoverChange (UpdateCover). The generic approve refuses both with 409.
+   *
+   * Throws:
+   * - 400 if ApproveAsVariant or MergeKnowledgeBase has no target game
+   * - 404 if the proposed private game or the target game no longer exists
+   * - 409 if not locked by current admin
+   */
+  approveGameProposal(
+    shareRequestId: string,
+    data: ApproveGameProposalData
+  ): Promise<ApproveShareRequestResponse>;
+
+  /**
    * Reject a share request with a required reason.
    *
    * Required:
@@ -128,13 +148,15 @@ export function createAdminShareRequestsClient(httpClient: HttpClient): AdminSha
     ): Promise<PaginatedAdminShareRequestsResponse> {
       const queryParams = new URLSearchParams();
 
-      if (params.page) queryParams.set('page', params.page.toString());
-      if (params.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+      // #5076: the backend binds pageNumber, type and search, and requires pageNumber, sortBy and sortDirection.
+      // This sent page, contributionType and searchTerm: the list answered 400.
+      queryParams.set('pageNumber', (params.page ?? 1).toString());
+      queryParams.set('pageSize', (params.pageSize ?? 20).toString());
+      queryParams.set('sortBy', params.sortBy ?? 'CreatedAt');
+      queryParams.set('sortDirection', params.sortDirection ?? 'Descending');
       if (params.status) queryParams.set('status', params.status);
-      if (params.contributionType) queryParams.set('contributionType', params.contributionType);
-      if (params.searchTerm) queryParams.set('searchTerm', params.searchTerm);
-      if (params.sortBy) queryParams.set('sortBy', params.sortBy);
-      if (params.sortDirection) queryParams.set('sortDirection', params.sortDirection);
+      if (params.contributionType) queryParams.set('type', params.contributionType);
+      if (params.searchTerm) queryParams.set('search', params.searchTerm);
 
       const result = await httpClient.get(
         `${baseUrl}?${queryParams}`,
@@ -188,6 +210,23 @@ export function createAdminShareRequestsClient(httpClient: HttpClient): AdminSha
 
     async approve(shareRequestId: string, data?: ApproveRequestData): Promise<void> {
       await httpClient.post(`${baseUrl}/${shareRequestId}/approve`, data ?? {});
+    },
+
+    async approveGameProposal(
+      shareRequestId: string,
+      data: ApproveGameProposalData
+    ): Promise<ApproveShareRequestResponse> {
+      const result = await httpClient.post(
+        `${baseUrl}/${shareRequestId}/approve-game-proposal`,
+        data,
+        ApproveShareRequestResponseSchema
+      );
+
+      if (!result) {
+        throw new Error('Failed to approve the proposal');
+      }
+
+      return result;
     },
 
     async reject(shareRequestId: string, data: RejectRequestData): Promise<void> {

@@ -279,6 +279,7 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
         return new GameDetailsDto(
             Id: game?.Id ?? Guid.Empty,
             Title: game?.Title ?? "Unknown Game",
+            YearPublished: game?.YearPublished,
             Description: game?.Description,
             ThumbnailUrl: game?.ThumbnailUrl is { } url && !BggHostDenyList.IsBanned(url) ? url : null,
             BggId: game?.BggId,
@@ -295,8 +296,10 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
         return new GameDetailsDto(
             Id: game.Id,
             Title: game.Title,
+            YearPublished: game.YearPublished,
             Description: game.Description,
-            ThumbnailUrl: game.ThumbnailUrl,
+            // #5076: through the deny list, as the private game's thumbnail (#2123, ADR-059 §5).
+            ThumbnailUrl: game.ThumbnailUrl is { } url && !BggHostDenyList.IsBanned(url) ? url : null,
             BggId: game.BggId,
             MinPlayers: game.MinPlayers,
             MaxPlayers: game.MaxPlayers,

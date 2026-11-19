@@ -165,14 +165,12 @@ internal static class ApproveHandlerBuilder
         var documentServiceMock = new Mock<IShareRequestDocumentService>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
         var loggerMock = new Mock<ILogger<ApproveGameProposalCommandHandler>>();
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext($"ApproveCoverChangeTest_{Guid.NewGuid()}");
 
         var handler = new ApproveGameProposalCommandHandler(
             shareRequestRepoMock.Object,
             privateGameRepoMock.Object,
             sharedGameRepoMock.Object,
             documentServiceMock.Object,
-            dbContext,
             unitOfWorkMock.Object,
             loggerMock.Object);
 

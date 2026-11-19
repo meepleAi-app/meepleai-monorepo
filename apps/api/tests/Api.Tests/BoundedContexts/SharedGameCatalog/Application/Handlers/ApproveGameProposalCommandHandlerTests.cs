@@ -9,14 +9,9 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
-using Api.Infrastructure;
-using Api.Infrastructure.Entities;
-using Api.Infrastructure.Entities.UserLibrary;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
-using Api.Tests.TestHelpers;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -34,13 +29,11 @@ public class ApproveGameProposalCommandHandlerTests
     private readonly Mock<IShareRequestDocumentService> _documentServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<ApproveGameProposalCommandHandler>> _loggerMock;
-    private readonly MeepleAiDbContext _dbContext;
     private readonly ApproveGameProposalCommandHandler _handler;
 
     private static readonly Guid TestAdminId = Guid.NewGuid();
     private static readonly Guid TestUserId = Guid.NewGuid();
     private static readonly Guid TestPrivateGameId = Guid.NewGuid();
-    private static readonly Guid TestLibraryEntryId = Guid.NewGuid();
 
     public ApproveGameProposalCommandHandlerTests()
     {
@@ -50,14 +43,12 @@ public class ApproveGameProposalCommandHandlerTests
         _documentServiceMock = new Mock<IShareRequestDocumentService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<ApproveGameProposalCommandHandler>>();
-        _dbContext = TestDbContextFactory.CreateInMemoryDbContext($"ApproveGameProposalTest_{Guid.NewGuid()}");
 
         _handler = new ApproveGameProposalCommandHandler(
             _shareRequestRepoMock.Object,
             _privateGameRepoMock.Object,
             _sharedGameRepoMock.Object,
             _documentServiceMock.Object,
-            _dbContext,
             _unitOfWorkMock.Object,
             _loggerMock.Object);
     }
@@ -102,7 +93,7 @@ public class ApproveGameProposalCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonProposalShareRequest_ThrowsInvalidOperationException()
+    public async Task Handle_WithNonProposalShareRequest_ThrowsConflictException()
     {
         // Arrange
         var shareRequest = ShareRequest.Create(
@@ -129,96 +120,45 @@ public class ApproveGameProposalCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentLibraryEntry_ThrowsNotFoundException()
+    public async Task Handle_ProposalWithoutAPrivateGame_ThrowsConflictException()
     {
-        // Arrange
-        var shareRequest = CreateShareRequestInReview();
-        var command = new ApproveGameProposalCommand(
-            ShareRequestId: shareRequest.Id,
-            AdminId: TestAdminId,
-            ApprovalAction: ProposalApprovalAction.ApproveAsNew,
-            TargetSharedGameId: null,
-            AdminNotes: null);
-
+        // #5076: a NewGameProposal written by ShareRequest.Create carries a SourceGameId and no private game. The
+        // handler used to read that id as a UserLibraryEntry; there is nothing to approve, so it is a conflict.
+        var shareRequest = ShareRequest.Create(TestUserId, Guid.NewGuid(), ContributionType.NewGameProposal);
+        shareRequest.StartReview(TestAdminId);
         _shareRequestRepoMock
-            .Setup(r => r.GetByIdForUpdateAsync(command.ShareRequestId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(shareRequest.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(shareRequest);
 
-        // No library entry seeded in DbContext
+        var act = () => _handler.Handle(
+            new ApproveGameProposalCommand(shareRequest.Id, TestAdminId, ProposalApprovalAction.ApproveAsNew, null, null),
+            TestContext.Current.CancellationToken);
 
-        // Act & Assert
-        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<NotFoundException>();
-    }
-
-    [Fact]
-    public async Task Handle_WithLibraryEntryWithoutPrivateGame_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var shareRequest = CreateShareRequestInReview();
-
-        // Seed library entry WITHOUT PrivateGameId
-        var libraryEntry = new UserLibraryEntryEntity
-        {
-            Id = shareRequest.SourceGameId,
-            UserId = TestUserId,
-            PrivateGameId = null, // Missing PrivateGameId
-            AddedAt = DateTime.UtcNow,
-        };
-        _dbContext.UserLibraryEntries.Add(libraryEntry);
-        await _dbContext.SaveChangesAsync();
-
-        var command = new ApproveGameProposalCommand(
-            ShareRequestId: shareRequest.Id,
-            AdminId: TestAdminId,
-            ApprovalAction: ProposalApprovalAction.ApproveAsNew,
-            TargetSharedGameId: null,
-            AdminNotes: null);
-
-        _shareRequestRepoMock
-            .Setup(r => r.GetByIdForUpdateAsync(command.ShareRequestId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(shareRequest);
-
-        // Act & Assert - Handler throws ConflictException (409) for missing PrivateGameId
-        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<ConflictException>();
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*no proposed private game*");
+        _privateGameRepoMock.Verify(
+            r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task Handle_WithNonExistentPrivateGame_ThrowsNotFoundException()
     {
-        // Arrange
+        // The proposal's private game is gone (deleted after the proposal was sent): nothing is approved.
         var shareRequest = CreateShareRequestInReview();
-
-        // Seed library entry WITH valid PrivateGameId
-        var libraryEntry = new UserLibraryEntryEntity
-        {
-            Id = shareRequest.SourceGameId,
-            UserId = TestUserId,
-            PrivateGameId = TestPrivateGameId,
-            AddedAt = DateTime.UtcNow,
-        };
-        _dbContext.UserLibraryEntries.Add(libraryEntry);
-        await _dbContext.SaveChangesAsync();
-
-        var command = new ApproveGameProposalCommand(
-            ShareRequestId: shareRequest.Id,
-            AdminId: TestAdminId,
-            ApprovalAction: ProposalApprovalAction.ApproveAsNew,
-            TargetSharedGameId: null,
-            AdminNotes: null);
-
         _shareRequestRepoMock
-            .Setup(r => r.GetByIdForUpdateAsync(command.ShareRequestId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(shareRequest.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(shareRequest);
-
         _privateGameRepoMock
             .Setup(r => r.GetByIdAsync(TestPrivateGameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((PrivateGame?)null);
 
-        // Act & Assert
-        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var act = () => _handler.Handle(
+            new ApproveGameProposalCommand(shareRequest.Id, TestAdminId, ProposalApprovalAction.ApproveAsNew, null, null),
+            TestContext.Current.CancellationToken);
+
         await act.Should().ThrowAsync<NotFoundException>();
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -227,8 +167,6 @@ public class ApproveGameProposalCommandHandlerTests
         // Arrange
         var shareRequest = CreateShareRequestInReview();
         var privateGame = CreatePrivateGame();
-
-        await SeedLibraryEntryAsync(shareRequest.SourceGameId);
 
         var command = new ApproveGameProposalCommand(
             ShareRequestId: shareRequest.Id,
@@ -287,8 +225,6 @@ public class ApproveGameProposalCommandHandlerTests
         var privateGame = CreatePrivateGame();
         var existingGame = SharedGame.Create("Existing Game", 2020, "An existing game", 2, 4, 60, 10, 2.5m, null, "https://example.com/image.jpg", "https://example.com/thumb.jpg", null, TestUserId, null);
 
-        await SeedLibraryEntryAsync(shareRequest.SourceGameId);
-
         var command = new ApproveGameProposalCommand(
             ShareRequestId: shareRequest.Id,
             AdminId: TestAdminId,
@@ -336,8 +272,6 @@ public class ApproveGameProposalCommandHandlerTests
         var shareRequest = CreateShareRequestInReview();
         var privateGame = CreatePrivateGame();
 
-        await SeedLibraryEntryAsync(shareRequest.SourceGameId);
-
         var command = new ApproveGameProposalCommand(
             ShareRequestId: shareRequest.Id,
             AdminId: TestAdminId,
@@ -369,8 +303,6 @@ public class ApproveGameProposalCommandHandlerTests
         var shareRequest = CreateShareRequestInReview();
         var privateGame = CreatePrivateGame();
         var baseGame = SharedGame.Create("Base Game", 2020, "A base game", 2, 4, 60, 10, 2.5m, null, "https://example.com/image.jpg", "https://example.com/thumb.jpg", null, TestUserId, null);
-
-        await SeedLibraryEntryAsync(shareRequest.SourceGameId);
 
         var command = new ApproveGameProposalCommand(
             ShareRequestId: shareRequest.Id,
@@ -415,8 +347,6 @@ public class ApproveGameProposalCommandHandlerTests
         // Arrange
         var shareRequest = CreateShareRequestInReview();
         var privateGame = CreatePrivateGame();
-
-        await SeedLibraryEntryAsync(shareRequest.SourceGameId);
 
         var command = new ApproveGameProposalCommand(
             ShareRequestId: shareRequest.Id,
@@ -513,7 +443,6 @@ public class ApproveGameProposalCommandHandlerTests
     private async Task<SharedGame> ApproveAsync(ProposalApprovalAction action, PrivateGame privateGame)
     {
         var shareRequest = CreateShareRequestInReview();
-        await SeedLibraryEntryAsync(shareRequest.SourceGameId);
         var baseGame = SharedGame.Create("Base Game", 2020, "A base game", 2, 4, 60, 10, 2.5m, null, "https://example.com/image.jpg", "https://example.com/thumb.jpg", null, TestUserId, null);
 
         _shareRequestRepoMock
@@ -548,11 +477,8 @@ public class ApproveGameProposalCommandHandlerTests
 
     private static ShareRequest CreateShareRequestInReview()
     {
-        var shareRequest = ShareRequest.Create(
-            TestUserId,
-            TestLibraryEntryId, // SourceGameId references UserLibraryEntry.Id for NewGameProposal
-            ContributionType.NewGameProposal,
-            "Proposing new game");
+        // #5076: the proposal as its only producer writes it (ProposePrivateGameCommandHandler).
+        var shareRequest = ShareRequest.CreateGameProposal(TestUserId, TestPrivateGameId, "Proposing new game");
         shareRequest.StartReview(TestAdminId);
         return shareRequest;
     }
@@ -574,18 +500,5 @@ public class ApproveGameProposalCommandHandlerTests
             playingTimeMinutes: 60,
             minAge: 10,
             complexityRating: 2.5m);
-    }
-
-    private async Task SeedLibraryEntryAsync(Guid libraryEntryId)
-    {
-        var libraryEntry = new UserLibraryEntryEntity
-        {
-            Id = libraryEntryId,
-            UserId = TestUserId,
-            PrivateGameId = TestPrivateGameId,
-            AddedAt = DateTime.UtcNow,
-        };
-        _dbContext.UserLibraryEntries.Add(libraryEntry);
-        await _dbContext.SaveChangesAsync();
     }
 }

@@ -919,5 +919,89 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
         theirsBody.Should().NotContain(title);
     }
 
+    /// <summary>
+    /// #5076: a user proposes a game, the admin starts the review and approves the proposal with
+    /// <paramref name="action"/>. Returns the proposal's id and the approval's response.
+    /// </summary>
+    private async Task<(Guid ShareRequestId, HttpResponseMessage Response)> ProposeAndApproveAsync(
+        MeepleAiDbContext dbContext, string adminToken, string title, string action, Guid? targetSharedGameId = null)
+    {
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var gameId = await SeedProposableGameAsync(dbContext, userId, title, $"{title}, a tile game.");
+        var created = await ProposeAsync(gameId, sessionToken);
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var shareRequestId = System.Text.Json.JsonDocument.Parse(await created.Content.ReadAsStringAsync())
+            .RootElement.GetProperty("shareRequestId").GetGuid();
+        var review = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/admin/share-requests/{shareRequestId}/start-review", adminToken));
+        review.StatusCode.Should().Be(HttpStatusCode.OK, await review.Content.ReadAsStringAsync());
+
+        var approve = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/admin/share-requests/{shareRequestId}/approve-game-proposal", adminToken);
+        approve.Content = JsonContent.Create(new { ApprovalAction = action, TargetSharedGameId = targetSharedGameId, AdminNotes = (string?)null });
+        return (shareRequestId, await _client.SendAsync(approve));
+    }
+
+    private static async Task<Guid> ApprovedTargetAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        return System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("targetSharedGameId").GetGuid();
+    }
+
+    [Fact]
+    public async Task ProposedGame_ApprovedAsNew_CreatesTheSharedGameFromThePrivateGame()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+        var title = $"Approved {Guid.NewGuid():N}";
+
+        // The handler read the proposed game from a library entry at source_game_id, which a proposal does not
+        // have (null since #5074): every real proposal answered 404 "UserLibraryEntry".
+        var (shareRequestId, response) = await ProposeAndApproveAsync(dbContext, adminToken, title, "ApproveAsNew");
+
+        var sharedGameId = await ApprovedTargetAsync(response);
+        var sharedGame = await dbContext.SharedGames.AsNoTracking().SingleAsync(g => g.Id == sharedGameId);
+        sharedGame.Title.Should().Be(title);
+        sharedGame.Description.Should().Be($"{title}, a tile game.");
+        sharedGame.MinPlayers.Should().Be(2);
+        sharedGame.MaxPlayers.Should().Be(4);
+        var stored = await dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>()
+            .AsNoTracking()
+            .SingleAsync(r => r.Id == shareRequestId);
+        stored.Status.Should().Be((int)Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects.ShareRequestStatus.Approved);
+        stored.TargetSharedGameId.Should().Be(sharedGameId);
+        stored.SourceGameId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ProposedGames_ApprovedAsVariantAndMerged_ReachTheExistingSharedGame()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+        var baseTitle = $"Base {Guid.NewGuid():N}";
+        var baseGameId = await ApprovedTargetAsync(
+            (await ProposeAndApproveAsync(dbContext, adminToken, baseTitle, "ApproveAsNew")).Response);
+
+        var variantTitle = $"Variant {Guid.NewGuid():N}";
+        var variantId = await ApprovedTargetAsync(
+            (await ProposeAndApproveAsync(dbContext, adminToken, variantTitle, "ApproveAsVariant", baseGameId)).Response);
+        var mergedTitle = $"Merged {Guid.NewGuid():N}";
+        var (mergedRequestId, mergeResponse) =
+            await ProposeAndApproveAsync(dbContext, adminToken, mergedTitle, "MergeKnowledgeBase", baseGameId);
+
+        variantId.Should().NotBe(baseGameId);
+        (await dbContext.SharedGames.AsNoTracking().SingleAsync(g => g.Id == variantId)).Title
+            .Should().Be($"{variantTitle} (Variant)");
+        // Merging creates no game: the proposal points at the existing one.
+        (await ApprovedTargetAsync(mergeResponse)).Should().Be(baseGameId);
+        (await dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>()
+            .AsNoTracking()
+            .SingleAsync(r => r.Id == mergedRequestId)).TargetSharedGameId.Should().Be(baseGameId);
+        (await dbContext.SharedGames.AsNoTracking().AnyAsync(g => g.Title == mergedTitle)).Should().BeFalse();
+    }
+
     #endregion
 }

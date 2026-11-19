@@ -733,7 +733,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
     // #5074: the proposal of a private game to the shared catalog, restored with the description as a requirement.
     // Each test owns its user and a game with a unique title, so the shared database cannot leak into it.
 
-    private static async Task<Guid> SeedProposableGameAsync(MeepleAiDbContext dbContext, Guid ownerId, string title, string? description)
+    private static async Task<Guid> SeedProposableGameAsync(
+        MeepleAiDbContext dbContext, Guid ownerId, string title, string? description, int? yearPublished = null)
     {
         var id = Guid.NewGuid();
         dbContext.PrivateGames.Add(new PrivateGameEntity
@@ -742,6 +743,7 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
             OwnerId = ownerId,
             Title = title,
             Description = description,
+            YearPublished = yearPublished,
             MinPlayers = 2,
             MaxPlayers = 4,
             Source = Api.BoundedContexts.UserLibrary.Domain.Enums.PrivateGameSource.Manual,
@@ -838,7 +840,7 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
         var (_, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
         var title = $"Admin sees {Guid.NewGuid():N}";
-        var gameId = await SeedProposableGameAsync(dbContext, userId, title, "A tile game.");
+        var gameId = await SeedProposableGameAsync(dbContext, userId, title, "A tile game.", yearPublished: 2021);
         var created = await ProposeAsync(gameId, sessionToken);
         created.StatusCode.Should().Be(HttpStatusCode.Created);
         var shareRequestId = System.Text.Json.JsonDocument.Parse(await created.Content.ReadAsStringAsync())
@@ -864,6 +866,10 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
         var sourceGame = System.Text.Json.JsonDocument.Parse(detailsBody).RootElement.GetProperty("sourceGame");
         sourceGame.GetProperty("title").GetString().Should().Be(title);
         sourceGame.GetProperty("description").GetString().Should().Be("A tile game.");
+        // #5076: the review shows the year and the players.
+        sourceGame.GetProperty("yearPublished").GetInt32().Should().Be(2021);
+        sourceGame.GetProperty("minPlayers").GetInt32().Should().Be(2);
+        sourceGame.GetProperty("maxPlayers").GetInt32().Should().Be(4);
     }
 
     [Fact]

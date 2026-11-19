@@ -225,6 +225,38 @@ public class BulkApproveShareRequestsCommandHandlerTests
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // #5076: a CoverChange in the batch fails it too: approved here, its pending cover never reached the game.
+    [Fact]
+    public async Task Handle_WithACoverChange_FailsTheBatch_AndSavesNothing()
+    {
+        // Arrange
+        var editorId = Guid.NewGuid();
+        var regular = CreateInReviewShareRequest(Guid.NewGuid(), editorId);
+        var coverChange = ShareRequest.CreateCoverChange(
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "covers/g/pdf-cover", 3, null);
+        coverChange.StartReview(editorId, lockDurationMinutes: 30);
+        var shareRequestsDict = new Dictionary<Guid, ShareRequest>
+        {
+            [regular.Id] = regular,
+            [coverChange.Id] = coverChange,
+        };
+        var command = new BulkApproveShareRequestsCommand([regular.Id, coverChange.Id], editorId);
+
+        _mockShareRequestRepository
+            .Setup(r => r.GetByIdsForUpdateAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(shareRequestsDict);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.SuccessCount.Should().Be(0);
+        result.FailedCount.Should().Be(2);
+        result.Errors.Should().ContainSingle().Which.Should().Contain("CoverChange");
+        coverChange.Status.Should().Be(ShareRequestStatus.InReview);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static ShareRequest CreateInReviewShareRequest(Guid id, Guid editorId)
     {
         var shareRequest = ShareRequest.Create(

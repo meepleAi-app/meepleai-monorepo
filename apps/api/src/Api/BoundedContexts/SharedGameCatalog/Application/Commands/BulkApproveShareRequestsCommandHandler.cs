@@ -101,10 +101,11 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
 
                 // #5074: a NewGameProposal has no shared game yet; approving it here would mark it approved without
                 // creating one. It goes through approve-game-proposal (ApproveAsNew, ApproveAsVariant, MergeKnowledgeBase).
-                if (shareRequest.ContributionType == ContributionType.NewGameProposal)
+                // #5076: so does a CoverChange (UpdateCover): approved here, its pending cover never reached the game.
+                if (shareRequest.ContributionType is ContributionType.NewGameProposal or ContributionType.CoverChange)
                 {
                     throw new ConflictException(
-                        $"ShareRequest {shareRequest.Id} is a NewGameProposal: approve it with approve-game-proposal");
+                        $"ShareRequest {shareRequest.Id} is a {shareRequest.ContributionType}: approve it with approve-game-proposal");
                 }
 
                 // Approve the request (domain validates and raises events)

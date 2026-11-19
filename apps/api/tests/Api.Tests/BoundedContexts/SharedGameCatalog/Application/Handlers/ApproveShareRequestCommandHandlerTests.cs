@@ -172,6 +172,30 @@ public class ApproveShareRequestCommandHandlerTests
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // #5076: approving a CoverChange here marked it approved and never promoted its pending cover (UpdateCover does).
+    [Fact]
+    public async Task Handle_CoverChange_ThrowsConflict_AndChangesNothing()
+    {
+        // Arrange
+        var coverChange = ShareRequest.CreateCoverChange(
+            TestUserId, Guid.NewGuid(), Guid.NewGuid(), "covers/g/pdf-cover", 3, null);
+        coverChange.StartReview(TestAdminId);
+        var command = new ApproveShareRequestCommand(ShareRequestId: coverChange.Id, AdminId: TestAdminId);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdForUpdateAsync(coverChange.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coverChange);
+
+        // Act
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*CoverChange*approve-game-proposal*");
+        coverChange.Status.Should().Be(ShareRequestStatus.InReview);
+        _repositoryMock.Verify(r => r.Update(It.IsAny<ShareRequest>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static ShareRequest CreateShareRequestInReview(Guid reviewingAdminId)
     {
         var shareRequest = ShareRequest.Create(

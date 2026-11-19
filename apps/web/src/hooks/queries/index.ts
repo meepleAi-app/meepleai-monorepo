@@ -119,6 +119,7 @@ export {
   useStartReview,
   useReleaseReview,
   useApproveRequest,
+  useApproveGameProposal,
   useRejectRequest,
   useRequestChanges,
   adminShareRequestsKeys,

@@ -10,6 +10,7 @@ import {
   FileSearch,
   Gamepad2,
   Globe,
+  Inbox,
   LayoutDashboard,
   Mail,
   MonitorCheck,
@@ -72,6 +73,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: Wrench,
     items: [
       { label: 'Giochi', href: '/admin/shared-games/all', icon: Gamepad2 },
+      // #5076: the review of user share requests and private-game proposals
+      { label: 'Share Requests', href: '/admin/share-requests', icon: Inbox },
       { label: 'Email Templates', href: '/admin/content/email-templates', icon: Mail },
       { label: 'Invitations', href: '/admin/users/invitations', icon: Mail },
       { label: 'Ruoli & Permessi', href: '/admin/users/roles', icon: Shield },

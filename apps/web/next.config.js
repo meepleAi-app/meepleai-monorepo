@@ -485,11 +485,8 @@ const nextConfig = {
         destination: '/admin/content?tab=sessions',
         permanent: true,
       },
-      {
-        source: '/admin/share-requests',
-        destination: '/admin/content?tab=shared&section=requests',
-        permanent: true,
-      },
+      // #5076: no '/admin/share-requests' redirect: the review page lives there again. The content hub never read
+      // `section`, so this one led to the shared games tab.
 
       // Admin Analytics hub (/admin/analytics)
       {

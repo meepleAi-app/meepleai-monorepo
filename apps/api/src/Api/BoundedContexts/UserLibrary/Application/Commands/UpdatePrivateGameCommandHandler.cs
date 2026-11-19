@@ -1,9 +1,12 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using FluentValidation;
+using FluentValidation.Results;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 
@@ -14,15 +17,18 @@ namespace Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 internal sealed class UpdatePrivateGameCommandHandler : ICommandHandler<UpdatePrivateGameCommand, PrivateGameDto>
 {
     private readonly IPrivateGameRepository _repository;
+    private readonly IShareRequestRepository _shareRequestRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UpdatePrivateGameCommandHandler> _logger;
 
     public UpdatePrivateGameCommandHandler(
         IPrivateGameRepository repository,
+        IShareRequestRepository shareRequestRepository,
         IUnitOfWork unitOfWork,
         ILogger<UpdatePrivateGameCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -45,6 +51,20 @@ internal sealed class UpdatePrivateGameCommandHandler : ICommandHandler<UpdatePr
                 privateGame.OwnerId);
 
             throw new ForbiddenException("You can only update your own private games");
+        }
+
+        // #5079, decision of 2026-11-19: an open proposal to the catalog needs the description (#5074); the admin reads
+        // the game as it is, so it cannot be removed while the proposal is open. Withdrawing the proposal frees it.
+        if (string.IsNullOrWhiteSpace(command.Description) &&
+            await _shareRequestRepository.GetPendingProposalForPrivateGameAsync(command.PrivateGameId, cancellationToken)
+                .ConfigureAwait(false) != null)
+        {
+            throw new ValidationException(
+            [
+                new ValidationFailure(
+                    nameof(command.Description),
+                    "The game has an open proposal to the catalog: withdraw it before removing the description."),
+            ]);
         }
 
         // Update game information.

@@ -175,6 +175,8 @@ export interface LibraryClient {
   addPrivateGame(request: AddPrivateGameRequest): Promise<PrivateGameDto>;
   updatePrivateGame(id: string, request: UpdatePrivateGameRequest): Promise<PrivateGameDto>;
   deletePrivateGame(id: string): Promise<void>;
+  /** #5079: withdraws the game's open proposal to the catalog (404 without one, 409 while an admin reviews it). */
+  withdrawPrivateGameProposal(id: string): Promise<void>;
   // PDF Indexing Status (Issue #4946)
   getPdfProcessingStatus(gameId: string): Promise<PdfIndexingStatus>;
   // Game PDFs (Issue #4915)
@@ -723,6 +725,10 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      */
     async deletePrivateGame(id: string): Promise<void> {
       await httpClient.delete(`/api/v1/private-games/${id}`);
+    },
+
+    async withdrawPrivateGameProposal(id: string): Promise<void> {
+      await httpClient.delete(`/api/v1/private-games/${id}/proposal`);
     },
 
     // ==================== PDF Indexing Status (Issue #4946) ====================

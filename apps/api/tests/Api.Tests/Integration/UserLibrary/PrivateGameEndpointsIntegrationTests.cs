@@ -736,6 +736,11 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
     private static async Task<Guid> SeedProposableGameAsync(
         MeepleAiDbContext dbContext, Guid ownerId, string title, string? description, int? yearPublished = null)
     {
+        // #5079: a proposal takes the share-request limits, read from the tier configuration that the app seeds at
+        // startup and the test host does not; without it the evaluator answers 404. The seeder skips existing rows.
+        await Api.Infrastructure.Seeders.Core.RateLimitConfigSeeder.SeedRateLimitConfigsAsync(
+            dbContext, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+
         var id = Guid.NewGuid();
         dbContext.PrivateGames.Add(new PrivateGameEntity
         {
@@ -1054,6 +1059,190 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
         System.Text.Json.JsonDocument.Parse(detailsBody).RootElement.GetProperty("sourceGame")
             .GetProperty("thumbnailUrl").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
         detailsBody.Should().NotContain("geekdo");
+    }
+
+    #endregion
+
+    #region Proposal rules (#5079)
+
+    // #5079, decisions of 2026-11-19: the proposal takes the share-request limits; with a proposal open the game cannot
+    // lose its description nor be deleted, until the owner withdraws it; an approved game is not proposed again.
+
+    private Task<HttpResponseMessage> AdminAsync(HttpMethod method, string path, string adminToken, object? body = null)
+    {
+        var request = TestSessionHelper.CreateAuthenticatedRequest(method, path, adminToken);
+        if (body != null) request.Content = JsonContent.Create(body);
+        return _client.SendAsync(request);
+    }
+
+    private static async Task<Guid> ProposalIdAsync(HttpResponseMessage created)
+    {
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        return System.Text.Json.JsonDocument.Parse(await created.Content.ReadAsStringAsync())
+            .RootElement.GetProperty("shareRequestId").GetGuid();
+    }
+
+    private static async Task<string?> ErrorCodeAsync(HttpResponseMessage response) =>
+        System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+            .RootElement.TryGetProperty("error", out var code) ? code.GetString() : null;
+
+    private static async Task NoCooldownAsync(MeepleAiDbContext dbContext, Guid userId, Guid adminId, int? maxPending = null)
+    {
+        dbContext.UserRateLimitOverrides.Add(new Api.Infrastructure.Entities.SystemConfiguration.UserRateLimitOverrideEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            MaxPendingRequests = maxPending,
+            CooldownAfterRejectionSeconds = 0,
+            Reason = "test #5079",
+            CreatedByAdminId = adminId,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        await dbContext.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Proposal_AfterAnApproval_Is409_AfterARejection_IsAccepted()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (adminId, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+
+        // Approved: the game is in the catalog and is not proposed again.
+        var (approvedOwner, approvedToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var approvedGame = await SeedProposableGameAsync(dbContext, approvedOwner, $"Approved twice {Guid.NewGuid():N}", "A tile game.");
+        var approvedId = await ProposalIdAsync(await ProposeAsync(approvedGame, approvedToken));
+        (await AdminAsync(HttpMethod.Post, $"/api/v1/admin/share-requests/{approvedId}/start-review", adminToken)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await AdminAsync(HttpMethod.Post, $"/api/v1/admin/share-requests/{approvedId}/approve-game-proposal", adminToken,
+            new { ApprovalAction = "ApproveAsNew" })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var again = await ProposeAsync(approvedGame, approvedToken);
+
+        again.StatusCode.Should().Be(HttpStatusCode.Conflict, await again.Content.ReadAsStringAsync());
+        (await ErrorCodeAsync(again)).Should().Be("proposal_already_approved");
+
+        // Rejected: the game can be proposed again (here without the pause after a rejection, a limit of its own).
+        var (rejectedOwner, rejectedToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        await NoCooldownAsync(dbContext, rejectedOwner, adminId);
+        var rejectedGame = await SeedProposableGameAsync(dbContext, rejectedOwner, $"Rejected once {Guid.NewGuid():N}", "A tile game.");
+        var rejectedId = await ProposalIdAsync(await ProposeAsync(rejectedGame, rejectedToken));
+        (await AdminAsync(HttpMethod.Post, $"/api/v1/admin/share-requests/{rejectedId}/start-review", adminToken)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await AdminAsync(HttpMethod.Post, $"/api/v1/admin/share-requests/{rejectedId}/reject", adminToken,
+            new { Reason = "Not a board game, sorry." })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await ProposeAsync(rejectedGame, rejectedToken)).StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task OpenProposal_BlocksRemovingTheDescriptionAndDeleting_UntilTheOwnerWithdrawsIt()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var title = $"Held {Guid.NewGuid():N}";
+        var gameId = await SeedProposableGameAsync(dbContext, userId, title, "A tile game.");
+        await ProposalIdAsync(await ProposeAsync(gameId, sessionToken));
+
+        var update = TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Put, $"/api/v1/private-games/{gameId}", sessionToken);
+        update.Content = JsonContent.Create(new { Title = title, MinPlayers = 2, MaxPlayers = 4, Description = (string?)null });
+        var removed = await _client.SendAsync(update);
+        removed.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity, await removed.Content.ReadAsStringAsync());
+        (await removed.Content.ReadAsStringAsync()).Should().Contain("Description");
+
+        var deleted = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Delete, $"/api/v1/private-games/{gameId}", sessionToken));
+        deleted.StatusCode.Should().Be(HttpStatusCode.Conflict, await deleted.Content.ReadAsStringAsync());
+        (await ErrorCodeAsync(deleted)).Should().Be("proposal_already_open");
+        (await dbContext.PrivateGames.AsNoTracking().SingleAsync(g => g.Id == gameId)).IsDeleted.Should().BeFalse();
+
+        var withdrawn = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Delete, $"/api/v1/private-games/{gameId}/proposal", sessionToken));
+        withdrawn.StatusCode.Should().Be(HttpStatusCode.NoContent, await withdrawn.Content.ReadAsStringAsync());
+
+        (await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Delete, $"/api/v1/private-games/{gameId}", sessionToken))).StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task ProposalInReview_CannotBeWithdrawn()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (_, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+        var gameId = await SeedProposableGameAsync(dbContext, userId, $"In review {Guid.NewGuid():N}", "A tile game.");
+        var proposalId = await ProposalIdAsync(await ProposeAsync(gameId, sessionToken));
+        (await AdminAsync(HttpMethod.Post, $"/api/v1/admin/share-requests/{proposalId}/start-review", adminToken)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var withdrawn = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Delete, $"/api/v1/private-games/{gameId}/proposal", sessionToken));
+
+        withdrawn.StatusCode.Should().Be(HttpStatusCode.Conflict, await withdrawn.Content.ReadAsStringAsync());
+        (await ErrorCodeAsync(withdrawn)).Should().Be("proposal_in_review");
+    }
+
+    [Fact]
+    public async Task Proposal_UserAtTheShareRequestLimits_Is429_AndStoresNothing()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (adminId, _) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+        await NoCooldownAsync(dbContext, userId, adminId, maxPending: 0);
+        var gameId = await SeedProposableGameAsync(dbContext, userId, $"Over the limit {Guid.NewGuid():N}", "A tile game.");
+
+        var response = await ProposeAsync(gameId, sessionToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.TooManyRequests, await response.Content.ReadAsStringAsync());
+        (await ErrorCodeAsync(response)).Should().Be("share_request_limit_reached");
+        (await dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>()
+            .AnyAsync(r => r.SourcePrivateGameId == gameId)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ConcurrentProposals_CreateOne_AndAnswer409ToTheOther()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var gameId = await SeedProposableGameAsync(dbContext, userId, $"Twice at once {Guid.NewGuid():N}", "A tile game.");
+
+        var responses = await Task.WhenAll(ProposeAsync(gameId, sessionToken), ProposeAsync(gameId, sessionToken));
+
+        responses.Select(r => r.StatusCode).Should().BeEquivalentTo([HttpStatusCode.Created, HttpStatusCode.Conflict]);
+        (await dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>()
+            .CountAsync(r => r.SourcePrivateGameId == gameId)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task TheDatabase_RefusesASecondOpenProposalForTheSameGame()
+    {
+        // The handler's check can race; the partial unique index cannot (migration ShareRequestsOneProposalPerPrivateGame).
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, _) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var gameId = await SeedProposableGameAsync(dbContext, userId, $"Index {Guid.NewGuid():N}", "A tile game.");
+        Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity Open() => new()
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            SourcePrivateGameId = gameId,
+            Status = (int)Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects.ShareRequestStatus.Pending,
+            ContributionType = (int)Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects.ContributionType.NewGameProposal,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId,
+        };
+        dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>().Add(Open());
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>().Add(Open());
+        var act = () => dbContext.SaveChangesAsync();
+
+        var error = await act.Should().ThrowAsync<DbUpdateException>();
+        error.Which.InnerException.Should().BeOfType<Npgsql.PostgresException>()
+            .Which.ConstraintName.Should().Be("ux_share_requests_one_proposal_per_private_game");
     }
 
     #endregion

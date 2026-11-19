@@ -33,6 +33,7 @@ import { KbStatusBadge } from '@/components/library/KbStatusBadge';
 import { LibraryEmptyState } from '@/components/library/LibraryEmptyState';
 import { PrivateGameActionsMenu } from '@/components/library/PrivateGameActionsMenu';
 import { ProposeGameModal } from '@/components/library/ProposeGameModal';
+import { WithdrawProposalButton } from '@/components/library/WithdrawProposalButton';
 import {
   Card,
   CardContent,
@@ -72,6 +73,7 @@ import { Textarea } from '@/components/ui/primitives/textarea';
 import { useProposePrivateGame } from '@/hooks/queries/useShareRequests';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
+import { ApiError, ValidationError } from '@/lib/api/core/errors';
 import type {
   PrivateGameDto,
   GetPrivateGamesParams,
@@ -199,9 +201,16 @@ export default function PrivateGamesClient() {
     }
   };
 
+  // #5079: why the last deletion was refused, shown in the dialog. It closed on click and the error went only to the
+  // log; with a proposal open the game is not deleted (decision of 2026-11-19), and the user is told so.
+  const [deleteProblem, setDeleteProblem] = useState<'proposal' | 'withdrawn' | 'failed' | null>(
+    null
+  );
+
   const handleDeleteGame = async () => {
     if (!selectedGame) return;
     setIsDeleting(true);
+    setDeleteProblem(null);
     try {
       await api.library.deletePrivateGame(selectedGame.id);
       setDeleteDialogOpen(false);
@@ -209,6 +218,9 @@ export default function PrivateGamesClient() {
       await loadGames();
     } catch (err) {
       logger.error('Failed to delete private game:', err);
+      setDeleteProblem(
+        err instanceof ApiError && err.code === 'proposal_already_open' ? 'proposal' : 'failed'
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -235,6 +247,7 @@ export default function PrivateGamesClient() {
     const game = games.find(g => g.id === gameId);
     if (game) {
       if (trigger !== undefined) returnFocusRef.current = trigger;
+      setDeleteProblem(null);
       setSelectedGame(game);
       setDeleteDialogOpen(true);
     }
@@ -443,7 +456,10 @@ export default function PrivateGamesClient() {
         open={deleteDialogOpen}
         onOpenChange={open => {
           setDeleteDialogOpen(open);
-          if (!open) setSelectedGame(null);
+          if (!open) {
+            setSelectedGame(null);
+            setDeleteProblem(null);
+          }
         }}
       >
         <AlertDialogContent onCloseAutoFocus={returnFocus}>
@@ -453,10 +469,35 @@ export default function PrivateGamesClient() {
               {t('privateGames.deleteConfirm', { title: selectedGame?.title ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deleteProblem === 'proposal' && selectedGame && (
+            <div className="space-y-2" data-testid="delete-blocked-by-proposal">
+              <p role="alert" className="text-sm text-destructive">
+                {t('privateGames.deleteBlockedByProposal')}
+              </p>
+              <WithdrawProposalButton
+                gameId={selectedGame.id}
+                onWithdrawn={() => setDeleteProblem('withdrawn')}
+              />
+            </div>
+          )}
+          {deleteProblem === 'withdrawn' && (
+            <p role="status" className="text-sm text-muted-foreground">
+              {t('privateGames.proposalWithdrawn')}
+            </p>
+          )}
+          {deleteProblem === 'failed' && (
+            <p role="alert" className="text-sm text-destructive">
+              {t('privateGames.deleteFailed')}
+            </p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteGame}
+              onClick={event => {
+                // Radix closes the dialog on click: keep it open until the deletion answers.
+                event.preventDefault();
+                void handleDeleteGame();
+              }}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="confirm-delete-btn"
@@ -584,6 +625,11 @@ function EditPrivateGameForm({
   );
 }
 
+// #5088: an empty optional number is `undefined`, which the schema accepts and the update sends as null. With
+// `valueAsNumber` the empty input became NaN: the schema refused it without showing it, and Save did nothing.
+const optionalNumber = (value: unknown): number | undefined =>
+  value === '' || value == null ? undefined : Number(value);
+
 const EditFormSchema = z
   .object({
     title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
@@ -593,7 +639,8 @@ const EditFormSchema = z
     playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
     minAge: z.number().int().min(0).max(99).nullable().optional(),
     complexityRating: z.number().min(0).max(5).nullable().optional(),
-    description: z.string().max(5000, 'Description too long').nullable().optional(),
+    // The server's limit (UpdatePrivateGameCommandValidator): with 5000 here the form sent what the server refused.
+    description: z.string().max(2000, 'Description too long').nullable().optional(),
   })
   .refine(data => data.maxPlayers >= data.minPlayers, {
     message: 'Max players must be >= min players',
@@ -612,9 +659,14 @@ function EditPrivateGameFormInner({
   isSubmitting: boolean;
 }) {
   const { t } = useTranslation();
+  // #5079: the server's refusal, shown instead of going only to the log. With a proposal open the description cannot
+  // be removed (decision of 2026-11-19): the form says so on the field, and offers to withdraw the proposal.
+  const [saveProblem, setSaveProblem] = useState<'proposal' | 'withdrawn' | 'failed' | null>(null);
   const {
     register,
     handleSubmit,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<AddPrivateGameFormData>({
     resolver: zodResolver(EditFormSchema),
@@ -631,10 +683,27 @@ function EditPrivateGameFormInner({
   });
 
   const onSubmitForm = async (data: AddPrivateGameFormData) => {
+    setSaveProblem(null);
     try {
       await onSubmit(data);
     } catch (error) {
       logger.error('Form submission error:', error);
+      const onDescription =
+        error instanceof ValidationError
+          ? (error.validationErrors?.Description ?? error.validationErrors?.description)
+          : undefined;
+      if (onDescription?.length) {
+        // The server refuses a blank description only while a proposal is open, and a filled one only for its
+        // length: the cause is the description sent, not the field the refusal names.
+        const removing = !data.description?.trim();
+        setError('description', {
+          type: 'server',
+          message: removing ? t('privateGames.descriptionNeededByProposal') : onDescription[0],
+        });
+        setSaveProblem(removing ? 'proposal' : null);
+      } else {
+        setSaveProblem('failed');
+      }
     }
   };
 
@@ -691,7 +760,7 @@ function EditPrivateGameFormInner({
             type="number"
             min="1900"
             max="2100"
-            {...register('yearPublished', { valueAsNumber: true })}
+            {...register('yearPublished', { setValueAs: optionalNumber })}
             disabled={isSubmitting}
           />
         </div>
@@ -702,7 +771,7 @@ function EditPrivateGameFormInner({
             type="number"
             min="1"
             max="10000"
-            {...register('playingTimeMinutes', { valueAsNumber: true })}
+            {...register('playingTimeMinutes', { setValueAs: optionalNumber })}
             disabled={isSubmitting}
           />
         </div>
@@ -716,7 +785,7 @@ function EditPrivateGameFormInner({
             type="number"
             min="0"
             max="99"
-            {...register('minAge', { valueAsNumber: true })}
+            {...register('minAge', { setValueAs: optionalNumber })}
             disabled={isSubmitting}
           />
         </div>
@@ -728,7 +797,7 @@ function EditPrivateGameFormInner({
             min="0"
             max="5"
             step="0.1"
-            {...register('complexityRating', { valueAsNumber: true })}
+            {...register('complexityRating', { setValueAs: optionalNumber })}
             disabled={isSubmitting}
           />
         </div>
@@ -741,8 +810,35 @@ function EditPrivateGameFormInner({
           {...register('description')}
           rows={4}
           disabled={isSubmitting}
+          aria-invalid={errors.description ? true : undefined}
+          aria-describedby={errors.description ? 'edit-description-error' : undefined}
         />
+        {errors.description && (
+          <p id="edit-description-error" role="alert" className="text-sm text-destructive">
+            {errors.description.message}
+          </p>
+        )}
+        {saveProblem === 'proposal' && (
+          <WithdrawProposalButton
+            gameId={game.id}
+            onWithdrawn={() => {
+              clearErrors('description');
+              setSaveProblem('withdrawn');
+            }}
+          />
+        )}
+        {saveProblem === 'withdrawn' && (
+          <p role="status" className="text-sm text-muted-foreground">
+            {t('privateGames.proposalWithdrawn')}
+          </p>
+        )}
       </div>
+
+      {saveProblem === 'failed' && (
+        <p role="alert" className="text-sm text-destructive">
+          {t('privateGames.saveFailed')}
+        </p>
+      )}
 
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>

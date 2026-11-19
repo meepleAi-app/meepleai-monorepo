@@ -75,6 +75,14 @@ public interface IShareRequestRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #5079: whether a game proposal (NewGameProposal) for this private game was approved. Such a game is already in
+    /// the catalog: it is not proposed again. After a rejection or a withdrawal it can be.
+    /// </summary>
+    Task<bool> HasApprovedProposalForPrivateGameAsync(
+        Guid privateGameId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all share requests for a specific user.
     /// </summary>
     /// <param name="userId">The user ID.</param>

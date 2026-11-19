@@ -440,5 +440,18 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
         return entity != null ? MapToDomain(entity) : null;
     }
 
+    public async Task<bool> HasApprovedProposalForPrivateGameAsync(
+        Guid privateGameId,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<ShareRequestEntity>()
+            .AsNoTracking()
+            .AnyAsync(r => r.SourcePrivateGameId == privateGameId &&
+                           r.ContributionType == (int)ContributionType.NewGameProposal &&
+                           r.Status == (int)ShareRequestStatus.Approved,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     #endregion
 }

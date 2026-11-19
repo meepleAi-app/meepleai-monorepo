@@ -13710,6 +13710,10 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("UserId", "SourceGameId", "Status")
                         .HasDatabaseName("ix_share_requests_user_source_status");
 
+                    b.HasIndex(new[] { "SourcePrivateGameId" }, "ux_share_requests_one_proposal_per_private_game")
+                        .IsUnique()
+                        .HasFilter("contribution_type = 2 AND status IN (0, 1, 2, 3) AND source_private_game_id IS NOT NULL");
+
                     b.ToTable("share_requests", (string)null);
                 });
 

@@ -70,6 +70,8 @@ public sealed class PrivateGameQuotaConcurrencyIntegrationTests : IAsyncLifetime
         services.AddScoped<IPrivateGameRepository, PrivateGameRepository>();
         services.AddScoped<IUserLibraryRepository, UserLibraryRepository>();
         services.AddScoped<ISharedGameRepository, SharedGameRepository>();
+        // #5079: the deletion first checks that the game has no open proposal to the catalog.
+        services.AddScoped<IShareRequestRepository, ShareRequestRepository>();
 
         // The free tier, so the limit is the real one (3).
         var tier = new Mock<ITierEnforcementService>();

@@ -26,6 +26,7 @@ internal static class PrivateGameEndpoints
         MapUpdatePrivateGameEndpoint(group);
         MapDeletePrivateGameEndpoint(group);
         MapProposePrivateGameEndpoint(group); // Issue #3665, restored by #5074
+        MapWithdrawPrivateGameProposalEndpoint(group); // #5079
         // Issue #4138: link-agent / unlink-agent (Issue #4228) are retired — one system agent
         // for every game (ADR-094). EndpointContractTests.RetiredRoutes keeps them off.
         MapKnowledgeBaseStatusEndpoint(group); // Issue #3664
@@ -257,6 +258,42 @@ internal static class PrivateGameEndpoints
         .Produces<ProblemDetails>(StatusCodes.Status403Forbidden)
         .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
         .Produces(StatusCodes.Status429TooManyRequests);
+    }
+
+    /// <summary>
+    /// DELETE /api/v1/private-games/{id}/proposal - Withdraw the game's open proposal to the catalog (#5079). With a
+    /// proposal open the game cannot lose its description nor be deleted; withdrawing frees it.
+    /// </summary>
+    private static void MapWithdrawPrivateGameProposalEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/private-games/{id:guid}/proposal", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            await mediator.Send(new WithdrawPrivateGameProposalCommand(userId, id), ct).ConfigureAwait(false);
+
+            return Results.NoContent();
+        })
+        .RequireAuthorization()
+        .WithName("WithdrawPrivateGameProposal")
+        .WithTags("PrivateGames")
+        .WithSummary("Withdraw the private game's open proposal to the catalog")
+        .WithDescription("Withdraws the pending proposal of your private game. A proposal an admin is reviewing " +
+            "cannot be withdrawn until the decision (409).")
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+        .Produces<ProblemDetails>(StatusCodes.Status403Forbidden)
+        .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
     }
 
     /// <summary>

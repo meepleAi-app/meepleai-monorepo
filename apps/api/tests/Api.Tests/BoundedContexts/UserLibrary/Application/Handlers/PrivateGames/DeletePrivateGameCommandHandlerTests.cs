@@ -1,4 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.PurgePrivateGameContent;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -23,6 +25,7 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers.PrivateGame
 public sealed class DeletePrivateGameCommandHandlerTests
 {
     private readonly Mock<IPrivateGameRepository> _repositoryMock;
+    private readonly Mock<IShareRequestRepository> _shareRequestRepositoryMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IMediator> _mediatorMock;
     private readonly Mock<ILogger<DeletePrivateGameCommandHandler>> _loggerMock;
@@ -37,6 +40,7 @@ public sealed class DeletePrivateGameCommandHandlerTests
 
         _handler = new DeletePrivateGameCommandHandler(
             _repositoryMock.Object,
+            _shareRequestRepositoryMock.Object,
             _unitOfWorkMock.Object,
             _mediatorMock.Object,
             _loggerMock.Object);
@@ -51,6 +55,7 @@ public sealed class DeletePrivateGameCommandHandlerTests
         var act = () =>
             new DeletePrivateGameCommandHandler(
                 null!,
+                _shareRequestRepositoryMock.Object,
                 _unitOfWorkMock.Object,
                 _mediatorMock.Object,
                 _loggerMock.Object);
@@ -66,6 +71,7 @@ public sealed class DeletePrivateGameCommandHandlerTests
         var act2 = () =>
             new DeletePrivateGameCommandHandler(
                 _repositoryMock.Object,
+                _shareRequestRepositoryMock.Object,
                 null!,
                 _mediatorMock.Object,
                 _loggerMock.Object);
@@ -81,6 +87,7 @@ public sealed class DeletePrivateGameCommandHandlerTests
         var act3 = () =>
             new DeletePrivateGameCommandHandler(
                 _repositoryMock.Object,
+                _shareRequestRepositoryMock.Object,
                 _unitOfWorkMock.Object,
                 _mediatorMock.Object,
                 null!);
@@ -95,6 +102,7 @@ public sealed class DeletePrivateGameCommandHandlerTests
         var act = () =>
             new DeletePrivateGameCommandHandler(
                 _repositoryMock.Object,
+                _shareRequestRepositoryMock.Object,
                 _unitOfWorkMock.Object,
                 null!,
                 _loggerMock.Object);
@@ -283,6 +291,28 @@ public sealed class DeletePrivateGameCommandHandlerTests
         game.IsDeleted.Should().BeFalse();
         _repositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // #5079, decision of 2026-11-19: the admin reads the proposed game as it is, so it is not deleted while its proposal
+    // to the catalog is open. The check comes before the purge, which cannot be undone.
+    [Fact]
+    public async Task Handle_GameWithAnOpenProposal_ThrowsConflict_AndPurgesNothing()
+    {
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var game = GameOwnedBy(userId, gameId);
+        _shareRequestRepositoryMock
+            .Setup(r => r.GetPendingProposalForPrivateGameAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ShareRequest.CreateGameProposal(userId, gameId));
+
+        var act = () => _handler.Handle(new DeletePrivateGameCommand(gameId, userId), CancellationToken.None);
+
+        var conflict = await act.Should().ThrowAsync<ConflictException>();
+        conflict.Which.ErrorCode.Should().Be(PrivateGameProposalCodes.AlreadyOpen);
+        game.IsDeleted.Should().BeFalse();
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<PurgePrivateGameContentCommand>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 

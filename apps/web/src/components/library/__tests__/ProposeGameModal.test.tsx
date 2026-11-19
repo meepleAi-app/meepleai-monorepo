@@ -6,7 +6,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError } from '@/lib/api/core/errors';
+import { ApiError, ValidationError } from '@/lib/api/core/errors';
 import type { PrivateGameDto } from '@/lib/api/schemas/private-games.schemas';
 
 import { ProposeGameModal } from '../ProposeGameModal';
@@ -77,20 +77,66 @@ describe('ProposeGameModal (#5074)', () => {
   });
 
   it.each([
-    [409, 'already waiting for review'],
-    [422, 'Add a description to the game'],
-    [500, 'could not be sent'],
-  ])('shows why a %i refused the proposal, and stays open', async (statusCode, message) => {
-    const onPropose = vi
-      .fn()
-      .mockRejectedValue(new ApiError({ message: 'refused', statusCode, endpoint: '/x' }));
-    const { onClose } = renderModal(game('A tile game.'), onPropose);
+    [409, undefined, 'already waiting for review'],
+    // #5079: an approved game is not proposed again, and a proposal takes the share-request limits.
+    [409, 'proposal_already_approved', 'already in the catalog'],
+    [422, undefined, 'Add a description to the game'],
+    [429, 'share_request_limit_reached', 'limit of share requests'],
+    [429, undefined, 'Too many attempts in a short time'],
+    [500, undefined, 'could not be sent'],
+  ])(
+    'shows why a %i (%s) refused the proposal, and stays open',
+    async (statusCode, code, message) => {
+      const onPropose = vi
+        .fn()
+        .mockRejectedValue(new ApiError({ message: 'refused', statusCode, endpoint: '/x', code }));
+      const { onClose } = renderModal(game('A tile game.'), onPropose);
+
+      const submit = screen.getByRole('button', { name: 'Submit Proposal' });
+      await waitFor(() => expect(submit).toBeEnabled());
+      fireEvent.click(submit);
+
+      expect(await screen.findByTestId('propose-error')).toHaveTextContent(message);
+      expect(onClose).not.toHaveBeenCalled();
+    }
+  );
+
+  it('says the notes are too long when the server refuses them, not that the description is missing', async () => {
+    const onPropose = vi.fn().mockRejectedValue(
+      new ValidationError({
+        message: 'refused',
+        endpoint: '/x',
+        validationErrors: { Notes: ['Notes cannot exceed 2000 characters'] },
+      })
+    );
+    renderModal(game('A tile game.'), onPropose);
 
     const submit = screen.getByRole('button', { name: 'Submit Proposal' });
     await waitFor(() => expect(submit).toBeEnabled());
     fireEvent.click(submit);
 
-    expect(await screen.findByTestId('propose-error')).toHaveTextContent(message);
-    expect(onClose).not.toHaveBeenCalled();
+    expect(await screen.findByTestId('propose-error')).toHaveTextContent('at most 2000 characters');
+  });
+
+  it('forgets the notes when closed, so they are not sent with the next game', async () => {
+    // The page keeps the modal mounted and swaps the game.
+    const onClose = vi.fn();
+    const props = { isOpen: true, onClose, onPropose: vi.fn(), onEditGame: vi.fn() };
+    const { rerender } = render(<ProposeGameModal {...props} game={game('A tile game.')} />);
+    fireEvent.change(screen.getByLabelText(/Notes for Reviewers/), {
+      target: { value: 'Notes about the first game' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    rerender(<ProposeGameModal {...props} isOpen={false} game={null} />);
+    rerender(
+      <ProposeGameModal
+        {...props}
+        game={{ ...game('Another game.'), id: 'game-2' } as PrivateGameDto}
+      />
+    );
+
+    expect(onClose).toHaveBeenCalled();
+    expect(screen.getByLabelText(/Notes for Reviewers/)).toHaveValue('');
   });
 });

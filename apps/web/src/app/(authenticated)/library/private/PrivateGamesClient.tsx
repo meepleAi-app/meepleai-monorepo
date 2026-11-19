@@ -639,7 +639,8 @@ const EditFormSchema = z
     playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
     minAge: z.number().int().min(0).max(99).nullable().optional(),
     complexityRating: z.number().min(0).max(5).nullable().optional(),
-    description: z.string().max(5000, 'Description too long').nullable().optional(),
+    // The server's limit (UpdatePrivateGameCommandValidator): with 5000 here the form sent what the server refused.
+    description: z.string().max(2000, 'Description too long').nullable().optional(),
   })
   .refine(data => data.maxPlayers >= data.minPlayers, {
     message: 'Max players must be >= min players',
@@ -688,14 +689,18 @@ function EditPrivateGameFormInner({
     } catch (error) {
       logger.error('Form submission error:', error);
       const onDescription =
-        error instanceof ValidationError &&
-        Boolean(error.validationErrors?.Description ?? error.validationErrors?.description);
-      if (onDescription) {
+        error instanceof ValidationError
+          ? (error.validationErrors?.Description ?? error.validationErrors?.description)
+          : undefined;
+      if (onDescription?.length) {
+        // The server refuses a blank description only while a proposal is open, and a filled one only for its
+        // length: the cause is the description sent, not the field the refusal names.
+        const removing = !data.description?.trim();
         setError('description', {
           type: 'server',
-          message: t('privateGames.descriptionNeededByProposal'),
+          message: removing ? t('privateGames.descriptionNeededByProposal') : onDescription[0],
         });
-        setSaveProblem('proposal');
+        setSaveProblem(removing ? 'proposal' : null);
       } else {
         setSaveProblem('failed');
       }

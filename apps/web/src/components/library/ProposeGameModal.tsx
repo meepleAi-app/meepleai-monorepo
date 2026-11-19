@@ -23,7 +23,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { ApiError } from '@/lib/api/core/errors';
+import { ApiError, ValidationError } from '@/lib/api/core/errors';
 import type { PrivateGameDto } from '@/lib/api/schemas/private-games.schemas';
 import { logger } from '@/lib/logger';
 
@@ -45,9 +45,17 @@ function proposeErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.code === 'proposal_already_approved')
     return 'This game is already in the catalog: its proposal was approved.';
   if (status === 409) return 'A proposal for this game is already waiting for review.';
+  // The button is disabled without a description, so a 422 is mostly the notes' length; the description's refusal
+  // stays for a game whose description was removed elsewhere after the page loaded.
+  if (
+    error instanceof ValidationError &&
+    (error.validationErrors?.Notes ?? error.validationErrors?.notes)
+  )
+    return 'The notes for reviewers can be at most 2000 characters.';
   if (status === 422) return 'Add a description to the game before proposing it to the catalog.';
-  if (status === 429)
+  if (error instanceof ApiError && error.code === 'share_request_limit_reached')
     return 'You have reached the limit of share requests for now (pending, monthly, or a recent rejection). Try again later.';
+  if (status === 429) return 'Too many attempts in a short time. Wait a moment and try again.';
   return 'The proposal could not be sent. Please try again.';
 }
 
@@ -66,6 +74,8 @@ export function ProposeGameModal({
   const missingDescription = !!game && !game.description?.trim();
 
   const handleClose = () => {
+    // The modal stays mounted between games: notes typed for one game must not be sent with the next one.
+    setNotes('');
     setError(null);
     onClose();
   };

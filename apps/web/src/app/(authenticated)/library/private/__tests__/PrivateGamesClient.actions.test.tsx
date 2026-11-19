@@ -225,6 +225,43 @@ describe('PrivateGamesClient with a proposal open (#5079)', () => {
     expect(description).not.toHaveAttribute('aria-invalid');
   });
 
+  it("shows the server's own refusal of a filled description, without blaming a proposal", async () => {
+    // The server refuses a filled description only for its length: no proposal is involved, so nothing to withdraw.
+    library.updatePrivateGame.mockRejectedValueOnce(
+      new ValidationError({
+        message: 'refused',
+        endpoint: '/api/v1/private-games',
+        validationErrors: { Description: ['Description cannot exceed 2000 characters'] },
+      })
+    );
+    await choose('Edit');
+    const dialog = await screen.findByRole('dialog');
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save Changes' }));
+
+    expect(
+      await within(dialog).findByText('Description cannot exceed 2000 characters')
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/open proposal to the catalog/)).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', { name: 'Withdraw the proposal' })
+    ).not.toBeInTheDocument();
+  });
+
+  it("refuses a description over the server's limit before sending it", async () => {
+    await choose('Edit');
+    const dialog = await screen.findByRole('dialog');
+    const description = within(dialog).getByRole('textbox', { name: /description/i });
+    await userEvent.clear(description);
+    await userEvent.click(description);
+    await userEvent.paste('x'.repeat(2001));
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save Changes' }));
+
+    expect(await within(dialog).findByText('Description too long')).toBeInTheDocument();
+    expect(library.updatePrivateGame).not.toHaveBeenCalled();
+  });
+
   it('says the changes were not saved when the server refuses them for another reason', async () => {
     library.updatePrivateGame.mockRejectedValueOnce(refused(500));
     await choose('Edit');

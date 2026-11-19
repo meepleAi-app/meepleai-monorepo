@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+  type UseQueryOptions,
+} from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { api } from '@/lib/api';
@@ -54,6 +60,27 @@ export const adminShareRequestsKeys = {
 function statusOf(error: Error): number | undefined {
   return error instanceof ApiError ? error.statusCode : undefined;
 }
+
+/**
+ * #5076: after a refused review action the request is refetched, so the panel shows its real state (a lock that
+ * expired or was released, a status that changed) instead of offering the same refused forms again.
+ */
+function refreshReview(queryClient: QueryClient, shareRequestId: string): void {
+  queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.lists() });
+  queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.detail(shareRequestId) });
+  queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.myReviews() });
+}
+
+/**
+ * #5076: the validators of approve, reject and request-changes refuse an admin who no longer holds the review (the
+ * lock expired and was released): 400 or 422, which "try again" cannot fix.
+ */
+function isLostReview(error: Error): boolean {
+  const status = statusOf(error);
+  return status === 400 || status === 422;
+}
+
+const LOST_REVIEW = 'La revisione non è più tua: la pagina mostra lo stato aggiornato.';
 
 /**
  * Get paginated list of share requests with filters.
@@ -196,9 +223,12 @@ export function useStartReview() {
 
       toast.success('Revisione avviata: hai 30 minuti per completarla.');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
       if (statusOf(error) === 409) {
-        toast.error('Un altro admin sta già rivedendo questa richiesta.');
+        toast.error(
+          'Revisione non avviata: un altro admin la sta rivedendo, o la richiesta è cambiata.'
+        );
       } else if (statusOf(error) === 403) {
         toast.error('Non hai i permessi per rivedere questa richiesta.');
       } else {
@@ -241,7 +271,8 @@ export function useReleaseReview() {
 
       toast.success('Revisione rilasciata: altri admin possono riprenderla.');
     },
-    onError: () => {
+    onError: (_error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
       toast.error('Non è stato possibile rilasciare la revisione. Riprova.');
     },
   });
@@ -282,9 +313,12 @@ export function useApproveRequest() {
 
       toast.success('Richiesta approvata.');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
       if (statusOf(error) === 409) {
         toast.error('Non approvabile: la revisione non è tua, è scaduta, o lo stato è cambiato.');
+      } else if (isLostReview(error)) {
+        toast.error(LOST_REVIEW);
       } else if (statusOf(error) === 403) {
         toast.error('Non hai i permessi per approvare questa richiesta.');
       } else {
@@ -320,12 +354,15 @@ export function useApproveGameProposal() {
 
       toast.success('Proposta approvata.');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
       const status = statusOf(error);
       if (status === 409) {
         toast.error('Non approvabile: la revisione non è tua, è scaduta, o lo stato è cambiato.');
       } else if (status === 404) {
         toast.error('Il gioco proposto o il gioco di destinazione non esiste più.');
+      } else if (isLostReview(error)) {
+        toast.error(LOST_REVIEW);
       } else if (status === 403) {
         toast.error('Non hai i permessi per approvare questa proposta.');
       } else {
@@ -372,9 +409,12 @@ export function useRejectRequest() {
 
       toast.success('Richiesta rifiutata.');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
       if (statusOf(error) === 409) {
         toast.error('Non rifiutabile: la revisione non è tua, è scaduta, o lo stato è cambiato.');
+      } else if (isLostReview(error)) {
+        toast.error(LOST_REVIEW);
       } else if (statusOf(error) === 403) {
         toast.error('Non hai i permessi per rifiutare questa richiesta.');
       } else {
@@ -421,11 +461,14 @@ export function useRequestChanges() {
 
       toast.success('Modifiche richieste.');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      refreshReview(queryClient, variables.shareRequestId);
       if (statusOf(error) === 409) {
         toast.error(
           'Modifiche non richiedibili: la revisione non è tua, è scaduta, o lo stato è cambiato.'
         );
+      } else if (isLostReview(error)) {
+        toast.error(LOST_REVIEW);
       } else if (statusOf(error) === 403) {
         toast.error('Non hai i permessi per chiedere modifiche a questa richiesta.');
       } else {

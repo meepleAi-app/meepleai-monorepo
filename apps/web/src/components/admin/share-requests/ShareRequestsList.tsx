@@ -43,7 +43,9 @@ import { ShareRequestStatusBadge } from './ShareRequestStatusBadge';
 const PAGE_SIZE = 20;
 const ALL = 'all';
 
-const STATUSES = Object.keys(STATUS_LABELS) as ShareRequestStatus[];
+// The queue holds the active requests only: the backend lists these three statuses, and answers 400 to a filter on
+// any other. A closed request opens from its link (the admin notification's, or the review's).
+const STATUSES: ShareRequestStatus[] = ['Pending', 'InReview', 'ChangesRequested'];
 const TYPES = Object.keys(CONTRIBUTION_TYPE_LABELS) as ContributionType[];
 
 interface ShareRequestsListProps {
@@ -89,8 +91,8 @@ export function ShareRequestsList({ oldestFirst = false }: ShareRequestsListProp
           type="search"
           value={searchInput}
           onChange={e => setSearchInput(e.target.value)}
-          placeholder="Cerca per gioco o contributore"
-          aria-label="Cerca per gioco o contributore"
+          placeholder="Cerca per gioco o note"
+          aria-label="Cerca per gioco o note"
           className="w-full sm:w-72"
         />
         <Select
@@ -104,7 +106,7 @@ export function ShareRequestsList({ oldestFirst = false }: ShareRequestsListProp
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Tutti gli stati</SelectItem>
+            <SelectItem value={ALL}>Tutte le attive</SelectItem>
             {STATUSES.map(s => (
               <SelectItem key={s} value={s}>
                 {STATUS_LABELS[s]}

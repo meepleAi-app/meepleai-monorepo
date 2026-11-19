@@ -5,13 +5,16 @@
  * approve (the way the contribution type takes), reject, or ask for changes; or release it.
  */
 
-import { useState, type JSX } from 'react';
+import { useEffect, useState, type JSX } from 'react';
+
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import {
+  adminShareRequestsKeys,
   useApproveGameProposal,
   useApproveRequest,
   useRejectRequest,
@@ -25,9 +28,44 @@ import { ProposalApprovalForm } from './ProposalApprovalForm';
 import { ReasonForm } from './ReasonForm';
 import { approvalKindOf, formatDateTime, isClosed } from './share-request-labels';
 
-function GenericApproval({ shareRequestId }: { shareRequestId: string }): JSX.Element {
+/**
+ * True from the moment `iso` passes. The backend reports the lock as held until the release job runs (every few
+ * minutes), and refuses every decision on an expired one: the panel stops offering them on time.
+ */
+function useExpired(iso: string | null): boolean {
+  const deadline = iso ? Date.parse(iso) : null;
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (deadline === null || deadline <= now) return;
+    const timer = setTimeout(() => setNow(Date.now()), Math.min(deadline - now + 250, 2 ** 31 - 1));
+    return () => clearTimeout(timer);
+  }, [deadline, now]);
+
+  return deadline !== null && deadline <= now;
+}
+
+function GenericApproval({
+  shareRequestId,
+  documentCount,
+}: {
+  shareRequestId: string;
+  documentCount: number;
+}): JSX.Element {
   const [notes, setNotes] = useState('');
   const { mutate, isPending } = useApproveRequest();
+
+  // Decision of 2026-11-19: approval cannot copy attached documents to the catalog yet, and the backend refuses it
+  // (409). Approved, the request would close with its documents left out.
+  if (documentCount > 0) {
+    return (
+      <p className="text-sm text-muted-foreground" data-testid="approve-blocked-by-documents">
+        Ha {documentCount === 1 ? 'un documento allegato' : `${documentCount} documenti allegati`}:
+        l&apos;approvazione non sa ancora copiarli nel catalogo, quindi per ora non si può
+        approvare. Puoi chiedere modifiche o rifiutare.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -70,11 +108,13 @@ function CoverApproval({ shareRequestId }: { shareRequestId: string }): JSX.Elem
 }
 
 export function ReviewPanel({ request }: { request: ShareRequestDetailsDto }): JSX.Element {
+  const queryClient = useQueryClient();
   const startReview = useStartReview();
   const releaseReview = useReleaseReview();
   const reject = useRejectRequest();
   const requestChanges = useRequestChanges();
   const { lockStatus, status, id } = request;
+  const lockExpired = useExpired(lockStatus.isLocked ? lockStatus.lockExpiresAt : null);
 
   if (isClosed(status)) {
     return (
@@ -84,6 +124,34 @@ export function ReviewPanel({ request }: { request: ShareRequestDetailsDto }): J
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           Richiesta chiusa il {formatDateTime(request.resolvedAt)}.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (lockStatus.isLocked && lockExpired) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-quicksand text-base">Revisione</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-muted-foreground" data-testid="review-expired">
+            La revisione
+            {lockStatus.isLockedByCurrentAdmin
+              ? ''
+              : ` di ${lockStatus.lockedByAdminName ?? 'un altro admin'}`}{' '}
+            è scaduta il {formatDateTime(lockStatus.lockExpiresAt)}. Si potrà riprendere quando il
+            blocco viene rilasciato, entro pochi minuti.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() =>
+              queryClient.invalidateQueries({ queryKey: adminShareRequestsKeys.detail(id) })
+            }
+          >
+            Aggiorna
+          </Button>
         </CardContent>
       </Card>
     );
@@ -153,7 +221,7 @@ export function ReviewPanel({ request }: { request: ShareRequestDetailsDto }): J
           ) : kind === 'cover' ? (
             <CoverApproval shareRequestId={id} />
           ) : (
-            <GenericApproval shareRequestId={id} />
+            <GenericApproval shareRequestId={id} documentCount={request.attachedDocuments.length} />
           )}
         </section>
 

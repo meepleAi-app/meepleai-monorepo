@@ -93,17 +93,34 @@ describe('ShareRequestsList', () => {
     );
   });
 
-  it('searches by title or contributor', async () => {
+  it('searches by game or notes, what the backend matches', async () => {
     renderList();
     await screen.findByRole('link', { name: /Tile Kingdoms/ });
 
-    await userEvent.type(screen.getByRole('searchbox', { name: /Cerca/ }), 'tile');
+    // The backend matches the game title and the contributor's notes, not the contributor's name.
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Cerca per gioco o note' }), 'tile');
 
     await waitFor(() =>
       expect(adminShareRequests.getAll).toHaveBeenLastCalledWith(
         expect.objectContaining({ searchTerm: 'tile', page: 1 })
       )
     );
+  });
+
+  it('filters by the open statuses only, the ones the backend accepts', async () => {
+    // The queue lists Pending, InReview and ChangesRequested; a filter on any other status is a 400.
+    renderList();
+    await screen.findByRole('link', { name: /Tile Kingdoms/ });
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Stato' }));
+    const options = (await screen.findAllByRole('option')).map(o => o.textContent);
+
+    expect(options).toEqual([
+      'Tutte le attive',
+      'In attesa',
+      'In revisione',
+      'Modifiche richieste',
+    ]);
   });
 
   it('says so when nothing matches', async () => {

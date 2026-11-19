@@ -46,11 +46,27 @@ const ADMIN_ID = '44444444-4444-4444-8444-444444444444';
 
 type Lock = 'none' | 'mine' | 'theirs';
 
+/** A review lock that is still held: the panel stops offering decisions once it passes. */
+const inTwentyMinutes = () => new Date(Date.now() + 20 * 60_000).toISOString();
+
+const DOCUMENT = {
+  documentId: '66666666-6666-4666-8666-666666666666',
+  fileName: 'rules.pdf',
+  contentType: 'application/pdf',
+  fileSize: 2048,
+  previewUrl: null,
+  pageCount: null,
+};
+
 /** A details payload as the backend sends it, through the real schema. */
 function details(
   contributionType: ShareRequestDetailsDto['contributionType'],
   lock: Lock,
-  status: ShareRequestDetailsDto['status'] = lock === 'none' ? 'Pending' : 'InReview'
+  status: ShareRequestDetailsDto['status'] = lock === 'none' ? 'Pending' : 'InReview',
+  {
+    lockExpiresAt = inTwentyMinutes(),
+    documents = 0,
+  }: { lockExpiresAt?: string; documents?: number } = {}
 ): ShareRequestDetailsDto {
   return ShareRequestDetailsDtoSchema.parse({
     id: REQUEST_ID,
@@ -82,14 +98,14 @@ function details(
       badges: [],
     },
     userNotes: 'Please add it',
-    attachedDocuments: [],
+    attachedDocuments: documents > 0 ? [DOCUMENT] : [],
     history: [],
     lockStatus: {
       isLocked: lock !== 'none',
       isLockedByCurrentAdmin: lock === 'mine',
       lockedByAdminId: lock === 'none' ? null : ADMIN_ID,
       lockedByAdminName: lock === 'theirs' ? 'Grace' : lock === 'mine' ? 'Me' : null,
-      lockExpiresAt: lock === 'none' ? null : '2026-11-19T12:30:00Z',
+      lockExpiresAt: lock === 'none' ? null : lockExpiresAt,
     },
     createdAt: '2026-11-19T10:00:00Z',
     resolvedAt: status === 'Approved' ? '2026-11-19T11:00:00Z' : null,
@@ -151,7 +167,7 @@ describe('ShareRequestDetail', () => {
   it('shows the proposed private game with its year and players, and starts the review', async () => {
     adminShareRequests.startReview.mockResolvedValue({
       shareRequestId: REQUEST_ID,
-      lockExpiresAt: '2026-11-19T12:30:00Z',
+      lockExpiresAt: inTwentyMinutes(),
       requestDetails: details('NewGameProposal', 'mine'),
     });
     renderDetail(details('NewGameProposal', 'none'));
@@ -252,6 +268,36 @@ describe('ShareRequestDetail', () => {
         reason: 'Too short and vague',
       })
     );
+  });
+
+  it('does not offer the generic approve on a request with attached documents', async () => {
+    // Decision of 2026-11-19: approval cannot copy the documents to the catalog yet, and the backend refuses it.
+    renderDetail(details('NewGame', 'mine', 'InReview', { documents: 1 }));
+
+    expect(await screen.findByTestId('approve-blocked-by-documents')).toHaveTextContent(
+      'un documento allegato'
+    );
+    expect(screen.queryByRole('button', { name: 'Approva' })).not.toBeInTheDocument();
+    // Asking for changes and rejecting stay available.
+    expect(screen.getByRole('button', { name: 'Chiedi modifiche' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rifiuta' })).toBeInTheDocument();
+  });
+
+  it('stops offering decisions once the review lock has expired', async () => {
+    // The backend reports the lock as held until its release job runs, and refuses every decision meanwhile.
+    renderDetail(
+      details('NewGameProposal', 'mine', 'InReview', {
+        lockExpiresAt: new Date(Date.now() - 60_000).toISOString(),
+      })
+    );
+
+    expect(await screen.findByTestId('review-expired')).toHaveTextContent('è scaduta');
+    expect(screen.queryByRole('button', { name: 'Approva la proposta' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Rifiuta' })).not.toBeInTheDocument();
+
+    adminShareRequests.getById.mockClear();
+    await userEvent.click(screen.getByRole('button', { name: 'Aggiorna' }));
+    await waitFor(() => expect(adminShareRequests.getById).toHaveBeenCalledWith(REQUEST_ID));
   });
 
   it('offers no decision while another admin holds the review', async () => {

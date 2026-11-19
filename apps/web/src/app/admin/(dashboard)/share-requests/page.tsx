@@ -23,7 +23,8 @@ export default async function ShareRequestsPage({ searchParams }: ShareRequestsP
           Richieste di condivisione
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Rivedi le richieste e le proposte di giochi che gli utenti mandano al catalogo.
+          Rivedi le richieste e le proposte di giochi che gli utenti mandano al catalogo. La coda
+          mostra quelle aperte: in attesa, in revisione o con modifiche richieste.
         </p>
       </div>
 

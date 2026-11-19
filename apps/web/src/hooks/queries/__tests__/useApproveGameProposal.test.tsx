@@ -59,9 +59,12 @@ describe('useApproveGameProposal (#5076)', () => {
   it.each([
     [409, 'Non approvabile: la revisione non è tua, è scaduta, o lo stato è cambiato.'],
     [404, 'Il gioco proposto o il gioco di destinazione non esiste più.'],
-  ])('shows the message for a %i', async (statusCode, message) => {
+    // The validators refuse an admin who no longer holds the review: "try again" cannot fix it.
+    [422, 'La revisione non è più tua: la pagina mostra lo stato aggiornato.'],
+    [400, 'La revisione non è più tua: la pagina mostra lo stato aggiornato.'],
+  ])('shows the message for a %i, and refreshes the request', async (statusCode, message) => {
     approveGameProposal.mockRejectedValue(new ApiError({ message: 'refused', statusCode }));
-    const { result } = setup();
+    const { result, invalidate } = setup();
 
     await act(async () => {
       await result.current
@@ -70,5 +73,7 @@ describe('useApproveGameProposal (#5076)', () => {
     });
 
     expect(toast.error).toHaveBeenCalledWith(message);
+    // The panel then shows the request's real state instead of the refused form.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: adminShareRequestsKeys.detail('req-1') });
   });
 });

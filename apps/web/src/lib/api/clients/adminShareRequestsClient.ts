@@ -45,9 +45,9 @@ export interface AdminShareRequestsClient {
    * Parameters, and the query names the backend binds:
    * - page → pageNumber (default: 1)
    * - pageSize → pageSize (default: 20, max: 100)
-   * - status → status (Pending, InReview, etc.)
+   * - status → status (Pending, InReview, ChangesRequested: the queue lists open requests only; any other is a 400)
    * - contributionType → type
-   * - searchTerm → search (game title or contributor name)
+   * - searchTerm → search (game title or the contributor's notes)
    * - sortBy → sortBy (CreatedAt, GameTitle, ContributorName, Status; default CreatedAt)
    * - sortDirection → sortDirection (default Descending)
    *

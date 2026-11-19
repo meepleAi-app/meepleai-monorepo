@@ -314,22 +314,17 @@ function StepItem({ step, isLast }: { step: Step; isLast: boolean }) {
     </div>
   );
 
+  // #5085: no opacity on the step: it took a pending label to 1.87:1. The colour carries the state, in shades that
+  // pass AA (4.5:1) for 12 px text in both themes; the -600/-500 ones measured 3.6:1 and 3.53:1 on the light banner.
   const content = (
-    <div
-      className={cn(
-        'flex flex-col items-center gap-1.5 min-w-0',
-        isCompleted && 'opacity-100',
-        isActive && 'opacity-100',
-        !isCompleted && !isActive && 'opacity-40'
-      )}
-    >
+    <div className="flex flex-col items-center gap-1.5 min-w-0">
       {icon}
       <div className="flex flex-col items-center gap-0.5">
         <span
           className={cn(
             'text-xs font-medium whitespace-nowrap',
-            isCompleted && 'text-teal-600 dark:text-teal-400',
-            isActive && 'text-orange-600 dark:text-orange-400',
+            isCompleted && 'text-teal-700 dark:text-teal-300',
+            isActive && 'text-orange-700 dark:text-orange-300',
             !isCompleted && !isActive && 'text-muted-foreground'
           )}
         >
@@ -337,7 +332,7 @@ function StepItem({ step, isLast }: { step: Step; isLast: boolean }) {
         </span>
         {step.detail && (
           <span
-            className="text-[10px] text-orange-500 dark:text-orange-400 whitespace-nowrap"
+            className="text-[10px] text-orange-700 dark:text-orange-300 whitespace-nowrap"
             data-testid={`journey-step-detail-${step.id}`}
             aria-live="polite"
             aria-atomic="true"

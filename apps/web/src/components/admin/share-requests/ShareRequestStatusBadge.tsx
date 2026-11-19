@@ -5,11 +5,13 @@ import type { ShareRequestStatus } from '@/lib/api/schemas/admin-share-requests.
 
 import { STATUS_LABELS } from './share-request-labels';
 
+// `secondary` is the green of the theme: it marks the approved request, `default` (the primary orange) the one in
+// review, the outline the ones waiting on someone.
 const VARIANTS: Record<ShareRequestStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  Pending: 'secondary',
+  Pending: 'outline',
   InReview: 'default',
   ChangesRequested: 'outline',
-  Approved: 'default',
+  Approved: 'secondary',
   Rejected: 'destructive',
   Withdrawn: 'outline',
 };

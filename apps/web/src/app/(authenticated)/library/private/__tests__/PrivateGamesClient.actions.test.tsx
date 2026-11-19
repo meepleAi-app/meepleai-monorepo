@@ -16,6 +16,7 @@ const library = vi.hoisted(() => ({
   updatePrivateGame: vi.fn(),
   deletePrivateGame: vi.fn(),
 }));
+const push = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -25,7 +26,7 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ push, replace: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => '/library/private',
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -63,44 +64,78 @@ const page = PaginatedPrivateGamesResponseSchema.parse({
   hasPreviousPage: false,
 });
 
-async function openCardMenu() {
+async function renderLibrary() {
   renderWithQuery(<PrivateGamesClient />);
   const card = await screen.findByTestId(`game-card-${GAME_ID}`);
   const menu = screen.getByRole('button', { name: 'Actions for "Tile Kingdoms"' });
+  return { card, menu };
+}
+
+async function choose(item: string) {
+  const { card, menu } = await renderLibrary();
   // The menu is a control of its own, not nested in the clickable card.
   expect(card.contains(menu)).toBe(false);
   await userEvent.click(menu);
+  await userEvent.click(await screen.findByRole('menuitem', { name: item }));
+  return { card, menu };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   library.getPrivateGames.mockResolvedValue(page);
+  library.deletePrivateGame.mockResolvedValue(undefined);
 });
 
 describe('PrivateGamesClient card actions (#5081)', () => {
-  it('opens the proposal to the catalog from the card', async () => {
-    await openCardMenu();
-
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Propose to catalog' }));
+  it('opens the proposal to the catalog from the card, without opening the game', async () => {
+    await choose('Propose to catalog');
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Propose to Shared Catalog')).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
   });
 
-  it('opens the edit form from the card', async () => {
-    await openCardMenu();
+  it('opens the edit form from the card, and gives the focus back to the menu when it closes', async () => {
+    const { menu } = await choose('Edit');
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Edit Game');
+    // The dialog keeps the focus: the closing menu does not take it back to its button.
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
 
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }));
+    // The dialog is controlled and has no trigger: without the menu's button to go back to, focus fell on <body>.
+    await userEvent.keyboard('{Escape}');
 
-    expect(await screen.findByRole('dialog')).toHaveTextContent('Edit Game');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(menu).toHaveFocus());
+    // A dialog opened while the modal menu was still closing restored the menu's `pointer-events: none` on close.
+    expect(document.body).not.toHaveStyle({ pointerEvents: 'none' });
+    expect(push).not.toHaveBeenCalled();
   });
 
-  it('asks to confirm the deletion from the card', async () => {
-    await openCardMenu();
+  it('deletes the game after the confirmation opened from the card', async () => {
+    await choose('Delete');
 
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }));
+    const confirm = await screen.findByRole('alertdialog');
+    expect(confirm).toHaveTextContent('Delete Game');
+    await userEvent.click(within(confirm).getByTestId('confirm-delete-btn'));
 
-    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Delete Game');
-    await waitFor(() => expect(library.deletePrivateGame).not.toHaveBeenCalled());
+    await waitFor(() => expect(library.deletePrivateGame).toHaveBeenCalledWith(GAME_ID));
+  });
+
+  it('keeps the page underneath out of reach while the menu is open', async () => {
+    // A non-modal menu let the click that closes it reach the card, which opens the game.
+    const { menu } = await renderLibrary();
+    await userEvent.click(menu);
+    await screen.findByRole('menuitem', { name: 'Edit' });
+
+    expect(document.body).toHaveStyle({ pointerEvents: 'none' });
+  });
+
+  it('still opens the game when the card itself is clicked', async () => {
+    const { card } = await renderLibrary();
+
+    await userEvent.click(card);
+
+    expect(push).toHaveBeenCalledWith(`/library/private/${GAME_ID}`);
   });
 });

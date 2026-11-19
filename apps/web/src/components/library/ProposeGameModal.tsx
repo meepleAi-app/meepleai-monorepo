@@ -34,6 +34,8 @@ export interface ProposeGameModalProps {
   onPropose: (gameId: string, notes: string) => Promise<void>;
   /** Opens the game's edit form, offered when the game has no description (#5074). */
   onEditGame?: (game: PrivateGameDto) => void;
+  /** Where the focus goes when the modal closes (#5081): it opens from a card menu, not from a trigger of its own. */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 /** What the user reads when the proposal is refused (#5074). */
@@ -50,6 +52,7 @@ export function ProposeGameModal({
   game,
   onPropose,
   onEditGame,
+  onCloseAutoFocus,
 }: ProposeGameModalProps) {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,7 +84,7 @@ export function ProposeGameModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={open => !open && handleClose()}>
-      <DialogContent>
+      <DialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>Propose to Shared Catalog</DialogTitle>
           <DialogDescription>

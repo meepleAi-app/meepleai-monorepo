@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -214,20 +214,34 @@ export default function PrivateGamesClient() {
     }
   };
 
-  const openEdit = (game: PrivateGameDto) => {
+  // #5081: the card's actions menu that opened a dialog. The dialogs are controlled and have no trigger of their own,
+  // so on close Radix gives the focus back to nothing: they give it back here, while the button is still on the page.
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const returnFocus = (event: Event) => {
+    const trigger = returnFocusRef.current;
+    if (trigger?.isConnected) {
+      event.preventDefault();
+      trigger.focus();
+    }
+  };
+
+  const openEdit = (game: PrivateGameDto, trigger?: HTMLElement | null) => {
+    if (trigger !== undefined) returnFocusRef.current = trigger;
     setSelectedGame(game);
     setEditDialogOpen(true);
   };
 
-  const openDelete = (gameId: string) => {
+  const openDelete = (gameId: string, trigger?: HTMLElement | null) => {
     const game = games.find(g => g.id === gameId);
     if (game) {
+      if (trigger !== undefined) returnFocusRef.current = trigger;
       setSelectedGame(game);
       setDeleteDialogOpen(true);
     }
   };
 
-  const openPropose = (game: PrivateGameDto) => {
+  const openPropose = (game: PrivateGameDto, trigger?: HTMLElement | null) => {
+    if (trigger !== undefined) returnFocusRef.current = trigger;
     setSelectedGame(game);
     setProposeDialogOpen(true);
   };
@@ -400,7 +414,10 @@ export default function PrivateGamesClient() {
           if (!open) setSelectedGame(null);
         }}
       >
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-lg max-h-[90vh] overflow-y-auto"
+          onCloseAutoFocus={returnFocus}
+        >
           <DialogHeader>
             <DialogTitle>{t('privateGames.editGame')}</DialogTitle>
             <DialogDescription>
@@ -429,7 +446,7 @@ export default function PrivateGamesClient() {
           if (!open) setSelectedGame(null);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent onCloseAutoFocus={returnFocus}>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('privateGames.deleteGame')}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -466,7 +483,8 @@ export default function PrivateGamesClient() {
         }}
         game={selectedGame}
         onPropose={handlePropose}
-        onEditGame={openEdit}
+        onEditGame={game => openEdit(game)}
+        onCloseAutoFocus={returnFocus}
       />
 
       {/* Add Game Drawer — local instance so close stays on /library/private */}
@@ -489,9 +507,9 @@ export default function PrivateGamesClient() {
 
 interface PrivateGameCardProps {
   game: PrivateGameDto;
-  onEdit?: (game: PrivateGameDto) => void;
-  onDelete?: (gameId: string) => void;
-  onPropose?: (game: PrivateGameDto) => void;
+  onEdit?: (game: PrivateGameDto, trigger?: HTMLElement | null) => void;
+  onDelete?: (gameId: string, trigger?: HTMLElement | null) => void;
+  onPropose?: (game: PrivateGameDto, trigger?: HTMLElement | null) => void;
   onClick?: () => void;
 }
 
@@ -529,9 +547,9 @@ function PrivateGameCard({ game, onEdit, onDelete, onPropose, onClick }: Private
           <PrivateGameActionsMenu
             // eslint-disable-next-line local/prefer-use-game-title -- a private game has no catalog translations: the menu names it as its owner wrote it
             title={game.title}
-            onEdit={onEdit ? () => onEdit(game) : undefined}
-            onPropose={onPropose ? () => onPropose(game) : undefined}
-            onDelete={onDelete ? () => onDelete(game.id) : undefined}
+            onEdit={onEdit ? trigger => onEdit(game, trigger) : undefined}
+            onPropose={onPropose ? trigger => onPropose(game, trigger) : undefined}
+            onDelete={onDelete ? trigger => onDelete(game.id, trigger) : undefined}
           />
         ) : undefined
       }

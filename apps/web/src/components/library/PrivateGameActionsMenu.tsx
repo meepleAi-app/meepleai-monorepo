@@ -8,7 +8,7 @@
  * outside its clickable surface (no axe nested-interactive), and is always visible: by touch and by keyboard too.
  */
 
-import type { JSX } from 'react';
+import { useRef, type JSX } from 'react';
 
 import { MoreHorizontalIcon } from 'lucide-react';
 
@@ -21,11 +21,14 @@ import {
 } from '@/components/ui/navigation/dropdown-menu';
 import { useTranslation } from '@/hooks/useTranslation';
 
+/** Runs an action; `trigger` is the menu's button, where focus goes back when the action's dialog closes. */
+export type PrivateGameAction = (trigger: HTMLElement | null) => void;
+
 interface PrivateGameActionsMenuProps {
   title: string;
-  onEdit?: () => void;
-  onPropose?: () => void;
-  onDelete?: () => void;
+  onEdit?: PrivateGameAction;
+  onPropose?: PrivateGameAction;
+  onDelete?: PrivateGameAction;
 }
 
 export function PrivateGameActionsMenu({
@@ -35,25 +38,32 @@ export function PrivateGameActionsMenu({
   onDelete,
 }: PrivateGameActionsMenuProps): JSX.Element {
   const { t } = useTranslation();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const choose = (action: PrivateGameAction) => () => action(triggerRef.current);
 
   return (
-    // Not modal: each item opens a dialog, and a modal menu closing under a modal dialog can leave the body inert.
-    <DropdownMenu modal={false}>
+    // Modal (the default): while it is open the page underneath takes no clicks, so the click that closes it does
+    // not reach the card, which opens the game.
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
+          ref={triggerRef}
           type="button"
           aria-label={t('privateGames.cardActions', { title })}
-          className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card/90 text-foreground shadow-sm backdrop-blur-md transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          // 32 px drawn, 44 px to touch: the ::after extends the hit area (design-system minimum).
+          className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card/90 text-foreground shadow-sm backdrop-blur-md transition-colors after:absolute after:-inset-1.5 after:content-[''] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <MoreHorizontalIcon className="h-4 w-4" aria-hidden />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {onEdit && (
-          <DropdownMenuItem onSelect={onEdit}>{t('privateGames.actionEdit')}</DropdownMenuItem>
+          <DropdownMenuItem onSelect={choose(onEdit)}>
+            {t('privateGames.actionEdit')}
+          </DropdownMenuItem>
         )}
         {onPropose && (
-          <DropdownMenuItem onSelect={onPropose}>
+          <DropdownMenuItem onSelect={choose(onPropose)}>
             {t('privateGames.actionPropose')}
           </DropdownMenuItem>
         )}
@@ -61,7 +71,7 @@ export function PrivateGameActionsMenu({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onSelect={onDelete}
+              onSelect={choose(onDelete)}
               className="text-destructive focus:text-destructive"
             >
               {t('privateGames.actionDelete')}

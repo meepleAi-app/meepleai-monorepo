@@ -52,7 +52,9 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
             .Include(r => r.TargetSharedGame)
                 .ThenInclude(g => g!.Mechanics)
             .Include(r => r.AttachedDocuments)
-            .FirstOrDefaultAsync(r => r.Id == query.ShareRequestId, cancellationToken)
+            .FirstOrDefaultAsync(
+                r => r.Id == query.ShareRequestId && (!query.OwnRequestsOnly || r.UserId == query.AdminId),
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (request == null)

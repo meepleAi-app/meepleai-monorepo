@@ -150,7 +150,8 @@ internal static class SharedGameCatalogUserShareRequestEndpoints
             return Results.Unauthorized();
         }
 
-        var query = new GetShareRequestDetailsQuery(id, userId);
+        // #5074: this route served any user's request; it now finds only the caller's own (404 otherwise)
+        var query = new GetShareRequestDetailsQuery(id, userId, OwnRequestsOnly: true);
 
         try
         {

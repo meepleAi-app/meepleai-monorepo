@@ -866,5 +866,58 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
         sourceGame.GetProperty("description").GetString().Should().Be("A tile game.");
     }
 
+    [Fact]
+    public async Task ProposedGame_AdminStartsTheReview_Returns200_AndTheRowKeepsNoSharedGame()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (_, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+        var gameId = await SeedProposableGameAsync(dbContext, userId, $"Reviewed {Guid.NewGuid():N}", "A tile game.");
+        var created = await ProposeAsync(gameId, sessionToken);
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var shareRequestId = System.Text.Json.JsonDocument.Parse(await created.Content.ReadAsStringAsync())
+            .RootElement.GetProperty("shareRequestId").GetGuid();
+
+        // The update path writes source_game_id again: an empty GUID there breaks the foreign key on the first
+        // admin action, the insert alone does not show it.
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/admin/share-requests/{shareRequestId}/start-review", adminToken));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var stored = await dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>()
+            .AsNoTracking()
+            .SingleAsync(r => r.Id == shareRequestId);
+        stored.Status.Should().Be((int)Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects.ShareRequestStatus.InReview);
+        stored.SourceGameId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ProposalLocation_AnswersTheOwner_AndIs404ForAnotherUser()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (_, otherToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var title = $"Mine only {Guid.NewGuid():N}";
+        var gameId = await SeedProposableGameAsync(dbContext, userId, title, "A private description.");
+        var created = await ProposeAsync(gameId, sessionToken);
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var location = created.Headers.Location!.ToString();
+
+        var mine = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, location, sessionToken));
+        var mineBody = await mine.Content.ReadAsStringAsync();
+        mine.StatusCode.Should().Be(HttpStatusCode.OK, mineBody);
+        System.Text.Json.JsonDocument.Parse(mineBody).RootElement.GetProperty("sourceGame")
+            .GetProperty("title").GetString().Should().Be(title);
+
+        // The user route used the admin query, which reads any request: any signed-in user holding the id got
+        // the private game's title and description.
+        var theirs = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, location, otherToken));
+        var theirsBody = await theirs.Content.ReadAsStringAsync();
+        theirs.StatusCode.Should().Be(HttpStatusCode.NotFound, theirsBody);
+        theirsBody.Should().NotContain(title);
+    }
+
     #endregion
 }

@@ -149,6 +149,29 @@ public class ApproveShareRequestCommandHandlerTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    // #5074: approving a NewGameProposal here would mark it approved without creating the shared game.
+    [Fact]
+    public async Task Handle_NewGameProposal_ThrowsConflict_AndChangesNothing()
+    {
+        // Arrange
+        var proposal = ShareRequest.CreateGameProposal(TestUserId, Guid.NewGuid(), "Please add it");
+        proposal.StartReview(TestAdminId);
+        var command = new ApproveShareRequestCommand(ShareRequestId: proposal.Id, AdminId: TestAdminId);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdForUpdateAsync(proposal.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(proposal);
+
+        // Act
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*approve-game-proposal*");
+        proposal.Status.Should().Be(ShareRequestStatus.InReview);
+        _repositoryMock.Verify(r => r.Update(It.IsAny<ShareRequest>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static ShareRequest CreateShareRequestInReview(Guid reviewingAdminId)
     {
         var shareRequest = ShareRequest.Create(

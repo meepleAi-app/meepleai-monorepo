@@ -194,6 +194,37 @@ public class BulkApproveShareRequestsCommandHandlerTests
         result.Errors[0].Should().Contain("maximum limit of 20");
     }
 
+    // #5074: a NewGameProposal in the batch fails the whole batch (all-or-nothing), and nothing is saved.
+    [Fact]
+    public async Task Handle_WithANewGameProposal_FailsTheBatch_AndSavesNothing()
+    {
+        // Arrange
+        var editorId = Guid.NewGuid();
+        var regular = CreateInReviewShareRequest(Guid.NewGuid(), editorId);
+        var proposal = ShareRequest.CreateGameProposal(Guid.NewGuid(), Guid.NewGuid(), "Please add it");
+        proposal.StartReview(editorId, lockDurationMinutes: 30);
+        var shareRequestsDict = new Dictionary<Guid, ShareRequest>
+        {
+            [regular.Id] = regular,
+            [proposal.Id] = proposal,
+        };
+        var command = new BulkApproveShareRequestsCommand([regular.Id, proposal.Id], editorId);
+
+        _mockShareRequestRepository
+            .Setup(r => r.GetByIdsForUpdateAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(shareRequestsDict);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.SuccessCount.Should().Be(0);
+        result.FailedCount.Should().Be(2);
+        result.Errors.Should().ContainSingle().Which.Should().Contain("approve-game-proposal");
+        proposal.Status.Should().Be(ShareRequestStatus.InReview);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static ShareRequest CreateInReviewShareRequest(Guid id, Guid editorId)
     {
         var shareRequest = ShareRequest.Create(

@@ -475,11 +475,29 @@ public class ApproveGameProposalCommandHandlerTests
     {
         // Since #5070 a private game imported from BGG has no image (the fixture is one, with a description). Approving
         // its proposal answered 400: SharedGame.Create required the image URLs. A game created by hand without a
-        // description still answers 400 here, for the description: that is #5074, not this test.
+        // description stops here on the description: Handle_ManualGameWithoutDescription_StopsOnTheDescription.
         var shared = await ApproveAsync(action, CreatePrivateGame(imageUrl: null, thumbnailUrl: null));
 
         shared.ImageUrl.Should().BeEmpty();
         shared.ThumbnailUrl.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(ProposalApprovalAction.ApproveAsNew)]
+    [InlineData(ProposalApprovalAction.ApproveAsVariant)]
+    public async Task Handle_ManualGameWithoutDescription_StopsOnTheDescription(ProposalApprovalAction action)
+    {
+        // #5074, decision (b) of 2026-11-19: the catalog keeps requiring a description, and the proposal of a game
+        // without one does not start (ProposePrivateGameCommandHandlerTests). A proposal stored before that, if
+        // any, still stops here on the description, and no shared game is created.
+        var manual = PrivateGame.CreateManual(TestUserId, "Hand-made", 2, 4);
+
+        var act = () => ApproveAsync(action, manual);
+
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*Description is required*");
+        _sharedGameRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

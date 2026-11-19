@@ -470,7 +470,8 @@ public sealed class UpdatePrivateGameCommandHandlerTests
         result.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         result.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         result.BggSyncedAt.Should().BeNull();
-        result.CanProposeToCatalog.Should().BeFalse();
+        // #5074: a manual game with a description can be proposed; the BGG origin no longer decides.
+        result.CanProposeToCatalog.Should().BeTrue();
     }
 
     #endregion

@@ -607,6 +607,37 @@ public sealed class PrivateGameTests
 
     #endregion
 
+    #region CanBeProposedToCatalog Tests (#5074)
+
+    // #5074, decision of 2026-11-19: the catalog requires a description, so a proposal does too. The BGG origin
+    // no longer decides it.
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void CanBeProposedToCatalog_WithoutDescription_IsFalse(string? description)
+    {
+        var manual = PrivateGame.CreateManual(Guid.NewGuid(), "Hand-made", 2, 4, description: description);
+        var fromBgg = PrivateGame.CreateFromBgg(
+            Guid.NewGuid(), 13, "Catan", 1995, description, 3, 4, 90, 10, 2.3m, null, null);
+
+        manual.CanBeProposedToCatalog.Should().BeFalse();
+        fromBgg.CanBeProposedToCatalog.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CanBeProposedToCatalog_WithDescription_IsTrue_ForManualAndBggGames()
+    {
+        var manual = PrivateGame.CreateManual(Guid.NewGuid(), "Hand-made", 2, 4, description: "A tile game.");
+        var fromBgg = PrivateGame.CreateFromBgg(
+            Guid.NewGuid(), 13, "Catan", 1995, "Trade and build.", 3, 4, 90, 10, 2.3m, null, null);
+
+        manual.CanBeProposedToCatalog.Should().BeTrue();
+        fromBgg.CanBeProposedToCatalog.Should().BeTrue();
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static PrivateGame CreateValidManualGame()

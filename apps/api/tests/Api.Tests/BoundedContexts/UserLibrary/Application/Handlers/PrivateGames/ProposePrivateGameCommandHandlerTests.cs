@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.BoundedContexts.SystemConfiguration.Domain.Services;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -25,6 +26,7 @@ public sealed class ProposePrivateGameCommandHandlerTests
 {
     private readonly Mock<IPrivateGameRepository> _privateGameRepositoryMock = new();
     private readonly Mock<IShareRequestRepository> _shareRequestRepositoryMock = new();
+    private readonly Mock<IRateLimitEvaluator> _rateLimitEvaluatorMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly ProposePrivateGameCommandHandler _handler;
 
@@ -32,9 +34,14 @@ public sealed class ProposePrivateGameCommandHandlerTests
 
     public ProposePrivateGameCommandHandlerTests()
     {
+        // Under the share-request limits unless a test says otherwise (#5079).
+        _rateLimitEvaluatorMock
+            .Setup(r => r.CanUserCreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         _handler = new ProposePrivateGameCommandHandler(
             _privateGameRepositoryMock.Object,
             _shareRequestRepositoryMock.Object,
+            _rateLimitEvaluatorMock.Object,
             _unitOfWorkMock.Object,
             Mock.Of<ILogger<ProposePrivateGameCommandHandler>>());
     }
@@ -119,9 +126,83 @@ public sealed class ProposePrivateGameCommandHandlerTests
             new ProposePrivateGameCommand(OwnerId, game.Id),
             TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<ConflictException>();
+        var conflict = await act.Should().ThrowAsync<ConflictException>();
+        conflict.Which.ErrorCode.Should().Be(PrivateGameProposalCodes.AlreadyOpen);
         VerifyNothingStored();
     }
+
+    [Fact]
+    public async Task Handle_GameWhoseProposalWasApproved_ThrowsConflictAlreadyApproved()
+    {
+        // #5079, decision of 2026-11-19: once approved the game is in the catalog, and is not proposed again.
+        var game = Seed(PrivateGame.CreateManual(OwnerId, "Hand-made", 2, 4, description: "A tile game."));
+        _shareRequestRepositoryMock
+            .Setup(r => r.HasApprovedProposalForPrivateGameAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var act = () => _handler.Handle(
+            new ProposePrivateGameCommand(OwnerId, game.Id),
+            TestContext.Current.CancellationToken);
+
+        var conflict = await act.Should().ThrowAsync<ConflictException>();
+        conflict.Which.ErrorCode.Should().Be(PrivateGameProposalCodes.AlreadyApproved);
+        VerifyNothingStored();
+    }
+
+    [Fact]
+    public async Task Handle_UserAtTheShareRequestLimits_ThrowsTooManyRequests()
+    {
+        // #5079, decision of 2026-11-19: a proposal is a share request and takes the same limits; it used to skip them
+        // while the counters counted it.
+        var game = Seed(PrivateGame.CreateManual(OwnerId, "Hand-made", 2, 4, description: "A tile game."));
+        _rateLimitEvaluatorMock
+            .Setup(r => r.CanUserCreateRequestAsync(OwnerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var act = () => _handler.Handle(
+            new ProposePrivateGameCommand(OwnerId, game.Id),
+            TestContext.Current.CancellationToken);
+
+        var refused = await act.Should().ThrowAsync<TooManyRequestsException>();
+        refused.Which.ErrorCode.Should().Be(PrivateGameProposalCodes.LimitReached);
+        VerifyNothingStored();
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrentProposalStoredFirst_MapsTheUniqueIndexToConflict()
+    {
+        // #5079: two concurrent requests both pass the pending check; the database index refuses the second insert.
+        var game = Seed(PrivateGame.CreateManual(OwnerId, "Hand-made", 2, 4, description: "A tile game."));
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(UniqueViolation(ProposePrivateGameCommandHandler.OneProposalIndex));
+
+        var act = () => _handler.Handle(
+            new ProposePrivateGameCommand(OwnerId, game.Id),
+            TestContext.Current.CancellationToken);
+
+        var conflict = await act.Should().ThrowAsync<ConflictException>();
+        conflict.Which.ErrorCode.Should().Be(PrivateGameProposalCodes.AlreadyOpen);
+    }
+
+    [Fact]
+    public async Task Handle_AnotherUniqueViolation_IsNotTakenForTheProposalOne()
+    {
+        var game = Seed(PrivateGame.CreateManual(OwnerId, "Hand-made", 2, 4, description: "A tile game."));
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(UniqueViolation("pk_share_requests"));
+
+        var act = () => _handler.Handle(
+            new ProposePrivateGameCommand(OwnerId, game.Id),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<Microsoft.EntityFrameworkCore.DbUpdateException>();
+    }
+
+    private static Microsoft.EntityFrameworkCore.DbUpdateException UniqueViolation(string constraint) =>
+        new("unique violation", new Npgsql.PostgresException(
+            "duplicate key value violates unique constraint", "ERROR", "ERROR", "23505", constraintName: constraint));
 
     private PrivateGame Seed(PrivateGame game)
     {

@@ -1,3 +1,5 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -21,6 +23,7 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers.PrivateGame
 public sealed class UpdatePrivateGameCommandHandlerTests
 {
     private readonly Mock<IPrivateGameRepository> _repositoryMock;
+    private readonly Mock<IShareRequestRepository> _shareRequestRepositoryMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<UpdatePrivateGameCommandHandler>> _loggerMock;
     private readonly UpdatePrivateGameCommandHandler _handler;
@@ -33,6 +36,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
 
         _handler = new UpdatePrivateGameCommandHandler(
             _repositoryMock.Object,
+            _shareRequestRepositoryMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object);
     }
@@ -46,6 +50,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
         var act = () =>
             new UpdatePrivateGameCommandHandler(
                 null!,
+                _shareRequestRepositoryMock.Object,
                 _unitOfWorkMock.Object,
                 _loggerMock.Object);
         var exception = act.Should().Throw<ArgumentNullException>().Which;
@@ -60,6 +65,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
         var act2 = () =>
             new UpdatePrivateGameCommandHandler(
                 _repositoryMock.Object,
+                _shareRequestRepositoryMock.Object,
                 null!,
                 _loggerMock.Object);
         var exception = act2.Should().Throw<ArgumentNullException>().Which;
@@ -74,6 +80,7 @@ public sealed class UpdatePrivateGameCommandHandlerTests
         var act3 = () =>
             new UpdatePrivateGameCommandHandler(
                 _repositoryMock.Object,
+                _shareRequestRepositoryMock.Object,
                 _unitOfWorkMock.Object,
                 null!);
         var exception = act3.Should().Throw<ArgumentNullException>().Which;
@@ -145,6 +152,61 @@ public sealed class UpdatePrivateGameCommandHandlerTests
             r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
             Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // #5079, decision of 2026-11-19: with a proposal to the catalog open, the description cannot be removed (the admin
+    // reads the game as it is, and the catalog needs it). Withdrawing the proposal frees it.
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public async Task Handle_RemovingTheDescriptionWithAnOpenProposal_ThrowsValidation_AndSavesNothing(string? description)
+    {
+        var (game, command) = GameAndUpdate(description);
+        _shareRequestRepositoryMock
+            .Setup(r => r.GetPendingProposalForPrivateGameAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ShareRequest.CreateGameProposal(game.OwnerId, game.Id));
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        var error = await act.Should().ThrowAsync<FluentValidation.ValidationException>();
+        error.Which.Errors.Should().ContainSingle().Which.PropertyName.Should().Be("Description");
+        game.Description.Should().Be("Original description");
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ChangingTheDescriptionWithAnOpenProposal_Saves()
+    {
+        // Only removing it is refused: the rest of the game, the description included, stays editable.
+        var (game, command) = GameAndUpdate("A better description");
+        _shareRequestRepositoryMock
+            .Setup(r => r.GetPendingProposalForPrivateGameAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ShareRequest.CreateGameProposal(game.OwnerId, game.Id));
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.Description.Should().Be("A better description");
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private (PrivateGame Game, UpdatePrivateGameCommand Command) GameAndUpdate(string? description)
+    {
+        var userId = Guid.NewGuid();
+        var game = PrivateGame.CreateManual(
+            ownerId: userId, title: "Original Title", minPlayers: 2, maxPlayers: 4, description: "Original description");
+        _repositoryMock.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        var command = new UpdatePrivateGameCommand(
+            PrivateGameId: game.Id,
+            UserId: userId,
+            Title: "Original Title",
+            MinPlayers: 2,
+            MaxPlayers: 4,
+            YearPublished: null,
+            Description: description,
+            PlayingTimeMinutes: null,
+            MinAge: null,
+            ComplexityRating: null);
+        return (game, command);
     }
 
     [Fact]

@@ -41,8 +41,13 @@ export interface ProposeGameModalProps {
 /** What the user reads when the proposal is refused (#5074). */
 function proposeErrorMessage(error: unknown): string {
   const status = error instanceof ApiError ? error.statusCode : undefined;
+  // #5079: an approved game is not proposed again, and a proposal takes the share-request limits.
+  if (error instanceof ApiError && error.code === 'proposal_already_approved')
+    return 'This game is already in the catalog: its proposal was approved.';
   if (status === 409) return 'A proposal for this game is already waiting for review.';
   if (status === 422) return 'Add a description to the game before proposing it to the catalog.';
+  if (status === 429)
+    return 'You have reached the limit of share requests for now (pending, monthly, or a recent rejection). Try again later.';
   return 'The proposal could not be sent. Please try again.';
 }
 

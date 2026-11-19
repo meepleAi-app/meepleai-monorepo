@@ -76,7 +76,7 @@ Orchestrazione e casi d'uso (CQRS pattern con MediatR):
   - *Labels*: AddLabelToGame, RemoveLabelFromGame, CreateCustomLabel, DeleteCustomLabel
   - *Collezioni*: AddToCollection, RemoveFromCollection, BulkAddToCollection, BulkRemoveFromCollection
   - *Wishlist*: AddToWishlist, RemoveFromWishlist, UpdateWishlistItem
-  - *Giochi Privati*: AddPrivateGame, UpdatePrivateGame, DeletePrivateGame, ProposePrivateGame
+  - *Giochi Privati*: AddPrivateGame, UpdatePrivateGame, DeletePrivateGame, ProposePrivateGame, WithdrawPrivateGameProposal
   - *Migrazioni*: HandleMigrationChoice
 - **Queries/**: Operazioni di lettura
   - *Libreria*: GetUserLibrary, GetLibraryStats, GetLibraryQuota, GetGameInLibraryStatus, BatchCheckGamesInLibrary, GetGameDetail
@@ -216,7 +216,15 @@ GET    /private-games/{id}                           -> GetPrivateGameQuery
 PUT    /private-games/{id}                           -> UpdatePrivateGameCommand
 DELETE /private-games/{id}                           -> DeletePrivateGameCommand
 POST   /private-games/{id}/propose-to-catalog        -> ProposePrivateGameCommand
+DELETE /private-games/{id}/proposal                  -> WithdrawPrivateGameProposalCommand
 ```
+
+Regole della proposta al catalogo (#5079, decise il 2026-11-19):
+
+- la proposta consuma i limiti delle richieste di condivisione (in attesa, mensili, pausa dopo un rifiuto): oltre, `429 share_request_limit_reached`;
+- una proposta aperta (in attesa, in revisione, modifiche richieste) per gioco: la seconda è `409 proposal_already_open`. Le richieste concorrenti le ferma un indice unico parziale (`ux_share_requests_one_proposal_per_private_game`), che copre gli stati aperti e l'approvato;
+- un gioco la cui proposta è stata approvata non si propone di nuovo (`409 proposal_already_approved`); dopo un rifiuto o un ritiro sì;
+- con una proposta aperta il gioco non perde la descrizione (`422` sul campo `Description`) e non si elimina (`409 proposal_already_open`): il proprietario ritira prima la proposta. Durante la revisione il ritiro è `409 proposal_in_review`.
 
 ### Admin Config
 ```

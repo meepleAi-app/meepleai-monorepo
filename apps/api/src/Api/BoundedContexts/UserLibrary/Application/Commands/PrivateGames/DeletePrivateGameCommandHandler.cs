@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.PurgePrivateGameContent;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -21,17 +22,20 @@ namespace Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 internal sealed class DeletePrivateGameCommandHandler : ICommandHandler<DeletePrivateGameCommand>
 {
     private readonly IPrivateGameRepository _repository;
+    private readonly IShareRequestRepository _shareRequestRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMediator _mediator;
     private readonly ILogger<DeletePrivateGameCommandHandler> _logger;
 
     public DeletePrivateGameCommandHandler(
         IPrivateGameRepository repository,
+        IShareRequestRepository shareRequestRepository,
         IUnitOfWork unitOfWork,
         IMediator mediator,
         ILogger<DeletePrivateGameCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -55,6 +59,16 @@ internal sealed class DeletePrivateGameCommandHandler : ICommandHandler<DeletePr
                 privateGame.OwnerId);
 
             throw new ForbiddenException("You can only delete your own private games");
+        }
+
+        // #5079, decision of 2026-11-19: the admin reads the proposed game as it is, so it is not deleted while its
+        // proposal to the catalog is open. Withdrawing the proposal frees it. Checked before the content is purged.
+        if (await _shareRequestRepository.GetPendingProposalForPrivateGameAsync(command.PrivateGameId, cancellationToken)
+                .ConfigureAwait(false) != null)
+        {
+            throw new ConflictException(
+                PrivateGameProposalCodes.AlreadyOpen,
+                "The game has an open proposal to the catalog: withdraw it before deleting the game");
         }
 
         // #4244: prima il contenuto (KnowledgeBase lo possiede), poi il gioco.

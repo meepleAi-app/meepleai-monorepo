@@ -77,20 +77,26 @@ describe('ProposeGameModal (#5074)', () => {
   });
 
   it.each([
-    [409, 'already waiting for review'],
-    [422, 'Add a description to the game'],
-    [500, 'could not be sent'],
-  ])('shows why a %i refused the proposal, and stays open', async (statusCode, message) => {
-    const onPropose = vi
-      .fn()
-      .mockRejectedValue(new ApiError({ message: 'refused', statusCode, endpoint: '/x' }));
-    const { onClose } = renderModal(game('A tile game.'), onPropose);
+    [409, undefined, 'already waiting for review'],
+    // #5079: an approved game is not proposed again, and a proposal takes the share-request limits.
+    [409, 'proposal_already_approved', 'already in the catalog'],
+    [422, undefined, 'Add a description to the game'],
+    [429, 'share_request_limit_reached', 'limit of share requests'],
+    [500, undefined, 'could not be sent'],
+  ])(
+    'shows why a %i (%s) refused the proposal, and stays open',
+    async (statusCode, code, message) => {
+      const onPropose = vi
+        .fn()
+        .mockRejectedValue(new ApiError({ message: 'refused', statusCode, endpoint: '/x', code }));
+      const { onClose } = renderModal(game('A tile game.'), onPropose);
 
-    const submit = screen.getByRole('button', { name: 'Submit Proposal' });
-    await waitFor(() => expect(submit).toBeEnabled());
-    fireEvent.click(submit);
+      const submit = screen.getByRole('button', { name: 'Submit Proposal' });
+      await waitFor(() => expect(submit).toBeEnabled());
+      fireEvent.click(submit);
 
-    expect(await screen.findByTestId('propose-error')).toHaveTextContent(message);
-    expect(onClose).not.toHaveBeenCalled();
-  });
+      expect(await screen.findByTestId('propose-error')).toHaveTextContent(message);
+      expect(onClose).not.toHaveBeenCalled();
+    }
+  );
 });

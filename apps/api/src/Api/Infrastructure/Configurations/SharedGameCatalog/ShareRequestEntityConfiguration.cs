@@ -126,6 +126,13 @@ internal sealed class ShareRequestEntityConfiguration : IEntityTypeConfiguration
             .HasDatabaseName("ix_share_requests_source_private_game_id")
             .HasFilter("source_private_game_id IS NOT NULL");
 
+        // #5079: at most one open (Pending, InReview, ChangesRequested) or approved proposal per private game. Two
+        // concurrent proposals both passed the handler's check; an approved game is not proposed again. A rejected or
+        // withdrawn proposal leaves the index, so the game can be proposed again after it.
+        builder.HasIndex(e => e.SourcePrivateGameId, "ux_share_requests_one_proposal_per_private_game")
+            .IsUnique()
+            .HasFilter("contribution_type = 2 AND status IN (0, 1, 2, 3) AND source_private_game_id IS NOT NULL");
+
         // Relationships
         builder.HasOne(e => e.SourceGame)
             .WithMany()

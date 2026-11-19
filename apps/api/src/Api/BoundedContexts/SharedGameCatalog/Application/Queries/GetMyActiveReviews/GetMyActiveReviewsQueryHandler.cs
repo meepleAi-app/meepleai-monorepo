@@ -42,6 +42,7 @@ internal sealed class GetMyActiveReviewsQueryHandler
         var shareRequests = await _context.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(sr => sr.SourceGame)
+            .Include(sr => sr.PrivateGame)
             .Where(sr => sr.ReviewingAdminId == query.AdminId
                 && sr.Status == (int)ShareRequestStatus.InReview)
             .OrderByDescending(sr => sr.ReviewStartedAt)
@@ -62,8 +63,9 @@ internal sealed class GetMyActiveReviewsQueryHandler
         var results = shareRequests
             .Select(sr => new ActiveReviewDto(
                 sr.Id,
-                sr.SourceGameId,
-                sr.SourceGame?.Title ?? "Unknown Game",
+                sr.SourceGameId ?? Guid.Empty,
+                // #5074: a NewGameProposal has no shared game yet; the proposed private game names it.
+                sr.SourceGame?.Title ?? sr.PrivateGame?.Title ?? "Unknown Game",
                 sr.UserId,
                 users.TryGetValue(sr.UserId, out var user)
                     ? (user.DisplayName ?? user.Email ?? "Unknown User")

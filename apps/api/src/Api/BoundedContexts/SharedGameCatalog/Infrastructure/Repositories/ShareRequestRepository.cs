@@ -87,7 +87,7 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
         {
             // Update the tracked entity's properties directly
             trackedEntity.UserId = request.UserId;
-            trackedEntity.SourceGameId = request.SourceGameId;
+            trackedEntity.SourceGameId = ToSourceGameColumn(request.SourceGameId);
             trackedEntity.TargetSharedGameId = request.TargetSharedGameId;
             trackedEntity.Status = (int)request.Status;
             trackedEntity.StatusBeforeReview = request.StatusBeforeReview.HasValue ? (int)request.StatusBeforeReview.Value : null;
@@ -193,6 +193,13 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
 
     #region Mapping Methods
 
+    /// <summary>
+    /// The domain keeps <see cref="Guid.Empty"/> for "no shared game" (a NewGameProposal); the column keeps null,
+    /// because it is a foreign key to shared_games (#5074).
+    /// </summary>
+    private static Guid? ToSourceGameColumn(Guid sourceGameId) =>
+        sourceGameId == Guid.Empty ? null : sourceGameId;
+
     private static ShareRequest MapToDomain(ShareRequestEntity entity)
     {
         var documents = entity.AttachedDocuments
@@ -209,7 +216,7 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
         return new ShareRequest(
             entity.Id,
             entity.UserId,
-            entity.SourceGameId,
+            entity.SourceGameId ?? Guid.Empty,
             entity.TargetSharedGameId,
             entity.SourcePrivateGameId,
             (ShareRequestStatus)entity.Status,
@@ -238,7 +245,7 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
         {
             Id = request.Id,
             UserId = request.UserId,
-            SourceGameId = request.SourceGameId,
+            SourceGameId = ToSourceGameColumn(request.SourceGameId),
             TargetSharedGameId = request.TargetSharedGameId,
             SourcePrivateGameId = request.SourcePrivateGameId,
             Status = (int)request.Status,

@@ -10,6 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { CreateShareRequestResponseSchema } from '../../schemas/share-requests.schemas';
 import { createShareRequestsClient } from '../shareRequestsClient';
 import type { HttpClient } from '../../core/httpClient';
 
@@ -307,5 +308,53 @@ describe('ShareRequestsClient - Issue #3026', () => {
 
       await expect(client.getRateLimitStatus()).rejects.toThrow('Failed to get rate limit status');
     });
+  });
+
+  // #5074: the private game's own proposal route. CreateShareRequest knows only shared games and answered 404.
+  describe('proposePrivateGame (#5074)', () => {
+    const response = {
+      shareRequestId: '4f3b2a10-6c1d-4e8f-9a2b-3c4d5e6f7a8b',
+      status: 'Pending',
+      contributionType: 'NewGameProposal',
+      createdAt: '2026-11-19T08:00:00Z',
+    };
+
+    it('posts the notes to the propose-to-catalog route of the game, and parses the reply', async () => {
+      vi.mocked(mockHttpClient.post).mockResolvedValue(response);
+
+      const client = createShareRequestsClient({ httpClient: mockHttpClient });
+      const result = await client.proposePrivateGame('game-1', 'Please add it');
+
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        '/api/v1/private-games/game-1/propose-to-catalog',
+        { notes: 'Please add it' },
+        CreateShareRequestResponseSchema
+      );
+      expect(result.contributionType).toBe('NewGameProposal');
+    });
+
+    it('sends null notes when there are none', async () => {
+      vi.mocked(mockHttpClient.post).mockResolvedValue(response);
+
+      const client = createShareRequestsClient({ httpClient: mockHttpClient });
+      await client.proposePrivateGame('game-1');
+
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        '/api/v1/private-games/game-1/propose-to-catalog',
+        { notes: null },
+        CreateShareRequestResponseSchema
+      );
+    });
+
+    // The schema used to list two of the backend's four types, so this reply, and any list holding a proposal
+    // or a cover change, failed it.
+    it.each(['NewGame', 'AdditionalContent', 'NewGameProposal', 'CoverChange'])(
+      'the response schema accepts the contribution type %s',
+      contributionType => {
+        expect(
+          CreateShareRequestResponseSchema.safeParse({ ...response, contributionType }).success
+        ).toBe(true);
+      }
+    );
   });
 });

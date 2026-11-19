@@ -157,7 +157,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
             result.Source.Should().Be("Manual");
             result.MinPlayers.Should().Be(2);
             result.MaxPlayers.Should().Be(6);
-            result.CanProposeToCatalog.Should().BeFalse();
+            // #5074: it has a description, so it can be proposed; the BGG origin no longer decides.
+            result.CanProposeToCatalog.Should().BeTrue();
 
             // Verify location header
             response.Headers.Location.Should().NotBeNull();
@@ -723,6 +724,199 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
 
         var getAfterDeleteResponse = await _client.SendAsync(getAfterDeleteRequest);
         getAfterDeleteResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    #endregion
+
+    #region Propose to catalog (#5074)
+
+    // #5074: the proposal of a private game to the shared catalog, restored with the description as a requirement.
+    // Each test owns its user and a game with a unique title, so the shared database cannot leak into it.
+
+    private static async Task<Guid> SeedProposableGameAsync(MeepleAiDbContext dbContext, Guid ownerId, string title, string? description)
+    {
+        var id = Guid.NewGuid();
+        dbContext.PrivateGames.Add(new PrivateGameEntity
+        {
+            Id = id,
+            OwnerId = ownerId,
+            Title = title,
+            Description = description,
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            Source = Api.BoundedContexts.UserLibrary.Domain.Enums.PrivateGameSource.Manual,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await dbContext.SaveChangesAsync();
+        return id;
+    }
+
+    private Task<HttpResponseMessage> ProposeAsync(Guid gameId, string sessionToken, string? notes = null)
+    {
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/private-games/{gameId}/propose-to-catalog",
+            sessionToken);
+        request.Content = JsonContent.Create(new { Notes = notes });
+        return _client.SendAsync(request);
+    }
+
+    [Fact]
+    public async Task ProposeToCatalog_GameWithDescription_Returns201_AndStoresAProposalWithoutASharedGame()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var gameId = await SeedProposableGameAsync(dbContext, userId, $"Proposed {Guid.NewGuid():N}", "A tile game.");
+
+        var response = await ProposeAsync(gameId, sessionToken, "Please add it");
+
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.Created, body);
+        var shareRequestId = System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("shareRequestId").GetGuid();
+
+        // Before #5074 source_game_id was NOT NULL with a foreign key to shared_games: no proposal could be stored.
+        var stored = await dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>()
+            .AsNoTracking()
+            .SingleAsync(r => r.Id == shareRequestId);
+        stored.ContributionType.Should().Be((int)Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects.ContributionType.NewGameProposal);
+        stored.SourceGameId.Should().BeNull();
+        stored.SourcePrivateGameId.Should().Be(gameId);
+        stored.UserId.Should().Be(userId);
+    }
+
+    [Fact]
+    public async Task ProposeToCatalog_GameWithoutDescription_Returns422OnDescription_AndStoresNothing()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var gameId = await SeedProposableGameAsync(dbContext, userId, $"No description {Guid.NewGuid():N}", null);
+
+        var response = await ProposeAsync(gameId, sessionToken);
+
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity, body);
+        body.Should().Contain("Description");
+        (await dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>()
+            .AnyAsync(r => r.SourcePrivateGameId == gameId)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ProposeToCatalog_Twice_Returns409TheSecondTime()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var gameId = await SeedProposableGameAsync(dbContext, userId, $"Twice {Guid.NewGuid():N}", "A tile game.");
+
+        (await ProposeAsync(gameId, sessionToken)).StatusCode.Should().Be(HttpStatusCode.Created);
+        var second = await ProposeAsync(gameId, sessionToken);
+
+        second.StatusCode.Should().Be(HttpStatusCode.Conflict, await second.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task ProposeToCatalog_SomeoneElsesGame_Returns403()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (ownerId, _) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (_, otherToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var gameId = await SeedProposableGameAsync(dbContext, ownerId, $"Not yours {Guid.NewGuid():N}", "A tile game.");
+
+        var response = await ProposeAsync(gameId, otherToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task ProposedGame_AppearsToTheAdmin_WithThePrivateGamesTitle_InTheListAndTheDetails()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (_, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+        var title = $"Admin sees {Guid.NewGuid():N}";
+        var gameId = await SeedProposableGameAsync(dbContext, userId, title, "A tile game.");
+        var created = await ProposeAsync(gameId, sessionToken);
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var shareRequestId = System.Text.Json.JsonDocument.Parse(await created.Content.ReadAsStringAsync())
+            .RootElement.GetProperty("shareRequestId").GetGuid();
+
+        // The list: with an INNER JOIN on shared_games the proposal was not there at all; then it would be
+        // "Unknown Game". The search runs on the private game's title.
+        var list = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/admin/share-requests?search={Uri.EscapeDataString(title)}&sortBy=GameTitle&sortDirection=Ascending&pageNumber=1&pageSize=20",
+            adminToken));
+        var listBody = await list.Content.ReadAsStringAsync();
+        list.StatusCode.Should().Be(HttpStatusCode.OK, listBody);
+        var item = System.Text.Json.JsonDocument.Parse(listBody).RootElement.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetGuid() == shareRequestId);
+        item.GetProperty("gameTitle").GetString().Should().Be(title);
+
+        // The details: MapToGameDetailsDto read a null shared game and answered 500.
+        var details = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get, $"/api/v1/admin/share-requests/{shareRequestId}", adminToken));
+        var detailsBody = await details.Content.ReadAsStringAsync();
+        details.StatusCode.Should().Be(HttpStatusCode.OK, detailsBody);
+        var sourceGame = System.Text.Json.JsonDocument.Parse(detailsBody).RootElement.GetProperty("sourceGame");
+        sourceGame.GetProperty("title").GetString().Should().Be(title);
+        sourceGame.GetProperty("description").GetString().Should().Be("A tile game.");
+    }
+
+    [Fact]
+    public async Task ProposedGame_AdminStartsTheReview_Returns200_AndTheRowKeepsNoSharedGame()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (_, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+        var gameId = await SeedProposableGameAsync(dbContext, userId, $"Reviewed {Guid.NewGuid():N}", "A tile game.");
+        var created = await ProposeAsync(gameId, sessionToken);
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var shareRequestId = System.Text.Json.JsonDocument.Parse(await created.Content.ReadAsStringAsync())
+            .RootElement.GetProperty("shareRequestId").GetGuid();
+
+        // The update path writes source_game_id again: an empty GUID there breaks the foreign key on the first
+        // admin action, the insert alone does not show it.
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/admin/share-requests/{shareRequestId}/start-review", adminToken));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var stored = await dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>()
+            .AsNoTracking()
+            .SingleAsync(r => r.Id == shareRequestId);
+        stored.Status.Should().Be((int)Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects.ShareRequestStatus.InReview);
+        stored.SourceGameId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ProposalLocation_AnswersTheOwner_AndIs404ForAnotherUser()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (_, otherToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var title = $"Mine only {Guid.NewGuid():N}";
+        var gameId = await SeedProposableGameAsync(dbContext, userId, title, "A private description.");
+        var created = await ProposeAsync(gameId, sessionToken);
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var location = created.Headers.Location!.ToString();
+
+        var mine = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, location, sessionToken));
+        var mineBody = await mine.Content.ReadAsStringAsync();
+        mine.StatusCode.Should().Be(HttpStatusCode.OK, mineBody);
+        System.Text.Json.JsonDocument.Parse(mineBody).RootElement.GetProperty("sourceGame")
+            .GetProperty("title").GetString().Should().Be(title);
+
+        // The user route used the admin query, which reads any request: any signed-in user holding the id got
+        // the private game's title and description.
+        var theirs = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, location, otherToken));
+        var theirsBody = await theirs.Content.ReadAsStringAsync();
+        theirs.StatusCode.Should().Be(HttpStatusCode.NotFound, theirsBody);
+        theirsBody.Should().NotContain(title);
     }
 
     #endregion

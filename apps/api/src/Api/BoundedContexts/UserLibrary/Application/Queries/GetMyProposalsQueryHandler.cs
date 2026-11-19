@@ -65,7 +65,7 @@ internal sealed class GetMyProposalsQueryHandler : IRequestHandler<GetMyProposal
             .Take(query.PageSize)
             .Select(r => new UserShareRequestDto(
                 r.Id,
-                r.SourceGameId,
+                r.SourceGameId ?? Guid.Empty,
                 r.PrivateGame != null ? r.PrivateGame.Title : "Unknown Game",
                 r.PrivateGame != null ? r.PrivateGame.ThumbnailUrl : null,
                 (ShareRequestStatus)r.Status,

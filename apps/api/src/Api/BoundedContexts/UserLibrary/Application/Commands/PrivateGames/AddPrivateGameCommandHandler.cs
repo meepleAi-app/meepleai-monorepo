@@ -179,7 +179,7 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
             CreatedAt: game.CreatedAt,
             UpdatedAt: game.UpdatedAt,
             BggSyncedAt: game.BggSyncedAt,
-            CanProposeToCatalog: game.BggId.HasValue // Can only propose BGG-sourced games
+            CanProposeToCatalog: game.CanBeProposedToCatalog // #5074: a description, not a BGG origin
         );
     }
 }

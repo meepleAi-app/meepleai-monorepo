@@ -105,6 +105,7 @@ export {
   useShareRequest,
   useRateLimitStatus,
   useCreateShareRequest,
+  useProposePrivateGame,
   shareRequestsKeys,
 } from './useShareRequests';
 

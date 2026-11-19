@@ -42,6 +42,7 @@ internal sealed class GetUserShareRequestsQueryHandler : IRequestHandler<GetUser
         var dbQuery = _context.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(r => r.SourceGame)
+            .Include(r => r.PrivateGame)
             .Include(r => r.AttachedDocuments)
             .Where(r => r.UserId == query.UserId);
 
@@ -63,8 +64,9 @@ internal sealed class GetUserShareRequestsQueryHandler : IRequestHandler<GetUser
             .Take(query.PageSize)
             .Select(r => new UserShareRequestDto(
                 r.Id,
-                r.SourceGameId,
-                r.SourceGame != null ? r.SourceGame.Title : "Unknown Game",
+                r.SourceGameId ?? Guid.Empty,
+                // #5074: a NewGameProposal has no shared game yet; the proposed private game names it.
+                r.SourceGame != null ? r.SourceGame.Title : r.PrivateGame != null ? r.PrivateGame.Title : "Unknown Game",
                 r.SourceGame != null ? r.SourceGame.ThumbnailUrl : null,
                 (ShareRequestStatus)r.Status,
                 (ContributionType)r.ContributionType,

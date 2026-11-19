@@ -105,7 +105,8 @@ public sealed class GetPrivateGameQueryHandlerTests
         result.Description.Should().Be("Test description");
         result.ComplexityRating.Should().Be(3.0m);
         result.BggId.Should().BeNull();
-        result.CanProposeToCatalog.Should().BeFalse();
+        // #5074: a manual game with a description can be proposed; the BGG origin no longer decides.
+        result.CanProposeToCatalog.Should().BeTrue();
     }
 
     [Fact]

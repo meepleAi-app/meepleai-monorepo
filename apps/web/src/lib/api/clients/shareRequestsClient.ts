@@ -42,6 +42,12 @@ export interface ShareRequestsClient {
   createShareRequest(command: CreateShareRequestCommand): Promise<CreateShareRequestResponse>;
 
   /**
+   * Propose a private game to the shared catalog (#5074): a NewGameProposal. The game needs a description
+   * (422 without), and one proposal per game can be pending (409).
+   */
+  proposePrivateGame(privateGameId: string, notes?: string): Promise<CreateShareRequestResponse>;
+
+  /**
    * Get current rate limit status for the user
    */
   getRateLimitStatus(): Promise<RateLimitStatusDto>;
@@ -114,6 +120,23 @@ export function createShareRequestsClient({
 
       if (!data) {
         throw new Error('Failed to create share request');
+      }
+
+      return data;
+    },
+
+    async proposePrivateGame(
+      privateGameId: string,
+      notes?: string
+    ): Promise<CreateShareRequestResponse> {
+      const data = await httpClient.post<CreateShareRequestResponse>(
+        `/api/v1/private-games/${encodeURIComponent(privateGameId)}/propose-to-catalog`,
+        { notes: notes || null },
+        CreateShareRequestResponseSchema
+      );
+
+      if (!data) {
+        throw new Error('Failed to propose the game');
       }
 
       return data;

@@ -3,6 +3,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Infrastructure.Entities.UserLibrary;
+using Api.SharedKernel.Infrastructure.Http;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -41,15 +43,18 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
         var request = await _context.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(r => r.SourceGame)
-                .ThenInclude(g => g.Categories)
+                .ThenInclude(g => g!.Categories)
             .Include(r => r.SourceGame)
-                .ThenInclude(g => g.Mechanics)
+                .ThenInclude(g => g!.Mechanics)
+            .Include(r => r.PrivateGame)
             .Include(r => r.TargetSharedGame)
                 .ThenInclude(g => g!.Categories)
             .Include(r => r.TargetSharedGame)
                 .ThenInclude(g => g!.Mechanics)
             .Include(r => r.AttachedDocuments)
-            .FirstOrDefaultAsync(r => r.Id == query.ShareRequestId, cancellationToken)
+            .FirstOrDefaultAsync(
+                r => r.Id == query.ShareRequestId && (!query.OwnRequestsOnly || r.UserId == query.AdminId),
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (request == null)
@@ -217,7 +222,10 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
         List<ShareRequestHistoryEntryDto> history,
         Guid currentAdminId)
     {
-        var sourceGame = MapToGameDetailsDto(request.SourceGame);
+        // #5074: a NewGameProposal has no shared game yet: the details are the proposed private game's.
+        var sourceGame = request.SourceGame != null
+            ? MapToGameDetailsDto(request.SourceGame)
+            : MapToGameDetailsDto(request.PrivateGame);
         var targetGame = request.TargetSharedGame != null
             ? MapToGameDetailsDto(request.TargetSharedGame)
             : null;
@@ -264,6 +272,22 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
             LockStatus: lockStatus,
             CreatedAt: request.CreatedAt,
             ResolvedAt: request.ResolvedAt);
+    }
+
+    private static GameDetailsDto MapToGameDetailsDto(PrivateGameEntity? game)
+    {
+        return new GameDetailsDto(
+            Id: game?.Id ?? Guid.Empty,
+            Title: game?.Title ?? "Unknown Game",
+            Description: game?.Description,
+            ThumbnailUrl: game?.ThumbnailUrl is { } url && !BggHostDenyList.IsBanned(url) ? url : null,
+            BggId: game?.BggId,
+            MinPlayers: game?.MinPlayers,
+            MaxPlayers: game?.MaxPlayers,
+            PlayingTime: game?.PlayingTimeMinutes,
+            Complexity: game?.ComplexityRating,
+            Categories: [],
+            Mechanisms: []);
     }
 
     private static GameDetailsDto MapToGameDetailsDto(SharedGameEntity game)

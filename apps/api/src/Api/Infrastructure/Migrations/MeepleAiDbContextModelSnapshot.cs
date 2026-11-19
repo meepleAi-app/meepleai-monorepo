@@ -13643,7 +13643,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("reviewing_admin_id");
 
-                    b.Property<Guid>("SourceGameId")
+                    b.Property<Guid?>("SourceGameId")
                         .HasColumnType("uuid")
                         .HasColumnName("source_game_id");
 
@@ -18867,8 +18867,7 @@ namespace Api.Infrastructure.Migrations
                     b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SourceGame")
                         .WithMany()
                         .HasForeignKey("SourceGameId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity", "PrivateGame")
                         .WithMany()

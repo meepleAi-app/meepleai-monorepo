@@ -4,6 +4,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
+using Api.SharedKernel.Infrastructure.Http;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -54,6 +55,7 @@ internal sealed class GetPendingShareRequestsQueryHandler : IRequestHandler<GetP
         var dbQuery = _context.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(r => r.SourceGame)
+            .Include(r => r.PrivateGame)
             .Include(r => r.TargetSharedGame)
             .Include(r => r.AttachedDocuments)
             .Where(r => ActiveStatuses.Contains(r.Status));
@@ -75,7 +77,9 @@ internal sealed class GetPendingShareRequestsQueryHandler : IRequestHandler<GetP
         {
             var searchPattern = $"%{query.SearchTerm}%";
             dbQuery = dbQuery.Where(r =>
-                EF.Functions.ILike(r.SourceGame.Title, searchPattern) ||
+                // #5074: a NewGameProposal has no shared game; its private game carries the title.
+                (r.SourceGame != null && EF.Functions.ILike(r.SourceGame.Title, searchPattern)) ||
+                (r.SourceGame == null && r.PrivateGame != null && EF.Functions.ILike(r.PrivateGame.Title, searchPattern)) ||
                 (r.UserNotes != null && EF.Functions.ILike(r.UserNotes, searchPattern)));
         }
 
@@ -141,8 +145,8 @@ internal sealed class GetPendingShareRequestsQueryHandler : IRequestHandler<GetP
         {
             (ShareRequestSortField.CreatedAt, SortDirection.Ascending) => query.OrderBy(r => r.CreatedAt),
             (ShareRequestSortField.CreatedAt, SortDirection.Descending) => query.OrderByDescending(r => r.CreatedAt),
-            (ShareRequestSortField.GameTitle, SortDirection.Ascending) => query.OrderBy(r => r.SourceGame.Title),
-            (ShareRequestSortField.GameTitle, SortDirection.Descending) => query.OrderByDescending(r => r.SourceGame.Title),
+            (ShareRequestSortField.GameTitle, SortDirection.Ascending) => query.OrderBy(r => r.SourceGame != null ? r.SourceGame.Title : r.PrivateGame!.Title),
+            (ShareRequestSortField.GameTitle, SortDirection.Descending) => query.OrderByDescending(r => r.SourceGame != null ? r.SourceGame.Title : r.PrivateGame!.Title),
             (ShareRequestSortField.Status, SortDirection.Ascending) => query.OrderBy(r => r.Status),
             (ShareRequestSortField.Status, SortDirection.Descending) => query.OrderByDescending(r => r.Status),
             // For ContributorName, we can't sort directly - we'll sort by UserId as a proxy
@@ -172,10 +176,10 @@ internal sealed class GetPendingShareRequestsQueryHandler : IRequestHandler<GetP
             ContributionType: (ContributionType)request.ContributionType,
 
             // Game preview
-            SourceGameId: request.SourceGameId,
-            GameTitle: request.SourceGame?.Title ?? "Unknown Game",
-            GameThumbnailUrl: request.SourceGame?.ThumbnailUrl,
-            BggId: request.SourceGame?.BggId,
+            SourceGameId: request.SourceGameId ?? Guid.Empty,
+            GameTitle: request.SourceGame?.Title ?? request.PrivateGame?.Title ?? "Unknown Game",
+            GameThumbnailUrl: request.SourceGame?.ThumbnailUrl ?? AllowedThumbnail(request.PrivateGame?.ThumbnailUrl),
+            BggId: request.SourceGame?.BggId ?? request.PrivateGame?.BggId,
 
             // Contributor info
             UserId: request.UserId,
@@ -200,4 +204,11 @@ internal sealed class GetPendingShareRequestsQueryHandler : IRequestHandler<GetP
             TargetSharedGameId: request.TargetSharedGameId,
             TargetSharedGameTitle: request.TargetSharedGame?.Title);
     }
+
+    /// <summary>
+    /// A private game's thumbnail can still be a BGG URL written before #5066; it never leaves as a preview
+    /// (#2123, ADR-059 §5).
+    /// </summary>
+    private static string? AllowedThumbnail(string? url) =>
+        url is not null && !BggHostDenyList.IsBanned(url) ? url : null;
 }

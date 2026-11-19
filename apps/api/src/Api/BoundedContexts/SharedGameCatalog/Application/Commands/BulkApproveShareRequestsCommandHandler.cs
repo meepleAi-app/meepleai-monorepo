@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
@@ -97,6 +98,14 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
             foreach (var shareRequestId in distinctIds)
             {
                 var shareRequest = shareRequestsDict[shareRequestId];
+
+                // #5074: a NewGameProposal has no shared game yet; approving it here would mark it approved without
+                // creating one. It goes through approve-game-proposal (ApproveAsNew, ApproveAsVariant, MergeKnowledgeBase).
+                if (shareRequest.ContributionType == ContributionType.NewGameProposal)
+                {
+                    throw new ConflictException(
+                        $"ShareRequest {shareRequest.Id} is a NewGameProposal: approve it with approve-game-proposal");
+                }
 
                 // Approve the request (domain validates and raises events)
                 // Will throw if: not in InReview status, lock expired, reviewer mismatch, etc.

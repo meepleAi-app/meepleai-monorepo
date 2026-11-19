@@ -44,6 +44,7 @@ export function GridCard(props: MeepleCardProps) {
     className = '',
     attribution,
     coverEditSlot,
+    actionsSlot,
     coverFocal,
   } = props;
   const testId = props['data-testid'];
@@ -54,7 +55,9 @@ export function GridCard(props: MeepleCardProps) {
 
   // With a coverEditSlot the hover-lift moves to the wrapper (see withSlot below) so the
   // card and its sibling affordance lift together; stripping it here avoids a double lift.
-  const liftClass = coverEditSlot ? '' : 'hover:-translate-y-1.5';
+  // #5081: the actions slot sits in the same wrapper, so the same rule applies to it.
+  const hasSlot = Boolean(coverEditSlot || actionsSlot);
+  const liftClass = hasSlot ? '' : 'hover:-translate-y-1.5';
   const rootClassName = `group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-card)] shadow-[var(--mc-shadow-sm)] outline-2 outline-offset-2 outline-transparent backdrop-blur-[12px] backdrop-saturate-[180%] transition-all duration-[350ms] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] ${liftClass} hover:shadow-[var(--mc-shadow-xl)] hover:outline-[var(--mc-glow)] ${className}`;
   const rootStyle = { '--mc-glow': glowColor } as React.CSSProperties;
 
@@ -79,7 +82,9 @@ export function GridCard(props: MeepleCardProps) {
           <EntityBadge entity={entity} stacked />
         </div>
         {/* Top-right hover-visible 3-dot menu placeholder (#1856 DEC-4). */}
-        {!href && (!showQuickActions || actions.length === 0) && <MenuPlaceholder />}
+        {!href && !actionsSlot && (!showQuickActions || actions.length === 0) && (
+          <MenuPlaceholder />
+        )}
         {tags.length > 0 && <TagStrip tags={tags} entity={entity} topClass="top-9" />}
         {showQuickActions && actions.length > 0 && <QuickActions actions={actions} />}
       </div>
@@ -113,7 +118,7 @@ export function GridCard(props: MeepleCardProps) {
   // hover + positioning context for a hover-revealed absolute affordance. When the slot is
   // absent the card root is returned unchanged, so every existing consumer is byte-identical.
   const withSlot = (card: ReactElement): ReactElement =>
-    coverEditSlot ? (
+    hasSlot ? (
       // `grid` makes the single in-flow child (the card) stretch to the row height like the
       // card did before (CSS Grid `align-items: stretch`), preserving equal-height rows.
       // The hover-lift lives here (not on the card) so the card + its absolutely-positioned
@@ -121,6 +126,7 @@ export function GridCard(props: MeepleCardProps) {
       <div className="group relative grid transition-transform duration-[350ms] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1.5">
         {card}
         {coverEditSlot}
+        {actionsSlot}
       </div>
     ) : (
       card

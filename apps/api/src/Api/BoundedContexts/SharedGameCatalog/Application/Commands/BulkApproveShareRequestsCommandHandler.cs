@@ -108,6 +108,16 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
                         $"ShareRequest {shareRequest.Id} is a {shareRequest.ContributionType}: approve it with approve-game-proposal");
                 }
 
+                // #5076, decision of 2026-11-19: approval cannot copy attached documents yet. The copy lives only in
+                // ShareRequestApprovedDocumentHandler, which no event reaches (#5078), and reads local paths even with S3
+                // (#5082). Approved here, the request would close with its documents left out, and nothing recovers them
+                // later: it waits instead.
+                if (shareRequest.AttachedDocuments.Count > 0)
+                {
+                    throw new ConflictException(
+                        $"ShareRequest {shareRequest.Id} has {shareRequest.AttachedDocuments.Count} attached documents: approval cannot copy them to the catalog yet");
+                }
+
                 // Approve the request (domain validates and raises events)
                 // Will throw if: not in InReview status, lock expired, reviewer mismatch, etc.
                 shareRequest.Approve(

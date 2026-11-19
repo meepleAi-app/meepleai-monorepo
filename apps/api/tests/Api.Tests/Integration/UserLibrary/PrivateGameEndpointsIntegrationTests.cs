@@ -1009,5 +1009,52 @@ public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<Private
         (await dbContext.SharedGames.AsNoTracking().AnyAsync(g => g.Title == mergedTitle)).Should().BeFalse();
     }
 
+    [Fact]
+    public async Task SharedGameThumbnail_FromABggHost_IsNotServedInTheListOrTheDetails()
+    {
+        // #5076: the review serves the shared game's thumbnail as well as the private game's, and both go through the
+        // deny list (#2123, ADR-059 §5). A shared game stored with a BGG thumbnail before the freeze is the case.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+        var title = $"Bgg thumb {Guid.NewGuid():N}";
+        var sharedGameId = await ApprovedTargetAsync(
+            (await ProposeAndApproveAsync(dbContext, adminToken, title, "ApproveAsNew")).Response);
+        (await dbContext.SharedGames.Where(g => g.Id == sharedGameId)
+            .ExecuteUpdateAsync(u => u.SetProperty(g => g.ThumbnailUrl, "https://cf.geekdo-images.com/thumb.jpg")))
+            .Should().Be(1);
+        var (contributorId, _) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var requestId = Guid.NewGuid();
+        dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity>().Add(new()
+        {
+            Id = requestId,
+            UserId = contributorId,
+            SourceGameId = sharedGameId,
+            Status = (int)Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects.ShareRequestStatus.Pending,
+            ContributionType = (int)Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects.ContributionType.NewGame,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = contributorId,
+        });
+        await dbContext.SaveChangesAsync();
+
+        var list = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/admin/share-requests?search={Uri.EscapeDataString(title)}&sortBy=CreatedAt&sortDirection=Descending&pageNumber=1&pageSize=20",
+            adminToken));
+        var listBody = await list.Content.ReadAsStringAsync();
+        list.StatusCode.Should().Be(HttpStatusCode.OK, listBody);
+        var item = System.Text.Json.JsonDocument.Parse(listBody).RootElement.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetGuid() == requestId);
+        item.GetProperty("gameThumbnailUrl").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+
+        var details = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get, $"/api/v1/admin/share-requests/{requestId}", adminToken));
+        var detailsBody = await details.Content.ReadAsStringAsync();
+        details.StatusCode.Should().Be(HttpStatusCode.OK, detailsBody);
+        System.Text.Json.JsonDocument.Parse(detailsBody).RootElement.GetProperty("sourceGame")
+            .GetProperty("thumbnailUrl").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+        detailsBody.Should().NotContain("geekdo");
+    }
+
     #endregion
 }

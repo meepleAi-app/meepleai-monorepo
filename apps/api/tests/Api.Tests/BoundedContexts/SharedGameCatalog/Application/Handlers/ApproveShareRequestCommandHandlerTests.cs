@@ -196,6 +196,32 @@ public class ApproveShareRequestCommandHandlerTests
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // #5076, decision of 2026-11-19: approval cannot copy attached documents yet (#5078, #5082); approved here, the
+    // request would close with its documents left out. It waits instead.
+    [Fact]
+    public async Task Handle_WithAttachedDocuments_ThrowsConflict_AndChangesNothing()
+    {
+        // Arrange
+        var request = ShareRequest.Create(
+            TestUserId, TestGameId, ContributionType.NewGame, "With the rulebook");
+        request.AttachDocument(Guid.NewGuid(), "rules.pdf", "application/pdf", 1024);
+        request.StartReview(TestAdminId);
+        var command = new ApproveShareRequestCommand(ShareRequestId: request.Id, AdminId: TestAdminId);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdForUpdateAsync(request.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(request);
+
+        // Act
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*1 attached documents*");
+        request.Status.Should().Be(ShareRequestStatus.InReview);
+        _repositoryMock.Verify(r => r.Update(It.IsAny<ShareRequest>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static ShareRequest CreateShareRequestInReview(Guid reviewingAdminId)
     {
         var shareRequest = ShareRequest.Create(

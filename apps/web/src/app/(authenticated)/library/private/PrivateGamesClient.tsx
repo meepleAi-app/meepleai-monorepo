@@ -68,7 +68,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { useCreateShareRequest } from '@/hooks/queries/useShareRequests';
+import { useProposePrivateGame } from '@/hooks/queries/useShareRequests';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import type {
@@ -110,8 +110,9 @@ export default function PrivateGamesClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Propose mutation
-  const createShareRequest = useCreateShareRequest();
+  // Propose mutation. #5074: the proposal route of the private game; CreateShareRequest knows only shared games
+  // and answered 404 here.
+  const proposePrivateGame = useProposePrivateGame();
 
   const PAGE_SIZE = 12;
 
@@ -231,11 +232,7 @@ export default function PrivateGamesClient() {
   };
 
   const handlePropose = async (gameId: string, notes: string) => {
-    await createShareRequest.mutateAsync({
-      sourceGameId: gameId,
-      notes: notes || undefined,
-      attachedDocumentIds: [],
-    });
+    await proposePrivateGame.mutateAsync({ privateGameId: gameId, notes: notes || undefined });
     setProposeDialogOpen(false);
     setSelectedGame(null);
   };
@@ -468,6 +465,7 @@ export default function PrivateGamesClient() {
         }}
         game={selectedGame}
         onPropose={handlePropose}
+        onEditGame={openEdit}
       />
 
       {/* Add Game Drawer — local instance so close stays on /library/private */}

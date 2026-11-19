@@ -19,7 +19,14 @@ export const ShareRequestStatusSchema = z.enum([
 
 export type ShareRequestStatus = z.infer<typeof ShareRequestStatusSchema>;
 
-export const ContributionTypeSchema = z.enum(['NewGame', 'AdditionalContent']);
+// The backend's ContributionType, all four (#5074). With two, a list that held a cover change (#3590) or a game
+// proposal failed the schema whole.
+export const ContributionTypeSchema = z.enum([
+  'NewGame',
+  'AdditionalContent',
+  'NewGameProposal',
+  'CoverChange',
+]);
 
 export type ContributionType = z.infer<typeof ContributionTypeSchema>;
 

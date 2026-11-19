@@ -451,8 +451,26 @@ describe('JourneyProgress', () => {
       expect(label('upload-pdf')).toHaveClass('text-orange-700', 'dark:text-orange-300');
       expect(label('chat')).toHaveClass('text-muted-foreground');
 
-      const steps = screen.getByTestId('journey-steps');
-      expect(steps.querySelector('[class*="opacity-"]:not([aria-hidden])')).toBeNull();
+      // The whole banner, root included: an opacity anywhere above a label lowers its contrast too.
+      const banner = screen.getByTestId('journey-progress');
+      const dimmed = [banner, ...banner.querySelectorAll('*')].filter(
+        el =>
+          !el.closest('[aria-hidden="true"]') &&
+          /(^|\s)opacity-/.test(el.getAttribute('class') ?? '')
+      );
+      expect(dimmed).toEqual([]);
+    });
+
+    it('shows the 10 px detail of the active step in the measured shade', () => {
+      // orange-500 there was about 3:1; the detail now takes the active label's orange-700 (5.12:1 measured).
+      mockAllHooks({ privateGamesCount: 1, pdfStatus: { status: 'processing', progress: 68 } });
+
+      render(<JourneyProgress gameId="game-1" />);
+
+      expect(screen.getByTestId('journey-step-detail-kb-ready')).toHaveClass(
+        'text-orange-700',
+        'dark:text-orange-300'
+      );
     });
   });
 });

@@ -163,6 +163,13 @@ export interface MeepleCardProps {
    * so existing consumers are unaffected.
    */
   coverEditSlot?: ReactNode;
+  /**
+   * #5081 — optional actions menu (e.g. Edit, Propose, Delete on a private game), rendered like
+   * `coverEditSlot`: OUTSIDE the card's anchor/button root, so it is a real control without axe
+   * nested-interactive. It replaces the decorative `MenuPlaceholder`. Currently honored by GridCard only.
+   * `actions` + `showQuickActions` render the hover-only quick actions INSIDE the root instead.
+   */
+  actionsSlot?: ReactNode;
   /** #3611 — punto focale del crop, inoltrato a `Cover`. Assente = comportamento invariato. */
   coverFocal?: { x: number; y: number };
   /**

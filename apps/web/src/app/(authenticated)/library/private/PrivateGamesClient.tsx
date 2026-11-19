@@ -31,6 +31,7 @@ import { type AddPrivateGameFormData } from '@/components/library/AddPrivateGame
 import { JourneyProgress } from '@/components/library/JourneyProgress';
 import { KbStatusBadge } from '@/components/library/KbStatusBadge';
 import { LibraryEmptyState } from '@/components/library/LibraryEmptyState';
+import { PrivateGameActionsMenu } from '@/components/library/PrivateGameActionsMenu';
 import { ProposeGameModal } from '@/components/library/ProposeGameModal';
 import {
   Card,
@@ -509,20 +510,9 @@ function PrivateGameCard({ game, onEdit, onDelete, onPropose, onClick }: Private
     ...(game.yearPublished ? [{ label: `${game.yearPublished}` }] : []),
   ];
 
-  const actions = [
-    ...(onEdit ? [{ icon: '✏️', label: 'Edit', onClick: () => onEdit(game) }] : []),
-    ...(onPropose ? [{ icon: '📤', label: 'Propose', onClick: () => onPropose(game) }] : []),
-    ...(onDelete
-      ? [
-          {
-            icon: '🗑️',
-            label: 'Delete',
-            onClick: () => onDelete(game.id),
-            variant: 'danger' as const,
-          },
-        ]
-      : []),
-  ];
+  // #5081: the actions go in the card's actionsSlot. Passed as `actions` without `showQuickActions`, the grid card
+  // drew only its decorative menu placeholder, and none of them was reachable (#1877, 2026-06-04).
+  const hasActions = Boolean(onEdit || onPropose || onDelete);
 
   return (
     <MeepleCard
@@ -534,7 +524,17 @@ function PrivateGameCard({ game, onEdit, onDelete, onPropose, onClick }: Private
       badge="Private"
       metadata={metadata}
       onClick={onClick}
-      actions={actions.length > 0 ? actions : undefined}
+      actionsSlot={
+        hasActions ? (
+          <PrivateGameActionsMenu
+            // eslint-disable-next-line local/prefer-use-game-title -- a private game has no catalog translations: the menu names it as its owner wrote it
+            title={game.title}
+            onEdit={onEdit ? () => onEdit(game) : undefined}
+            onPropose={onPropose ? () => onPropose(game) : undefined}
+            onDelete={onDelete ? () => onDelete(game.id) : undefined}
+          />
+        ) : undefined
+      }
       data-testid={`game-card-${game.id}`}
     />
   );

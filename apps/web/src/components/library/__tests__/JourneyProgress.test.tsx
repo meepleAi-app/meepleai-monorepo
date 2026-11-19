@@ -435,4 +435,24 @@ describe('JourneyProgress', () => {
       expect(screen.getByRole('button', { name: /Chiudi percorso/i })).toBeInTheDocument();
     });
   });
+
+  // #5085: the labels failed AA on the light banner (teal-600 3.6:1, orange-600 3.53:1, a pending step under
+  // opacity-40 1.87:1). jsdom computes no colours, so the contrast is measured in a browser (PR #5085, 5.12:1 or
+  // more in both themes); this pins what was measured: the shades, and no opacity on the steps.
+  describe('Step label contrast (#5085)', () => {
+    it('carries each state in the measured shades, with no opacity on the steps', () => {
+      mockAllHooks({ privateGamesCount: 1 });
+
+      render(<JourneyProgress gameId="game-1" />);
+
+      const label = (id: string) =>
+        screen.getByTestId(`journey-step-${id}`).querySelector('span.text-xs');
+      expect(label('create-game')).toHaveClass('text-teal-700', 'dark:text-teal-300');
+      expect(label('upload-pdf')).toHaveClass('text-orange-700', 'dark:text-orange-300');
+      expect(label('chat')).toHaveClass('text-muted-foreground');
+
+      const steps = screen.getByTestId('journey-steps');
+      expect(steps.querySelector('[class*="opacity-"]:not([aria-hidden])')).toBeNull();
+    });
+  });
 });

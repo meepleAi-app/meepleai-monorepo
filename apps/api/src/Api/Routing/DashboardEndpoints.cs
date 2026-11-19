@@ -9,6 +9,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries.Dashboard;
 using Api.BoundedContexts.GameManagement.Application.Queries.Sessions;
 using Api.BoundedContexts.UserLibrary.Application.Queries.Games;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -272,7 +273,7 @@ with the current user scheduled within the last 90 days.
                 var query = new GetDashboardStreamQuery(userId);
                 eventStream = await mediator.Send(query, ct).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (AccessDeniedException)
             {
                 return Results.StatusCode(403);
             }

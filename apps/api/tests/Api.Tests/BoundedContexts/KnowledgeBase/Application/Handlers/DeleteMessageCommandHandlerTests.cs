@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -94,7 +95,7 @@ public class DeleteMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_UserNotOwnerAndNotAdmin_ThrowsUnauthorizedAccessException()
+    public async Task Handle_UserNotOwnerAndNotAdmin_ThrowsAccessDeniedException()
     {
         // Arrange
         var ownerId = Guid.NewGuid();
@@ -112,7 +113,7 @@ public class DeleteMessageCommandHandlerTests
 
         // Act & Assert
         Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        await act.Should().ThrowAsync<AccessDeniedException>();
 
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

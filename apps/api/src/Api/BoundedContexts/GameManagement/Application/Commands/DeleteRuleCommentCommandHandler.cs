@@ -39,7 +39,7 @@ internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComme
         // Verify ownership or admin
         if (comment.UserId != command.UserId && !command.IsAdmin)
         {
-            throw new UnauthorizedAccessException($"User {command.UserId} is not authorized to delete this comment");
+            throw new AccessDeniedException($"User {command.UserId} is not authorized to delete this comment");
         }
 
         // Manually delete all replies (cascade delete - DeleteBehavior.Restrict requires manual handling)

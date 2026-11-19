@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Configuration;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -62,7 +63,7 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         var validationResult = ValidateTierAccess(tier, strategy, userId);
         if (!validationResult.IsValid)
         {
-            throw new UnauthorizedAccessException(
+            throw new AccessDeniedException(
                 $"Tier {tier} does not have access to strategy {strategy.GetDisplayName()}. " +
                 $"Available strategies: {string.Join(", ", validationResult.AvailableStrategies.Select(s => s.GetDisplayName()))}");
         }

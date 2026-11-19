@@ -145,7 +145,7 @@ public sealed class CancelGameNightCommandHandlerTests
         var act = () => CreateHandler().Handle(
             new CancelGameNightCommand(night.Id, Guid.NewGuid()), CancellationToken.None);
 
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        await act.Should().ThrowAsync<AccessDeniedException>();
         night.Status.Should().Be(GameNightStatus.Published);
         _cache.Verify(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }

@@ -35,7 +35,7 @@ public class GetSessionStreamQueryHandler : IRequestHandler<GetSessionStreamQuer
 
         if (!isOwner && !isParticipant)
         {
-            throw new UnauthorizedAccessException($"User {request.UserId} is not authorized to access session {request.SessionId}");
+            throw new AccessDeniedException($"User {request.UserId} is not authorized to access session {request.SessionId}");
         }
 
         // Return subscription stream

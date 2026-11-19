@@ -173,7 +173,7 @@ public sealed class PublicBaseUrlResolvedBeforeWritesTests
             new CreateGameNightInvitationByEmailCommand(fixture.GameNight.Id, "guest@example.com", Guid.NewGuid()),
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        await act.Should().ThrowAsync<AccessDeniedException>();
     }
 
     // ------------------------------------------------------------------------------------------------------

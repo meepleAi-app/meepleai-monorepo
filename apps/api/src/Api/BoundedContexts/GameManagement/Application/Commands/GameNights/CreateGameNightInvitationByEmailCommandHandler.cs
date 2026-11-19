@@ -74,7 +74,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
 
         if (gameNight.OrganizerId != command.OrganizerUserId)
         {
-            throw new UnauthorizedAccessException(
+            throw new AccessDeniedException(
                 "Only the organizer can issue invitations for this game night");
         }
 

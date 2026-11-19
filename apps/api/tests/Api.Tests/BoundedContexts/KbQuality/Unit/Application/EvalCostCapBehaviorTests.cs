@@ -3,6 +3,7 @@ using Api.BoundedContexts.KbQuality.Application.Behaviors;
 using Api.BoundedContexts.KbQuality.Application.Commands.StartEvaluation;
 using Api.BoundedContexts.KbQuality.Application.Services;
 using Api.BoundedContexts.KbQuality.Domain.Evaluation.Exceptions;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -131,7 +132,7 @@ public sealed class EvalCostCapBehaviorTests
 
         var act = () => HandleAsync(overrideCostCap: true);
 
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        await act.Should().ThrowAsync<AccessDeniedException>();
         _handlerRuns.Should().Be(0);
     }
 }

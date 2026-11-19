@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Queries.Sessions;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -78,7 +79,7 @@ internal class GetRecentSessionsQueryHandler : IRequestHandler<GetRecentSessions
 
         var userIdClaim = httpContext.User.FindFirst("sub")?.Value
             ?? httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? throw new UnauthorizedAccessException("User ID not found in claims");
+            ?? throw new AccessDeniedException("User ID not found in claims");
 
         return Guid.Parse(userIdClaim);
     }

@@ -228,7 +228,7 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         Func<Task> act = async () => await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+        await act.Should().ThrowAsync<AccessDeniedException>()
             .WithMessage("*not authorized*");
 
         // Verify comment still exists

@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
@@ -78,7 +79,7 @@ public class DeleteChatThreadCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_UserNotOwner_ThrowsUnauthorizedAccessException()
+    public async Task Handle_UserNotOwner_ThrowsAccessDeniedException()
     {
         // Arrange
         var ownerId = Guid.NewGuid();
@@ -94,7 +95,7 @@ public class DeleteChatThreadCommandHandlerTests
 
         // Act & Assert
         Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<UnauthorizedAccessException>()).Which;
+        var exception = (await act.Should().ThrowAsync<AccessDeniedException>()).Which;
 
         exception.Message.Should().Contain(differentUserId.ToString());
         exception.Message.Should().Contain(threadId.ToString());

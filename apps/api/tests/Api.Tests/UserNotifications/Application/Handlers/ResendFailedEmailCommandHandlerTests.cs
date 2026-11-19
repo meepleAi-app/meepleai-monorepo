@@ -3,6 +3,7 @@ using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -48,7 +49,7 @@ public sealed class ResendFailedEmailCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_UnauthorizedUser_ThrowsUnauthorizedAccessException()
+    public async Task Handle_UnauthorizedUser_ThrowsAccessDeniedException()
     {
         var otherUserId = Guid.NewGuid();
         var emailItem = CreateDeadLetterEmail(_userId);
@@ -59,7 +60,7 @@ public sealed class ResendFailedEmailCommandHandlerTests
         var command = new ResendFailedEmailCommand(emailItem.Id, otherUserId);
         var act = () => _sut.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        await act.Should().ThrowAsync<AccessDeniedException>();
     }
 
     [Fact]

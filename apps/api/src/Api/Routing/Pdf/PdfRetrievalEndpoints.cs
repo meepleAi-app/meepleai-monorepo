@@ -7,6 +7,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetPdfCleanupPreview;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -227,7 +228,7 @@ internal static class PdfRetrievalEndpoints
         {
             result = await mediator.Send(query, ct).ConfigureAwait(false);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (AccessDeniedException ex)
         {
             logger.LogWarning(ex, "Access denied for user {UserId} to download PDF {PdfId}", userId, pdfId);
             return Results.Forbid();

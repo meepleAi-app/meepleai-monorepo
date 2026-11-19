@@ -1,3 +1,4 @@
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -31,7 +32,7 @@ internal class Disable2FACommandHandler : ICommandHandler<Disable2FACommand, Dis
             _logger.LogInformation("2FA disabled successfully for user {UserId} via CQRS", command.UserId);
             return new Disable2FAResult(Success: true);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (AccessDeniedException ex)
         {
             _logger.LogWarning(ex, "2FA disable failed for user {UserId}: Unauthorized", command.UserId);
             return new Disable2FAResult(Success: false, ErrorMessage: ex.Message);
@@ -39,7 +40,7 @@ internal class Disable2FACommandHandler : ICommandHandler<Disable2FACommand, Dis
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
         // HANDLER BOUNDARY: COMMAND HANDLER PATTERN - CQRS handler boundary
-        // Specific exceptions (UnauthorizedAccessException) caught separately above.
+        // Specific exceptions (AccessDeniedException) caught separately above.
         // Generic catch handles unexpected infrastructure failures (DB, network, memory)
         // to prevent exception propagation to API layer. Returns Result pattern.
 #pragma warning restore S125

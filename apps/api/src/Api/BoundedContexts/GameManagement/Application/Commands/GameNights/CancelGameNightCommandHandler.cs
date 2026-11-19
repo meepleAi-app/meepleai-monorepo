@@ -57,7 +57,7 @@ internal sealed class CancelGameNightCommandHandler : ICommandHandler<CancelGame
             ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
 
         if (gameNight.OrganizerId != command.UserId)
-            throw new UnauthorizedAccessException("Only the organizer can cancel a game night");
+            throw new AccessDeniedException("Only the organizer can cancel a game night");
 
         try
         {

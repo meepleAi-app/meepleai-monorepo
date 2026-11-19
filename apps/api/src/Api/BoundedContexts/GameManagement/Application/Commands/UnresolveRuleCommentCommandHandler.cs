@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Mappers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -44,7 +45,7 @@ internal class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRul
         // Authorization: Only comment owner or admin can unresolve
         if (comment.UserId != command.UserId && !command.IsAdmin)
         {
-            throw new UnauthorizedAccessException(
+            throw new AccessDeniedException(
                 $"User {command.UserId} is not authorized to unresolve this comment");
         }
 

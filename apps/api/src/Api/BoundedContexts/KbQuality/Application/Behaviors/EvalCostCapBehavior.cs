@@ -2,6 +2,7 @@ using Api.BoundedContexts.KbQuality.Application.Authentication;
 using Api.BoundedContexts.KbQuality.Application.Commands.StartEvaluation;
 using Api.BoundedContexts.KbQuality.Application.Services;
 using Api.BoundedContexts.KbQuality.Domain.Evaluation.Exceptions;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -81,7 +82,7 @@ public sealed class EvalCostCapBehavior<TRequest, TResponse>(
 
         if (evalCommand.OverrideCostCap && !isAdmin)
         {
-            throw new UnauthorizedAccessException("Override eval cost cap requires Admin role");
+            throw new AccessDeniedException("Override eval cost cap requires Admin role");
         }
 
         if (evalCommand.OverrideCostCap)

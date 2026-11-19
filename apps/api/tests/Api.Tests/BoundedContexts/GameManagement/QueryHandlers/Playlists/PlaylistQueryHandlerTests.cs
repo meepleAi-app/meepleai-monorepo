@@ -62,7 +62,7 @@ public class PlaylistQueryHandlerTests
 
         var act = () =>
             handler.Handle(new GetPlaylistQuery(playlist.Id, _userId), CancellationToken.None);
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        await act.Should().ThrowAsync<AccessDeniedException>();
     }
 
     #endregion

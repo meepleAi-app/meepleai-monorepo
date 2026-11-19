@@ -32,7 +32,7 @@ internal class AddGameToPlaylistCommandHandler : ICommandHandler<AddGameToPlayli
             ?? throw new NotFoundException("GameNightPlaylist", command.PlaylistId.ToString());
 
         if (playlist.CreatorUserId != command.UserId)
-            throw new UnauthorizedAccessException("Only the playlist creator can modify it");
+            throw new AccessDeniedException("Only the playlist creator can modify it");
 
         playlist.AddGame(command.SharedGameId, command.Position);
 

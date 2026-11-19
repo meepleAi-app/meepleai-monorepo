@@ -32,7 +32,7 @@ internal sealed class InviteToGameNightCommandHandler : ICommandHandler<InviteTo
             ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
 
         if (gameNight.OrganizerId != command.UserId)
-            throw new UnauthorizedAccessException("Only the organizer can invite users to a game night");
+            throw new AccessDeniedException("Only the organizer can invite users to a game night");
 
         try
         {

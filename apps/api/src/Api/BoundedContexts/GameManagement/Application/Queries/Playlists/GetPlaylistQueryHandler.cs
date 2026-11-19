@@ -29,7 +29,7 @@ internal class GetPlaylistQueryHandler : IQueryHandler<GetPlaylistQuery, GameNig
 
         // Only the creator can view their own playlists (shared access is via token)
         if (playlist.CreatorUserId != query.UserId)
-            throw new UnauthorizedAccessException("Only the playlist creator can view it");
+            throw new AccessDeniedException("Only the playlist creator can view it");
 
         return PlaylistMapperHelper.MapToDto(playlist);
     }

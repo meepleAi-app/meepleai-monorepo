@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Middleware;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -81,7 +82,7 @@ internal static class ReportingEndpoints
             var userId = context.User.GetUserId();
             if (userId == Guid.Empty)
             {
-                throw new UnauthorizedAccessException("User ID not found");
+                throw new AccessDeniedException("User ID not found");
             }
 
             logger.LogInformation("POST /api/v1/admin/reports/schedule - Name={Name}, Template={Template}",

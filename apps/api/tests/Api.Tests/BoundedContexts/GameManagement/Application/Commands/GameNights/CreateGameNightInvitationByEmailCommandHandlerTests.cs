@@ -95,7 +95,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CallerIsNotOrganizer_ThrowsUnauthorizedAccessException()
+    public async Task Handle_CallerIsNotOrganizer_ThrowsAccessDeniedException()
     {
         var organizerId = Guid.NewGuid();
         var attackerId = Guid.NewGuid();
@@ -109,7 +109,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
 
         var act = async () => await _sut.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        await act.Should().ThrowAsync<AccessDeniedException>();
         _invitationRepoMock.Verify(
             r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()),
             Times.Never);

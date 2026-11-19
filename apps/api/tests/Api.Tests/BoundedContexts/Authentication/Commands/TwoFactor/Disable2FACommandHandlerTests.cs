@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Application.Commands;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -11,7 +12,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Commands.TwoFactor;
 /// <summary>
 /// Tests for Disable2FACommandHandler - Issue #2308 Week 4 Phase 3.
 /// Tests 2FA disablement with branch coverage for success, unauthorized, service exception.
-/// Covers: Valid password+code, invalid credentials, UnauthorizedAccessException, generic exceptions.
+/// Covers: Valid password+code, invalid credentials, AccessDeniedException, generic exceptions.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Authentication")]
@@ -71,7 +72,7 @@ public class Disable2FACommandHandlerTests
                 "WrongPassword",
                 "123456",
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new UnauthorizedAccessException("Invalid password or TOTP code"));
+            .ThrowsAsync(new AccessDeniedException("Invalid password or TOTP code"));
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -94,7 +95,7 @@ public class Disable2FACommandHandlerTests
                 "UnusualPwd123!",
                 "invalid_backup_code",
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new UnauthorizedAccessException("Invalid backup code"));
+            .ThrowsAsync(new AccessDeniedException("Invalid backup code"));
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

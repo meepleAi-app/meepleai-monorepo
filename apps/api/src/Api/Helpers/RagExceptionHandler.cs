@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Api.Helpers;
 using Api.Middleware;
+using Api.Middleware.Exceptions;
 using Api.Observability;
 using Microsoft.Extensions.Logging;
 
@@ -234,7 +235,7 @@ internal static class RagExceptionHandler
             JsonException => "Invalid response format from service.",
             InvalidOperationException invEx when invEx.Message.Contains("configuration", StringComparison.OrdinalIgnoreCase)
                 => "Configuration error. Please contact support.",
-            UnauthorizedAccessException => "Authentication failed. Please check your credentials.",
+            AccessDeniedException or UnauthorizedAccessException => "Authentication failed. Please check your credentials.",
             ArgumentException => "Invalid request parameters.",
             _ => defaultMessage
         };

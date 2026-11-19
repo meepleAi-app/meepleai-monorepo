@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -50,7 +51,7 @@ internal class MarkNotificationReadCommandHandler : ICommandHandler<MarkNotifica
         {
             _logger.LogWarning("Unauthorized attempt to mark notification {NotificationId} as read by user {UserId}",
                 command.NotificationId, command.UserId);
-            throw new UnauthorizedAccessException($"User {command.UserId} cannot mark notification {command.NotificationId} as read");
+            throw new AccessDeniedException($"User {command.UserId} cannot mark notification {command.NotificationId} as read");
         }
 
         notification.MarkAsRead();

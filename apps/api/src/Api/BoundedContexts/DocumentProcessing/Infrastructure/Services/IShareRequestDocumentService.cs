@@ -1,5 +1,3 @@
-using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
-
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 
 /// <summary>
@@ -65,26 +63,6 @@ public interface IShareRequestDocumentService
         List<Guid> sourceDocumentIds,
         Guid sharedGameId,
         Guid contributorId,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets a preview DTO for a document.
-    /// </summary>
-    /// <param name="documentId">The document ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Document preview data.</returns>
-    Task<DocumentPreviewDto> GetDocumentPreview(
-        Guid documentId,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets preview DTOs for multiple documents.
-    /// </summary>
-    /// <param name="documentIds">List of document IDs.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of document preview data.</returns>
-    Task<List<DocumentPreviewDto>> GetDocumentPreviews(
-        List<Guid> documentIds,
         CancellationToken cancellationToken = default);
 
     /// <summary>

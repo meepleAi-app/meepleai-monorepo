@@ -97,7 +97,7 @@ public class PlaylistCommandHandlerTests
         var handler = new UpdatePlaylistCommandHandler(_repositoryMock.Object, _unitOfWorkMock.Object);
         var command = new UpdatePlaylistCommand(playlist.Id, _userId, "Name");
 
-        await ((Func<Task>)(() => handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<UnauthorizedAccessException>();
+        await ((Func<Task>)(() => handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<AccessDeniedException>();
     }
 
     #endregion

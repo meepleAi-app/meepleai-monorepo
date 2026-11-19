@@ -207,7 +207,7 @@ public class ResolveRuleCommentCommandHandlerTests
     //
     // Key scenarios for integration tests:
     // 1. Resolve comment by owner succeeds
-    // 2. Resolve comment by non-owner non-admin throws UnauthorizedAccessException
+    // 2. Resolve comment by non-owner non-admin throws AccessDeniedException
     // 3. Resolve comment by admin (not owner) succeeds
     // 4. Resolve non-existent comment throws InvalidOperationException
     // 5. Resolve comment without replies (ResolveReplies=false)

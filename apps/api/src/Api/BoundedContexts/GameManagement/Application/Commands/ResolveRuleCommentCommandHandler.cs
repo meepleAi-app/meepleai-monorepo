@@ -45,7 +45,7 @@ internal class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleCom
         // Authorization: Only comment owner or admin can resolve
         if (comment.UserId != command.ResolvedByUserId && !command.IsAdmin)
         {
-            throw new UnauthorizedAccessException(
+            throw new AccessDeniedException(
                 $"User {command.ResolvedByUserId} is not authorized to resolve this comment");
         }
 

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
@@ -45,7 +46,7 @@ internal class ResendFailedEmailCommandHandler : ICommandHandler<ResendFailedEma
             _logger.LogWarning(
                 "Unauthorized resend attempt: User {UserId} tried to resend email {EmailId} owned by {OwnerId}",
                 command.UserId, command.EmailId, emailItem.UserId);
-            throw new UnauthorizedAccessException($"User {command.UserId} cannot resend email {command.EmailId}");
+            throw new AccessDeniedException($"User {command.UserId} cannot resend email {command.EmailId}");
         }
 
         emailItem.ResetToPending();

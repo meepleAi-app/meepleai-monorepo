@@ -4,6 +4,7 @@ using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -282,7 +283,7 @@ internal static class SessionQueryEndpoints
             {
                 return Results.NotFound(new { error = "Session not found" });
             }
-            catch (UnauthorizedAccessException)
+            catch (AccessDeniedException)
             {
                 return Results.StatusCode(403);
             }

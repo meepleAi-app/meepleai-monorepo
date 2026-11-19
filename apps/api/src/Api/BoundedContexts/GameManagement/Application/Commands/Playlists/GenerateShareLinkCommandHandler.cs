@@ -32,7 +32,7 @@ internal class GenerateShareLinkCommandHandler : ICommandHandler<GenerateShareLi
             ?? throw new NotFoundException("GameNightPlaylist", command.PlaylistId.ToString());
 
         if (playlist.CreatorUserId != command.UserId)
-            throw new UnauthorizedAccessException("Only the playlist creator can generate a share link");
+            throw new AccessDeniedException("Only the playlist creator can generate a share link");
 
         var token = playlist.GenerateShareToken();
 

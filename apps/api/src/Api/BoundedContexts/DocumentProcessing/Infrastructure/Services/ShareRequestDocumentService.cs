@@ -1,9 +1,9 @@
-using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
-using Api.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
@@ -16,18 +16,18 @@ internal sealed class ShareRequestDocumentService : IShareRequestDocumentService
 {
     private readonly IPdfDocumentRepository _documentRepo;
     private readonly IShareRequestRepository _shareRequestRepo;
-    private readonly IStorageService _storageService;
+    private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<ShareRequestDocumentService> _logger;
 
     public ShareRequestDocumentService(
         IPdfDocumentRepository documentRepo,
         IShareRequestRepository shareRequestRepo,
-        IStorageService storageService,
+        IBlobStorageService blobStorage,
         ILogger<ShareRequestDocumentService> logger)
     {
         _documentRepo = documentRepo;
         _shareRequestRepo = shareRequestRepo;
-        _storageService = storageService;
+        _blobStorage = blobStorage;
         _logger = logger;
     }
 
@@ -188,21 +188,51 @@ internal sealed class ShareRequestDocumentService : IShareRequestDocumentService
         {
             try
             {
-                // Create storage path for shared game document
-                var newStoragePath = $"shared-games/{sharedGameId}/documents/{Guid.NewGuid()}/{sourceDoc.FileName.Value}";
+                // #5082: through the blob storage that holds the PDFs, local or S3 per STORAGE_PROVIDER. The copy went
+                // through a local-only service that read FilePath as a path on disk: with the PDFs on S3 it found
+                // nothing, and in the container it could not write under /app.
+                // Both halves of the source key come from the stored path, as in DownloadPdfQueryHandler (#3568).
+                var bucketKey = PdfStorageKey.ForPdf(sourceDoc.Id);
+                var fileId = PdfStorageKey.FileIdFromPath(sourceDoc.FilePath) ?? bucketKey;
+                var resourceKey = PdfStorageKey.ResourceKeyFromPath(sourceDoc.FilePath) ?? bucketKey;
 
-                // Copy file in storage
-                var copiedPath = await _storageService.CopyFile(
-                    sourceDoc.FilePath,
-                    newStoragePath,
-                    cancellationToken).ConfigureAwait(false);
+                var source = await _blobStorage
+                    .RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken)
+                    .ConfigureAwait(false);
+                if (source == null)
+                {
+                    _logger.LogError(
+                        "Document {SourceId} is not in storage at {FilePath}: not copied to shared game {SharedGameId}",
+                        sourceDoc.Id, sourceDoc.FilePath, sharedGameId);
+                    continue;
+                }
+
+                BlobStorageResult stored;
+                await using (source.ConfigureAwait(false))
+                {
+                    // The same place as a PDF an admin uploads for the shared game (UploadSharedGamePdfCommandHandler).
+                    stored = await _blobStorage.StoreAsync(
+                        source,
+                        sourceDoc.FileName.Value,
+                        BlobCategory.Pdf,
+                        $"shared-game-{sharedGameId}",
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                if (!stored.Success || string.IsNullOrEmpty(stored.FilePath))
+                {
+                    _logger.LogError(
+                        "Document {SourceId} could not be stored for shared game {SharedGameId}: {Error}",
+                        sourceDoc.Id, sharedGameId, stored.ErrorMessage);
+                    continue;
+                }
 
                 // Create new document entity for shared game
                 var newDocument = PdfDocument.CreateCopy(
                     sourceDoc,
                     sharedGameId,
                     contributorId,
-                    copiedPath);
+                    stored.FilePath);
 
                 await _documentRepo.AddAsync(newDocument, cancellationToken).ConfigureAwait(false);
                 newDocumentIds.Add(newDocument.Id);
@@ -222,69 +252,6 @@ internal sealed class ShareRequestDocumentService : IShareRequestDocumentService
         }
 
         return newDocumentIds;
-    }
-
-    public async Task<DocumentPreviewDto> GetDocumentPreview(
-        Guid documentId,
-        CancellationToken cancellationToken = default)
-    {
-        var document = await _documentRepo.GetByIdAsync(documentId, cancellationToken).ConfigureAwait(false);
-
-        if (document == null)
-            throw new NotFoundException("Document", documentId.ToString());
-
-        var previewUrl = await _storageService.GetPreviewUrl(document.FilePath, cancellationToken).ConfigureAwait(false);
-
-        return new DocumentPreviewDto
-        {
-            DocumentId = document.Id,
-            FileName = document.FileName.Value,
-            ContentType = document.ContentType,
-            FileSize = document.FileSize.Bytes,
-            PreviewUrl = previewUrl,
-            PageCount = document.PageCount,
-            UploadedAt = document.UploadedAt
-        };
-    }
-
-    public async Task<List<DocumentPreviewDto>> GetDocumentPreviews(
-        List<Guid> documentIds,
-        CancellationToken cancellationToken = default)
-    {
-        if (documentIds == null || documentIds.Count == 0)
-            return new List<DocumentPreviewDto>();
-
-        var documents = await _documentRepo.GetByIdsAsync(documentIds, cancellationToken).ConfigureAwait(false);
-        var previews = new List<DocumentPreviewDto>();
-
-        foreach (var document in documents)
-        {
-            try
-            {
-                var previewUrl = await _storageService.GetPreviewUrl(document.FilePath, cancellationToken).ConfigureAwait(false);
-
-                previews.Add(new DocumentPreviewDto
-                {
-                    DocumentId = document.Id,
-                    FileName = document.FileName.Value,
-                    ContentType = document.ContentType,
-                    FileSize = document.FileSize.Bytes,
-                    PreviewUrl = previewUrl,
-                    PageCount = document.PageCount,
-                    UploadedAt = document.UploadedAt
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Failed to generate preview for document {DocumentId}",
-                    document.Id);
-
-                // Skip this document instead of failing entire operation
-            }
-        }
-
-        return previews;
     }
 
     public async Task CleanupOrphanedDocuments(

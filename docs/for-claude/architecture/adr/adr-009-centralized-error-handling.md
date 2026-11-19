@@ -130,10 +130,13 @@ Features:
 | ValidationException | 400 | validation_error |
 | DomainException | 400 | domain_error |
 | ArgumentException | 400 | bad_request |
-| UnauthorizedAccessException | 403 | forbidden |
+| AccessDeniedException | 403 | forbidden |
+| UnauthorizedAccessException | 500 | internal_server_error |
 | KeyNotFoundException | 404 | not_found |
 | TimeoutException | 504 | timeout |
 | Unknown exceptions | 500 | internal_server_error |
+
+> **2026-11-20, #5082.** A permission the code refuses throws `AccessDeniedException` (`Api.Middleware.Exceptions`): 403 with the generic message "Access denied", the detail only in the log. `UnauthorizedAccessException` used to be the 403, but the file system throws it too, so a disk the API could not write read as "you are not allowed" and was logged as a client error. It is now a 500. `ForbiddenException` stays the 403 that sends its own message to the client.
 
 ### 4. Endpoint Cleanup
 

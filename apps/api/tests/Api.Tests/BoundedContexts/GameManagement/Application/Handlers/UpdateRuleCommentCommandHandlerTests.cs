@@ -160,7 +160,7 @@ public class UpdateRuleCommentCommandHandlerTests
     //
     // Key scenarios for integration tests:
     // 1. Update comment by owner succeeds
-    // 2. Update comment by non-owner throws UnauthorizedAccessException
+    // 2. Update comment by non-owner throws AccessDeniedException
     // 3. Update non-existent comment throws InvalidOperationException
     // 4. UpdatedAt timestamp is set from TimeProvider
     // 5. Validation: Empty comment text throws InvalidOperationException

@@ -147,6 +147,27 @@ public sealed class ExtractPdfTextCommandHandlerTests : IDisposable
         reloaded.ProcessingError.Should().NotContain("10.0.0.5");
     }
 
+    /// <summary>#5091: il pdfId faceva da fileId e da resourceKey, ma il fileId è casuale (#2671): nessun PDF letto.</summary>
+    [Fact]
+    public async Task Handle_ReadsTheBlobUnderTheKeyItsFilePathRecords()
+    {
+        var privateGameId = Guid.NewGuid();
+        const string storedFileId = "8b2e4c6a1d3f4e5a9c7b0d2e4f6a8c1e";
+        SeedPdfDocument(
+            nameof(PdfProcessingState.Pending), privateGameId, $"pdfs/{privateGameId}/{storedFileId}_rules.pdf");
+        _blobStorageMock
+            .Setup(b => b.RetrieveAsync(storedFileId, BlobCategory.Pdf, privateGameId.ToString(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 })); // %PDF header
+        SetupSuccessfulExtraction();
+
+        var result = await CreateHandler().Handle(new ExtractPdfTextCommand(_pdfDocumentId), CancellationToken.None);
+
+        result.ErrorMessage.Should().BeNull("the blob is under the key FilePath records");
+        result.Success.Should().BeTrue();
+        var reloaded = await _db.PdfDocuments.AsNoTracking().FirstAsync(p => p.Id == _pdfDocumentId);
+        reloaded.ExtractedText.Should().Be(_expectedFullText);
+    }
+
     [Fact]
     public void CreateSuccess_ReturnsExtractingProcessingState_NotReady()
     {
@@ -165,14 +186,14 @@ public sealed class ExtractPdfTextCommandHandlerTests : IDisposable
             NullLogger<ExtractPdfTextCommandHandler>.Instance,
             TimeProvider.System);
 
-    private void SeedPdfDocument(string processingState)
+    private void SeedPdfDocument(string processingState, Guid? privateGameId = null, string filePath = "/fake/path/test.pdf")
     {
         _db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
-            PrivateGameId = Guid.NewGuid(),
+            PrivateGameId = privateGameId ?? Guid.NewGuid(),
             FileName = "test.pdf",
-            FilePath = "/fake/path/test.pdf",
+            FilePath = filePath,
             ContentType = "application/pdf",
             FileSizeBytes = 1024,
             UploadedByUserId = Guid.NewGuid(),

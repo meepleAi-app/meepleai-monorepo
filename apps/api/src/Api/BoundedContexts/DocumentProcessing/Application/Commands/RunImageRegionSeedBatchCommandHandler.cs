@@ -313,8 +313,8 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
     // under a random fileId embedded in FilePath, not pdfId.
     private async Task<byte[]?> LoadPdfBytesAsync(Guid pdfId, string filePath, CancellationToken ct)
     {
-        var resourceKey = PdfStorageKey.ForPdf(pdfId);
-        var fileId = PdfStorageKey.FileIdFromPath(filePath) ?? resourceKey;
+        // #5091: the resourceKey from the stored path too, not rebuilt from the pdfId.
+        var (fileId, resourceKey) = PdfStorageKey.Locate(pdfId, filePath);
         var stream = await _blobStorage.RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, ct).ConfigureAwait(false);
         if (stream is null)
         {

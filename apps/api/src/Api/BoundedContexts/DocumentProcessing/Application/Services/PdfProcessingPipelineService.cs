@@ -591,9 +591,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // both blob backends resolve by exact prefix with no cross-folder search, so a rebuilt folder
         // simply finds nothing under S3 (#3846). Mirrors DownloadPdfQueryHandler (#3568). The ??
         // fallbacks preserve legacy behaviour for records with an empty/unparsable FilePath.
-        var bucketKey = PdfStorageKey.ForPdf(pdfDoc.Id);
-        var resourceKey = PdfStorageKey.ResourceKeyFromPath(pdfDoc.FilePath) ?? bucketKey;
-        var fileId = PdfStorageKey.FileIdFromPath(pdfDoc.FilePath) ?? bucketKey;
+        var (fileId, resourceKey) = PdfStorageKey.Locate(pdfDoc.Id, pdfDoc.FilePath);
         var fileStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)
@@ -1376,9 +1374,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // Issue #2671 + #3846: neither the fileId nor the resourceKey can be reconstructed from the
         // pdfId — both are recorded in FilePath. See ExtractTextAsync for the full rationale. The ??
         // fallbacks preserve legacy behaviour for records with an empty/unparsable FilePath.
-        var bucketKey = PdfStorageKey.ForPdf(pdfDocumentId);
-        var resourceKey = PdfStorageKey.ResourceKeyFromPath(filePath) ?? bucketKey;
-        var fileId = PdfStorageKey.FileIdFromPath(filePath) ?? bucketKey;
+        var (fileId, resourceKey) = PdfStorageKey.Locate(pdfDocumentId, filePath);
         var stream = await _blobStorageService
             .RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken)
             .ConfigureAwait(false);

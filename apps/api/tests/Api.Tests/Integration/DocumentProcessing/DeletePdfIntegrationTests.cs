@@ -176,7 +176,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         _dbContext.ChangeTracker.Clear();
     }
 
-    private async Task<Guid> CreateTestPdfAsync(string name = "Test.pdf", bool withVectorDoc = false)
+    private async Task<Guid> CreateTestPdfAsync(string name = "Test.pdf", bool withVectorDoc = false, string? filePath = null)
     {
         var gameId = (await _dbContext!.SharedGames.FirstAsync()).Id;
         var userId = (await _dbContext.Users.FirstAsync()).Id;
@@ -187,7 +187,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             SharedGameId = gameId, // FK_pdf_documents_shared_games_SharedGameId (post-Phase 2d)
             UploadedByUserId = userId,
             FileName = name,
-            FilePath = $"/test/{name}",
+            FilePath = filePath ?? $"/test/{name}",
             FileSizeBytes = 1024,
             UploadedAt = DateTime.UtcNow,
             PageCount = 10,
@@ -487,6 +487,41 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         // Verify database cleanup happened
         var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
         pdfExists.Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Issue", "5091")]
+    public async Task DeletePdf_DeletesTheBlobUnderTheKeyItsFilePathRecords()
+    {
+        // #5091: the pdfId was passed as fileId, which is random (#2671): the PDF stayed in storage after its row.
+        await ResetDatabaseAsync();
+        var gameId = (await _dbContext!.SharedGames.FirstAsync(TestCancellationToken)).Id;
+        const string storedFileId = "d0f2a4c6e8b14d3f5a7c9e1b3d5f7a9c";
+        var resourceKey = $"shared-game-{gameId}";
+        var pdfId = await CreateTestPdfAsync("rules.pdf", filePath: $"pdfs/{resourceKey}/{storedFileId}_rules.pdf");
+
+        var blobStorageMock = new Mock<IBlobStorageService>();
+        blobStorageMock.Setup(b => b.DeleteAsync(storedFileId, BlobCategory.Pdf, resourceKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var handler = new DeletePdfCommandHandler(
+            _dbContext!,
+            blobStorageMock.Object,
+            _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
+            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>(),
+            _serviceProvider!.GetRequiredService<IHybridCacheService>()
+        );
+
+        // Act
+        var result = await handler.Handle(new DeletePdfCommand(pdfId.ToString()), TestCancellationToken);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        blobStorageMock.Verify(
+            b => b.DeleteAsync(storedFileId, BlobCategory.Pdf, resourceKey, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
     [Fact]
     public async Task DeletePdf_StillLinkedBySecondGame_PreservesRecordAndRemovesOnlyCallerLink()

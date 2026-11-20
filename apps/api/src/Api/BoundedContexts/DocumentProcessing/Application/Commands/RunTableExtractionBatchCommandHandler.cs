@@ -443,8 +443,8 @@ internal sealed class RunTableExtractionBatchCommandHandler
     // Mirror of RunImageRegionSeedBatchCommandHandler.LoadPdfBytesAsync (R2/blob-only; #2671).
     private async Task<byte[]?> LoadPdfBytesAsync(Guid pdfId, string filePath, CancellationToken ct)
     {
-        var resourceKey = PdfStorageKey.ForPdf(pdfId);
-        var fileId = PdfStorageKey.FileIdFromPath(filePath) ?? resourceKey;
+        // #5091: the resourceKey from the stored path too, not rebuilt from the pdfId.
+        var (fileId, resourceKey) = PdfStorageKey.Locate(pdfId, filePath);
         var stream = await _blobStorage.RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, ct).ConfigureAwait(false);
         if (stream is null)
         {

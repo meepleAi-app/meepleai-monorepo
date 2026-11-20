@@ -45,14 +45,14 @@ public sealed class RunTableExtractionBatchCommandHandlerTests
             })
             .Build();
 
-    private static Guid SeedPdf(MeepleAiDbContext db)
+    private static Guid SeedPdf(MeepleAiDbContext db, string filePath = "pdfs/abc/doc.pdf")
     {
         var id = Guid.NewGuid();
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = id,
             FileName = "t.pdf",
-            FilePath = "pdfs/abc/doc.pdf",
+            FilePath = filePath,
             FileSizeBytes = 1024,
             ContentType = "application/pdf",
             UploadedByUserId = Guid.NewGuid(),
@@ -188,6 +188,31 @@ public sealed class RunTableExtractionBatchCommandHandlerTests
         state!.Status.Should().Be(PdfTableExtractionEntity.StatusExtracted);
         state.TextChunkId.Should().Be(chunkId);
         state.TableMarkdown.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    [Trait("Issue", "5091")]
+    public async Task Handle_ReadsTheBlobUnderTheKeyItsFilePathRecords()
+    {
+        // #5091: the resourceKey was rebuilt from the pdfId, which only the seeded corpus uses: no upload was found.
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"tvlm_{Guid.NewGuid():N}");
+        var gameId = Guid.NewGuid();
+        const string storedFileId = "c4a7e1b9d2f04c6a8e3b5d7f9a1c3e5b";
+        var pdf = SeedPdf(db, filePath: $"pdfs/{gameId}/{storedFileId}_rules.pdf");
+        SeedRegion(db, pdf);
+        await db.SaveChangesAsync();
+
+        var blob = new Mock<IBlobStorageService>();
+        blob.Setup(b => b.RetrieveAsync(storedFileId, BlobCategory.Pdf, gameId.ToString(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+        var handler = Create(db, MediatorWithCandidates(pdf).Object, CropperReturning(new byte[] { 9 }).Object,
+            ExtractorReturning(Table()).Object, IndexerReturning(Guid.NewGuid()).Object, blob.Object,
+            Config(enabled: true));
+
+        var result = await handler.Handle(new RunTableExtractionBatchCommand(), CancellationToken.None);
+
+        result.Failed.Should().Be(0, "the blob is under the key FilePath records");
+        result.Extracted.Should().Be(1);
     }
 
     [Fact]

@@ -280,11 +280,9 @@ public sealed class BackfillPdfCoversJob : IJob
         // backfill is intended for production-like environments where the PDF
         // lives in blob storage. The filesystem fallback in the pipeline
         // service exists for dev/test, which doesn't need a backfill job.
-        // Issue #2671: the blob lives under a random fileId embedded in FilePath, not pdfId.
-        // Recover it from the persisted path; ForPdf(Id) is the resourceKey folder. The ??
-        // fallback preserves legacy behaviour for records with an empty/unparsable FilePath.
-        var resourceKey = PdfStorageKey.ForPdf(pdf.Id);
-        var fileId = PdfStorageKey.FileIdFromPath(pdf.FilePath) ?? resourceKey;
+        // Issue #2671 + #5091: both halves of the key are in FilePath. The resourceKey was rebuilt from the
+        // pdfId, which only the seeded corpus uses: every uploaded PDF ended Failed as "binary not found".
+        var (fileId, resourceKey) = PdfStorageKey.Locate(pdf.Id, pdf.FilePath);
         var stream = await blob.RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, ct).ConfigureAwait(false);
         if (stream is null)
         {

@@ -192,9 +192,7 @@ internal sealed class ShareRequestDocumentService : IShareRequestDocumentService
                 // through a local-only service that read FilePath as a path on disk: with the PDFs on S3 it found
                 // nothing, and in the container it could not write under /app.
                 // Both halves of the source key come from the stored path, as in DownloadPdfQueryHandler (#3568).
-                var bucketKey = PdfStorageKey.ForPdf(sourceDoc.Id);
-                var fileId = PdfStorageKey.FileIdFromPath(sourceDoc.FilePath) ?? bucketKey;
-                var resourceKey = PdfStorageKey.ResourceKeyFromPath(sourceDoc.FilePath) ?? bucketKey;
+                var (fileId, resourceKey) = PdfStorageKey.Locate(sourceDoc.Id, sourceDoc.FilePath);
 
                 var source = await _blobStorage
                     .RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken)

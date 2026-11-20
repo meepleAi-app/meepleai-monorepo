@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -111,6 +112,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         // 4. EF delete — cascade removes TextChunks + VectorDocument
         var storageGameId = (doc.PrivateGameId ?? doc.SharedGameId)?.ToString() ?? string.Empty;
         var coverR2Key = doc.CoverR2Key;
+        var storedFilePath = doc.FilePath;
         var uploadedByUserId = doc.UploadedByUserId;
 
         _db.PdfDocuments.Remove(doc);
@@ -147,7 +149,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         }
 
         // 5. Blob — best-effort physical file deletion
-        await DeletePhysicalFileAsync(id.ToString(), storageGameId, cancellationToken).ConfigureAwait(false);
+        await DeletePhysicalFileAsync(id, storedFilePath, cancellationToken).ConfigureAwait(false);
 
         // 6. Cache — best-effort AI response cache invalidation
         await InvalidateCacheSafelyAsync(storageGameId, "KB doc deletion", cancellationToken).ConfigureAwait(false);
@@ -166,11 +168,13 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
     /// Deletes the physical PDF file from blob storage (best-effort; failures are logged, not re-thrown).
     /// Copied from <see cref="DeletePdfCommandHandler"/> per ADR pattern.
     /// </summary>
-    private async Task DeletePhysicalFileAsync(string pdfId, string gameId, CancellationToken cancellationToken)
+    private async Task DeletePhysicalFileAsync(Guid pdfId, string? filePath, CancellationToken cancellationToken)
     {
         try
         {
-            await _blobStorageService.DeleteAsync(pdfId, BlobCategory.Pdf, gameId, cancellationToken)
+            // #5091: the key from the stored path, as in DeletePdfCommandHandler.
+            var (fileId, resourceKey) = PdfStorageKey.Locate(pdfId, filePath);
+            await _blobStorageService.DeleteAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken)
                 .ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types

@@ -116,6 +116,11 @@ internal static class InfrastructureServiceExtensions
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
+        // #5093: work outside the database that waits for the commit of the transaction it runs in. Registered in every
+        // environment, Testing included: the test hosts that build their own DbContext attach it as an interceptor.
+        services.AddScoped<AfterCommitWork>();
+        services.AddScoped<IAfterCommitWork>(sp => sp.GetRequiredService<AfterCommitWork>());
+
         // Only configure Postgres in non-test environments (tests will override with SQLite)
         if (!environment.IsEnvironment("Testing"))
         {
@@ -176,7 +181,8 @@ internal static class InfrastructureServiceExtensions
                 // DomainEventLogEntity rows are fanned out to SSE subscribers.
                 options.AddInterceptors(
                     sp.GetRequiredService<AuditingSaveChangesInterceptor>(),
-                    sp.GetRequiredService<DomainEventBroadcastInterceptor>());
+                    sp.GetRequiredService<DomainEventBroadcastInterceptor>(),
+                    sp.GetRequiredService<AfterCommitWork>());
             });
 
             // Register domain event collector as scoped (per-request lifecycle)

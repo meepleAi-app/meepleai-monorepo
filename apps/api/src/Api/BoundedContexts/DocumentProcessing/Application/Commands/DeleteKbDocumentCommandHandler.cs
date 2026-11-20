@@ -9,6 +9,7 @@ using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,7 +23,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 ///   2. Agent cascade: detach the document from every consuming AgentDefinition.KbCardIds.
 ///   3. pgvector embeddings: delete raw embeddings by VectorDocumentId.
 ///   4. EF delete: remove PdfDocument; cascade removes TextChunks + VectorDocument.
-///   5. Blob: delete physical file (best-effort).
+///   5. Cover and blob: evicted and deleted after the commit (best-effort, #5093).
 ///   6. Cache: invalidate AI response cache (best-effort).
 ///   7. Cache: invalidate what the hybrid cache still holds of the document — the uploader's
 ///      «my documents» list, the document, its chunks (best-effort).
@@ -34,33 +35,30 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
     private readonly MeepleAiDbContext _db;
     private readonly IAgentDefinitionRepository _agents;
     private readonly IVectorStoreAdapter _vectorStore;
-    private readonly IBlobStorageService _blobStorageService;
     private readonly IAiResponseCacheService _cacheService;
     private readonly Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache _semanticCache;
     private readonly IHybridCacheService _hybridCache;
-    private readonly IMediator? _mediator;
+    private readonly IAfterCommitWork _afterCommit;
     private readonly ILogger<DeleteKbDocumentCommandHandler> _logger;
 
     public DeleteKbDocumentCommandHandler(
         MeepleAiDbContext db,
         IAgentDefinitionRepository agents,
         IVectorStoreAdapter vectorStore,
-        IBlobStorageService blobStorageService,
         IAiResponseCacheService cacheService,
         Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache semanticCache,
         IHybridCacheService hybridCache,
-        ILogger<DeleteKbDocumentCommandHandler> logger,
-        IMediator? mediator = null)
+        IAfterCommitWork afterCommit,
+        ILogger<DeleteKbDocumentCommandHandler> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _agents = agents ?? throw new ArgumentNullException(nameof(agents));
         _vectorStore = vectorStore ?? throw new ArgumentNullException(nameof(vectorStore));
-        _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
+        _afterCommit = afterCommit ?? throw new ArgumentNullException(nameof(afterCommit));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _mediator = mediator;
     }
 
     public async Task Handle(DeleteKbDocumentCommand command, CancellationToken cancellationToken)
@@ -135,23 +133,25 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
             "Deleted KB document {DocId} (detached from {AgentCount} consuming agents)",
             id, consumingAgents.Count);
 
-        // Issue #1831 AC: raise PdfDeletedDomainEvent so PdfDeletedEventHandler
-        // evicts the L4 cover thumb/preview from R2. Published AFTER the
-        // SaveChangesAsync succeeded (not via IDomainEventCollector pre-save):
-        // a stale event left in the collector after the ConflictException path
-        // would otherwise be drained by a later SaveChangesAsync in the same
-        // scope and trigger R2 cleanup for a PDF that was never deleted.
-        if (_mediator is not null && !string.IsNullOrWhiteSpace(coverR2Key))
+        // 5. Cover and file, which no rollback brings back. The command is [AtomicAudit]: the behavior commits only
+        // after the audit row, so these wait for that commit (#5093). A failed audit write or commit keeps the row,
+        // the cover and the file together; before, it brought the row back without the other two.
+        // The services come from the work's own scope: after the commit, this scope still holds the closed
+        // transaction, and publishing the event writes its audit row (DomainEventAuditHandler).
+        await _afterCommit.RunAfterCommitAsync(async (services, ct) =>
         {
-            await _mediator
-                .Publish(new PdfDeletedDomainEvent(id, coverR2Key), cancellationToken)
-                .ConfigureAwait(false);
-        }
+            // Issue #1831 AC: PdfDeletedEventHandler evicts the L4 cover thumb/preview from R2. Published, not
+            // collected: a stale event left in the collector after the ConflictException path would be drained by a
+            // later SaveChangesAsync in the same scope, for a PDF that was never deleted.
+            var mediator = services.GetService<IMediator>();
+            if (mediator is not null && !string.IsNullOrWhiteSpace(coverR2Key))
+            {
+                await mediator.Publish(new PdfDeletedDomainEvent(id, coverR2Key), ct).ConfigureAwait(false);
+            }
 
-        // 5. Blob — best-effort physical file deletion. Since #5091 it really deletes, and the command is
-        // [AtomicAudit]: this runs before the behavior commits, so a failed audit write or commit brings the row back
-        // without its file, as it already did without its cover. Moving both after the commit is #5093.
-        await DeletePhysicalFileAsync(id, storedFilePath, cancellationToken).ConfigureAwait(false);
+            await DeletePhysicalFileAsync(
+                services.GetRequiredService<IBlobStorageService>(), id, storedFilePath, ct).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
 
         // 6. Cache — best-effort AI response cache invalidation
         await InvalidateCacheSafelyAsync(storageGameId, "KB doc deletion", cancellationToken).ConfigureAwait(false);
@@ -170,13 +170,14 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
     /// Deletes the physical PDF file from blob storage (best-effort; failures are logged, not re-thrown).
     /// Copied from <see cref="DeletePdfCommandHandler"/> per ADR pattern.
     /// </summary>
-    private async Task DeletePhysicalFileAsync(Guid pdfId, string? filePath, CancellationToken cancellationToken)
+    private async Task DeletePhysicalFileAsync(
+        IBlobStorageService blobStorage, Guid pdfId, string? filePath, CancellationToken cancellationToken)
     {
         try
         {
             // #5091: the key from the stored path, as in DeletePdfCommandHandler.
             var (fileId, resourceKey) = PdfStorageKey.Locate(pdfId, filePath);
-            await _blobStorageService.DeleteAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken)
+            await blobStorage.DeleteAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken)
                 .ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types

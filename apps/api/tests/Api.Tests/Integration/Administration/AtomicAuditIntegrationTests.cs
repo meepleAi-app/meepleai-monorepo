@@ -7,6 +7,7 @@ using Api.Infrastructure;
 using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -281,36 +282,6 @@ public sealed class AtomicAuditIntegrationTests : IAsyncLifetime
             {
                 await Task.Delay(500, TestContext.Current.CancellationToken);
             }
-        }
-    }
-
-    /// <summary>
-    /// Test double for AuditService whose EnqueueAuditAtomicAsync always throws.
-    /// Used to prove that a mid-transaction audit failure rolls back the mutation.
-    /// The service still needs a valid MeepleAiDbContext for its base constructor — we
-    /// use an InMemory DB for constructor satisfaction since its methods are not invoked.
-    /// </summary>
-    private sealed class ThrowingAuditService : AuditService
-    {
-        public ThrowingAuditService()
-            : base(
-                new MeepleAiDbContext(
-                    new DbContextOptionsBuilder<MeepleAiDbContext>()
-                        .UseInMemoryDatabase($"throwing_audit_{Guid.NewGuid()}")
-                        .Options,
-                    Mock.Of<IMediator>(),
-                    Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>()),
-                Mock.Of<Microsoft.Extensions.Logging.ILogger<AuditService>>(),
-                timeProvider: null)
-        {
-        }
-
-        public override Task EnqueueAuditAtomicAsync(
-            AuditOutboxPayload payload,
-            CancellationToken cancellationToken = default)
-        {
-            throw new InvalidOperationException(
-                "Simulated audit write failure — verifies transaction rollback in atomic path.");
         }
     }
 }

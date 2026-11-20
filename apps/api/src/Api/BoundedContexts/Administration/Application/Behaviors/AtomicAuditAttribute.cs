@@ -29,6 +29,12 @@ namespace Api.BoundedContexts.Administration.Application.Behaviors;
 /// for the consumer-contract requirements that every <c>INotificationHandler&lt;TEvent&gt;</c>
 /// MUST honour to make the post-commit dispatch safe.
 ///
+/// <para><b>Effects outside the database</b> that the handler performs itself — a stored file deleted, a cover
+/// evicted, a direct <c>MediatR.Publish</c> with external side-effects — go through
+/// <c>IAfterCommitWork.RunAfterCommitAsync</c> (#5093): they run after this transaction commits, and a rollback drops
+/// them. Run inline, they happen before the commit, and a failed audit write leaves them done for a mutation that
+/// rolled back.</para>
+///
 /// <para>⚠ <b>Hybrid rollback caveat</b>: flipping <c>DomainEventOutbox:Mode</c> back to
 /// <c>Hybrid</c> re-introduces the inline-dispatch race for any <c>[AtomicAudit]</c> command
 /// whose handler raises a domain event with observable external side-effects (e.g.

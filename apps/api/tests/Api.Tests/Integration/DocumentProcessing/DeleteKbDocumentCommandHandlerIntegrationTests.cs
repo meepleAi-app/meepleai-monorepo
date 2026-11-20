@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -13,10 +14,13 @@ using Api.Services;
 using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -64,16 +68,26 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
         _databaseName = $"test_deletekbdoc_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
+        _blobMock.Setup(b => b.DeleteAsync(
+                It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _serviceProvider = BuildServices().BuildServiceProvider();
+        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+        _mediator = _serviceProvider.GetRequiredService<IMediator>();
+
+        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken);
+        await SeedBaseEntitiesAsync();
+    }
+
+    private ServiceCollection BuildServices()
+    {
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Override the mocked IAgentDefinitionRepository with the real one so the handler
         // can actually load and update consuming agents.
         services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>();
 
-        // Blob storage — best-effort, mock so physical delete doesn't fail tests
-        _blobMock.Setup(b => b.DeleteAsync(
-                It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        // Blob storage — best-effort, mock so physical delete doesn't fail tests (default set once, in InitializeAsync)
         services.AddSingleton<IBlobStorageService>(_blobMock.Object);
 
         // Cache invalidation — best-effort, mock
@@ -97,12 +111,24 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
             .Returns(Task.CompletedTask);
         services.AddScoped<IVectorStoreAdapter>(_ => vectorStoreMock.Object);
 
-        _serviceProvider = services.BuildServiceProvider();
-        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
-        _mediator = _serviceProvider.GetRequiredService<IMediator>();
+        return services;
+    }
 
-        await TestMigrationHelper.MigrateWithRetryAsync(_dbContext, TestCancellationToken);
-        await SeedBaseEntitiesAsync();
+    /// <summary>
+    /// The services above with <see cref="AuditLoggingBehavior{TRequest,TResponse}"/>, as in the app: the command is
+    /// [AtomicAudit], so the handler runs inside a transaction that commits only after the audit row (#5093).
+    /// </summary>
+    private ServiceProvider BuildAtomicProvider(AuditService? auditOverride = null)
+    {
+        var services = BuildServices();
+        services.AddSingleton(Mock.Of<IHttpContextAccessor>());
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditLoggingBehavior<,>));
+        if (auditOverride is not null)
+        {
+            services.Replace(ServiceDescriptor.Scoped<AuditService>(_ => auditOverride));
+        }
+
+        return services.BuildServiceProvider();
     }
 
     public async ValueTask DisposeAsync()
@@ -204,6 +230,63 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
 
         _blobMock.Verify(
             b => b.DeleteAsync(storedFileId, BlobCategory.Pdf, resourceKey, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // #5093: il comando è [AtomicAudit], e il behavior fa il commit solo dopo la riga d'audit. Copertina e file
+    // aspettano quel commit: prima partivano dentro la transazione, e un commit fallito riportava la riga senza di loro.
+    [Fact]
+    public async Task Handle_InTheAtomicAudit_DeletesCoverAndFileOnlyOnceTheDeletionIsCommitted()
+    {
+        var pdfId = await SeedIndexedDocWithAgentsAsync(
+            agentCount: 0, filePath: $"pdfs/shared-game-{TestSharedGameId}/0a1b2c3d4e5f60718293a4b5c6d7e8f9_rules.pdf");
+        await SetCoverAsync(pdfId);
+        var seenByAnotherConnection = new List<string>();
+        void RecordWhetherTheRowIsGone(string delete)
+        {
+            using var scope = _serviceProvider!.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var gone = !db.PdfDocuments.AsNoTracking().Any(p => p.Id == pdfId);
+            seenByAnotherConnection.Add($"{delete}: {(gone ? "committed" : "still there")}");
+        }
+        _blobMock.Setup(b => b.DeleteAsync(
+                It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => RecordWhetherTheRowIsGone("file"))
+            .ReturnsAsync(true);
+        _blobMock.Setup(b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => RecordWhetherTheRowIsGone("cover"))
+            .ReturnsAsync(true);
+        await using var atomic = BuildAtomicProvider();
+
+        await atomic.GetRequiredService<IMediator>().Send(new DeleteKbDocumentCommand(pdfId), TestCancellationToken);
+
+        // Another connection sees the row gone only after the commit: both deletes waited for it.
+        seenByAnotherConnection.Should().Equal("cover: committed", "file: committed");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheAuditWriteFails_KeepsTheRowTheCoverAndTheFile()
+    {
+        var pdfId = await SeedIndexedDocWithAgentsAsync(
+            agentCount: 0, filePath: $"pdfs/shared-game-{TestSharedGameId}/0a1b2c3d4e5f60718293a4b5c6d7e8f9_rules.pdf");
+        await SetCoverAsync(pdfId);
+        await using var atomic = BuildAtomicProvider(new ThrowingAuditService());
+
+        var act = () => atomic.GetRequiredService<IMediator>().Send(new DeleteKbDocumentCommand(pdfId), TestCancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        _dbContext!.ChangeTracker.Clear();
+        (await _dbContext.PdfDocuments.AsNoTracking().AnyAsync(p => p.Id == pdfId, TestCancellationToken))
+            .Should().BeTrue("the transaction rolled back");
+        _blobMock.Verify(b => b.DeleteAsync(
+            It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _blobMock.Verify(b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private async Task SetCoverAsync(Guid pdfId)
+    {
+        await _dbContext!.PdfDocuments
+            .Where(p => p.Id == pdfId)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.CoverR2Key, $"covers/pdf/{pdfId:N}"), TestCancellationToken);
     }
 
     /// <summary>Un documento che non c'è non ha un elenco da invalidare.</summary>

@@ -97,6 +97,9 @@ internal static class IntegrationServiceCollectionBuilder
         services.AddScoped<ScopedAuditSnapshotSink>();
         services.AddScoped<IAuditSnapshotSink>(sp => sp.GetRequiredService<ScopedAuditSnapshotSink>());
         services.AddScoped<AuditingSaveChangesInterceptor>();
+        // #5093: work that waits for the commit, wired into the DbContext like in the app.
+        services.AddScoped<AfterCommitWork>();
+        services.AddScoped<IAfterCommitWork>(sp => sp.GetRequiredService<AfterCommitWork>());
 
         // DbContext with pgvector support + audit interceptor
         services.AddDbContext<MeepleAiDbContext>((sp, options) =>
@@ -121,7 +124,9 @@ internal static class IntegrationServiceCollectionBuilder
             });
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-            options.AddInterceptors(sp.GetRequiredService<AuditingSaveChangesInterceptor>());
+            options.AddInterceptors(
+                sp.GetRequiredService<AuditingSaveChangesInterceptor>(),
+                sp.GetRequiredService<AfterCommitWork>());
         });
 
         // Core infrastructure

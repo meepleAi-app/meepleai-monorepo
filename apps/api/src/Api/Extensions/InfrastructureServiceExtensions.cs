@@ -141,6 +141,10 @@ internal static class InfrastructureServiceExtensions
             services.AddScoped<IAuditSnapshotSink>(sp => sp.GetRequiredService<ScopedAuditSnapshotSink>());
             services.AddScoped<AuditingSaveChangesInterceptor>();
 
+            // #5093: work outside the database that waits for the commit of the transaction it runs in.
+            services.AddScoped<AfterCommitWork>();
+            services.AddScoped<IAfterCommitWork>(sp => sp.GetRequiredService<AfterCommitWork>());
+
             // PERF-09: Optimize Postgres connection pooling for better throughput
             // Changed from (options =>) to (sp, options =>) to inject the interceptor.
             services.AddDbContext<MeepleAiDbContext>((sp, options) =>
@@ -176,7 +180,8 @@ internal static class InfrastructureServiceExtensions
                 // DomainEventLogEntity rows are fanned out to SSE subscribers.
                 options.AddInterceptors(
                     sp.GetRequiredService<AuditingSaveChangesInterceptor>(),
-                    sp.GetRequiredService<DomainEventBroadcastInterceptor>());
+                    sp.GetRequiredService<DomainEventBroadcastInterceptor>(),
+                    sp.GetRequiredService<AfterCommitWork>());
             });
 
             // Register domain event collector as scoped (per-request lifecycle)

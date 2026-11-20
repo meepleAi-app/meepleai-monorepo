@@ -205,8 +205,8 @@ internal sealed class ShareRequestDocumentService : IShareRequestDocumentService
                     continue;
                 }
 
-                // Under the copy's own id, the bucket PdfStorageKey.ForPdf names: some readers (the cover backfill, the
-                // page image, the text extraction) rebuild the key from the document id instead of reading FilePath.
+                // Under the copy's own id, the bucket PdfStorageKey.ForPdf names. Every reader locates it from FilePath
+                // (#5091), so any key would do; this one also keeps it apart from the contributor's file.
                 var copyId = Guid.NewGuid();
                 BlobStorageResult stored;
                 await using (source.ConfigureAwait(false))

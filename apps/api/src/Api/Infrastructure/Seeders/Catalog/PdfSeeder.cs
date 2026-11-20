@@ -139,11 +139,12 @@ internal static class PdfSeeder
                     if (!string.IsNullOrEmpty(manifestHash) &&
                         string.Equals(existing.ContentHash, manifestHash, StringComparison.OrdinalIgnoreCase))
                     {
-                        // fileId is embedded in the stored FilePath (pdfs/{resourceKey}/{fileId}_{name});
-                        // extract it so ExistsAsync can locate the blob for the EXISTING record.
-                        var existingFileId = PdfStorageKey.FileIdFromPath(existing.FilePath);
-                        var blobPresent = !string.IsNullOrEmpty(existingFileId)
-                            && await primaryBlob.ExistsAsync(existingFileId, BlobCategory.Pdf, PdfStorageKey.ForPdf(existing.Id), ct).ConfigureAwait(false);
+                        // fileId and resourceKey are embedded in the stored FilePath (pdfs/{resourceKey}/{fileId}_{name}).
+                        // #5091: the existing record may not be a seeded one (an admin upload uses shared-game-{id}), so
+                        // the folder comes from the path too, not from the id.
+                        var (existingFileId, existingResourceKey) = PdfStorageKey.Locate(existing.Id, existing.FilePath);
+                        var blobPresent = await primaryBlob
+                            .ExistsAsync(existingFileId, BlobCategory.Pdf, existingResourceKey, ct).ConfigureAwait(false);
 
                         if (blobPresent)
                         {
@@ -173,7 +174,10 @@ internal static class PdfSeeder
                         "PdfSeeder: hash drift detected for '{FileName}' (game '{Title}'). Replacing.",
                         fileName, entry.Title);
 
-                    await DeletePdfCascadeAsync(db, primaryBlob, existing.Id, PdfStorageKey.ForPdf(existing.Id), existing.FilePath, logger, ct)
+                    // #5091: the folder of the existing record from its path (see the repair branch above).
+                    await DeletePdfCascadeAsync(
+                            db, primaryBlob, existing.Id, PdfStorageKey.Locate(existing.Id, existing.FilePath).ResourceKey,
+                            existing.FilePath, logger, ct)
                         .ConfigureAwait(false);
 
                     existingMap.Remove(idempotencyKey);
@@ -453,7 +457,7 @@ internal static class PdfSeeder
         MeepleAiDbContext db,
         IBlobStorageService primaryBlob,
         Guid pdfId,
-        string gameIdStr,
+        string resourceKey,
         string? filePath,
         ILogger logger,
         CancellationToken ct)
@@ -472,7 +476,7 @@ internal static class PdfSeeder
                 var fileId = PdfStorageKey.FileIdFromPath(filePath);
                 if (!string.IsNullOrEmpty(fileId))
                 {
-                    await primaryBlob.DeleteAsync(fileId, BlobCategory.Pdf, gameIdStr, ct).ConfigureAwait(false);
+                    await primaryBlob.DeleteAsync(fileId, BlobCategory.Pdf, resourceKey, ct).ConfigureAwait(false);
                 }
                 else
                 {

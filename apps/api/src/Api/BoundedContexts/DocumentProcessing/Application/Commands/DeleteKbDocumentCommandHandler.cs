@@ -148,7 +148,9 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
                 .ConfigureAwait(false);
         }
 
-        // 5. Blob — best-effort physical file deletion
+        // 5. Blob — best-effort physical file deletion. Since #5091 it really deletes, and the command is
+        // [AtomicAudit]: this runs before the behavior commits, so a failed audit write or commit brings the row back
+        // without its file, as it already did without its cover. Moving both after the commit is #5093.
         await DeletePhysicalFileAsync(id, storedFilePath, cancellationToken).ConfigureAwait(false);
 
         // 6. Cache — best-effort AI response cache invalidation

@@ -91,7 +91,7 @@ public class PdfStorageKeyTests
     [Fact]
     public void Locate_APathWithAFolderButNoFileId_KeepsTheFolder_AndFallsBackForTheFileId()
     {
-        // The rebucketed layout pdfs/{pdfId}/{pdfId}.pdf has no underscore: the folder is still the real one.
+        // A file name without the {fileId}_ prefix gives no fileId, but the folder is still the one in the path.
         var pdfId = Guid.NewGuid();
 
         PdfStorageKey.Locate(pdfId, "pdfs/game-1/justAFile.pdf").Should().Be((PdfStorageKey.ForPdf(pdfId), "game-1"));

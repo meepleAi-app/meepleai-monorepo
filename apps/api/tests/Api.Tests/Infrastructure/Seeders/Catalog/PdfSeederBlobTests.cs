@@ -357,6 +357,53 @@ public sealed class PdfSeederBlobTests
         db.ProcessingJobs.Should().BeEmpty();
     }
 
+    // #5091: the existing record can be an admin upload, stored under shared-game-{id}, not a seeded one under the
+    // pdfId. The presence check read the folder from the id: it found nothing and re-uploaded a file that was there.
+    [Fact]
+    public async Task SeedAsync_ExistingHash_AdminUploadPresent_IsFoundUnderTheFolderInItsPath()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var existingId = Guid.NewGuid();
+        var folder = $"shared-game-{gameId}";
+        _seedBlob.Setup(x => x.IsConfigured).Returns(true);
+        _primaryBlob.Setup(x => x.ExistsAsync("deadbeef", BlobCategory.Pdf, folder, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        // The seed has the file too, so a presence check that looks in the wrong folder re-uploads it.
+        _seedBlob.Setup(x => x.ExistsAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _seedBlob.Setup(x => x.OpenReadAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BlobStorageResult(true, "newfile", "pdfs/repaired/newfile_gloomhaven.pdf", 4));
+
+        var manifest = CreateManifest(CreateBlobEntry(pdfSha256: "samehash"));
+        var gameMap = new Dictionary<int, Guid> { { 174430, gameId } };
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+
+        db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
+        db.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gloomhaven" });
+        db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = existingId,
+            SharedGameId = gameId,
+            FileName = "gloomhaven.pdf",
+            FilePath = $"pdfs/{folder}/deadbeef_gloomhaven.pdf",
+            ContentHash = "samehash",
+            ProcessingState = nameof(PdfProcessingState.Ready),
+            UploadedByUserId = userId,
+            DocumentType = "base",
+            DocumentCategory = "Rulebook",
+        });
+        await db.SaveChangesAsync();
+
+        await PdfSeeder.SeedAsync(db, manifest, gameMap, userId,
+            _primaryBlob.Object, _seedBlob.Object, _logger.Object, CancellationToken.None);
+
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        db.PdfDocuments.Single(p => p.Id == existingId).FilePath.Should().Be($"pdfs/{folder}/deadbeef_gloomhaven.pdf");
+    }
+
     // ---------------------------------------------------------------
     // Repair (b): record exists + blob ABSENT in runtime + present in
     //             seed → repair: re-upload against existing id, reset to

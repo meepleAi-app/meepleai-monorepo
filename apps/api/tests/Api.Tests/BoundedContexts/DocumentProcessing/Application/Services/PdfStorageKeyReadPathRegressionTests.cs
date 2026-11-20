@@ -139,4 +139,31 @@ public sealed class PdfStorageKeyReadPathRegressionTests : IDisposable
             read.ToArray().Should().Equal(legacyContent);
         }
     }
+
+    // #5091: an upload is stored under its game (or shared-game-{id}), not under the pdfId. Locate finds it from the
+    // path on the real backend, and a delete through it removes the file, which the pdfId as fileId never matched.
+    [Theory]
+    [InlineData("8b1e3d5c-7a9f-4e2b-b6d4-1c3e5f7a9b0d")]
+    [InlineData("shared-game-8b1e3d5c-7a9f-4e2b-b6d4-1c3e5f7a9b0d")]
+    public async Task Locate_FindsAnUploadStoredUnderItsGame_AndDeletesIt(string resourceKey)
+    {
+        var pdfId = Guid.NewGuid();
+        var content = "an-uploaded-pdf"u8.ToArray();
+        BlobStorageResult written;
+        using (var ms = new MemoryStream(content))
+        {
+            written = await _storage.StoreAsync(ms, "rules.pdf", BlobCategory.Pdf, resourceKey, CancellationToken.None);
+        }
+        written.Success.Should().BeTrue();
+
+        var (fileId, folder) = PdfStorageKey.Locate(pdfId, written.FilePath);
+
+        folder.Should().Be(resourceKey);
+        await using (var read = await _storage.RetrieveAsync(fileId, BlobCategory.Pdf, folder, CancellationToken.None))
+        {
+            read.Should().NotBeNull();
+        }
+        (await _storage.DeleteAsync(fileId, BlobCategory.Pdf, folder, CancellationToken.None)).Should().BeTrue();
+        File.Exists(written.FilePath).Should().BeFalse();
+    }
 }

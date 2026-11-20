@@ -115,7 +115,19 @@ public sealed record ShareRequestDetailsDto(
 
     // Timestamps
     DateTime CreatedAt,
-    DateTime? ResolvedAt);
+    DateTime? ResolvedAt,
+
+    // #5084: a cover change shows what it proposes, next to what the game shows today
+    CoverChangeDto? CoverChange = null);
+
+/// <summary>
+/// What a cover change proposes (#5084). Both URLs are presigned for the private bucket, as for the other covers from
+/// a PDF; on the local storage, which holds no raw-key objects, they are null. The page is 1-based.
+/// </summary>
+public sealed record CoverChangeDto(
+    string? ProposedCoverUrl,
+    string? CurrentCoverUrl,
+    int? ProposedFromPage);
 
 /// <summary>
 /// DTO for game details in share request preview.

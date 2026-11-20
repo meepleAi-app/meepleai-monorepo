@@ -371,7 +371,7 @@ The only written exception is `<SafeImg allowBggHost>`: the BGG thumbnails in th
 | Issue | Rule |
 |-------|------|
 | #2567 | Endpoint flow: DTOs → Queries → Commands → Validators → Handlers → Routing |
-| #2568 | Exceptions: `ConflictException` (409), `NotFoundException` (404) — never `InvalidOperationException` (500) |
+| #2568 | Exceptions: `ConflictException` (409), `NotFoundException` (404) — never `InvalidOperationException` (500). A refused permission is `AccessDeniedException` (403, generic message), never `UnauthorizedAccessException`: since #5082 that one means the file system refused and maps to 500 |
 | #2565 | DI: register both `IService` interface and implementation |
 | #2593 | Before running tests, kill only **your own** stale testhost: `tools/cleanup/cleanup-test-processes.ps1 -TestHostOnly` is scoped to this checkout (#4310). Never `taskkill //IM testhost.exe` or `Get-Process testhost \| Stop-Process`: other checkouts on this machine have test runs in progress. Use culture-independent `$"{val*100:0}%"` |
 | #2600 | OAuth: defensive validation + InMemory transaction + manual rollback |

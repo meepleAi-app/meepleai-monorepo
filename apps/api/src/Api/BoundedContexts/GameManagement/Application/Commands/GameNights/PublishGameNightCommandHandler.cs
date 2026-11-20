@@ -32,7 +32,7 @@ internal sealed class PublishGameNightCommandHandler : ICommandHandler<PublishGa
             ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
 
         if (gameNight.OrganizerId != command.UserId)
-            throw new UnauthorizedAccessException("Only the organizer can publish a game night");
+            throw new AccessDeniedException("Only the organizer can publish a game night");
 
         // Publish with invited user IDs from existing RSVPs (pre-invited during Create)
         var existingInvitedIds = gameNight.Rsvps.Select(r => r.UserId).ToList();

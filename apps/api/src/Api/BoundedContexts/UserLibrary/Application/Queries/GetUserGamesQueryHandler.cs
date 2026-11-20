@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserLibrary.Application.Queries.Games;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserLibrary;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -98,7 +99,7 @@ internal class GetUserGamesQueryHandler : IRequestHandler<GetUserGamesQuery, Pag
 
         var userIdClaim = httpContext.User.FindFirst("sub")?.Value
             ?? httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? throw new UnauthorizedAccessException("User ID not found in claims");
+            ?? throw new AccessDeniedException("User ID not found in claims");
 
         return Guid.Parse(userIdClaim);
     }

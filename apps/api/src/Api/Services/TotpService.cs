@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Authentication;
+using Api.Middleware.Exceptions;
 using Api.Observability;
 using Microsoft.EntityFrameworkCore;
 using OtpNet;
@@ -269,7 +270,7 @@ internal class TotpService : ITotpService
             _logger.LogWarning("2FA disable failed: OAuth-only user {UserId} cannot use password auth", userId);
             await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Failed",
                 "OAuth user - password authentication not available").ConfigureAwait(false);
-            throw new UnauthorizedAccessException("OAuth users must re-authenticate via OAuth provider");
+            throw new AccessDeniedException("OAuth users must re-authenticate via OAuth provider");
         }
 
         // Verify password first (using private method, need to duplicate logic)
@@ -279,7 +280,7 @@ internal class TotpService : ITotpService
             _logger.LogWarning("2FA disable failed: Invalid password for user {UserId}", userId);
             await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Failed",
                 "Invalid password").ConfigureAwait(false);
-            throw new UnauthorizedAccessException("Invalid password");
+            throw new AccessDeniedException("Invalid password");
         }
 
         // Verify TOTP code or backup code
@@ -291,7 +292,7 @@ internal class TotpService : ITotpService
             _logger.LogWarning("2FA disable failed: Invalid verification code for user {UserId}", userId);
             await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Failed",
                 "Invalid verification code").ConfigureAwait(false);
-            throw new UnauthorizedAccessException("Invalid verification code");
+            throw new AccessDeniedException("Invalid verification code");
         }
 
         // Disable 2FA and clear all data.

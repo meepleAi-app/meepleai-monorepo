@@ -48,7 +48,7 @@ internal class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleComme
         // Verify ownership
         if (comment.UserId != command.UserId)
         {
-            throw new UnauthorizedAccessException($"User {command.UserId} is not authorized to update this comment");
+            throw new AccessDeniedException($"User {command.UserId} is not authorized to update this comment");
         }
 
         comment.CommentText = command.CommentText;

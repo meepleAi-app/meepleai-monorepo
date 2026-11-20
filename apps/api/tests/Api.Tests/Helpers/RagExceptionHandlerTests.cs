@@ -585,6 +585,29 @@ public class RagExceptionHandlerTests
     // Issue #1444: Tests for GetUserFriendlyMessage method
 
     [Fact]
+    public void GetUserFriendlyMessage_AccessDeniedException_KeepsTheMessageTheCodeRefusalHad()
+    {
+        // #5082: the code's refusals used to be UnauthorizedAccessException; the user reads what they read then.
+        var message = RagExceptionHandler.GetUserFriendlyMessage(
+            new Api.Middleware.Exceptions.AccessDeniedException("Tier Free does not have access to strategy Expert"),
+            "Default message");
+
+        message.Should().Be("Authentication failed. Please check your credentials.");
+    }
+
+    [Fact]
+    public void GetUserFriendlyMessage_FileSystemRefusal_IsAServiceFailure_AndDoesNotShowThePath()
+    {
+        // #5082: the file system's refusal is a server fault. The default is the one HandleServiceException passes,
+        // which carries the exception's text, and so the path.
+        var exception = new UnauthorizedAccessException("Access to the path '/app/storage' is denied.");
+        var message = RagExceptionHandler.GetUserFriendlyMessage(exception, $"RAG query failed: {exception.Message}");
+
+        message.Should().NotContain("/app/storage");
+        message.Should().NotContain("credentials");
+    }
+
+    [Fact]
     public void GetUserFriendlyMessage_TaskCanceledException_ReturnsTimeoutMessage()
     {
         // Arrange

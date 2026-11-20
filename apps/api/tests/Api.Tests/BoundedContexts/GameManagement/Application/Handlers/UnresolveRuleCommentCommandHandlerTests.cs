@@ -221,7 +221,7 @@ public class UnresolveRuleCommentCommandHandlerTests
     //
     // Key scenarios for integration tests:
     // 1. Unresolve comment by owner succeeds
-    // 2. Unresolve comment by non-owner non-admin throws UnauthorizedAccessException
+    // 2. Unresolve comment by non-owner non-admin throws AccessDeniedException
     // 3. Unresolve comment by admin (not owner) succeeds
     // 4. Unresolve non-existent comment throws InvalidOperationException
     // 5. Unresolve comment without parent (UnresolveParent=false)

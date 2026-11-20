@@ -2,6 +2,7 @@ using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -41,7 +42,7 @@ internal class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageComman
         // Verify user owns the thread
         if (thread.UserId != request.UserId)
         {
-            throw new UnauthorizedAccessException("You can only update messages in your own threads");
+            throw new AccessDeniedException("You can only update messages in your own threads");
         }
 
         // Get the message

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -259,7 +260,7 @@ public sealed class TierAwareLlmRoutingTests
 
         // Act & Assert
         Action act = () => sut.SelectProvider(LlmUserContextMapper.FromUser(user), RagStrategy.Expert);
-        var exception = act.Should().Throw<UnauthorizedAccessException>().Which;
+        var exception = act.Should().Throw<AccessDeniedException>().Which;
 
         exception.Message.Should().Contain("Premium");
         exception.Message.Should().Contain("EXPERT");

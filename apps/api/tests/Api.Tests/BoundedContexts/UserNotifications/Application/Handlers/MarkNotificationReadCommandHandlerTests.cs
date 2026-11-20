@@ -2,6 +2,7 @@ using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.UserNotifications.TestHelpers;
 using Api.Tests.Constants;
@@ -96,7 +97,7 @@ public class MarkNotificationReadCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithDifferentUser_ThrowsUnauthorizedAccessException()
+    public async Task Handle_WithDifferentUser_ThrowsAccessDeniedException()
     {
         // Arrange
         var ownerId = Guid.NewGuid();
@@ -116,7 +117,7 @@ public class MarkNotificationReadCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, CancellationToken.None);
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        await act.Should().ThrowAsync<AccessDeniedException>();
 
         _notificationRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),

@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -72,7 +73,7 @@ internal class DownloadPdfQueryHandler : IQueryHandler<DownloadPdfQuery, PdfDown
             _logger.LogWarning(
                 "User {UserId} denied access to download PDF {PdfId} (owner: {OwnerId})",
                 query.UserId, query.PdfId, pdf.UploadedByUserId);
-            throw new UnauthorizedAccessException($"Access denied to PDF {query.PdfId}");
+            throw new AccessDeniedException($"Access denied to PDF {query.PdfId}");
         }
 
         // Step 3: Retrieve file stream from blob storage

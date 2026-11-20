@@ -39,7 +39,7 @@ public class GetSessionStreamQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_UnauthorizedUser_ThrowsUnauthorizedAccessException()
+    public async Task Handle_UnauthorizedUser_ThrowsAccessDeniedException()
     {
         // Arrange
         var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
@@ -49,7 +49,7 @@ public class GetSessionStreamQueryHandlerTests
         var query = new GetSessionStreamQuery(session.Id, Guid.NewGuid()); // random user
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+        await Assert.ThrowsAsync<AccessDeniedException>(
             () => _handler.Handle(query, CancellationToken.None));
     }
 

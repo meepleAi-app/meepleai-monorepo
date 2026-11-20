@@ -32,7 +32,7 @@ internal sealed class UpdateGameNightCommandHandler : ICommandHandler<UpdateGame
             ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
 
         if (gameNight.OrganizerId != command.UserId)
-            throw new UnauthorizedAccessException("Only the organizer can update a game night");
+            throw new AccessDeniedException("Only the organizer can update a game night");
 
         try
         {

@@ -31,7 +31,7 @@ internal class RevokeShareLinkCommandHandler : ICommandHandler<RevokeShareLinkCo
             ?? throw new NotFoundException("GameNightPlaylist", command.PlaylistId.ToString());
 
         if (playlist.CreatorUserId != command.UserId)
-            throw new UnauthorizedAccessException("Only the playlist creator can revoke the share link");
+            throw new AccessDeniedException("Only the playlist creator can revoke the share link");
 
         playlist.RevokeShareToken();
 

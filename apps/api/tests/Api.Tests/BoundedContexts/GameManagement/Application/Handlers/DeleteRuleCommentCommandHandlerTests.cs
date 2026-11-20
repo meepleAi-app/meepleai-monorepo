@@ -136,7 +136,7 @@ public class DeleteRuleCommentCommandHandlerTests
     //
     // Key scenarios for integration tests:
     // 1. Delete comment by owner succeeds
-    // 2. Delete comment by non-owner non-admin throws UnauthorizedAccessException
+    // 2. Delete comment by non-owner non-admin throws AccessDeniedException
     // 3. Delete comment by admin (not owner) succeeds
     // 4. Delete non-existent comment throws NotFoundException (#5048)
     // 5. Deleting parent comment deletes its replies too (FK is DeleteBehavior.Restrict, so the

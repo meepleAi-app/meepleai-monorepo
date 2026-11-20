@@ -63,7 +63,7 @@ public sealed class StartEvaluationCommandHandler(
         var (userId, _, _) = KbQualityCurrentUser.FromHttpContext(httpContextAccessor.HttpContext);
         if (userId == Guid.Empty)
         {
-            throw new UnauthorizedAccessException("StartEvaluation requires an authenticated admin session");
+            throw new AccessDeniedException("StartEvaluation requires an authenticated admin session");
         }
 
         // 1. Resolve goldset version

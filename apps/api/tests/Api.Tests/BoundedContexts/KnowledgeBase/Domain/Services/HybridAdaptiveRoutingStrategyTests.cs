@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Configuration;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -155,7 +156,7 @@ public class HybridAdaptiveRoutingStrategyTests
     #region Tier Access Validation Tests
 
     [Fact]
-    public void SelectProvider_TierDeniedAccess_ThrowsUnauthorizedAccessException()
+    public void SelectProvider_TierDeniedAccess_ThrowsAccessDeniedException()
     {
         // Arrange
         _mockTierAccessService
@@ -171,7 +172,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Act & Assert
         Action act = () => sut.SelectProvider(userContext, RagStrategy.Expert);
-        var exception = act.Should().Throw<UnauthorizedAccessException>().Which;
+        var exception = act.Should().Throw<AccessDeniedException>().Which;
 
         exception.Message.Should().Contain("User");
         exception.Message.Should().Contain("EXPERT");
@@ -207,7 +208,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Act & Assert - Should deny access on error (fail closed)
         Action act = () => sut.SelectProvider(userContext, RagStrategy.Balanced);
-        var exception = act.Should().Throw<UnauthorizedAccessException>().Which;
+        var exception = act.Should().Throw<AccessDeniedException>().Which;
     }
 
     #endregion

@@ -358,10 +358,11 @@ public class ApiExceptionHandlerMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_UnauthorizedAccessException_Returns403()
+    public async Task InvokeAsync_AccessDeniedException_Returns403_WithTheGenericMessage_AsAClientError()
     {
-        // Arrange
-        var exception = new UnauthorizedAccessException("Access denied");
+        // #5082: a permission the code refuses. The client reads "Access denied", as when these sites threw
+        // UnauthorizedAccessException; the detail stays in the log.
+        var exception = new AccessDeniedException("Only the organizer can cancel a game night");
         var middleware = new ApiExceptionHandlerMiddleware(
             next: (context) => throw exception,
             _loggerMock.Object,
@@ -369,11 +370,43 @@ public class ApiExceptionHandlerMiddlewareTests
 
         _httpContext.Response.Body = new MemoryStream();
 
-        // Act
         await middleware.InvokeAsync(_httpContext);
 
-        // Assert
         _httpContext.Response.StatusCode.Should().Be(403);
+        var body = await ReadBodyAsync();
+        body.RootElement.GetProperty("error").GetString().Should().Be("forbidden");
+        body.RootElement.GetProperty("message").GetString().Should().Be("Access denied");
+        VerifyLogLevel(LogLevel.Warning, Times.AtLeastOnce());
+        VerifyLogLevel(LogLevel.Error, Times.Never());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_UnauthorizedAccessExceptionFromTheFileSystem_Returns500_AsAServerError()
+    {
+        // #5082: the file system's refusal is a server fault. As a 403 it read "you are not allowed" and was logged as
+        // a client error, while the API could not write under /app in the container.
+        var exception = new UnauthorizedAccessException("Access to the path '/app/storage' is denied.");
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(500);
+        var body = await ReadBodyAsync();
+        body.RootElement.GetProperty("error").GetString().Should().Be("internal_server_error");
+        body.RootElement.GetProperty("message").GetString().Should().NotContain("/app/storage");
+        VerifyLogLevel(LogLevel.Error, Times.AtLeastOnce());
+    }
+
+    private async Task<JsonDocument> ReadBodyAsync()
+    {
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body, leaveOpen: true);
+        return JsonDocument.Parse(await reader.ReadToEndAsync(TestCancellationToken));
     }
 
     [Fact]
@@ -640,7 +673,8 @@ public class ApiExceptionHandlerMiddlewareTests
     [Theory]
     [InlineData(typeof(ArgumentException), 400)]
     [InlineData(typeof(ArgumentNullException), 400)]
-    [InlineData(typeof(UnauthorizedAccessException), 403)]
+    [InlineData(typeof(AccessDeniedException), 403)]
+    [InlineData(typeof(UnauthorizedAccessException), 500)]
     [InlineData(typeof(KeyNotFoundException), 404)]
     [InlineData(typeof(TimeoutException), 504)]
     public async Task InvokeAsync_SystemExceptions_ReturnCorrectCodes(

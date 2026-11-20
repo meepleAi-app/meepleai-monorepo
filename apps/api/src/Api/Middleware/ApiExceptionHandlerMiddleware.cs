@@ -502,10 +502,17 @@ internal class ApiExceptionHandlerMiddleware
                 "bad_request",
                 "Invalid request parameters"
             ),
-            UnauthorizedAccessException => (
+            // #5082: a permission the code refuses. The file system's UnauthorizedAccessException is not one: it read
+            // as "you are not allowed" and hid a server fault (the API could not write under /app), so it is a 500.
+            AccessDeniedException => (
                 StatusCodes.Status403Forbidden,
                 "forbidden",
                 "Access denied"
+            ),
+            UnauthorizedAccessException => (
+                StatusCodes.Status500InternalServerError,
+                "internal_server_error",
+                "An unexpected error occurred"
             ),
             KeyNotFoundException => (
                 StatusCodes.Status404NotFound,

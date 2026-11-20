@@ -32,7 +32,7 @@ internal class UpdatePlaylistCommandHandler : ICommandHandler<UpdatePlaylistComm
             ?? throw new NotFoundException("GameNightPlaylist", command.PlaylistId.ToString());
 
         if (playlist.CreatorUserId != command.UserId)
-            throw new UnauthorizedAccessException("Only the playlist creator can update it");
+            throw new AccessDeniedException("Only the playlist creator can update it");
 
         if (!string.IsNullOrWhiteSpace(command.Name))
         {

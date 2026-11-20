@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -38,7 +39,7 @@ internal class DeleteChatThreadCommandHandler : ICommandHandler<DeleteChatThread
         // Verify ownership
         if (thread.UserId != request.UserId)
         {
-            throw new UnauthorizedAccessException(
+            throw new AccessDeniedException(
                 $"User {request.UserId} does not have permission to delete thread {request.ThreadId}");
         }
 

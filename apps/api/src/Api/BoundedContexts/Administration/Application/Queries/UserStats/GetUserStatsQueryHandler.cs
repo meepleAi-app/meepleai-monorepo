@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Queries.UserStats;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserLibrary;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -113,7 +114,7 @@ internal class GetUserStatsQueryHandler : IRequestHandler<GetUserStatsQuery, Use
 
         var userIdClaim = httpContext.User.FindFirst("sub")?.Value
             ?? httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? throw new UnauthorizedAccessException("User ID not found in claims");
+            ?? throw new AccessDeniedException("User ID not found in claims");
 
         return Guid.Parse(userIdClaim);
     }

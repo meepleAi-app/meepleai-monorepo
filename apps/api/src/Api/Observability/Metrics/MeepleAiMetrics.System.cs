@@ -1,6 +1,7 @@
 // OPS-02: System/API error metrics and background job metrics
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using Api.Middleware.Exceptions;
 
 namespace Api.Observability;
 
@@ -96,7 +97,8 @@ internal static partial class MeepleAiMetrics
         return exception switch
         {
             ArgumentException or ArgumentNullException => "validation",
-            UnauthorizedAccessException => "authorization",
+            AccessDeniedException => "authorization",
+            UnauthorizedAccessException => "system",
             InvalidOperationException when exception.Message.Contains("not found", StringComparison.OrdinalIgnoreCase) => "notfound",
             InvalidOperationException => "system",
             TimeoutException => "timeout",

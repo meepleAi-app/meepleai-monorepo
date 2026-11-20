@@ -48,7 +48,6 @@ internal static class InfrastructureServiceExtensions
         // Safety net for schema mismatches (integration mode) or transient DB failures.
         services.Configure<HostOptions>(options =>
             options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
-        services.AddStorageServices(); // Issue #2732: Storage services
 
         // Issue #936: Provider token probe (G1+G3).
         // Single OpenAiCompatibleProbeExecutor handles any /v1/models endpoint
@@ -108,14 +107,6 @@ internal static class InfrastructureServiceExtensions
 
         // Issue #985 (G4): static metrics registrar wired with DI-resolved IProviderQuotaService at startup.
         services.AddHostedService<Api.Observability.ProviderQuotaMetricsHostedService>();
-
-        return services;
-    }
-
-    private static IServiceCollection AddStorageServices(this IServiceCollection services)
-    {
-        // Issue #2732: File storage service for document operations
-        services.AddScoped<Infrastructure.Services.IStorageService, Infrastructure.Services.LocalStorageService>();
 
         return services;
     }

@@ -180,7 +180,10 @@ internal static class IntegrationWebApplicationFactory
                         // so silent-write bugs (writers that mutate without AsTracking/Update) surface here.
                         options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
                         // SP5 Admin Security S1 T3: attach the audit interceptor for HTTP integration tests.
-                        options.AddInterceptors(serviceProvider.GetRequiredService<AuditingSaveChangesInterceptor>());
+                        // #5093: the work that waits for the commit, as in production.
+                        options.AddInterceptors(
+                            serviceProvider.GetRequiredService<AuditingSaveChangesInterceptor>(),
+                            serviceProvider.GetRequiredService<AfterCommitWork>());
                     });
                 });
 

@@ -261,6 +261,12 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
 
         // Another connection sees the row gone only after the commit: both deletes waited for it.
         seenByAnotherConnection.Should().Equal("cover: committed", "file: committed");
+        // Publishing the event writes its audit row (DomainEventAuditHandler). Run in the caller's scope, whose context
+        // still held the closed transaction, that write failed and was swallowed.
+        _dbContext!.ChangeTracker.Clear();
+        var payloads = await _dbContext.AuditOutbox.AsNoTracking().Select(r => r.PayloadJson).ToListAsync(TestCancellationToken);
+        payloads.Should().Contain(p => p.Contains("DomainEvent.PdfDeletedDomainEvent"),
+            "the event's audit row is written after the commit, in the work's own scope");
     }
 
     [Fact]

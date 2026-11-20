@@ -1,12 +1,15 @@
 using System.Data.Common;
 using Api.SharedKernel.Application.Services;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Api.Infrastructure.Persistence;
 
 /// <summary>
 /// <see cref="IAfterCommitWork"/> as a transaction interceptor on the scope's <see cref="MeepleAiDbContext"/> (#5093).
-/// While a transaction is open the work waits; the commit runs it, a rollback or a failure drops it.
+/// Work asked for while a transaction is open waits for that transaction: its commit runs the work, in a new scope.
+/// Nothing else does: a rollback, a failed commit or a disposal leaves it unrun, and the next transaction to start
+/// clears it.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -15,28 +18,49 @@ namespace Api.Infrastructure.Persistence;
 /// the row back. Listening to the transaction itself, not to the behavior, keeps the rule true for any transaction.
 /// </para>
 /// <para>
-/// The transaction state comes from these events, not from the DbContext, which builds this interceptor. A transaction
-/// disposed without a commit or a rollback raises no event: the next one to start drops what the abandoned one queued.
-/// When the execution strategy retries, the failed attempt's rollback drops its work and the retry queues it again.
+/// Whether a transaction is open is read from the DbContext when the work is asked for, not inferred from events: a
+/// transaction disposed without a commit or a rollback raises none, and must not hold back later work. The context is
+/// resolved then, not injected, because it builds this interceptor. When the execution strategy retries, the failed
+/// attempt never commits and the retry's transaction starts over, so its work runs once.
+/// </para>
+/// <para>
+/// A commit that throws leaves the work unrun even if the database did commit: a file then stays behind, rather than
+/// going away under a row that may still exist.
 /// </para>
 /// </remarks>
 internal sealed class AfterCommitWork : DbTransactionInterceptor, IAfterCommitWork
 {
+    private readonly IServiceProvider _scope;
+    private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<AfterCommitWork> _logger;
-    private readonly List<Func<CancellationToken, Task>> _pending = [];
-    private bool _inTransaction;
+    private readonly List<Func<IServiceProvider, CancellationToken, Task>> _pending = [];
+    private DbTransaction? _awaited;
 
-    public AfterCommitWork(ILogger<AfterCommitWork> logger)
+    public AfterCommitWork(IServiceProvider scope, IServiceScopeFactory scopes, ILogger<AfterCommitWork> logger)
     {
+        _scope = scope;
+        _scopes = scopes;
         _logger = logger;
     }
 
-    public Task RunAfterCommitAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken)
+    public Task RunAfterCommitAsync(
+        Func<IServiceProvider, CancellationToken, Task> work, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(work);
-        if (!_inTransaction)
+
+        var open = _scope.GetRequiredService<MeepleAiDbContext>().Database.CurrentTransaction?.GetDbTransaction();
+        if (open is null)
         {
-            return work(cancellationToken);
+            return work(_scope, cancellationToken);
+        }
+
+        if (!ReferenceEquals(open, _awaited))
+        {
+            // Run now, the work would happen before a commit that may not come; queued, it would wait for an event
+            // that never arrives.
+            throw new InvalidOperationException(
+                "A transaction is open on the DbContext, but AfterCommitWork did not see it start: it is not among "
+                + "the context's interceptors.");
         }
 
         _pending.Add(work);
@@ -46,7 +70,7 @@ internal sealed class AfterCommitWork : DbTransactionInterceptor, IAfterCommitWo
     public override DbTransaction TransactionStarted(
         DbConnection connection, TransactionEndEventData eventData, DbTransaction result)
     {
-        Begin();
+        Await(result);
         return result;
     }
 
@@ -56,7 +80,7 @@ internal sealed class AfterCommitWork : DbTransactionInterceptor, IAfterCommitWo
         DbTransaction result,
         CancellationToken cancellationToken = default)
     {
-        Begin();
+        Await(result);
         return ValueTask.FromResult(result);
     }
 
@@ -67,48 +91,28 @@ internal sealed class AfterCommitWork : DbTransactionInterceptor, IAfterCommitWo
         DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default) =>
         RunCommittedAsync();
 
-    public override void TransactionRolledBack(DbTransaction transaction, TransactionEndEventData eventData) => Drop();
-
-    public override Task TransactionRolledBackAsync(
-        DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default)
+    private void Await(DbTransaction transaction)
     {
-        Drop();
-        return Task.CompletedTask;
-    }
-
-    public override void TransactionFailed(DbTransaction transaction, TransactionErrorEventData eventData) => Drop();
-
-    public override Task TransactionFailedAsync(
-        DbTransaction transaction, TransactionErrorEventData eventData, CancellationToken cancellationToken = default)
-    {
-        Drop();
-        return Task.CompletedTask;
-    }
-
-    private void Begin()
-    {
-        // Work still queued belongs to a transaction disposed without commit or rollback: it never committed.
+        // Work still queued waited for a transaction that never committed: rolled back, failed or disposed.
         _pending.Clear();
-        _inTransaction = true;
-    }
-
-    private void Drop()
-    {
-        _pending.Clear();
-        _inTransaction = false;
+        _awaited = transaction;
     }
 
     private async Task RunCommittedAsync()
     {
         var work = _pending.ToArray();
-        Drop();
+        _pending.Clear();
 
         foreach (var item in work)
         {
             try
             {
-                // The commit is done: a client gone in the meantime does not cancel what belongs to it.
-                await item(CancellationToken.None).ConfigureAwait(false);
+                var scope = _scopes.CreateAsyncScope();
+                await using (scope.ConfigureAwait(false))
+                {
+                    // The commit is done: a client gone in the meantime does not cancel what belongs to it.
+                    await item(scope.ServiceProvider, CancellationToken.None).ConfigureAwait(false);
+                }
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)

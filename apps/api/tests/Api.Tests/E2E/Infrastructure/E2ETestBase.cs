@@ -669,6 +669,9 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
                 options.UseNpgsql(connStr, o => o.UseVector()); // Issue #3547: Enable pgvector type mapping
                 options.ConfigureWarnings(warnings =>
                     warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+                // #5093: the work that waits for the commit, as in production. Without it, a deletion inside a
+                // transaction fails loudly instead of deleting the file before the commit.
+                options.AddInterceptors(serviceProvider.GetRequiredService<Api.Infrastructure.Persistence.AfterCommitWork>());
             });
 
             services.AddScoped<IDbContextMigrator, TestDbContextMigrator>();

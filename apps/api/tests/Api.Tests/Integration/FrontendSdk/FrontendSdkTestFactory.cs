@@ -380,7 +380,10 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 options.EnableSensitiveDataLogging(); // Better error messages
                 // #4518: come in produzione (PERF-06) e in IntegrationWebApplicationFactory.
                 options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-                options.AddInterceptors(serviceProvider.GetRequiredService<AuditingSaveChangesInterceptor>());
+                // #5093: the work that waits for the commit, as in production.
+                options.AddInterceptors(
+                    serviceProvider.GetRequiredService<AuditingSaveChangesInterceptor>(),
+                    serviceProvider.GetRequiredService<AfterCommitWork>());
             });
 
             // Mock external services that aren't needed for SDK tests

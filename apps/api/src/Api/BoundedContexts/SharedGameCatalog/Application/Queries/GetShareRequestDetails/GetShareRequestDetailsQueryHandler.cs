@@ -1,9 +1,12 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
+using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Http;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -18,13 +21,16 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetShareRequ
 internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetShareRequestDetailsQuery, ShareRequestDetailsDto>
 {
     private readonly MeepleAiDbContext _context;
+    private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<GetShareRequestDetailsQueryHandler> _logger;
 
     public GetShareRequestDetailsQueryHandler(
         MeepleAiDbContext context,
+        IBlobStorageService blobStorage,
         ILogger<GetShareRequestDetailsQueryHandler> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -86,13 +92,16 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
         var history = await GetShareRequestHistoryAsync(query.ShareRequestId, cancellationToken)
             .ConfigureAwait(false);
 
+        var coverChange = await MapCoverChangeAsync(request).ConfigureAwait(false);
+
         var dto = MapToDetailsDto(
             request,
             user,
             reviewingAdmin,
             contributorStats,
             history,
-            query.AdminId);
+            query.AdminId,
+            coverChange);
 
         _logger.LogInformation(
             "Retrieved share request details for ShareRequestId={ShareRequestId}",
@@ -220,7 +229,8 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
         UserEntity? reviewingAdmin,
         ContributorStatsData contributorStats,
         List<ShareRequestHistoryEntryDto> history,
-        Guid currentAdminId)
+        Guid currentAdminId,
+        CoverChangeDto? coverChange)
     {
         // #5074: a NewGameProposal has no shared game yet: the details are the proposed private game's.
         var sourceGame = request.SourceGame != null
@@ -271,7 +281,33 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
             History: history,
             LockStatus: lockStatus,
             CreatedAt: request.CreatedAt,
-            ResolvedAt: request.ResolvedAt);
+            ResolvedAt: request.ResolvedAt,
+            CoverChange: coverChange);
+    }
+
+    /// <summary>
+    /// #5084: the reviewer approved or rejected a cover change without seeing it. The proposed image is the pending key
+    /// the proposal materialized; the current one is the game's cover as the catalog resolves it.
+    /// </summary>
+    private async Task<CoverChangeDto?> MapCoverChangeAsync(ShareRequestEntity request)
+    {
+        if (request.ContributionType != (int)ContributionType.CoverChange)
+        {
+            return null;
+        }
+
+        var proposed = string.IsNullOrWhiteSpace(request.PendingCoverR2Key)
+            ? null
+            : await _blobStorage
+                .GetPresignedUrlForRawKeyAsync(
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, request.PendingCoverR2Key),
+                    CoverUrlResolver.CoverPresignExpirySeconds)
+                .ConfigureAwait(false);
+        var current = request.TargetSharedGame is null
+            ? null
+            : await CoverUrlResolver.ResolvePublicAsync(request.TargetSharedGame, _blobStorage).ConfigureAwait(false);
+
+        return new CoverChangeDto(proposed, current, request.CoverPageIndex + 1);
     }
 
     private static GameDetailsDto MapToGameDetailsDto(PrivateGameEntity? game)

@@ -155,6 +155,15 @@ export const AdminShareRequestDtoSchema = z.object({
 
 export type AdminShareRequestDto = z.infer<typeof AdminShareRequestDtoSchema>;
 
+// #5084: what a cover change proposes, next to the game's current cover. Presigned URLs; null on the local storage.
+export const CoverChangeDtoSchema = z.object({
+  proposedCoverUrl: z.string().nullable(),
+  currentCoverUrl: z.string().nullable(),
+  proposedFromPage: z.number().int().positive().nullable(),
+});
+
+export type CoverChangeDto = z.infer<typeof CoverChangeDtoSchema>;
+
 // Share Request Details DTO (for detail page)
 export const ShareRequestDetailsDtoSchema = z.object({
   id: z.string().uuid(),
@@ -183,6 +192,9 @@ export const ShareRequestDetailsDtoSchema = z.object({
   // Timestamps
   createdAt: z.string().datetime({ offset: true }),
   resolvedAt: z.string().datetime({ offset: true }).nullable(),
+
+  // #5084: only for a cover change
+  coverChange: CoverChangeDtoSchema.nullable().optional(),
 });
 
 export type ShareRequestDetailsDto = z.infer<typeof ShareRequestDetailsDtoSchema>;

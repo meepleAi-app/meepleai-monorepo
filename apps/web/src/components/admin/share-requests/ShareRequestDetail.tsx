@@ -14,7 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { SafeImg } from '@/components/ui/data-display/safe-img';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useShareRequestDetails } from '@/hooks/queries/useAdminShareRequests';
-import type { GameDetailsDto } from '@/lib/api/schemas/admin-share-requests.schemas';
+import type {
+  CoverChangeDto,
+  GameDetailsDto,
+} from '@/lib/api/schemas/admin-share-requests.schemas';
 
 import { ReviewPanel } from './ReviewPanel';
 import { CONTRIBUTION_TYPE_LABELS, formatDateTime } from './share-request-labels';
@@ -90,6 +93,53 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * #5084: a cover change was approved or rejected without seeing it. The proposed cover next to the one the game shows
+ * today; both come presigned from the private bucket, so on the local storage there is nothing to show.
+ */
+function CoverComparison({ change }: { change: CoverChangeDto }): JSX.Element {
+  const proposedCaption =
+    change.proposedFromPage != null
+      ? `Proposta, dalla pagina ${change.proposedFromPage} del PDF`
+      : 'Proposta';
+
+  return (
+    <Card data-testid="cover-comparison">
+      <CardHeader>
+        <CardTitle className="font-quicksand text-base">Copertina</CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-2 gap-4 text-sm">
+        <figure className="space-y-2">
+          <SafeImg
+            src={change.currentCoverUrl}
+            alt="Copertina attuale del gioco"
+            className="aspect-[3/4] w-full rounded-md border border-border bg-muted object-cover"
+            fallback={
+              <div className="flex aspect-[3/4] w-full items-center justify-center rounded-md border border-dashed border-border p-2 text-center text-muted-foreground">
+                Il gioco non ha ancora una copertina.
+              </div>
+            }
+          />
+          <figcaption className="text-muted-foreground">Attuale</figcaption>
+        </figure>
+        <figure className="space-y-2">
+          <SafeImg
+            src={change.proposedCoverUrl}
+            alt="Copertina proposta"
+            className="aspect-[3/4] w-full rounded-md border border-border bg-muted object-cover"
+            fallback={
+              <div className="flex aspect-[3/4] w-full items-center justify-center rounded-md border border-dashed border-border p-2 text-center text-muted-foreground">
+                Anteprima non disponibile.
+              </div>
+            }
+          />
+          <figcaption className="text-muted-foreground">{proposedCaption}</figcaption>
+        </figure>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ShareRequestDetail({ id }: { id: string }): JSX.Element {
   const { data: request, isLoading, isError } = useShareRequestDetails(id);
 
@@ -161,6 +211,8 @@ export function ShareRequestDetail({ id }: { id: string }): JSX.Element {
               </CardContent>
             </Card>
           )}
+
+          {request.coverChange && <CoverComparison change={request.coverChange} />}
 
           <Card>
             <CardHeader>

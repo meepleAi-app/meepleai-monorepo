@@ -46,6 +46,7 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
     private IServiceProvider? _serviceProvider;
     private IMediator? _mediator;
     private readonly Mock<IHybridCacheService> _hybridCacheMock = new();
+    private readonly Mock<IBlobStorageService> _blobMock = new();
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -70,11 +71,10 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
         services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>();
 
         // Blob storage — best-effort, mock so physical delete doesn't fail tests
-        var blobMock = new Mock<IBlobStorageService>();
-        blobMock.Setup(b => b.DeleteAsync(
+        _blobMock.Setup(b => b.DeleteAsync(
                 It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        services.AddSingleton<IBlobStorageService>(blobMock.Object);
+        services.AddSingleton<IBlobStorageService>(_blobMock.Object);
 
         // Cache invalidation — best-effort, mock
         var cacheMock = new Mock<IAiResponseCacheService>();
@@ -190,6 +190,22 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
             c => c.RemoveByTagAsync("user-docs", It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>#5091: il pdfId faceva da fileId, che è casuale (#2671): il PDF restava nello storage.</summary>
+    [Fact]
+    [Trait("Issue", "5091")]
+    public async Task Handle_DeletesTheBlobUnderTheKeyItsFilePathRecords()
+    {
+        const string storedFileId = "f1e3d5c7b9a04f2e6d8c0b2a4f6e8d0c";
+        var resourceKey = $"shared-game-{TestSharedGameId}";
+        var pdfId = await SeedIndexedDocWithAgentsAsync(
+            agentCount: 0, filePath: $"pdfs/{resourceKey}/{storedFileId}_rules.pdf");
+
+        await _mediator!.Send(new DeleteKbDocumentCommand(pdfId), TestCancellationToken);
+
+        _blobMock.Verify(
+            b => b.DeleteAsync(storedFileId, BlobCategory.Pdf, resourceKey, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     /// <summary>Un documento che non c'è non ha un elenco da invalidare.</summary>
     [Fact]
     public async Task Handle_WhenTheDocIsMissing_InvalidatesNothing()
@@ -236,7 +252,7 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
     /// AgentDefinitions that list the document in their KbCardIds.
     /// Returns the new PdfDocument id.
     /// </summary>
-    private async Task<Guid> SeedIndexedDocWithAgentsAsync(int agentCount)
+    private async Task<Guid> SeedIndexedDocWithAgentsAsync(int agentCount, string? filePath = null)
     {
         var pdfId = Guid.NewGuid();
 
@@ -247,7 +263,7 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
             SharedGameId = TestSharedGameId,
             UploadedByUserId = TestUserId,
             FileName = $"test-{pdfId:N}.pdf",
-            FilePath = $"/test/{pdfId:N}.pdf",
+            FilePath = filePath ?? $"/test/{pdfId:N}.pdf",
             FileSizeBytes = 2048,
             ProcessingState = "Ready",
             UploadedAt = DateTime.UtcNow,

@@ -54,13 +54,14 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
         string processingState = "Ready",
         DateTime? uploadedAt = null,
         Guid? sharedGameId = null,
-        int coverAttempts = 0)
+        int coverAttempts = 0,
+        string filePath = "/tmp/test.pdf")
     {
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
             FileName = "test.pdf",
-            FilePath = "/tmp/test.pdf",
+            FilePath = filePath,
             FileSizeBytes = 1024,
             ContentType = "application/pdf",
             UploadedByUserId = Guid.NewGuid(),
@@ -141,6 +142,28 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
         refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Failed),
             "at MaxAttempts the transient retry budget is exhausted → terminal");
         refreshed.CoverGenerationAttempts.Should().Be(PdfCoverRetryPolicy.MaxAttempts);
+    }
+
+    [Fact]
+    public async Task RunBatchAsync_UploadedPdf_ReadsTheBlobUnderTheKeyItsFilePathRecords()
+    {
+        // #5091: the resourceKey was rebuilt from the pdfId, which only the seeded corpus uses: no upload was found.
+        var gameId = Guid.NewGuid();
+        const string storedFileId = "3f6c1e2a9b8d4f7e8a1b2c3d4e5f6a7b";
+        var pdf = SeedPdf(sharedGameId: gameId, filePath: $"pdfs/{gameId}/{storedFileId}_rules.pdf");
+
+        _blob.Setup(b => b.RetrieveAsync(storedFileId, BlobCategory.Pdf, gameId.ToString(), It.IsAny<CancellationToken>()))
+             .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 })); // %PDF magic
+        ConfigureExtractorReturning(PdfCoverExtractionOutcome.Skipped);
+
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
+
+        var refreshed = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
+        refreshed.CoverGenerationError.Should().BeNull("the blob is under the key FilePath records");
+        refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Skipped));
+        _extractor.Verify(e => e.ExtractAsync(
+            It.Is<byte[]>(b => b.SequenceEqual(new byte[] { 0x25, 0x50, 0x44, 0x46 })),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

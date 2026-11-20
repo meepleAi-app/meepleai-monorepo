@@ -268,6 +268,29 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
     }
 
     [Fact]
+    [Trait("Issue", "5091")]
+    public async Task Handle_ReadsTheBlobUnderTheKeyItsFilePathRecords()
+    {
+        // #5091: the resourceKey was rebuilt from the pdfId, which only the seeded corpus uses: no upload was found.
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"sib_{Guid.NewGuid():N}");
+        var gameId = Guid.NewGuid();
+        const string storedFileId = "e9d1b3a5c7f24e6b8a0c2d4f6b8d0a2c";
+        var id = SeedPdf(db, filePath: $"pdfs/{gameId}/{storedFileId}_rules.pdf");
+        await db.SaveChangesAsync();
+        var blob = new Mock<IBlobStorageService>();
+        blob.Setup(b => b.RetrieveAsync(storedFileId, BlobCategory.Pdf, gameId.ToString(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+
+        var handler = Create(db, ExtractorReturning(ImageRegionJson).Object, blob.Object,
+            DelegatingMediator(db).Object, Config(enabled: true));
+        var result = await handler.Handle(new RunImageRegionSeedBatchCommand(), CancellationToken.None);
+
+        result.Failed.Should().Be(0, "the blob is under the key FilePath records");
+        result.Processed.Should().Be(1);
+        (await MarkerOf(db, id)).Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task Handle_SelectsOnlyEligiblePdfs()
     {
         using var db = TestDbContextFactory.CreateInMemoryDbContext($"sib_{Guid.NewGuid():N}");

@@ -65,4 +65,35 @@ public class PdfStorageKeyTests
         var fileId = PdfStorageKey.FileIdFromPath(string.Empty) ?? PdfStorageKey.ForPdf(pdfId);
         fileId.Should().Be(PdfStorageKey.ForPdf(pdfId));
     }
+
+    // #5091: the key of an uploaded PDF is in its path, not in its id. Readers that rebuilt the bucket from the id
+    // found nothing for any upload outside the seeded corpus.
+    [Theory]
+    [InlineData("pdfs/game-1/abc123_rulebook.pdf", "abc123", "game-1")]
+    [InlineData("pdfs/shared-game-7/abc123_rulebook.pdf", "abc123", "shared-game-7")]
+    [InlineData("pdf_uploads\\wizard-temp\\abc123_rulebook.pdf", "abc123", "wizard-temp")]
+    public void Locate_ReadsBothHalvesFromThePath(string filePath, string fileId, string resourceKey)
+    {
+        PdfStorageKey.Locate(Guid.NewGuid(), filePath).Should().Be((fileId, resourceKey));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("noSeparatorNorUnderscore")]
+    public void Locate_APathOutsideTheLayout_FallsBackToTheIdBucket_ForBothHalves(string? filePath)
+    {
+        var pdfId = Guid.NewGuid();
+
+        PdfStorageKey.Locate(pdfId, filePath).Should().Be((PdfStorageKey.ForPdf(pdfId), PdfStorageKey.ForPdf(pdfId)));
+    }
+
+    [Fact]
+    public void Locate_APathWithAFolderButNoFileId_KeepsTheFolder_AndFallsBackForTheFileId()
+    {
+        // A file name without the {fileId}_ prefix gives no fileId, but the folder is still the one in the path.
+        var pdfId = Guid.NewGuid();
+
+        PdfStorageKey.Locate(pdfId, "pdfs/game-1/justAFile.pdf").Should().Be((PdfStorageKey.ForPdf(pdfId), "game-1"));
+    }
 }

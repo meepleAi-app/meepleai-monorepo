@@ -58,12 +58,13 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
         }
 
         // 2. Retrieve PDF file from blob storage
-        // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
-        var bucketKey = PdfStorageKey.ForPdf(pdf.Id);
+        // #5091: both halves of the key from the stored path. The pdfId was used for both, and the fileId is
+        // random (#2671): the text of no PDF was ever found.
+        var (fileId, resourceKey) = PdfStorageKey.Locate(pdf.Id, pdf.FilePath);
         var fileStream = await _blobStorage.RetrieveAsync(
-            bucketKey,
+            fileId,
             BlobCategory.Pdf,
-            bucketKey,
+            resourceKey,
             cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)

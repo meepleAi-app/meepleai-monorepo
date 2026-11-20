@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
@@ -80,16 +81,9 @@ internal sealed class ExtractGameMetadataFromPdfByPdfIdQueryHandler
                 return GameMetadataDto.CreateEmpty();
             }
 
-            // Resolve storage bucket: orphaned PDFs use "wizard-temp"
-            var bucket = pdfDoc.PrivateGameId?.ToString() ?? pdfDoc.GameId.ToString();
-
-            // Extract fileId from stored FilePath (format: {fileId}_{timestamp}.pdf)
-            var fileId = ExtractFileIdFromPath(pdfDoc.FilePath);
-            if (string.IsNullOrEmpty(fileId))
-            {
-                _logger.LogWarning("[{RequestId}] Could not extract fileId from FilePath={FilePath}", requestId, pdfDoc.FilePath);
-                return GameMetadataDto.CreateEmpty();
-            }
+            // #5091: both halves of the key from the stored path. The bucket was rebuilt as
+            // PrivateGameId ?? GameId, which misses a catalog PDF an admin uploaded (shared-game-{id}) and a copy.
+            var (fileId, bucket) = PdfStorageKey.Locate(pdfDoc.Id, pdfDoc.FilePath);
 
             var pdfStream = await RetrievePdfAsync(fileId, bucket, requestId, cancellationToken).ConfigureAwait(false);
             if (pdfStream == null)
@@ -137,13 +131,6 @@ internal sealed class ExtractGameMetadataFromPdfByPdfIdQueryHandler
             return GameMetadataDto.CreateEmpty();
         }
 #pragma warning restore CA1031
-    }
-
-    private static string ExtractFileIdFromPath(string filePath)
-    {
-        var fileName = Path.GetFileName(filePath);
-        var parts = fileName.Split('_');
-        return parts.Length > 1 ? parts[0] : string.Empty;
     }
 
     private async Task<Stream?> RetrievePdfAsync(string fileId, string bucket, string requestId, CancellationToken ct)

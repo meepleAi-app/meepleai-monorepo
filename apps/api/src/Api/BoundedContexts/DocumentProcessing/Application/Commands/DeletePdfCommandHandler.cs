@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
@@ -70,6 +71,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             var gameId = pdfDoc.SharedGameId;
             var coverR2Key = pdfDoc.CoverR2Key;
+            var storedFilePath = pdfDoc.FilePath;
             var uploadedByUserId = pdfDoc.UploadedByUserId;
 
             var storageGameIdForUnlink = (pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId)?.ToString() ?? string.Empty;
@@ -185,7 +187,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             // Delegate physical file deletion to BlobStorageService
             var storageGameId = (pdfDoc.PrivateGameId ?? gameId)?.ToString() ?? string.Empty;
-            await DeletePhysicalFileAsync(pdfId, storageGameId, cancellationToken).ConfigureAwait(false);
+            await DeletePhysicalFileAsync(pdfGuid, storedFilePath, cancellationToken).ConfigureAwait(false);
 
             // Invalidate cache
             await InvalidateCacheSafelyAsync(storageGameId, "PDF deletion", cancellationToken).ConfigureAwait(false);
@@ -313,11 +315,14 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     /// <summary>
     /// Deletes physical PDF file from blob storage.
     /// </summary>
-    private async Task DeletePhysicalFileAsync(string pdfId, string gameId, CancellationToken cancellationToken)
+    private async Task DeletePhysicalFileAsync(Guid pdfId, string? filePath, CancellationToken cancellationToken)
     {
         try
         {
-            await _blobStorageService.DeleteAsync(pdfId, BlobCategory.Pdf, gameId, cancellationToken).ConfigureAwait(false);
+            // #5091: the key from the stored path. The pdfId was passed as fileId, which is random (#2671): the
+            // prefix matched no file, and the PDF stayed in storage after its row was gone.
+            var (fileId, resourceKey) = PdfStorageKey.Locate(pdfId, filePath);
+            await _blobStorageService.DeleteAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out

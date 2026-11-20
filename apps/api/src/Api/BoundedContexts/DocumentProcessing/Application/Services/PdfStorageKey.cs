@@ -13,6 +13,21 @@ public static class PdfStorageKey
     public static string ForPdf(Guid pdfId) => pdfId.ToString("N");
 
     /// <summary>
+    /// Where a stored PDF is: both halves of the key read from its persisted <c>FilePath</c>, with the
+    /// <see cref="ForPdf"/> bucket as the fallback for a path that does not match the layout.
+    /// </summary>
+    /// <remarks>
+    /// #5091: every read and delete of a stored PDF goes through here. Readers that rebuilt the key from the
+    /// pdfId found nothing for any upload outside the seeded corpus (see <see cref="ResourceKeyFromPath"/>), and
+    /// the deletes used the pdfId as fileId, so the file stayed in storage.
+    /// </remarks>
+    public static (string FileId, string ResourceKey) Locate(Guid pdfId, string? filePath)
+    {
+        var bucket = ForPdf(pdfId);
+        return (FileIdFromPath(filePath) ?? bucket, ResourceKeyFromPath(filePath) ?? bucket);
+    }
+
+    /// <summary>
     /// Extracts the bare fileId embedded in a stored blob path of shape
     /// <c>{category}/{resourceKey}/{fileId}_{sanitizedFileName}</c> (S3 forward-slash
     /// or Windows-local backslash layout). The fileId is the segment after the last path

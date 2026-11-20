@@ -41,14 +41,9 @@ internal sealed class GetPdfPageImageQueryHandler : IQueryHandler<GetPdfPageImag
         if (pdfDoc == null)
             throw new NotFoundException($"PdfDocument {query.PdfDocumentId} not found");
 
-        // Resolve storage bucket
-        // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
-        var bucket = PdfStorageKey.ForPdf(pdfDoc.Id);
-
-        // Extract file ID from stored path
-        var fileId = ExtractFileIdFromPath(pdfDoc.FilePath);
-        if (string.IsNullOrEmpty(fileId))
-            throw new InvalidOperationException($"Cannot extract fileId from path: {pdfDoc.FilePath}");
+        // #5091: both halves of the key from the stored path. The bucket was rebuilt from the pdfId, which only
+        // the seeded corpus uses, so the page of any uploaded PDF was a 404.
+        var (fileId, bucket) = PdfStorageKey.Locate(pdfDoc.Id, pdfDoc.FilePath);
 
         // Retrieve PDF bytes from blob storage
         var pdfStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, bucket, cancellationToken).ConfigureAwait(false);
@@ -137,13 +132,6 @@ internal sealed class GetPdfPageImageQueryHandler : IQueryHandler<GetPdfPageImag
             "Page preview requires the SmolDocling service, which is not available in this environment.",
             "page_image_service_unavailable",
             inner);
-    }
-
-    private static string ExtractFileIdFromPath(string filePath)
-    {
-        var fileName = Path.GetFileName(filePath);
-        var parts = fileName.Split('_');
-        return parts.Length > 1 ? parts[0] : string.Empty;
     }
 
     private static async Task<byte[]> ReadStreamAsync(Stream stream, CancellationToken ct)

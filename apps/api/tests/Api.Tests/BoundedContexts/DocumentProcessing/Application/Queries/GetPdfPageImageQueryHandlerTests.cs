@@ -42,16 +42,22 @@ public class GetPdfPageImageQueryHandlerTests
             new FileSize(1024),
             Guid.NewGuid());
 
-    private static GetPdfPageImageQueryHandler CreateHandler(HttpMessageHandler httpHandler)
+    private static GetPdfPageImageQueryHandler CreateHandler(
+        HttpMessageHandler httpHandler,
+        PdfDocument? pdf = null,
+        Mock<IBlobStorageService>? blob = null)
     {
         var repo = new Mock<IPdfDocumentRepository>();
         repo.Setup(r => r.GetByIdAsync(PdfId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePdf());
+            .ReturnsAsync(pdf ?? CreatePdf());
 
-        var blob = new Mock<IBlobStorageService>();
-        blob.Setup(b => b.RetrieveAsync(
-                It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new MemoryStream([0x25, 0x50, 0x44, 0x46]));
+        if (blob is null)
+        {
+            blob = new Mock<IBlobStorageService>();
+            blob.Setup(b => b.RetrieveAsync(
+                    It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => new MemoryStream([0x25, 0x50, 0x44, 0x46]));
+        }
 
         var httpClient = new HttpClient(httpHandler) { BaseAddress = new Uri("http://smoldocling-service:8002") };
         var factory = new Mock<IHttpClientFactory>();
@@ -141,6 +147,28 @@ public class GetPdfPageImageQueryHandlerTests
     public async Task Handle_HappyPath_ReturnsImageBytes()
     {
         var handler = CreateHandler(new StatusHandler(HttpStatusCode.OK, [0xFF, 0xD8, 0xFF]));
+
+        var bytes = await handler.Handle(Query(), CancellationToken.None);
+
+        bytes.Should().Equal(0xFF, 0xD8, 0xFF);
+    }
+
+    [Fact]
+    public async Task Handle_PdfStoredUnderItsGame_ReadsTheBlobUnderTheKeyItsFilePathRecords()
+    {
+        // #5091: the bucket was rebuilt from the pdfId, which only the seeded corpus uses: any upload was a 404.
+        var gameId = Guid.NewGuid();
+        var pdf = new PdfDocument(
+            PdfId,
+            gameId,
+            new FileName("rules.pdf"),
+            $"pdfs/{gameId}/{StoredFileId}_rules.pdf",
+            new FileSize(1024),
+            Guid.NewGuid());
+        var blob = new Mock<IBlobStorageService>();
+        blob.Setup(b => b.RetrieveAsync(StoredFileId, BlobCategory.Pdf, gameId.ToString(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new MemoryStream([0x25, 0x50, 0x44, 0x46]));
+        var handler = CreateHandler(new StatusHandler(HttpStatusCode.OK, [0xFF, 0xD8, 0xFF]), pdf, blob);
 
         var bytes = await handler.Handle(Query(), CancellationToken.None);
 

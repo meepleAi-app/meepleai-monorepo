@@ -235,7 +235,10 @@ internal static class RagExceptionHandler
             JsonException => "Invalid response format from service.",
             InvalidOperationException invEx when invEx.Message.Contains("configuration", StringComparison.OrdinalIgnoreCase)
                 => "Configuration error. Please contact support.",
-            AccessDeniedException or UnauthorizedAccessException => "Authentication failed. Please check your credentials.",
+            AccessDeniedException => "Authentication failed. Please check your credentials.",
+            // #5082: the file system refused, a server fault. Named here so the default does not show its message,
+            // which carries the path.
+            UnauthorizedAccessException => "The service failed. Please try again later.",
             ArgumentException => "Invalid request parameters.",
             _ => defaultMessage
         };

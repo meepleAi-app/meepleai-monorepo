@@ -990,17 +990,23 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Issue #2732: Document copying on share request approval
     /// </summary>
     /// <param name="source">Source document to copy</param>
+    /// <param name="copyId">The copy's id, chosen by the caller: its file is stored under it
+    /// (<c>PdfStorageKey.ForPdf</c>) before the entity exists (#5082)</param>
     /// <param name="sharedGameId">Target shared game ID</param>
     /// <param name="contributorId">User who contributed this document</param>
     /// <param name="newFilePath">Storage path for the copied file</param>
     /// <returns>New PdfDocument instance for shared game</returns>
     public static PdfDocument CreateCopy(
         PdfDocument source,
+        Guid copyId,
         Guid sharedGameId,
         Guid contributorId,
         string newFilePath)
     {
         ArgumentNullException.ThrowIfNull(source);
+
+        if (copyId == Guid.Empty)
+            throw new ArgumentException("Copy ID cannot be empty", nameof(copyId));
 
         if (sharedGameId == Guid.Empty)
             throw new ArgumentException("Shared game ID cannot be empty", nameof(sharedGameId));
@@ -1013,7 +1019,7 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
         var copy = new PdfDocument
         {
-            Id = Guid.NewGuid(),
+            Id = copyId,
             GameId = source.GameId,
             FileName = source.FileName,
             FilePath = newFilePath, // New storage path

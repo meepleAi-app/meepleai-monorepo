@@ -109,8 +109,8 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
                 }
 
                 // #5076, decision of 2026-11-19: approval cannot copy attached documents yet. The copy lives only in
-                // ShareRequestApprovedDocumentHandler, which no event reaches (#5078), and reads local paths even with S3
-                // (#5082). Approved here, the request would close with its documents left out, and nothing recovers them
+                // ShareRequestApprovedDocumentHandler, which no event reaches (#5078); since #5082 the copy itself works with
+                // S3 too. Approved here, the request would close with its documents left out, and nothing recovers them
                 // later: it waits instead.
                 if (shareRequest.AttachedDocuments.Count > 0)
                 {

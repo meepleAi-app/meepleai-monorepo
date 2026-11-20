@@ -196,7 +196,7 @@ public class ApproveShareRequestCommandHandlerTests
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    // #5076, decision of 2026-11-19: approval cannot copy attached documents yet (#5078, #5082); approved here, the
+    // #5076, decision of 2026-11-19: approval cannot copy attached documents yet (#5078); approved here, the
     // request would close with its documents left out. It waits instead.
     [Fact]
     public async Task Handle_WithAttachedDocuments_ThrowsConflict_AndChangesNothing()

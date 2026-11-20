@@ -207,15 +207,17 @@ internal sealed class ShareRequestDocumentService : IShareRequestDocumentService
                     continue;
                 }
 
+                // Under the copy's own id, the bucket PdfStorageKey.ForPdf names: some readers (the cover backfill, the
+                // page image, the text extraction) rebuild the key from the document id instead of reading FilePath.
+                var copyId = Guid.NewGuid();
                 BlobStorageResult stored;
                 await using (source.ConfigureAwait(false))
                 {
-                    // The same place as a PDF an admin uploads for the shared game (UploadSharedGamePdfCommandHandler).
                     stored = await _blobStorage.StoreAsync(
                         source,
                         sourceDoc.FileName.Value,
                         BlobCategory.Pdf,
-                        $"shared-game-{sharedGameId}",
+                        PdfStorageKey.ForPdf(copyId),
                         cancellationToken).ConfigureAwait(false);
                 }
 
@@ -230,6 +232,7 @@ internal sealed class ShareRequestDocumentService : IShareRequestDocumentService
                 // Create new document entity for shared game
                 var newDocument = PdfDocument.CreateCopy(
                     sourceDoc,
+                    copyId,
                     sharedGameId,
                     contributorId,
                     stored.FilePath);

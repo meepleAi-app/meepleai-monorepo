@@ -39,7 +39,7 @@ public abstract class ShareRequestDocumentCopyIntegrationTestsBase : IAsyncLifet
     }
 
     [Fact]
-    public async Task Copy_StoresTheFileUnderTheSharedGame_AndTheCopyReadsBackTheSameBytes()
+    public async Task Copy_StoresTheFileUnderTheCopysId_AndItReadsBackTheSameBytes_ByItsPathAndByItsId()
     {
         RequireStorage();
         var bytes = "%PDF-1.4 a rulebook attached to a share request"u8.ToArray();
@@ -52,8 +52,15 @@ public abstract class ShareRequestDocumentCopyIntegrationTestsBase : IAsyncLifet
         copied.Should().ContainSingle();
         var copy = added.Should().ContainSingle().Which;
         copy.Id.Should().Be(copied[0]);
-        PdfStorageKey.ResourceKeyFromPath(copy.FilePath).Should().Be($"shared-game-{sharedGameId}");
+        copy.SharedGameId.Should().Be(sharedGameId);
+        PdfStorageKey.ResourceKeyFromPath(copy.FilePath).Should().Be(PdfStorageKey.ForPdf(copy.Id));
         (await ReadAsync(copy.FilePath)).Should().Equal(bytes);
+        // How the cover backfill, the page image and the text extraction look for it: the bucket from the id.
+        await using (var byId = await Storage!.RetrieveAsync(
+            PdfStorageKey.FileIdFromPath(copy.FilePath)!, BlobCategory.Pdf, PdfStorageKey.ForPdf(copy.Id), Ct))
+        {
+            byId.Should().NotBeNull("a reader that rebuilds the key from the document id should find the copy");
+        }
         // A copy, not a move: the contributor's document keeps its file.
         (await ReadAsync(source.FilePath)).Should().Equal(bytes);
     }

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
@@ -40,23 +41,24 @@ public sealed class ShareRequestDocumentServiceCopyTests
     }
 
     [Fact]
-    public async Task Copy_ReadsTheSourceByTheKeysInItsPath_AndStoresItUnderTheSharedGame()
+    public async Task Copy_ReadsTheSourceByTheKeysInItsPath_AndStoresItUnderTheCopysId()
     {
         var source = Document("pdfs/private-1/file-a_rules.pdf", "rules.pdf");
         _documents.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([source]);
         _storage.Setup(s => s.RetrieveAsync("file-a", BlobCategory.Pdf, "private-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream([1, 2, 3]));
-        var sharedGameId = Guid.NewGuid();
         _storage.Setup(s => s.StoreAsync(
-                It.IsAny<Stream>(), "rules.pdf", BlobCategory.Pdf, $"shared-game-{sharedGameId}", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new BlobStorageResult(true, "file-b", $"pdfs/shared-game-{sharedGameId}/file-b_rules.pdf", 3));
+                It.IsAny<Stream>(), "rules.pdf", BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Stream _, string _, BlobCategory _, string key, CancellationToken _) =>
+                new BlobStorageResult(true, "file-b", $"pdfs/{key}/file-b_rules.pdf", 3));
 
         var copied = await _service.CopyDocumentsToSharedGame(
-            [source.Id], sharedGameId, Guid.NewGuid(), TestContext.Current.CancellationToken);
+            [source.Id], Guid.NewGuid(), Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         copied.Should().ContainSingle();
-        _added.Should().ContainSingle().Which.FilePath.Should().Be($"pdfs/shared-game-{sharedGameId}/file-b_rules.pdf");
+        var copy = _added.Should().ContainSingle().Which;
+        copy.FilePath.Should().Be($"pdfs/{PdfStorageKey.ForPdf(copy.Id)}/file-b_rules.pdf");
     }
 
     [Fact]

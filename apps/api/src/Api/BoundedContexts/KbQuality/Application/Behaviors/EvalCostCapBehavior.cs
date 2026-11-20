@@ -22,7 +22,7 @@ namespace Api.BoundedContexts.KbQuality.Application.Behaviors;
 /// <item>If <c>estimated &gt; remaining</c> and the caller did NOT request override, throw
 /// <see cref="CostCapExceededException"/> — the endpoint maps this to <c>402 Payment Required</c>.</item>
 /// <item>If override was requested but the caller is not an admin, throw
-/// <see cref="UnauthorizedAccessException"/>. The override skips this pre-flight estimate only: the
+/// <see cref="AccessDeniedException"/> (403). The override skips this pre-flight estimate only: the
 /// gateway still stops the run's LLM calls at the evaluation quota, which is part of the single cap
 /// (D6). An admin who needs more raises the quota in the LLM configuration.</item>
 /// <item>Run the inner handler. Its LLM calls go through the gateway with

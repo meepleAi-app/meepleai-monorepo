@@ -13,7 +13,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
 /// <summary>
 /// Defense-in-depth PII / info-leak guards for EnqueueStorageMigrationCommandHandler.
-/// Mirrors the pattern enforced by the BulkImportUsers / MigrateStorage / ImportRagData
+/// Mirrors the pattern enforced by the BulkImportUsers / ImportRagData
 /// / ExportRagData test suites (PRs #1532, #1543, #1545). The returned
 /// <c>EnqueueStorageMigrationResult.Errors</c> payload reaches admin API callers and
 /// log shipping pipelines; raw <c>AmazonS3Exception.Message</c> in particular routinely

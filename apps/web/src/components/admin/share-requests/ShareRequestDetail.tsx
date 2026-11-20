@@ -116,7 +116,7 @@ function CoverComparison({ change }: { change: CoverChangeDto }): JSX.Element {
             className="aspect-[3/4] w-full rounded-md border border-border bg-muted object-cover"
             fallback={
               <div className="flex aspect-[3/4] w-full items-center justify-center rounded-md border border-dashed border-border p-2 text-center text-muted-foreground">
-                Il gioco non ha ancora una copertina.
+                Copertina attuale non disponibile.
               </div>
             }
           />

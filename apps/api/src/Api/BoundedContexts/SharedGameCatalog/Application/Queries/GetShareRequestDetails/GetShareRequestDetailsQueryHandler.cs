@@ -57,6 +57,9 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
                 .ThenInclude(g => g!.Categories)
             .Include(r => r.TargetSharedGame)
                 .ThenInclude(g => g!.Mechanics)
+            // #5084: the current cover is the one the game page shows, assignments and manual covers included.
+            .Include(r => r.TargetSharedGame)
+                .ThenInclude(g => g!.CoverAssignments)
             .Include(r => r.AttachedDocuments)
             .FirstOrDefaultAsync(
                 r => r.Id == query.ShareRequestId && (!query.OwnRequestsOnly || r.UserId == query.AdminId),
@@ -303,9 +306,13 @@ internal sealed class GetShareRequestDetailsQueryHandler : IRequestHandler<GetSh
                     CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, request.PendingCoverR2Key),
                     CoverUrlResolver.CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
+        // The Hero context, as the game page (GetSharedGameByIdQueryHandler): an admin-pinned or manual cover is the one
+        // the proposal would replace, not the bare PDF/BGG precedence of the context-blind resolver.
         var current = request.TargetSharedGame is null
             ? null
-            : await CoverUrlResolver.ResolvePublicAsync(request.TargetSharedGame, _blobStorage).ConfigureAwait(false);
+            : await CoverUrlResolver
+                .ResolveForContextAsync(request.TargetSharedGame, CoverContext.Hero, _blobStorage)
+                .ConfigureAwait(false);
 
         return new CoverChangeDto(proposed, current, request.CoverPageIndex + 1);
     }

@@ -281,7 +281,7 @@ describe('ShareRequestDetail', () => {
 
     const comparison = await screen.findByTestId('cover-comparison');
     expect(within(comparison).queryByRole('img')).not.toBeInTheDocument();
-    expect(comparison).toHaveTextContent('Il gioco non ha ancora una copertina.');
+    expect(comparison).toHaveTextContent('Copertina attuale non disponibile.');
     expect(comparison).toHaveTextContent('Anteprima non disponibile.');
   });
 

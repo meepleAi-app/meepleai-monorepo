@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetShareRequestDetails;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -46,6 +47,35 @@ public sealed class GetShareRequestDetailsCoverChangeTests : IDisposable
         details.CoverChange!.ProposedCoverUrl.Should().Be("https://r2.test/proposed");
         details.CoverChange.CurrentCoverUrl.Should().Be("https://r2.test/current");
         details.CoverChange.ProposedFromPage.Should().Be(3, "the stored index is 0-based, the page shown is 1-based");
+    }
+
+    [Fact]
+    public async Task TheCurrentCover_IsTheOneTheGamePageShows_AnAdminPinnedCoverIncluded()
+    {
+        // The game has a cover from a PDF, but the admin pinned another for the game page (Hero): the proposal would
+        // replace that one, and the context-blind resolver would have shown the PDF one.
+        const string pdfCover = "covers/pdf/current/cover";
+        const string heroCrop = "covers/hero/pinned.webp";
+        SeedGame(pdfCoverKey: pdfCover);
+        _db.Set<GameCoverAssignmentEntity>().Add(new GameCoverAssignmentEntity
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = _gameId,
+            Context = CoverContext.Hero,
+            Source = CoverAssignmentSource.Bgg,
+            GeneratedR2Key = heroCrop,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _userId,
+        });
+        _db.SaveChanges();
+        var requestId = SeedRequest(ContributionType.CoverChange, pendingKey: "covers/game/pdf-cover-p", coverPageIndex: 0);
+        AnswerPresigned(pdfCover, "https://r2.test/pdf");
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync(heroCrop, CoverUrlResolver.CoverPresignExpirySeconds))
+            .ReturnsAsync("https://r2.test/pinned");
+
+        var details = await Handler().Handle(new GetShareRequestDetailsQuery(requestId, _userId), TestContext.Current.CancellationToken);
+
+        details.CoverChange!.CurrentCoverUrl.Should().Be("https://r2.test/pinned");
     }
 
     [Fact]

@@ -8,7 +8,6 @@
  * Restano deliberatamente fuori, e non sono da considerarsi verificate:
  *   - `POST /admin/infrastructure/services/{name}/restart`, `operations/restart-service`,
  *     `secrets/restart` — riavviano servizi reali
- *   - `POST /admin/storage/migrate` — migrazione dello storage
  *   - `POST /admin/providers/{name}/rotate-key` — romperebbe le integrazioni
  *   - `DELETE /admin/rag-backup/snapshots/{id}` — cancella backup
  *   - `DELETE /admin/sessions/{sessionId}` — potrebbe revocare la sessione dell'audit stesso

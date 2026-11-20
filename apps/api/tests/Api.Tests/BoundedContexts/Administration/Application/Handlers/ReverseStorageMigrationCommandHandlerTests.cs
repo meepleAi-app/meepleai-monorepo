@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Defense-in-depth PII / info-leak guard for the per-row catch in
 /// <c>ReverseStorageMigrationCommandHandler</c>. Mirrors the pattern enforced by
-/// the BulkImportUsers / MigrateStorage / ImportRagData / ExportRagData /
+/// the BulkImportUsers / ImportRagData / ExportRagData /
 /// EnqueueStorageMigration test suites (PRs #1532, #1543, #1545). The returned
 /// <c>ReverseStorageMigrationResult.Errors</c> payload is exposed to admin API
 /// callers and propagated to log shipping pipelines; <c>AmazonS3Exception.Message</c>

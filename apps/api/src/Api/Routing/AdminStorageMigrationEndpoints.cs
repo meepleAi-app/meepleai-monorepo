@@ -6,7 +6,8 @@ using MediatR;
 namespace Api.Routing;
 
 /// <summary>
-/// Admin endpoints for storage migration (local → S3, and #1314 PR 2 layout migration).
+/// Admin endpoints for the storage layout migration (#1314 PR 2). The local → S3 copy (POST /admin/storage/migrate)
+/// was removed by #5094: it read the layout from before #1314 and wrote S3 keys no reader looks for.
 /// </summary>
 internal static class AdminStorageMigrationEndpoints
 {
@@ -15,12 +16,6 @@ internal static class AdminStorageMigrationEndpoints
         var group = app.MapGroup("/admin/storage")
             .WithTags("Admin - Storage Migration")
             .AddEndpointFilter<RequireAdminSessionFilter>();
-
-        group.MapPost("/migrate", MigrateStorage)
-            .WithName("MigrateStorage")
-            .WithSummary("Migrate files from local filesystem to S3 storage")
-            .WithDescription("Scans pdf_uploads/ directory and uploads files to S3. " +
-                "Use dryRun=true to preview without executing. Idempotent: skips files already on S3.");
 
         // Issue #1333: storage-layout migration Phase 1 enqueue endpoint.
         group.MapPost("/migration/enqueue", EnqueueStorageMigration)
@@ -39,16 +34,6 @@ internal static class AdminStorageMigrationEndpoints
             .WithDescription("Reverses Sent rows (NewKey → LegacyKey + delete NewKey) and " +
                 "transitions Pending rows to Reverted state. Idempotent: rows already in " +
                 "FailedPermanent or Reverted are skipped.");
-    }
-
-    private static async Task<IResult> MigrateStorage(
-        bool dryRun,
-        IMediator mediator,
-        CancellationToken cancellationToken)
-    {
-        var result = await mediator.Send(new MigrateStorageCommand(dryRun), cancellationToken)
-            .ConfigureAwait(false);
-        return Results.Ok(result);
     }
 
     private static async Task<IResult> EnqueueStorageMigration(

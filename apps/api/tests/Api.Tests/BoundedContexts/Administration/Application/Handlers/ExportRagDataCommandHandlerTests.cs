@@ -19,7 +19,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Defense-in-depth PII / info-leak guard for the per-document catch in
 /// <c>ExportRagDataCommandHandler.Handle</c>. Mirrors the pattern enforced by
-/// the BulkImportUsersCommandHandler / MigrateStorage / ImportRagData test suites
+/// the BulkImportUsersCommandHandler / ImportRagData test suites
 /// (PRs #1532, #1543) — the returned <c>ExportRagDataResult.Errors</c> payload is
 /// exposed to admin API callers and propagated to log shipping pipelines, so it
 /// must never carry raw <c>ex.Message</c> content. Storage backends (the dual-

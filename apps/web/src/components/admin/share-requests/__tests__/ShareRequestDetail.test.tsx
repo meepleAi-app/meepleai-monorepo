@@ -5,7 +5,7 @@
  */
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -66,7 +66,12 @@ function details(
   {
     lockExpiresAt = inTwentyMinutes(),
     documents = 0,
-  }: { lockExpiresAt?: string; documents?: number } = {}
+    coverChange = null,
+  }: {
+    lockExpiresAt?: string;
+    documents?: number;
+    coverChange?: ShareRequestDetailsDto['coverChange'];
+  } = {}
 ): ShareRequestDetailsDto {
   return ShareRequestDetailsDtoSchema.parse({
     id: REQUEST_ID,
@@ -109,6 +114,7 @@ function details(
     },
     createdAt: '2026-11-19T10:00:00Z',
     resolvedAt: status === 'Approved' ? '2026-11-19T11:00:00Z' : null,
+    coverChange,
   });
 }
 
@@ -240,6 +246,50 @@ describe('ShareRequestDetail', () => {
       })
     );
     expect(adminShareRequests.approve).not.toHaveBeenCalled();
+  });
+
+  // #5084: a cover change was approved or rejected without seeing it.
+  it('shows the proposed cover next to the current one, before the review starts', async () => {
+    renderDetail(
+      details('CoverChange', 'none', 'Pending', {
+        coverChange: {
+          proposedCoverUrl: 'https://r2.test/proposed.webp',
+          currentCoverUrl: 'https://r2.test/current.webp',
+          proposedFromPage: 3,
+        },
+      })
+    );
+
+    const comparison = await screen.findByTestId('cover-comparison');
+    expect(
+      within(comparison).getByRole('img', { name: 'Copertina attuale del gioco' })
+    ).toHaveAttribute('src', 'https://r2.test/current.webp');
+    expect(within(comparison).getByRole('img', { name: 'Copertina proposta' })).toHaveAttribute(
+      'src',
+      'https://r2.test/proposed.webp'
+    );
+    expect(comparison).toHaveTextContent('Proposta, dalla pagina 3 del PDF');
+    expect(screen.getByRole('button', { name: 'Avvia la revisione' })).toBeInTheDocument();
+  });
+
+  it('says what is missing when a cover cannot be shown', async () => {
+    renderDetail(
+      details('CoverChange', 'mine', 'InReview', {
+        coverChange: { proposedCoverUrl: null, currentCoverUrl: null, proposedFromPage: 1 },
+      })
+    );
+
+    const comparison = await screen.findByTestId('cover-comparison');
+    expect(within(comparison).queryByRole('img')).not.toBeInTheDocument();
+    expect(comparison).toHaveTextContent('Copertina attuale non disponibile.');
+    expect(comparison).toHaveTextContent('Anteprima non disponibile.');
+  });
+
+  it('shows no cover comparison for another kind of request', async () => {
+    renderDetail(details('AdditionalContent', 'mine'));
+
+    await screen.findByRole('button', { name: 'Approva' });
+    expect(screen.queryByTestId('cover-comparison')).not.toBeInTheDocument();
   });
 
   it('approves the other types with the generic approve', async () => {

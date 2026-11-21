@@ -78,7 +78,8 @@ export type DocumentPreviewDto = z.infer<typeof DocumentPreviewDtoSchema>;
 
 // Game Details DTO
 export const GameDetailsDtoSchema = z.object({
-  id: z.string().uuid(),
+  // #5098: a game id, and a seeded game's id is not an RFC 4122 UUID (see GameIdString)
+  id: GameIdString,
   title: z.string(),
   // #5076: the review shows the proposed game's year
   yearPublished: z.number().int().nullable(),
@@ -155,6 +156,15 @@ export const AdminShareRequestDtoSchema = z.object({
 
 export type AdminShareRequestDto = z.infer<typeof AdminShareRequestDtoSchema>;
 
+// #5084: what a cover change proposes, next to the game's current cover. Presigned URLs; null on the local storage.
+export const CoverChangeDtoSchema = z.object({
+  proposedCoverUrl: z.string().nullable(),
+  currentCoverUrl: z.string().nullable(),
+  proposedFromPage: z.number().int().positive().nullable(),
+});
+
+export type CoverChangeDto = z.infer<typeof CoverChangeDtoSchema>;
+
 // Share Request Details DTO (for detail page)
 export const ShareRequestDetailsDtoSchema = z.object({
   id: z.string().uuid(),
@@ -183,6 +193,9 @@ export const ShareRequestDetailsDtoSchema = z.object({
   // Timestamps
   createdAt: z.string().datetime({ offset: true }),
   resolvedAt: z.string().datetime({ offset: true }).nullable(),
+
+  // #5084: only for a cover change
+  coverChange: CoverChangeDtoSchema.nullable().optional(),
 });
 
 export type ShareRequestDetailsDto = z.infer<typeof ShareRequestDetailsDtoSchema>;
@@ -229,7 +242,7 @@ export type StartReviewResponse = z.infer<typeof StartReviewResponseSchema>;
 // Backend ApproveShareRequestRequest: { targetSharedGameId?, adminNotes? }. It refuses a NewGameProposal and a
 // CoverChange (409): those go through approve-game-proposal.
 export const ApproveRequestDataSchema = z.object({
-  targetSharedGameId: z.string().uuid().optional(),
+  targetSharedGameId: GameIdString.optional(),
   adminNotes: z.string().max(2000).optional(),
 });
 
@@ -248,7 +261,7 @@ export type ProposalApprovalAction = z.infer<typeof ProposalApprovalActionSchema
 
 export const ApproveGameProposalDataSchema = z.object({
   approvalAction: ProposalApprovalActionSchema,
-  targetSharedGameId: z.string().uuid().nullable().optional(),
+  targetSharedGameId: GameIdString.nullable().optional(),
   adminNotes: z.string().max(1000).optional(),
 });
 
@@ -257,7 +270,7 @@ export type ApproveGameProposalData = z.infer<typeof ApproveGameProposalDataSche
 export const ApproveShareRequestResponseSchema = z.object({
   shareRequestId: z.string().uuid(),
   status: ShareRequestStatusSchema,
-  targetSharedGameId: z.string().uuid().nullable(),
+  targetSharedGameId: GameIdString.nullable(),
   resolvedAt: z.string().datetime({ offset: true }),
 });
 

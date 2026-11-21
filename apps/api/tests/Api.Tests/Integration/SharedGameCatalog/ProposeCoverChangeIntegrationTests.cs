@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ProposeCoverChange;
@@ -8,7 +9,11 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
@@ -18,6 +23,7 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -62,6 +68,13 @@ public sealed class ProposeCoverChangeIntegrationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
+
+        // #5100: domain events delivered inline, as PdfCoverPropagationIntegrationTests does. In the default
+        // OutboxOnly mode PdfCoverGeneratedEvent only lands in the outbox, so a proposal that changes the game
+        // would look harmless here.
+        services.AddSingleton<IOptions<DomainEventOutboxOptions>>(
+            Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
+        services.AddSingleton<ICacheInvalidationRetryPolicy, CacheInvalidationRetryPolicy>();
 
         // Real repositories needed by the command chain under test.
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
@@ -295,6 +308,123 @@ public sealed class ProposeCoverChangeIntegrationTests : IAsyncLifetime
         var keyPattern = $"^covers/{sharedGame.Id:D}/pdf-cover-[0-9a-f]{{32}}$";
         srA.PendingCoverR2Key.Should().MatchRegex(keyPattern);
         srB.PendingCoverR2Key.Should().MatchRegex(keyPattern);
+    }
+
+    /// <summary>
+    /// #5100: the proposal used to mark its page as the PDF's cover, and <c>PdfCoverGeneratedEvent</c> copied that
+    /// key onto the game during the proposal: the approval decided nothing and a rejection undid nothing. With the
+    /// event delivered inline (see <see cref="InitializeAsync"/>), a pending proposal must leave both untouched.
+    /// </summary>
+    [Fact]
+    public async Task Propose_LeavesTheGameAndItsPdfAsTheyWere()
+    {
+        var (userId, game, pdf) = await SeedGameWithPdfAsync("untouched", withCover: true);
+        var original = OriginalCoverKey(pdf.Id);
+
+        using var scope = _serviceProvider.CreateScope();
+        var shareRequestId = await scope.ServiceProvider.GetRequiredService<IMediator>()
+            .Send(new ProposeCoverChangeCommand(userId, game.Id, pdf.Id, PageNumber: 3), CancellationToken.None);
+
+        _dbContext.ChangeTracker.Clear();
+        var gameRow = await _dbContext.Set<SharedGameEntity>().AsNoTracking().SingleAsync(g => g.Id == game.Id);
+        var pdfRow = await _dbContext.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == pdf.Id);
+        var request = await scope.ServiceProvider.GetRequiredService<IShareRequestRepository>().GetByIdAsync(shareRequestId);
+
+        request!.PendingCoverR2Key.Should().NotBe(original, "the proposal renders its own image");
+        gameRow.PdfCoverR2Key.Should().Be(original, "only the approval changes the game's cover");
+        pdfRow.CoverR2Key.Should().Be(original);
+        pdfRow.CoverPageIndex.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Propose_WithAPdfOfAnotherGame_IsRefused()
+    {
+        var (userId, proposedFor, _) = await SeedGameWithPdfAsync("target", withCover: false);
+        var (_, owner, othersPdf) = await SeedGameWithPdfAsync("owner", withCover: true);
+
+        using var scope = _serviceProvider.CreateScope();
+        var act = () => scope.ServiceProvider.GetRequiredService<IMediator>()
+            .Send(new ProposeCoverChangeCommand(userId, proposedFor.Id, othersPdf.Id, PageNumber: 2), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        _dbContext.ChangeTracker.Clear();
+        (await _dbContext.Set<ShareRequestEntity>().AsNoTracking().CountAsync(r => r.TargetSharedGameId == proposedFor.Id))
+            .Should().Be(0);
+        (await _dbContext.Set<SharedGameEntity>().AsNoTracking().SingleAsync(g => g.Id == owner.Id)).PdfCoverR2Key
+            .Should().Be(OriginalCoverKey(othersPdf.Id));
+    }
+
+    [Fact]
+    public async Task Propose_APageThePdfDoesNotHave_IsRefused()
+    {
+        // The builder's Ready PDF has 10 pages.
+        var (userId, game, pdf) = await SeedGameWithPdfAsync("pages", withCover: false);
+
+        using var scope = _serviceProvider.CreateScope();
+        var act = () => scope.ServiceProvider.GetRequiredService<IMediator>()
+            .Send(new ProposeCoverChangeCommand(userId, game.Id, pdf.Id, PageNumber: 11), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+    }
+
+    private static string OriginalCoverKey(Guid pdfId) => $"covers/pdf/{pdfId:D}/cover";
+
+    /// <summary>
+    /// A user, a game and a Ready 10-page PDF of that game; with <paramref name="withCover"/> the PDF already has its
+    /// cover (page 1) and the game shows it, as after the processing pipeline.
+    /// </summary>
+    private async Task<(Guid UserId, SharedGame Game, PdfDocument Pdf)> SeedGameWithPdfAsync(string tag, bool withCover)
+    {
+        var userId = Guid.NewGuid();
+        _dbContext.Set<UserEntity>().Add(new UserEntity
+        {
+            Id = userId,
+            Email = $"propose-cover-{tag}-{userId:N}@test.com",
+            DisplayName = "Propose Cover Test User",
+            Role = "user",
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync(CancellationToken.None);
+        _dbContext.ChangeTracker.Clear();
+
+        var game = SharedGame.Create(
+            title: $"Azul {tag}",
+            yearPublished: 2017,
+            description: "Tile-drafting",
+            minPlayers: 2,
+            maxPlayers: 4,
+            playingTimeMinutes: 45,
+            minAge: 8,
+            complexityRating: 1.8m,
+            averageRating: 7.8m,
+            imageUrl: "https://example.com/azul.jpg",
+            thumbnailUrl: "https://example.com/azul-thumb.jpg",
+            rules: null,
+            createdBy: userId);
+
+        var pdf = new PdfDocumentBuilder()
+            .WithGameId(game.Id)
+            .WithUploadedBy(userId)
+            .WithFilePath($"/uploads/{Guid.NewGuid():D}_rulebook.pdf")
+            .ThatIsCompleted()
+            .Build();
+
+        if (withCover)
+        {
+            pdf.MarkCoverGenerated(OriginalCoverKey(pdf.Id), 0);
+            game.SetPdfCoverR2Key(OriginalCoverKey(pdf.Id));
+        }
+
+        using (var scope = _serviceProvider.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ISharedGameRepository>().AddAsync(game);
+            await scope.ServiceProvider.GetRequiredService<IPdfDocumentRepository>().AddAsync(pdf);
+            await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(CancellationToken.None);
+        }
+
+        _dbContext.ChangeTracker.Clear();
+        return (userId, game, pdf);
     }
 
     /// <summary>

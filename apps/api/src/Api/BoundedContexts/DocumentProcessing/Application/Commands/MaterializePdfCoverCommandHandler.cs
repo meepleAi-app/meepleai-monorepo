@@ -1,4 +1,3 @@
-using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
@@ -45,40 +44,16 @@ internal sealed class MaterializePdfCoverCommandHandler : ICommandHandler<Materi
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Issue #3363: on-demand cover materialization needs the R2 upload pipeline, registered only
-        // when STORAGE_PROVIDER=s3. Fail fast with a clear domain error in local-storage mode.
-        if (_uploadPipeline is null)
-        {
-            throw new CoverMaterializationException(
-                "Materializzazione cover PDF non disponibile: richiede storage S3/R2 (STORAGE_PROVIDER=s3).");
-        }
+        var uploadPipeline = PdfPageCoverRenderer.RequireUploadPipeline(_uploadPipeline);
 
         var pdf = await _repository.GetByIdAsync(command.PdfDocumentId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
 
-        byte[] jpeg;
-        try
-        {
-            jpeg = await _mediator
-                .Send(new GetPdfPageImageQuery(command.PdfDocumentId, command.PageNumber), cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-        {
-            // SmolDocling down/404: non-blocking failure, no "half-generated"
-            // cover state — leave PdfDocument untouched.
-            throw new CoverMaterializationException("Rendering pagina PDF non disponibile.", ex);
-        }
-
-        // The upload pipeline stores this under the {DbKey}-preview.webp physical key that
-        // CoverUrlResolver serves as the L4 preview (600x900). Encode at preview dimensions
-        // so a manually-materialized cover is not a 200x300 thumbnail stretched as a preview.
-        var webpBytes = await _webpVariantGenerator
-            .GenerateWebpAsync(jpeg, PdfCoverExtractor.PreviewWidth, PdfCoverExtractor.PreviewHeight, cancellationToken)
+        var dbKey = await PdfPageCoverRenderer
+            .RenderAndUploadAsync(
+                _mediator, _webpVariantGenerator, uploadPipeline, command.PdfDocumentId, command.PageNumber, command.DbKey,
+                cancellationToken)
             .ConfigureAwait(false);
-
-        // Non-null here: the guard at the top of Handle() throws when _uploadPipeline is null.
-        var dbKey = await _uploadPipeline!.UploadAsync(command.DbKey, webpBytes, cancellationToken).ConfigureAwait(false);
 
         // C1 fix: command.PageNumber is 1-based (render/query contract); PdfDocument.CoverPageIndex
         // is documented and persisted as 0-based (see PdfProcessingPipelineService.cs and

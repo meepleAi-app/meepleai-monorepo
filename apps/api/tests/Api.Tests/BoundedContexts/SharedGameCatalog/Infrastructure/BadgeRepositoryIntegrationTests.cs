@@ -1,9 +1,11 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Constants;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Infrastructure.Seeders.Core;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain;
 using Api.SharedKernel.Domain.Interfaces;
@@ -11,6 +13,7 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 using FluentAssertions;
@@ -125,6 +128,23 @@ public sealed class BadgeRepositoryIntegrationTests : IAsyncLifetime
         result[0].Code.Should().Be("BADGE_2"); // Display order 10, tier Bronze (0)
         result[1].Code.Should().Be("BADGE_3"); // Display order 10, tier Silver (1)
         result[2].Code.Should().Be("BADGE_1"); // Display order 20
+    }
+
+    [Fact]
+    public async Task GetAllActiveAsync_ReadsBackTheRequirementOfEverySeededBadge()
+    {
+        // #5114: BadgeSeeder writes the requirement in camelCase; the repository read it with the default, case
+        // sensitive options, bound no key, and every badge came back as ContributionCount with no threshold.
+        await BadgeSeeder.SeedBadgesAsync(_dbContext, NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        var result = await _repository.GetAllActiveAsync(TestContext.Current.CancellationToken);
+
+        var readBack = result.ToDictionary(b => b.Code, b => b.Requirement, StringComparer.Ordinal);
+        readBack.Keys.Should().BeEquivalentTo(PredefinedBadges.All.Where(b => b.IsActive).Select(b => b.Code));
+        foreach (var badge in PredefinedBadges.All.Where(b => b.IsActive))
+        {
+            readBack[badge.Code].Should().BeEquivalentTo(badge.Requirement, because: badge.Code);
+        }
     }
 
     #endregion

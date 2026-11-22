@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
@@ -64,17 +63,7 @@ internal sealed class BadgeRepository : RepositoryBase, IBadgeRepository
 
     private static Badge MapToDomain(BadgeEntity entity)
     {
-        var requirement = JsonSerializer.Deserialize<BadgeRequirementDto>(entity.RequirementJson)
-            ?? throw new InvalidOperationException($"Failed to deserialize badge requirement for badge {entity.Id}");
-
-        var badgeRequirement = new BadgeRequirement(
-            (BadgeRequirementType)requirement.Type,
-            requirement.MinContributions,
-            requirement.MinDocuments,
-            requirement.MinApprovalRate,
-            requirement.ConsecutiveApprovalsWithoutChanges,
-            requirement.TopContributorRank,
-            requirement.CustomRule);
+        var badgeRequirement = BadgeRequirementJson.Deserialize(entity.RequirementJson, entity.Id);
 
         return new Badge(
             entity.Id,
@@ -92,16 +81,4 @@ internal sealed class BadgeRepository : RepositoryBase, IBadgeRepository
     }
 
     #endregion
-
-    /// <summary>
-    /// DTO for JSON serialization of BadgeRequirement value object.
-    /// </summary>
-    private sealed record BadgeRequirementDto(
-        int Type,
-        int? MinContributions,
-        int? MinDocuments,
-        decimal? MinApprovalRate,
-        int? ConsecutiveApprovalsWithoutChanges,
-        int? TopContributorRank,
-        string? CustomRule);
 }

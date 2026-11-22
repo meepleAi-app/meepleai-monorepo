@@ -45,53 +45,57 @@ internal sealed class RateLimitApproachingHandler : INotificationHandler<ShareRe
                 return;
             }
 
-            // Check if approaching monthly limit (80% threshold)
-            if (status.MonthlyUsagePercent >= WarningThreshold && status.MonthlyUsagePercent < 100)
+            var nearsMonthly = status.MonthlyUsagePercent >= WarningThreshold && status.MonthlyUsagePercent < 100;
+            var nearsPending = status.PendingUsagePercent >= WarningThreshold && status.PendingUsagePercent < 100;
+            if (!nearsMonthly && !nearsPending)
             {
-                await _dispatcher.DispatchAsync(new NotificationMessage
-                {
-                    Type = NotificationType.RateLimitApproaching,
-                    RecipientUserId = notification.UserId,
-                    Payload = new GenericPayload(
-                        "Approaching Monthly Limit",
-                        $"You've used {status.CurrentMonthlyCount} of your {status.EffectiveMaxPerMonth} monthly share requests. " +
-                        $"Your limit resets on {status.MonthResetAt:MMMM d}."),
-                    DeepLinkPath = NotificationRoutes.Contributions,
-                    // Issue #1937 / CF-1: propagate event id for dispatcher dedup
-                    SourceEventId = notification.EventId
-                }, cancellationToken).ConfigureAwait(false);
-
-                _logger.LogInformation(
-                    "Dispatched monthly rate limit warning for user {UserId}: {CurrentCount}/{MaxCount} ({UsagePercent}%)",
-                    notification.UserId,
-                    status.CurrentMonthlyCount,
-                    status.EffectiveMaxPerMonth,
-                    status.MonthlyUsagePercent);
+                return;
             }
 
-            // Check if approaching pending limit (80% threshold)
-            if (status.PendingUsagePercent >= WarningThreshold && status.PendingUsagePercent < 100)
+            // #5112: one warning per event. The dispatcher keeps one notification per (recipient, SourceEventId), so a
+            // second warning for the same event, to the same user, was dropped as a duplicate.
+            var sentences = new List<string>(2);
+            if (nearsMonthly)
             {
-                await _dispatcher.DispatchAsync(new NotificationMessage
-                {
-                    Type = NotificationType.RateLimitApproaching,
-                    RecipientUserId = notification.UserId,
-                    Payload = new GenericPayload(
-                        "Approaching Pending Limit",
-                        $"You have {status.CurrentPendingCount} pending requests. " +
-                        $"You can have up to {status.EffectiveMaxPending} pending at once."),
-                    DeepLinkPath = NotificationRoutes.ContributionsPending,
-                    // Issue #1937 / CF-1: propagate event id for dispatcher dedup
-                    SourceEventId = notification.EventId
-                }, cancellationToken).ConfigureAwait(false);
-
-                _logger.LogInformation(
-                    "Dispatched pending rate limit warning for user {UserId}: {CurrentCount}/{MaxCount} ({UsagePercent}%)",
-                    notification.UserId,
-                    status.CurrentPendingCount,
-                    status.EffectiveMaxPending,
-                    status.PendingUsagePercent);
+                sentences.Add(
+                    $"You've used {status.CurrentMonthlyCount} of your {status.EffectiveMaxPerMonth} monthly share requests. " +
+                    $"Your limit resets on {status.MonthResetAt:MMMM d}.");
             }
+
+            if (nearsPending)
+            {
+                sentences.Add(
+                    $"You have {status.CurrentPendingCount} pending requests. " +
+                    $"You can have up to {status.EffectiveMaxPending} pending at once.");
+            }
+
+            var title = (nearsMonthly, nearsPending) switch
+            {
+                (true, true) => "Approaching Your Limits",
+                (true, false) => "Approaching Monthly Limit",
+                _ => "Approaching Pending Limit",
+            };
+
+            await _dispatcher.DispatchAsync(new NotificationMessage
+            {
+                Type = NotificationType.RateLimitApproaching,
+                RecipientUserId = notification.UserId,
+                Payload = new GenericPayload(title, string.Join(" ", sentences)),
+                // The pending requests are the ones a user can act on now (withdraw, complete): their page wins.
+                DeepLinkPath = nearsPending ? NotificationRoutes.ContributionsPending : NotificationRoutes.Contributions,
+                // Issue #1937 / CF-1: propagate event id for dispatcher dedup
+                SourceEventId = notification.EventId
+            }, cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Dispatched rate limit warning for user {UserId}: monthly {MonthlyCount}/{MonthlyMax} ({MonthlyPercent}%), pending {PendingCount}/{PendingMax} ({PendingPercent}%)",
+                notification.UserId,
+                status.CurrentMonthlyCount,
+                status.EffectiveMaxPerMonth,
+                status.MonthlyUsagePercent,
+                status.CurrentPendingCount,
+                status.EffectiveMaxPending,
+                status.PendingUsagePercent);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out

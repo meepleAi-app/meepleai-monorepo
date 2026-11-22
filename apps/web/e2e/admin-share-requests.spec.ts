@@ -1,366 +1,465 @@
 /**
- * E2E Test: Admin Share Requests Review Workflow - Issue #2745
+ * #5080: the admin review of share requests, on the screen #5076 restored (`/admin/share-requests` and its detail).
+ * The spec it replaces was written for the screen deleted on 2026-02-23: English labels, ids that are not GUIDs, a
+ * «My Reviews» popover, a timer and keyboard shortcuts the new screen does not have.
  *
- * Verifies admin review interface functionality including:
- * - Queue list display with filters
- * - Review lock acquisition and release
- * - Approve/Reject/Request changes actions
- * - Lock conflict handling
+ * The backend is fake and kept in memory (`FakeBackend`, the model of `chat-answer-intent.spec.ts`, #5000): it holds
+ * the requests and their review lock, records every request with its query and body, and fails the spec on any
+ * request to `/api/v1/` that no route serves. The assertions read the recorded requests, not only the screen.
  *
- * Tests cover critical admin workflows for game sharing review.
+ * The traps of a fake backend, from #5000: the calls are relative (`**\/api/v1/...`); the session cookie is trusted
+ * only with `PLAYWRIGHT_AUTH_BYPASS=true`; the responses must pass the Zod schemas, with valid UUIDs; the PWA service
+ * worker dodges `page.route`, so it is blocked.
  */
 
-import { test, expect } from '@playwright/test';
+import { test as base, expect, type Page, type Route } from '@playwright/test';
 
-import { setupMockAuth } from './fixtures/auth';
+import { seedCookieConsent } from './_helpers/seedCookieConsent';
 
-test.describe('Admin Share Requests - Review Workflow', () => {
-  test.beforeEach(async ({ page }) => {
-    await setupMockAuth(page, 'Admin');
-
-    // Navigate to admin share requests queue
-    // Note: Assumes admin authentication is handled by middleware or session
-    await page.goto('/admin/share-requests');
-
-    // Wait for page load
-    await page.waitForLoadState('networkidle');
-  });
-
-  test('should display queue list with share requests', async ({ page }) => {
-    // Verify page heading
-    await expect(page.getByRole('heading', { name: /share request review/i })).toBeVisible();
-
-    // Verify table is visible
-    const table = page.locator('table').first();
-    await expect(table).toBeVisible();
-
-    // Verify table headers
-    await expect(page.getByRole('columnheader', { name: /game/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /contributor/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /status/i })).toBeVisible();
-
-    // Verify at least one request is displayed (MSW provides 3 mock requests)
-    const rows = page.locator('tbody tr');
-    await expect(rows).toHaveCount(3); // MSW mock data has 3 requests
-  });
-
-  test('should filter requests by status', async ({ page }) => {
-    // Open status filter (assuming it's a select or dropdown)
-    const statusFilter = page
-      .getByRole('combobox', { name: /status/i })
-      .or(page.getByLabel(/status/i));
-
-    if (await statusFilter.isVisible()) {
-      await statusFilter.click();
-
-      // Select "Pending" status
-      await page.getByRole('option', { name: /pending/i }).click();
-
-      // Wait for filter to apply
-      await page.waitForTimeout(500);
-
-      // Verify only pending requests are shown
-      const pendingBadges = page.locator('text=/Pending/i');
-      await expect(pendingBadges).toHaveCount(2); // MSW has 2 pending requests
+/** The check that every request had an answer runs in the teardown, which a skipped test never creates. */
+const test = base.extend<{ fakeBackend: (requests: FakeRequest[]) => FakeBackend }>({
+  // eslint-disable-next-line no-empty-pattern -- Playwright fixtures destructure their dependencies; this has none
+  fakeBackend: async ({}, use) => {
+    const created: FakeBackend[] = [];
+    await use(requests => {
+      const backend = new FakeBackend(requests);
+      created.push(backend);
+      return backend;
+    });
+    for (const backend of created) {
+      expect(backend.unserved, 'every request to /api/v1/ has a route in the fake backend').toEqual(
+        []
+      );
     }
-  });
+  },
+});
 
-  test('should filter requests by contribution type', async ({ page }) => {
-    // Open type filter
-    const typeFilter = page
-      .getByRole('combobox', { name: /type|contribution/i })
-      .or(page.getByLabel(/type|contribution/i));
+test.use({ serviceWorkers: 'block' });
+test.skip(
+  ({ browserName, isMobile }) => browserName !== 'chromium' || isMobile,
+  'Chromium desktop only: one run covers the screen'
+);
 
-    if (await typeFilter.isVisible()) {
-      await typeFilter.click();
+const ADMIN_ID = '44444444-4444-4444-8444-444444444444';
+const CONTRIBUTOR_ID = '55555555-5555-4555-8555-555555555555';
+const CATAN_ID = '11111111-1111-4111-8111-111111111111';
+const PROPOSAL_ID = '22222222-2222-4222-8222-222222222222';
+const SHARED_GAME_ID = '33333333-3333-4333-8333-333333333333';
+const PRIVATE_GAME_ID = '66666666-6666-4666-8666-666666666666';
+const EMPTY_GUID = '00000000-0000-0000-0000-000000000000';
+const CREATED_AT = '2026-11-19T10:00:00Z';
 
-      // Select "New Game" type
-      await page.getByRole('option', { name: /new game/i }).click();
+type Lock = 'none' | 'mine' | 'theirs';
 
-      // Wait for filter to apply
-      await page.waitForTimeout(500);
+interface FakeRequest {
+  id: string;
+  title: string;
+  contributionType: 'NewGame' | 'NewGameProposal';
+  status: 'Pending' | 'InReview' | 'ChangesRequested' | 'Approved' | 'Rejected';
+  lock: Lock;
+}
 
-      // Verify only new game requests are shown
-      const newGameBadges = page.locator('text=/New Game/i');
-      await expect(newGameBadges.first()).toBeVisible();
-    }
-  });
+interface RecordedRequest {
+  readonly method: string;
+  readonly path: string;
+  readonly query: URLSearchParams;
+  readonly body: unknown;
+}
 
-  test('should navigate to detail page when review button clicked', async ({ page }) => {
-    // Find first Review button
-    const reviewButton = page.getByRole('button', { name: /review/i }).first();
-    await expect(reviewButton).toBeVisible();
+const catan = (lock: Lock = 'none'): FakeRequest => ({
+  id: CATAN_ID,
+  title: 'Catan',
+  contributionType: 'NewGame',
+  status: lock === 'none' ? 'Pending' : 'InReview',
+  lock,
+});
 
-    // Set up navigation listener BEFORE clicking
-    const navigationPromise = page.waitForURL(/\/admin\/share-requests\/share-req-\d+/);
-    await reviewButton.click();
-    await navigationPromise;
+const proposal = (lock: Lock = 'none'): FakeRequest => ({
+  id: PROPOSAL_ID,
+  title: 'Tile Kingdoms',
+  contributionType: 'NewGameProposal',
+  status: lock === 'none' ? 'Pending' : 'InReview',
+  lock,
+});
 
-    // Verify detail page loaded
-    await expect(page).toHaveURL(/\/admin\/share-requests\/share-req-/);
+/** A review lock still held: the panel stops offering decisions once it passes. */
+const inTwentyMinutes = () => new Date(Date.now() + 20 * 60_000).toISOString();
 
-    // Wait for React navigation
-    await page.waitForTimeout(1000);
+class FakeBackend {
+  readonly requests: RecordedRequest[] = [];
+  readonly unserved: string[] = [];
+  private readonly byId: Map<string, FakeRequest & { lockExpiresAt: string | null }>;
 
-    // Verify detail page elements
-    const detailContent = page.getByRole('heading', { name: /wingspan|terraforming|gloomhaven/i });
-    await expect(
-      detailContent.or(page.locator('text=/wingspan|terraforming|gloomhaven/i'))
-    ).toBeVisible();
-  });
-
-  test('should start review and acquire lock', async ({ page }) => {
-    // Navigate to first pending request detail page
-    await page.goto('/admin/share-requests/share-req-1');
-    await page.waitForLoadState('networkidle');
-
-    // Verify Start Review button is visible
-    const startButton = page.getByRole('button', { name: /start review/i });
-    await expect(startButton).toBeVisible();
-
-    // Set up response listener BEFORE clicking
-    const responsePromise = page.waitForResponse(
-      response => response.url().includes('/start-review') && response.status() === 200
+  constructor(requests: FakeRequest[]) {
+    this.byId = new Map(
+      requests.map(r => [
+        r.id,
+        { ...r, lockExpiresAt: r.lock === 'none' ? null : inTwentyMinutes() },
+      ])
     );
+  }
 
-    // Click Start Review
-    await startButton.click();
+  async install(page: Page): Promise<void> {
+    await seedCookieConsent(page);
+    await page.context().addCookies([
+      { name: 'meepleai_session', value: 'fake-session', domain: 'localhost', path: '/' },
+      { name: 'meepleai_user_role', value: 'admin', domain: 'localhost', path: '/' },
+    ]);
+    await page.route('**/api/v1/**', route => this.handle(route));
+  }
 
-    // Wait for API response
-    await responsePromise;
+  /** The requests to one path, in order. */
+  sent(method: string, path: string): RecordedRequest[] {
+    return this.requests.filter(r => r.method === method && r.path === path);
+  }
 
-    // Wait for UI update
-    await page.waitForTimeout(1000);
+  private listItem(r: FakeRequest & { lockExpiresAt: string | null }) {
+    return {
+      id: r.id,
+      status: r.status,
+      contributionType: r.contributionType,
+      sourceGameId: r.contributionType === 'NewGameProposal' ? EMPTY_GUID : SHARED_GAME_ID,
+      gameTitle: r.title,
+      gameThumbnailUrl: null,
+      bggId: null,
+      userId: CONTRIBUTOR_ID,
+      userName: 'Ada',
+      userAvatarUrl: null,
+      userTotalContributions: 1,
+      userNotes: null,
+      attachedDocumentCount: 0,
+      createdAt: CREATED_AT,
+      isInReview: r.lock !== 'none',
+      reviewingAdminId: r.lock === 'none' ? null : ADMIN_ID,
+      reviewingAdminName:
+        r.lock === 'theirs' ? 'Grace' : r.lock === 'mine' ? 'Admin di prova' : null,
+      reviewStartedAt: r.lock === 'none' ? null : CREATED_AT,
+      reviewLockExpiresAt: r.lockExpiresAt,
+      canStartReview: r.lock === 'none',
+      targetSharedGameId: null,
+      targetSharedGameTitle: null,
+    };
+  }
 
-    // Verify lock timer appears
-    const timer = page.locator('text=/remaining|minutes/i');
-    await expect(timer.or(page.locator('text=/min|sec/i'))).toBeVisible();
+  private details(r: FakeRequest & { lockExpiresAt: string | null }) {
+    return {
+      id: r.id,
+      status: r.status,
+      contributionType: r.contributionType,
+      sourceGame: {
+        id: r.contributionType === 'NewGameProposal' ? PRIVATE_GAME_ID : SHARED_GAME_ID,
+        title: r.title,
+        yearPublished: 2021,
+        description: 'Un gioco di tessere.',
+        thumbnailUrl: null,
+        bggId: null,
+        minPlayers: 2,
+        maxPlayers: 4,
+        playingTime: 45,
+        complexity: null,
+        categories: [],
+        mechanisms: [],
+      },
+      targetSharedGame: null,
+      contributor: {
+        userId: CONTRIBUTOR_ID,
+        userName: 'Ada',
+        avatarUrl: null,
+        joinedAt: '2026-01-01T00:00:00Z',
+        totalContributions: 1,
+        approvedContributions: 0,
+        approvalRate: 0,
+        badges: [],
+      },
+      userNotes: 'Aggiungetelo, per favore',
+      attachedDocuments: [],
+      history: [],
+      lockStatus: {
+        isLocked: r.lock !== 'none',
+        isLockedByCurrentAdmin: r.lock === 'mine',
+        lockedByAdminId: r.lock === 'none' ? null : ADMIN_ID,
+        lockedByAdminName:
+          r.lock === 'theirs' ? 'Grace' : r.lock === 'mine' ? 'Admin di prova' : null,
+        lockExpiresAt: r.lockExpiresAt,
+      },
+      createdAt: CREATED_AT,
+      resolvedAt:
+        r.status === 'Approved' || r.status === 'Rejected' ? '2026-11-19T11:00:00Z' : null,
+      coverChange: null,
+    };
+  }
 
-    // Verify Release Review button appears
-    const releaseButton = page.getByRole('button', { name: /release review/i });
-    await expect(releaseButton).toBeVisible();
-  });
+  private resolve(
+    r: FakeRequest & { lockExpiresAt: string | null },
+    status: FakeRequest['status']
+  ) {
+    r.status = status;
+    r.lock = 'none';
+    r.lockExpiresAt = null;
+  }
 
-  test('should release review and unlock request', async ({ page }) => {
-    // Navigate to request that's already in review
-    await page.goto('/admin/share-requests/share-req-2');
-    await page.waitForLoadState('networkidle');
+  private async handle(route: Route): Promise<void> {
+    const request = route.request();
+    const url = new URL(request.url());
+    const method = request.method();
+    let body: unknown = null;
+    try {
+      body = request.postDataJSON();
+    } catch {
+      body = request.postData();
+    }
+    this.requests.push({ method, path: url.pathname, query: url.searchParams, body });
 
-    // Verify Release Review button is visible (req-2 is already locked by current admin in MSW)
-    const releaseButton = page.getByRole('button', { name: /release review/i });
+    const json = (status: number, payload: unknown) =>
+      route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(payload) });
+    const at = (m: string, path: string) => method === m && url.pathname === path;
+    const base = '/api/v1/admin/share-requests';
 
-    // If not visible, start review first
-    const startButton = page.getByRole('button', { name: /start review/i });
-    if (await startButton.isVisible()) {
-      await startButton.click();
-      await page.waitForTimeout(1000);
+    if (at('GET', '/api/v1/auth/me')) {
+      return json(200, {
+        user: {
+          id: ADMIN_ID,
+          email: 'admin@meepleai.dev',
+          displayName: 'Admin di prova',
+          role: 'Admin',
+          onboardingCompleted: true,
+          onboardingSkipped: false,
+          emailVerified: true,
+        },
+        expiresAt: '2099-01-01T00:00:00Z',
+      });
+    }
+    if (at('GET', '/api/v1/auth/session/status')) {
+      return json(200, {
+        expiresAt: '2099-01-01T00:00:00Z',
+        lastSeenAt: null,
+        remainingMinutes: 60,
+      });
+    }
+    if (at('GET', '/api/v1/status-banner')) {
+      return route.fulfill({ status: 204 });
+    }
+    // The PDF notifier of the admin layout (PdfProcessingNotifier): not under test. A 204 tells an EventSource to stop.
+    if (at('GET', '/api/v1/admin/queue/stream')) {
+      return route.fulfill({ status: 204 });
     }
 
-    // Now release
-    await expect(releaseButton).toBeVisible();
+    if (at('GET', base)) {
+      const status = url.searchParams.get('status');
+      const type = url.searchParams.get('type');
+      const search = url.searchParams.get('search')?.toLowerCase();
+      const items = [...this.byId.values()]
+        .filter(r => !status || r.status === status)
+        .filter(r => !type || r.contributionType === type)
+        .filter(r => !search || r.title.toLowerCase().includes(search))
+        .map(r => this.listItem(r));
+      return json(200, { items, total: items.length, page: 1, pageSize: 20 });
+    }
 
-    // Set up response listener
-    const responsePromise = page.waitForResponse(
-      response => response.url().includes('/release-review') && response.status() === 200
+    const match = /^\/api\/v1\/admin\/share-requests\/([0-9a-f-]{36})(?:\/([a-z-]+))?$/.exec(
+      url.pathname
     );
+    const target = match ? this.byId.get(match[1]) : undefined;
+    if (match && target) {
+      const action = match[2];
+      if (method === 'GET' && !action) {
+        return json(200, this.details(target));
+      }
+      if (method === 'POST' && action === 'start-review') {
+        target.lock = 'mine';
+        target.status = 'InReview';
+        target.lockExpiresAt = inTwentyMinutes();
+        return json(200, { shareRequestId: target.id, lockExpiresAt: target.lockExpiresAt });
+      }
+      if (method === 'POST' && action === 'release') {
+        target.lock = 'none';
+        target.status = 'Pending';
+        target.lockExpiresAt = null;
+        return route.fulfill({ status: 204 });
+      }
+      if (method === 'POST' && action === 'approve') {
+        this.resolve(target, 'Approved');
+        return json(200, {
+          shareRequestId: target.id,
+          status: 'Approved',
+          targetSharedGameId: SHARED_GAME_ID,
+          resolvedAt: '2026-11-19T11:00:00Z',
+        });
+      }
+      if (method === 'POST' && action === 'approve-game-proposal') {
+        this.resolve(target, 'Approved');
+        return json(200, {
+          shareRequestId: target.id,
+          status: 'Approved',
+          targetSharedGameId: SHARED_GAME_ID,
+          resolvedAt: '2026-11-19T11:00:00Z',
+        });
+      }
+      if (method === 'POST' && action === 'reject') {
+        this.resolve(target, 'Rejected');
+        return route.fulfill({ status: 204 });
+      }
+      if (method === 'POST' && action === 'request-changes') {
+        this.resolve(target, 'ChangesRequested');
+        return route.fulfill({ status: 204 });
+      }
+    }
 
-    await releaseButton.click();
-    await responsePromise;
+    this.unserved.push(`${method} ${url.pathname}${url.search}`);
+    return json(404, { error: 'not served by the fake backend' });
+  }
+}
 
-    // Wait for UI update
-    await page.waitForTimeout(1000);
+/** The query of a request to the list, or undefined for any other request. */
+const listQuery = (href: string): URLSearchParams | undefined => {
+  const url = new URL(href);
+  return url.pathname === '/api/v1/admin/share-requests' ? url.searchParams : undefined;
+};
 
-    // Verify Start Review button returns
-    await expect(page.getByRole('button', { name: /start review/i })).toBeVisible();
+async function openQueue(page: Page, backend: FakeBackend): Promise<void> {
+  await backend.install(page);
+  await page.goto('/admin/share-requests');
+  // The first visit compiles the page under `next dev`.
+  await expect(page.getByRole('columnheader', { name: 'Gioco' })).toBeVisible({ timeout: 90_000 });
+}
+
+async function openReview(page: Page, backend: FakeBackend, id: string): Promise<void> {
+  await backend.install(page);
+  await page.goto(`/admin/share-requests/${id}`);
+  await expect(page.getByText('Revisione', { exact: true })).toBeVisible({ timeout: 90_000 });
+}
+
+test.describe('Admin share requests (#5076 screen)', () => {
+  test('the queue lists the requests and sends its filters to the backend', async ({
+    page,
+    fakeBackend,
+  }) => {
+    const backend = fakeBackend([catan(), proposal()]);
+    await openQueue(page, backend);
+
+    for (const header of ['Gioco', 'Tipo', 'Contributore', 'Stato', 'Creata il']) {
+      await expect(page.getByRole('columnheader', { name: header })).toBeVisible();
+    }
+    const rows = page.locator('table tbody tr');
+    await expect(rows).toHaveCount(2);
+
+    // The list moves through loading states between filters: wait for the request that carries the filter, then
+    // read the rows its answer leaves on the screen.
+    const byType = page.waitForRequest(r => listQuery(r.url())?.get('type') === 'NewGameProposal');
+    await page.getByRole('combobox', { name: 'Tipo' }).click();
+    await page.getByRole('option', { name: 'Proposta di gioco privato' }).click();
+    await byType;
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('Tile Kingdoms');
+
+    await page.getByRole('combobox', { name: 'Tipo' }).click();
+    await page.getByRole('option', { name: 'Tutti i tipi' }).click();
+    await expect(rows).toHaveCount(2);
+
+    const bySearch = page.waitForRequest(r => listQuery(r.url())?.get('search') === 'Catan');
+    await page.getByLabel('Cerca per gioco o note').fill('Catan');
+    const searched = listQuery((await bySearch).url());
+    expect(searched?.get('pageNumber')).toBe('1');
+    expect(searched?.get('type')).toBeNull();
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('Catan');
   });
 
-  test('should approve request with admin notes', async ({ page }) => {
-    // Navigate to pending request
-    await page.goto('/admin/share-requests/share-req-1');
-    await page.waitForLoadState('networkidle');
+  test('a row opens the review of its request', async ({ page, fakeBackend }) => {
+    const backend = fakeBackend([catan()]);
+    await openQueue(page, backend);
 
-    // Start review first
-    const startButton = page.getByRole('button', { name: /start review/i });
-    if (await startButton.isVisible()) {
-      await startButton.click();
-      await page.waitForTimeout(1000);
-    }
+    await page.getByRole('link', { name: 'Catan' }).click();
 
-    // Find and click Approve button
-    const approveButton = page.getByRole('button', { name: /approve/i });
-    await expect(approveButton).toBeVisible();
-    await approveButton.click();
+    await expect(page).toHaveURL(`/admin/share-requests/${CATAN_ID}`);
+    await expect(page.getByRole('button', { name: 'Avvia la revisione' })).toBeVisible();
+  });
 
-    // Wait for confirmation dialog
-    await page.waitForTimeout(500);
+  test('the review is taken, then released', async ({ page, fakeBackend }) => {
+    const backend = fakeBackend([catan()]);
+    await openReview(page, backend, CATAN_ID);
 
-    // Check for confirmation dialog or notes input
-    const notesInput = page
-      .getByLabel(/notes|comment/i)
-      .or(page.getByPlaceholder(/notes|comment/i));
+    await page.getByRole('button', { name: 'Avvia la revisione' }).click();
+    await expect(page.getByRole('button', { name: 'Rilascia' })).toBeVisible();
+    expect(
+      backend.sent('POST', `/api/v1/admin/share-requests/${CATAN_ID}/start-review`)
+    ).toHaveLength(1);
 
-    if (await notesInput.isVisible()) {
-      await notesInput.fill('Looks great! Approved for catalog.');
-    }
-
-    // Confirm approval
-    const confirmButton = page.getByRole('button', { name: /confirm|approve/i }).last();
-
-    // Set up response listener
-    const responsePromise = page.waitForResponse(
-      response => response.url().includes('/approve') && response.status() === 200
+    await page.getByRole('button', { name: 'Rilascia' }).click();
+    await expect(page.getByRole('button', { name: 'Avvia la revisione' })).toBeVisible();
+    expect(backend.sent('POST', `/api/v1/admin/share-requests/${CATAN_ID}/release`)).toHaveLength(
+      1
     );
-
-    await confirmButton.click();
-    await responsePromise;
-
-    // Wait for success message or redirect
-    await page.waitForTimeout(1000);
-
-    // Verify success (check for success message or redirect to queue)
-    const successMessage = page.locator('text=/approved|success/i');
-    await expect(successMessage.or(page).first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('should reject request with reason', async ({ page }) => {
-    // Navigate to pending request
-    await page.goto('/admin/share-requests/share-req-3');
-    await page.waitForLoadState('networkidle');
+  test('an approval sends the admin notes', async ({ page, fakeBackend }) => {
+    const backend = fakeBackend([catan('mine')]);
+    await openReview(page, backend, CATAN_ID);
 
-    // Start review first
-    const startButton = page.getByRole('button', { name: /start review/i });
-    if (await startButton.isVisible()) {
-      await startButton.click();
-      await page.waitForTimeout(1000);
-    }
+    await page.getByLabel("Note dell'admin (facoltative)").fill('Benvenuto nel catalogo');
+    await page.getByRole('button', { name: 'Approva', exact: true }).click();
 
-    // Find and click Reject button
-    const rejectButton = page.getByRole('button', { name: /reject/i });
-    await expect(rejectButton).toBeVisible();
-    await rejectButton.click();
+    await expect(page.getByRole('button', { name: 'Approva', exact: true })).toHaveCount(0);
+    expect(
+      backend.sent('POST', `/api/v1/admin/share-requests/${CATAN_ID}/approve`).map(r => r.body)
+    ).toEqual([{ adminNotes: 'Benvenuto nel catalogo' }]);
+  });
 
-    // Wait for dialog
-    await page.waitForTimeout(500);
+  test('a rejection sends its reason', async ({ page, fakeBackend }) => {
+    const backend = fakeBackend([catan('mine')]);
+    await openReview(page, backend, CATAN_ID);
 
-    // Fill rejection reason (required field)
-    const reasonInput = page.getByLabel(/reason/i).or(page.getByPlaceholder(/reason/i));
-    await expect(reasonInput).toBeVisible();
-    await reasonInput.fill(
-      'Incomplete documentation. Please provide rulebook and quick reference.'
+    await page.getByLabel('Motivo del rifiuto').fill('È già nel catalogo con un altro nome.');
+    await page.getByRole('button', { name: 'Rifiuta' }).click();
+
+    await expect(page.getByRole('button', { name: 'Rifiuta' })).toHaveCount(0);
+    expect(
+      backend.sent('POST', `/api/v1/admin/share-requests/${CATAN_ID}/reject`).map(r => r.body)
+    ).toEqual([{ reason: 'È già nel catalogo con un altro nome.' }]);
+  });
+
+  test('changes are asked with their feedback', async ({ page, fakeBackend }) => {
+    const backend = fakeBackend([catan('mine')]);
+    await openReview(page, backend, CATAN_ID);
+
+    await page.getByLabel('Cosa deve cambiare').fill('Serve la scheda del regolamento.');
+    await page.getByRole('button', { name: 'Chiedi modifiche' }).click();
+
+    await expect(page.getByRole('button', { name: 'Chiedi modifiche' })).toHaveCount(0);
+    expect(
+      backend
+        .sent('POST', `/api/v1/admin/share-requests/${CATAN_ID}/request-changes`)
+        .map(r => r.body)
+    ).toEqual([{ feedback: 'Serve la scheda del regolamento.' }]);
+  });
+
+  test("a request under another admin's review offers no decision", async ({
+    page,
+    fakeBackend,
+  }) => {
+    const backend = fakeBackend([catan('theirs')]);
+    await openReview(page, backend, CATAN_ID);
+
+    await expect(page.getByText(/In revisione da Grace/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Avvia la revisione' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Approva', exact: true })).toHaveCount(0);
+  });
+
+  test('a proposal is approved as a new game', async ({ page, fakeBackend }) => {
+    const backend = fakeBackend([proposal('mine')]);
+    await openReview(page, backend, PROPOSAL_ID);
+
+    await page.getByRole('button', { name: 'Approva la proposta' }).click();
+
+    await expect(page.getByRole('button', { name: 'Approva la proposta' })).toHaveCount(0);
+    const sent = backend.sent(
+      'POST',
+      `/api/v1/admin/share-requests/${PROPOSAL_ID}/approve-game-proposal`
     );
-
-    // Confirm rejection
-    const confirmButton = page.getByRole('button', { name: /confirm|reject/i }).last();
-
-    // Set up response listener
-    const responsePromise = page.waitForResponse(
-      response => response.url().includes('/reject') && response.status() === 200
-    );
-
-    await confirmButton.click();
-    await responsePromise;
-
-    // Wait for success message or redirect
-    await page.waitForTimeout(1000);
-
-    // Verify success
-    const successMessage = page.locator('text=/rejected|success/i');
-    await expect(successMessage.or(page).first()).toBeVisible({ timeout: 5000 });
-  });
-
-  test('should request changes with feedback', async ({ page }) => {
-    // Navigate to pending request
-    await page.goto('/admin/share-requests/share-req-1');
-    await page.waitForLoadState('networkidle');
-
-    // Start review first
-    const startButton = page.getByRole('button', { name: /start review/i });
-    if (await startButton.isVisible()) {
-      await startButton.click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Find and click Request Changes button
-    const requestChangesButton = page.getByRole('button', { name: /request changes|changes/i });
-    await expect(requestChangesButton).toBeVisible();
-    await requestChangesButton.click();
-
-    // Wait for dialog
-    await page.waitForTimeout(500);
-
-    // Fill feedback (required field)
-    const feedbackInput = page
-      .getByLabel(/feedback|changes/i)
-      .or(page.getByPlaceholder(/feedback|changes/i));
-    await expect(feedbackInput).toBeVisible();
-    await feedbackInput.fill('Please add FAQ section and clarify setup rules.');
-
-    // Confirm request changes
-    const confirmButton = page.getByRole('button', { name: /confirm|submit|send/i }).last();
-
-    // Set up response listener
-    const responsePromise = page.waitForResponse(
-      response => response.url().includes('/request-changes') && response.status() === 200
-    );
-
-    await confirmButton.click();
-    await responsePromise;
-
-    // Wait for success message or redirect
-    await page.waitForTimeout(1000);
-
-    // Verify success
-    const successMessage = page.locator('text=/changes requested|success|sent/i');
-    await expect(successMessage.or(page).first()).toBeVisible({ timeout: 5000 });
-  });
-
-  test('should show lock conflict when request is locked by another admin', async ({ page }) => {
-    // Request share-req-2 is already locked by admin-1 in MSW mock data
-    await page.goto('/admin/share-requests/share-req-2');
-    await page.waitForLoadState('networkidle');
-
-    // Verify locked status badge is shown
-    const lockedBadge = page.locator('text=/in review|locked|being reviewed/i');
-    await expect(lockedBadge.first()).toBeVisible();
-
-    // Verify locked by admin name is shown
-    const adminName = page.locator('text=/Admin User/i');
-    await expect(adminName.first()).toBeVisible();
-
-    // Verify action buttons are disabled or not visible
-    const approveButton = page.getByRole('button', { name: /approve/i });
-    const isDisabled = await approveButton.isDisabled().catch(() => true);
-    const isHidden = !(await approveButton.isVisible());
-
-    expect(isDisabled || isHidden).toBe(true);
-  });
-
-  test('should work on mobile viewport', async ({ page }) => {
-    // Set mobile viewport
-    await page.setViewportSize({ width: 375, height: 667 }); // iPhone SE
-
-    await page.goto('/admin/share-requests');
-    await page.waitForLoadState('networkidle');
-
-    // Verify page renders without errors
-    await expect(page.locator('body')).toBeVisible();
-
-    // Verify queue list is visible (may have responsive layout)
-    const heading = page.getByRole('heading', { name: /share request/i });
-    await expect(heading.or(page.locator('text=/share request/i'))).toBeVisible();
-
-    // Verify can navigate to detail page
-    const reviewButton = page
-      .getByRole('button', { name: /review/i })
-      .first()
-      .or(page.locator('text=/review/i').first());
-
-    if (await reviewButton.isVisible()) {
-      await reviewButton.click();
-      await page.waitForTimeout(1000);
-
-      // Verify detail page loaded
-      await expect(page.locator('body')).toBeVisible();
-    }
+    expect(sent).toHaveLength(1);
+    expect(sent[0].body).toMatchObject({ approvalAction: 'ApproveAsNew' });
+    expect(
+      backend.sent('POST', `/api/v1/admin/share-requests/${PROPOSAL_ID}/approve`)
+    ).toHaveLength(0);
   });
 });

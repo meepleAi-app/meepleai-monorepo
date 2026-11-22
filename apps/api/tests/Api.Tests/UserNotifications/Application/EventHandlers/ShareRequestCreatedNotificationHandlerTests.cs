@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -24,6 +25,7 @@ public sealed class ShareRequestCreatedNotificationHandlerTests
     private readonly Mock<IUserRepository> _userRepo;
     private readonly Mock<IShareRequestRepository> _shareRequestRepo;
     private readonly Mock<ISharedGameRepository> _sharedGameRepo;
+    private readonly Mock<IPrivateGameRepository> _privateGameRepo = new();
     private readonly MeepleAiDbContext _dbContext;
     private readonly ShareRequestCreatedNotificationHandler _sut;
 
@@ -44,7 +46,7 @@ public sealed class ShareRequestCreatedNotificationHandlerTests
             _dispatcher.Object,
             _userRepo.Object,
             _shareRequestRepo.Object,
-            _sharedGameRepo.Object,
+            _sharedGameRepo.Object, _privateGameRepo.Object,
             new Mock<ILogger<ShareRequestCreatedNotificationHandler>>().Object);
     }
 

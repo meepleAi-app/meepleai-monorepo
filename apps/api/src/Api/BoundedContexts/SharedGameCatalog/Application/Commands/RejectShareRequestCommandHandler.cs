@@ -57,7 +57,7 @@ internal sealed class RejectShareRequestCommandHandler : ICommandHandler<RejectS
             "Share request {ShareRequestId} rejected. Reason: {Reason}",
             shareRequest.Id, command.Reason);
 
-        // Domain event ShareRequestRejectedEvent is dispatched automatically
+        // ShareRequestRejectedEvent: the repository collects it and SaveChangesAsync hands it to its handlers (#5078).
 
         return new RejectShareRequestResponse(
             shareRequest.Id,

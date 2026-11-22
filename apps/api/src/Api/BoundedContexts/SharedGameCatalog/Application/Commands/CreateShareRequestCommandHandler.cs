@@ -140,7 +140,7 @@ internal sealed class CreateShareRequestCommandHandler : ICommandHandler<CreateS
             "Share request {ShareRequestId} created successfully. Type: {ContributionType}, Status: {Status}",
             shareRequest.Id, contributionType, shareRequest.Status);
 
-        // Domain event ShareRequestCreatedEvent is dispatched automatically via AggregateRoot
+        // ShareRequestCreatedEvent: the repository collects it and SaveChangesAsync hands it to its handlers (#5078).
 
         return new CreateShareRequestResponse(
             shareRequest.Id,

@@ -1,5 +1,5 @@
-using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Constants;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +14,6 @@ namespace Api.Infrastructure.Seeders.Core;
 /// </summary>
 internal static class BadgeSeeder
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     /// <summary>
     /// Seeds all predefined badges from the PredefinedBadges constant.
     /// </summary>
@@ -63,7 +58,7 @@ internal static class BadgeSeeder
                     Category = (int)badge.Category,
                     IsActive = badge.IsActive,
                     DisplayOrder = badge.DisplayOrder,
-                    RequirementJson = SerializeBadgeRequirement(badge.Requirement),
+                    RequirementJson = BadgeRequirementJson.Serialize(badge.Requirement),
                     CreatedAt = badge.CreatedAt,
                     ModifiedAt = badge.ModifiedAt
                 };
@@ -86,31 +81,4 @@ internal static class BadgeSeeder
         logger.LogInformation("🌱 Badge seed completed: {Seeded} seeded, {Skipped} skipped",
             seededCount, skippedCount);
     }
-
-    private static string SerializeBadgeRequirement(
-        BoundedContexts.SharedGameCatalog.Domain.ValueObjects.BadgeRequirement requirement)
-    {
-        var dto = new BadgeRequirementDto(
-            (int)requirement.Type,
-            requirement.MinContributions,
-            requirement.MinDocuments,
-            requirement.MinApprovalRate,
-            requirement.ConsecutiveApprovalsWithoutChanges,
-            requirement.TopContributorRank,
-            requirement.CustomRule);
-
-        return JsonSerializer.Serialize(dto, JsonOptions);
-    }
-
-    /// <summary>
-    /// DTO for JSON serialization of BadgeRequirement value object.
-    /// </summary>
-    private sealed record BadgeRequirementDto(
-        int Type,
-        int? MinContributions,
-        int? MinDocuments,
-        decimal? MinApprovalRate,
-        int? ConsecutiveApprovalsWithoutChanges,
-        int? TopContributorRank,
-        string? CustomRule);
 }

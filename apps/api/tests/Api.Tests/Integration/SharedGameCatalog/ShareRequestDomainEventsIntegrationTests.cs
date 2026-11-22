@@ -11,6 +11,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Infrastructure.Entities.UserNotifications;
+using Api.Infrastructure.Seeders.Core;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -23,6 +24,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -152,12 +154,15 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
     public async Task AnApprovalDeliveredAgainByTheOutbox_ChangesNothing()
     {
         var (userId, adminId) = await SeedUserAndAdminAsync();
+        await SeedBadgesAsync();
         var (privateGameId, _) = await SeedPrivateGameAsync(userId);
         var proposal = ShareRequest.CreateGameProposal(userId, privateGameId);
         proposal.AttachDocument(Guid.NewGuid(), "regolamento-5078.pdf", "application/pdf", 2048);
         var requestId = await SaveNewAsync(proposal);
         await UpdateAsync(requestId, r => r.StartReview(adminId));
         var sharedGameId = await ApproveAsNewAsync(requestId, adminId);
+        // #5114: the user's first approved request; BadgeEvaluator could not read a seeded requirement before.
+        (await BadgeCodesAsync(userId)).Should().Equal("FIRST_CONTRIBUTION");
 
         // Hybrid delivers the event inline and leaves its outbox row for the processor: deliver that row the way the
         // processor does (DomainEventOutboxProcessor), from its JSON.
@@ -166,8 +171,7 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
         (await MigrationsAsync(requestId)).Should().ContainSingle();
         (await NotificationsAsync(userId, "share_request_approved")).Should().ContainSingle();
         VerifyDocumentCopies(sharedGameId, Times.Once());
-        // No badge count: BadgeEvaluator cannot read a seeded badge's requirement (#5114), so no badge is awarded and
-        // a count would stay equal for nothing.
+        (await BadgeCodesAsync(userId)).Should().Equal("FIRST_CONTRIBUTION");
     }
 
     private async Task<(Guid UserId, Guid AdminId)> SeedUserAndAdminAsync()
@@ -177,6 +181,24 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
         var (userId, _) = await TestSessionHelper.CreateUserSessionAsync(db, cancellationToken: Ct);
         var (adminId, _) = await TestSessionHelper.CreateAdminSessionAsync(db, cancellationToken: Ct);
         return (userId, adminId);
+    }
+
+    private async Task SeedBadgesAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        // Idempotent: the badges BadgeEvaluationOnApprovalHandler awards, as production seeds them.
+        await BadgeSeeder.SeedBadgesAsync(
+            scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>(), NullLogger.Instance, Ct);
+    }
+
+    private async Task<List<string>> BadgeCodesAsync(Guid userId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.UserBadges.AsNoTracking()
+            .Where(ub => ub.UserId == userId)
+            .Join(db.Badges, ub => ub.BadgeId, b => b.Id, (_, b) => b.Code)
+            .ToListAsync(Ct);
     }
 
     private async Task<(Guid Id, string Title)> SeedPrivateGameAsync(Guid ownerId)

@@ -14,10 +14,23 @@ namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 /// <summary>
 /// Event handler that creates celebratory notifications when users earn badges.
 /// Dispatches via NotificationDispatcher for multi-channel delivery (in-app, email, Slack).
-/// ISSUE-2741: Badge earned notification system.
+/// ISSUE-2741: Badge earned notification system; a milestone badge adds its own celebration.
 /// </summary>
+/// <remarks>
+/// #5110: the milestone celebration used to be a second handler of the same event. Both dispatched with the event's
+/// id as SourceEventId, the dispatcher keeps one notification per (user, SourceEventId), and which of the two survived
+/// depended on the order MediatR ran them in. One notification, with the milestone text when there is one.
+/// </remarks>
 internal sealed class BadgeEarnedNotificationHandler : INotificationHandler<BadgeEarnedEvent>
 {
+    private static readonly HashSet<string> MilestoneBadgeCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CONTRIBUTOR_50",
+        "CONTRIBUTOR_100",
+        "FIRST_CONTRIBUTION",
+        "COMMUNITY_CHAMPION"
+    };
+
     private readonly INotificationDispatcher _dispatcher;
     private readonly IBadgeRepository _badgeRepository;
     private readonly MeepleAiDbContext _dbContext;
@@ -73,7 +86,9 @@ internal sealed class BadgeEarnedNotificationHandler : INotificationHandler<Badg
                 Payload = new BadgePayload(
                     notification.BadgeId,
                     badge.Name,
-                    badge.Description),
+                    MilestoneBadgeCodes.Contains(notification.BadgeCode)
+                        ? $"{badge.Description} {GetMilestoneMessage(notification.BadgeCode)}"
+                        : badge.Description),
                 DeepLinkPath = NotificationRoutes.UserBadges,
                 // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                 SourceEventId = notification.EventId
@@ -96,4 +111,13 @@ internal sealed class BadgeEarnedNotificationHandler : INotificationHandler<Badg
         }
 #pragma warning restore CA1031
     }
+
+    private static string GetMilestoneMessage(string badgeCode) => badgeCode.ToUpperInvariant() switch
+    {
+        "FIRST_CONTRIBUTION" => "Welcome to the MeepleAI community! Your first contribution is the beginning of an amazing journey.",
+        "CONTRIBUTOR_50" => "50 contributions is a remarkable achievement! You're in the top tier of contributors.",
+        "CONTRIBUTOR_100" => "100 contributions! You're a true legend of the MeepleAI community!",
+        "COMMUNITY_CHAMPION" => "You've shown exceptional dedication to the community. Thank you for your contributions!",
+        _ => "Congratulations on this amazing milestone!"
+    };
 }

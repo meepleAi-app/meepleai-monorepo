@@ -84,6 +84,32 @@ describe('GameChatTab', () => {
     expect(screen.getByRole('status')).toHaveAttribute('data-tier', 'alta');
   });
 
+  it('keeps the question box disabled while the answer streams, and frees it at the end', async () => {
+    // #5062: the E2E spec of the streaming (agent/chat-streaming.spec.ts) is gone with the routes it used; this is
+    // the one behaviour of it no other test asserted on the game chat.
+    let finish!: () => void;
+    const finished = new Promise<void>(resolve => {
+      finish = resolve;
+    });
+    async function* gatedStream() {
+      yield { type: 7, data: 'Sì, ' };
+      await finished;
+      yield { type: 4, data: { confidence: 0.92, Citations: [] } };
+    }
+    vi.mocked(qaStream).mockReturnValueOnce(gatedStream() as any);
+    render(<GameChatTab gameId="wingspan" />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+
+    // The answer is shown once it is complete: while the stream waits, the box stays disabled.
+    await waitFor(() => expect(screen.getByRole('textbox')).toBeDisabled());
+    expect(screen.queryByText(/Sì,/)).not.toBeInTheDocument();
+
+    finish();
+    await waitFor(() => expect(screen.getByText(/Sì,/)).toBeInTheDocument());
+    expect(screen.getByRole('textbox')).toBeEnabled();
+  });
+
   it('low confidence path: shows disclaimer + bassa badge', async () => {
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(lowConfEvents) as any);
     render(<GameChatTab gameId="wingspan" />);

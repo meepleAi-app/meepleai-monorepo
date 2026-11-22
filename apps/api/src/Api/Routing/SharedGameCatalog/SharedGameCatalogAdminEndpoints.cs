@@ -385,6 +385,14 @@ internal static class SharedGameCatalogAdminEndpoints
             .WithSummary("Get active documents for a game (Admin/Editor)")
             .Produces<List<SharedGameDocumentDto>>();
 
+        // KB cards of a game (Issue #4925). #5104: removed by 5e87855474 the day it was added, while the query, its
+        // handler and KbCardDto stayed and the admin game page kept calling it (404 on every visit).
+        group.MapGet("/admin/shared-games/{id:guid}/kb-cards", HandleGetSharedGameKbCards)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetSharedGameKbCards")
+            .WithSummary("Get vector KB cards for shared game (Admin/Editor)")
+            .Produces<IReadOnlyList<KbCardDto>>();
+
         group.MapPost("/admin/shared-games/{id:guid}/documents", HandleAddDocument)
             .RequireAuthorization("AdminOrEditorPolicy")
             .WithName("AddGameDocument")
@@ -1440,6 +1448,16 @@ internal static class SharedGameCatalogAdminEndpoints
     {
         var query = new GetActiveDocumentsQuery(id);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetSharedGameKbCards(
+        Guid id,
+        [FromQuery] string? status,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetSharedGameKbCardsQuery(id, status), ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

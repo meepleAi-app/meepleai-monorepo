@@ -87,6 +87,14 @@ function DocTypeBadge({ documentType }: { documentType: number }) {
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 
+/**
+ * #5104: the backend writes a KB card's indexing status in lowercase ("completed", "processing", "failed"), and the
+ * page compared it with "Completed": the completed count stayed at 0 and no card ever looked indexed.
+ */
+export function isKbCardCompleted(indexingStatus: string | null | undefined): boolean {
+  return (indexingStatus ?? '').toLowerCase() === 'completed';
+}
+
 export function DocumentItem({
   document,
   onDelete,
@@ -216,7 +224,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
     },
   });
 
-  const kbCompletedCount = kbCards?.filter(k => k.indexingStatus === 'Completed').length ?? 0;
+  const kbCompletedCount = kbCards?.filter(k => isKbCardCompleted(k.indexingStatus)).length ?? 0;
   const kbTotalCount = kbCards?.length ?? 0;
 
   if (isLoading) {
@@ -479,11 +487,11 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                         <span className="truncate text-xs">{card.fileName}</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-2">
-                        {card.indexingStatus === 'Completed' && (
+                        {isKbCardCompleted(card.indexingStatus) && (
                           <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
                         )}
                         <Badge
-                          variant={card.indexingStatus === 'Completed' ? 'default' : 'secondary'}
+                          variant={isKbCardCompleted(card.indexingStatus) ? 'default' : 'secondary'}
                           className="text-xs"
                         >
                           {card.indexingStatus}

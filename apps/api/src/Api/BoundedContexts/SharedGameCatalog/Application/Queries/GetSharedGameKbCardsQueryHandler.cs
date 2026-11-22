@@ -36,8 +36,18 @@ internal sealed class GetSharedGameKbCardsQueryHandler
             "GetSharedGameKbCards: sharedGameId={SharedGameId}, status={Status}",
             request.SharedGameId, request.Status ?? "all");
 
-        var query = from vd in _db.VectorDocuments.AsNoTracking()
-                    where vd.SharedGameId == request.SharedGameId
+        var vectorDocuments = _db.VectorDocuments.AsNoTracking()
+            .Where(vd => vd.SharedGameId == request.SharedGameId);
+
+        // #5104: on the vector documents, before the projection. Filtering the projected KbCardDto (a constructor
+        // call) is not translatable and gave 500.
+        if (!string.IsNullOrWhiteSpace(request.Status))
+        {
+            var statusFilter = request.Status.ToLowerInvariant();
+            vectorDocuments = vectorDocuments.Where(vd => vd.IndexingStatus == statusFilter);
+        }
+
+        var query = from vd in vectorDocuments
                     join pdf in _db.PdfDocuments.AsNoTracking()
                         on vd.PdfDocumentId equals pdf.Id
                     join sgd in _db.SharedGameDocuments.AsNoTracking()
@@ -54,12 +64,6 @@ internal sealed class GetSharedGameKbCardsQueryHandler
                         sgd != null ? sgd.Version : null,
                         sgd != null && sgd.IsActive
                     );
-
-        if (!string.IsNullOrWhiteSpace(request.Status))
-        {
-            var statusFilter = request.Status.ToLowerInvariant();
-            query = query.Where(x => x.IndexingStatus == statusFilter);
-        }
 
         var results = await query.ToListAsync(cancellationToken).ConfigureAwait(false);
 

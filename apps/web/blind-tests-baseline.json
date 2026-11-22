@@ -26,8 +26,6 @@
     "e2e/admin/system-alerts.spec.ts": 9,
     "e2e/admin/tier-feature-flags.spec.ts": 12,
     "e2e/agent-content-gating.spec.ts": 4,
-    "e2e/agent/quota-warning.spec.ts": 1,
-    "e2e/agent/responsive.spec.ts": 10,
     "e2e/agent/slot-management.spec.ts": 1,
     "e2e/api-key-rotation.spec.ts": 1,
     "e2e/auth-validation-negative.spec.ts": 2,

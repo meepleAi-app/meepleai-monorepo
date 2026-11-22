@@ -130,12 +130,27 @@ grep -rhoE 'data-testid="[^"]+"' apps/web/src/components/features/game-chat/ | s
 
 ### Cosa serve
 
-- [ ] URL: `/library/<id>?tab=aiChat`, non `/library/games/<id>?session=…`. Nota che **`?session=` non è letto da nessuno** sotto `library/[gameId]` (`grep -rn "get('session')" "apps/web/src/app/(authenticated)/library/"` → nessun risultato): qualunque cosa quelle spec intendessero preparare con quel parametro va ottenuta per altra via, o l'intento va dichiarato caduto
-- [ ] Selettori rimappati secondo la tabella sopra
-- [ ] `beforeEach` riscritto: la chat è inline, non c'è niente da aprire
-- [ ] Locator morti rimossi, non implementati
-- [ ] `dashboard-user-journey.spec.ts:317` asserisce `waitForURL('**/library/games/game-1')`, cioè si aspetta che **l'app** navighi alla forma vecchia. Nessun codice di produzione lo fa (§2): l'asserzione va corretta alla rotta canonica
-- [ ] I blocchi `if (await x.isVisible())` nei `beforeEach` di `responsive`, `quota-warning` e `chat-streaming` vanno via con la riscrittura: nascondono il fallimento invece di misurare
+- [x] URL: `/library/<id>?tab=aiChat`, non `/library/games/<id>?session=…`. Nota che **`?session=` non è letto da nessuno** sotto `library/[gameId]` (`grep -rn "get('session')" "apps/web/src/app/(authenticated)/library/"` → nessun risultato): qualunque cosa quelle spec intendessero preparare con quel parametro va ottenuta per altra via, o l'intento va dichiarato caduto
+- [x] Selettori rimappati secondo la tabella sopra
+- [x] `beforeEach` riscritto: la chat è inline, non c'è niente da aprire
+- [x] Locator morti rimossi, non implementati
+- [x] `dashboard-user-journey.spec.ts:317` asserisce `waitForURL('**/library/games/game-1')`, cioè si aspetta che **l'app** navighi alla forma vecchia. Nessun codice di produzione lo fa (§2): l'asserzione va corretta alla rotta canonica
+- [x] I blocchi `if (await x.isVisible())` nei `beforeEach` di `responsive`, `quota-warning` e `chat-streaming` vanno via con la riscrittura: nascondono il fallimento invece di misurare
+
+
+### Esito (2026-11-22, #5062)
+
+Le caselle sopra sono chiuse togliendo le spec, non riscrivendole: misurate una per una, provavano funzioni che oggi non esistono o che altri test coprono già.
+
+| spec | misura | decisione |
+|---|---|---|
+| `e2e/agent-chat.spec.ts` | il login cercava `name="username"`; `/library/games/<id>/chat` non ha pagina; nessuna pagina `agent-definitions` (`find apps/web/src/app -path "*agent-definitions*" -name page.tsx` → 0); nessun componente «popout» | tolta: la chat sulla rotta canonica la prova `chat-answer-intent.spec.ts` (#5000) |
+| `e2e/agent/chat-streaming.spec.ts` | rotta vecchia (`game-sessions/*/agent/chat`) | tolta: lo stream nel browser lo prova `chat-answer-intent.spec.ts`; errori, quota e 429 i test di `GameChatTab`. L'unico comportamento scoperto (l'input disabilitato mentre la risposta arriva) ora ha un test in `GameChatTab.test.tsx` |
+| `e2e/agent/quota-warning.spec.ts` | `open-agent-config`, `quota-display`, `quota-progress-bar`, `quota-reset-timer`, `quota-warning`: 0 occorrenze in `apps/web/src` | tolta: la quota di oggi ferma la domanda con un avviso nella lista (#4168), provato da `GameChatTab.test.tsx` |
+| `e2e/agent/responsive.spec.ts` | i suoi sette test id (`action-bar`, `agent-chat-sheet`, `agent-config-sheet`, `game-content`, `game-grid`, `resize-handle`, `template-carousel`): 0 occorrenze; `agent-typologies/approved` non è chiamata dal frontend | tolta: l'architettura a «sheet» non è quella scelta |
+| `e2e/dashboard-user-journey.spec.ts` | 12 test su 12 rossi in locale; `recent-games-section`, `recent-games-grid`, `library-quota-card`, `chat-history-section`: 0 occorrenze | tolta: scritta per la dashboard di #2862; i componenti della dashboard di oggi hanno i loro test |
+
+`e2e/epic-2-agent-system.spec.ts` non c'era più. `e2e/chat/thread-view-smoke.spec.ts`, fuori da questa sezione, ha la stessa malattia (un id che non esiste e un login che non avviene): #5125.
 
 ---
 

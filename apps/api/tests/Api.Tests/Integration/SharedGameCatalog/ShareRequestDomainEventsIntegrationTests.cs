@@ -158,7 +158,6 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
         var requestId = await SaveNewAsync(proposal);
         await UpdateAsync(requestId, r => r.StartReview(adminId));
         var sharedGameId = await ApproveAsNewAsync(requestId, adminId);
-        var badgesBefore = await BadgeCountAsync(userId);
 
         // Hybrid delivers the event inline and leaves its outbox row for the processor: deliver that row the way the
         // processor does (DomainEventOutboxProcessor), from its JSON.
@@ -166,8 +165,9 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
 
         (await MigrationsAsync(requestId)).Should().ContainSingle();
         (await NotificationsAsync(userId, "share_request_approved")).Should().ContainSingle();
-        (await BadgeCountAsync(userId)).Should().Be(badgesBefore);
         VerifyDocumentCopies(sharedGameId, Times.Once());
+        // No badge count: BadgeEvaluator cannot read a seeded badge's requirement (#5114), so no badge is awarded and
+        // a count would stay equal for nothing.
     }
 
     private async Task<(Guid UserId, Guid AdminId)> SeedUserAndAdminAsync()
@@ -260,13 +260,6 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
         return await scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>().ProposalMigrations.AsNoTracking()
             .Where(m => m.ShareRequestId == requestId)
             .ToListAsync(Ct);
-    }
-
-    private async Task<int> BadgeCountAsync(Guid userId)
-    {
-        using var scope = _factory.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>().UserBadges.AsNoTracking()
-            .CountAsync(b => b.UserId == userId, Ct);
     }
 
     private void VerifyDocumentCopies(Guid sharedGameId, Times times) =>

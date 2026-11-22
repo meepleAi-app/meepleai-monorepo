@@ -6,89 +6,68 @@
  * - Progress bar updates
  * - Compact and full display modes
  * - Completion and error states
+ *
+ * #5106: the responses are what GET /api/v1/pdfs/{id}/progress really sends — a ProcessingProgress, through
+ * api.pdf.getProcessingProgress. These tests used to stub `fetch` with the component's own invented shape
+ * (`status`, `progress`, `chunksProcessed`), which the API never sent: they passed while every real row showed an
+ * error or polled forever.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import {
-  PdfIndexingStatus,
-  type PdfIndexingStatusData,
-} from '@/components/admin/shared-games/PdfIndexingStatus';
+import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
+import type { ProcessingProgress } from '@/lib/api';
 import { backgroundClasses } from '@/test-utils/background-classes';
+
+const { getProcessingProgress } = vi.hoisted(() => ({ getProcessingProgress: vi.fn() }));
+
+vi.mock('@/lib/api', () => ({ api: { pdf: { getProcessingProgress } } }));
 
 // ============================================================================
 // Mock Data
 // ============================================================================
 
-const mockStatusUploaded: PdfIndexingStatusData = {
-  pdfId: 'pdf-123',
-  status: 'uploaded',
-  progress: 0,
-  currentStep: 'File uploaded, waiting for processing',
-};
+const progress = (overrides: Partial<ProcessingProgress>): ProcessingProgress => ({
+  currentStep: 'Uploading',
+  percentComplete: 0,
+  elapsedTime: '00:00:00',
+  estimatedTimeRemaining: null,
+  pagesProcessed: 0,
+  totalPages: 30,
+  startedAt: '2024-01-20T11:55:00Z',
+  completedAt: null,
+  errorMessage: null,
+  ...overrides,
+});
 
-const mockStatusProcessing: PdfIndexingStatusData = {
-  pdfId: 'pdf-123',
-  status: 'processing',
-  progress: 25,
-  currentStep: 'Analyzing document structure',
-};
-
-const mockStatusChunking: PdfIndexingStatusData = {
-  pdfId: 'pdf-123',
-  status: 'chunked',
-  progress: 60,
-  currentStep: 'Splitting into chunks',
-  chunksProcessed: 15,
-  totalChunks: 30,
-};
-
-const mockStatusEmbedding: PdfIndexingStatusData = {
-  pdfId: 'pdf-123',
-  status: 'embedding',
-  progress: 80,
-  currentStep: 'Generating embeddings',
-  chunksProcessed: 25,
-  totalChunks: 30,
-};
-
-const mockStatusIndexed: PdfIndexingStatusData = {
-  pdfId: 'pdf-123',
-  status: 'indexed',
-  progress: 100,
-  currentStep: 'Complete',
+const mockStatusUploaded = progress({ currentStep: 'Uploading' });
+const mockStatusProcessing = progress({ currentStep: 'Extracting', percentComplete: 25 });
+const mockStatusChunking = progress({
+  currentStep: 'Chunking',
+  percentComplete: 60,
+  pagesProcessed: 15,
+});
+const mockStatusEmbedding = progress({
+  currentStep: 'Embedding',
+  percentComplete: 80,
+  pagesProcessed: 25,
+});
+const mockStatusIndexed = progress({
+  currentStep: 'Completed',
+  percentComplete: 100,
+  pagesProcessed: 30,
   completedAt: '2024-01-20T12:00:00Z',
-};
-
-const mockStatusFailed: PdfIndexingStatusData = {
-  pdfId: 'pdf-123',
-  status: 'failed',
-  progress: 0,
-  error: 'Failed to extract text from PDF',
-};
-
-// ============================================================================
-// Mock Fetch
-// ============================================================================
-
-let mockFetchResponse: PdfIndexingStatusData = mockStatusUploaded;
+});
+const mockStatusFailed = progress({
+  currentStep: 'Failed',
+  errorMessage: 'Failed to extract text from PDF',
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockFetchResponse = mockStatusUploaded;
-
-  global.fetch = vi.fn(() =>
-    Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve(mockFetchResponse),
-    } as Response)
-  );
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
+  getProcessingProgress.mockResolvedValue(mockStatusUploaded);
 });
 
 // ============================================================================
@@ -130,7 +109,7 @@ describe('PdfIndexingStatus', () => {
 
   describe('Full Mode Rendering', () => {
     it('should render stage timeline in full mode', async () => {
-      mockFetchResponse = mockStatusProcessing;
+      getProcessingProgress.mockResolvedValue(mockStatusProcessing);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
       await waitFor(() => {
@@ -147,16 +126,17 @@ describe('PdfIndexingStatus', () => {
     });
 
     it('should display progress bar with percentage', async () => {
-      mockFetchResponse = mockStatusProcessing;
+      getProcessingProgress.mockResolvedValue(mockStatusProcessing);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
       await waitFor(() => {
         expect(screen.getByText('Progresso')).toBeInTheDocument();
       });
+      expect(screen.getByText('25%')).toBeInTheDocument();
     });
 
     it('should show filename when provided', async () => {
-      mockFetchResponse = mockStatusProcessing;
+      getProcessingProgress.mockResolvedValue(mockStatusProcessing);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} fileName="rulebook.pdf" />);
 
       await waitFor(() => {
@@ -167,7 +147,7 @@ describe('PdfIndexingStatus', () => {
 
   describe('Compact Mode Rendering', () => {
     it('should render compact badge when processing', async () => {
-      mockFetchResponse = mockStatusProcessing;
+      getProcessingProgress.mockResolvedValue(mockStatusProcessing);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} compact />);
 
       await waitFor(() => {
@@ -176,7 +156,7 @@ describe('PdfIndexingStatus', () => {
     });
 
     it('should render RAG Ready badge when indexed', async () => {
-      mockFetchResponse = mockStatusIndexed;
+      getProcessingProgress.mockResolvedValue(mockStatusIndexed);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} compact />);
 
       await waitFor(() => {
@@ -192,7 +172,7 @@ describe('PdfIndexingStatus', () => {
       ['compatta', true],
       ['completa', false],
     ])('in modalità %s «RAG Ready» tiene solo il suo verde (#4539)', async (_mode, compact) => {
-      mockFetchResponse = mockStatusIndexed;
+      getProcessingProgress.mockResolvedValue(mockStatusIndexed);
       renderWithProviders(
         <div data-admin-shell data-theme="dark" className="dark">
           <PdfIndexingStatus {...defaultProps} compact={compact} />
@@ -204,7 +184,7 @@ describe('PdfIndexingStatus', () => {
     });
 
     it('should render error badge when failed', async () => {
-      mockFetchResponse = mockStatusFailed;
+      getProcessingProgress.mockResolvedValue(mockStatusFailed);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} compact />);
 
       await waitFor(() => {
@@ -215,7 +195,7 @@ describe('PdfIndexingStatus', () => {
 
   describe('Stage Progression', () => {
     it('should show uploaded stage correctly', async () => {
-      mockFetchResponse = mockStatusUploaded;
+      getProcessingProgress.mockResolvedValue(mockStatusUploaded);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
       await waitFor(() => {
@@ -223,28 +203,29 @@ describe('PdfIndexingStatus', () => {
       });
     });
 
-    it('should show chunking progress with counts', async () => {
-      mockFetchResponse = mockStatusChunking;
+    // The API reports the overall percentage (percentComplete) and pages, not chunk counts: the bar is the progress.
+    it('should show the overall progress while chunking', async () => {
+      getProcessingProgress.mockResolvedValue(mockStatusChunking);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('15/30')).toBeInTheDocument();
+        expect(screen.getByText('60%')).toBeInTheDocument();
       });
     });
 
-    it('should show embedding progress with counts', async () => {
-      mockFetchResponse = mockStatusEmbedding;
+    it('should show the overall progress while embedding', async () => {
+      getProcessingProgress.mockResolvedValue(mockStatusEmbedding);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('25/30')).toBeInTheDocument();
+        expect(screen.getByText('80%')).toBeInTheDocument();
       });
     });
   });
 
   describe('Completion State', () => {
     it('should show success message when indexed', async () => {
-      mockFetchResponse = mockStatusIndexed;
+      getProcessingProgress.mockResolvedValue(mockStatusIndexed);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
       await waitFor(() => {
@@ -253,7 +234,7 @@ describe('PdfIndexingStatus', () => {
     });
 
     it('should show RAG Ready badge in full mode when indexed', async () => {
-      mockFetchResponse = mockStatusIndexed;
+      getProcessingProgress.mockResolvedValue(mockStatusIndexed);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
       await waitFor(() => {
@@ -263,7 +244,7 @@ describe('PdfIndexingStatus', () => {
 
     it('should call onComplete callback when indexed', async () => {
       const onComplete = vi.fn();
-      mockFetchResponse = mockStatusIndexed;
+      getProcessingProgress.mockResolvedValue(mockStatusIndexed);
 
       renderWithProviders(<PdfIndexingStatus {...defaultProps} onComplete={onComplete} />);
 
@@ -275,7 +256,7 @@ describe('PdfIndexingStatus', () => {
 
   describe('Error State', () => {
     it('should show error message when failed', async () => {
-      mockFetchResponse = mockStatusFailed;
+      getProcessingProgress.mockResolvedValue(mockStatusFailed);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
       await waitFor(() => {
@@ -284,7 +265,7 @@ describe('PdfIndexingStatus', () => {
     });
 
     it('should show Fallito badge when failed', async () => {
-      mockFetchResponse = mockStatusFailed;
+      getProcessingProgress.mockResolvedValue(mockStatusFailed);
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
       await waitFor(() => {
@@ -294,7 +275,7 @@ describe('PdfIndexingStatus', () => {
 
     it('should call onError callback when failed', async () => {
       const onError = vi.fn();
-      mockFetchResponse = mockStatusFailed;
+      getProcessingProgress.mockResolvedValue(mockStatusFailed);
 
       renderWithProviders(<PdfIndexingStatus {...defaultProps} onError={onError} />);
 
@@ -305,13 +286,8 @@ describe('PdfIndexingStatus', () => {
   });
 
   describe('Fetch Error Handling', () => {
-    it('should show error state when fetch fails', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: false,
-          status: 500,
-        } as Response)
-      );
+    it('should show error state when the request fails', async () => {
+      getProcessingProgress.mockRejectedValue(new Error('500'));
 
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
@@ -321,12 +297,7 @@ describe('PdfIndexingStatus', () => {
     });
 
     it('should show retry button on fetch error', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: false,
-          status: 500,
-        } as Response)
-      );
+      getProcessingProgress.mockRejectedValue(new Error('500'));
 
       renderWithProviders(<PdfIndexingStatus {...defaultProps} />);
 
@@ -340,7 +311,7 @@ describe('PdfIndexingStatus', () => {
     it('should not fetch when pdfId is empty', () => {
       renderWithProviders(<PdfIndexingStatus pdfId="" />);
 
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(getProcessingProgress).not.toHaveBeenCalled();
     });
   });
 });

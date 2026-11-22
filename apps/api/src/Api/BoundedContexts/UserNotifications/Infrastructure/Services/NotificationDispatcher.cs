@@ -75,7 +75,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             type: message.Type,
             severity: ResolveSeverity(message.Type),
             title: ResolveTitle(message.Type),
-            message: message.Payload.ToString() ?? string.Empty,
+            message: NotificationPayloadText.Of(message.Payload),
             link: message.DeepLinkPath,
             metadata: metadataJson,
             correlationId: correlationId,

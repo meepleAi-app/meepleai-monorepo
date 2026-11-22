@@ -754,4 +754,44 @@ public class NotificationDispatcherTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
+
+    // #5111: the in-app text was payload.ToString(), the record's own representation ("ShareRequestPayload {
+    // ShareRequestId = 584f1262-…"), and the notification list shows its first 50 characters. It is the words the
+    // producer put in the payload; nothing is written here that the producer did not write.
+    public static TheoryData<INotificationPayload, string> PayloadTexts => new()
+    {
+        { new ShareRequestPayload(Guid.NewGuid(), "Mario", "Catan", null), "Catan" },
+        { new GameNightPayload(Guid.NewGuid(), "Serata Catan", new DateTime(2026, 12, 5, 20, 0, 0, DateTimeKind.Utc), "Mario"), "Serata Catan" },
+        { new PdfProcessingPayload(Guid.NewGuid(), "regolamento.pdf", "Ready"), "regolamento.pdf" },
+        { new BadgePayload(Guid.NewGuid(), "First Steps", "Made your first contribution"), "First Steps — Made your first contribution" },
+        { new GenericPayload("New Share Request", "A new share request is waiting for review."), "A new share request is waiting for review." },
+    };
+
+    [Theory]
+    [MemberData(nameof(PayloadTexts))]
+    public async Task DispatchAsync_TheInAppText_IsWhatTheProducerWrote(INotificationPayload payload, string expected)
+    {
+        Notification? captured = null;
+        _notificationRepoMock
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .Callback<Notification, CancellationToken>((n, _) => captured = n)
+            .ReturnsAsync(true);
+
+        await CreateSut().DispatchAsync(CreateMessage(payload: payload));
+
+        captured!.Message.Should().Be(expected);
+        captured.Message.Should().NotContain(payload.GetType().Name).And.NotContain("{");
+    }
+
+    [Fact]
+    public void EveryNotificationPayload_HasAnInAppTextCase()
+    {
+        // A payload type added to INotificationPayload without a case here would fall back to nothing readable.
+        var declared = typeof(INotificationPayload)
+            .GetCustomAttributes(typeof(System.Text.Json.Serialization.JsonDerivedTypeAttribute), inherit: false)
+            .Cast<System.Text.Json.Serialization.JsonDerivedTypeAttribute>()
+            .Select(a => a.DerivedType);
+
+        declared.Should().BeEquivalentTo(PayloadTexts.Select(row => row.Data.Item1.GetType()));
+    }
 }

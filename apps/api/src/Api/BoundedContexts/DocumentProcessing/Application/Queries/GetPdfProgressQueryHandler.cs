@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Infrastructure;
+using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,19 +34,28 @@ internal class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, P
             var pdf = await _dbContext.PdfDocuments
                 .Where(p => p.Id == query.PdfId)
                 .AsNoTracking()
-                .Select(p => new PdfProgressResult(
+                .Select(p => new
+                {
                     p.Id,
                     p.UploadedByUserId,
-                    p.ProcessingProgressJson
-                ))
+                    p.ProcessingProgressJson,
+                    p.ProcessingState,
+                    p.ProcessingError,
+                    p.ProcessedAt,
+                    p.UploadedAt,
+                })
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (pdf == null)
             {
                 _logger.LogWarning("PDF {PdfId} not found for progress query", query.PdfId);
+                return null;
             }
 
-            return pdf;
+            var progress = ReadRecordedProgress(pdf.Id, pdf.ProcessingProgressJson)
+                ?? PdfProgressFromState.Derive(pdf.ProcessingState, pdf.ProcessingError, pdf.ProcessedAt, pdf.UploadedAt);
+
+            return new PdfProgressResult(pdf.Id, pdf.UploadedByUserId, progress);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
@@ -55,6 +66,27 @@ internal class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, P
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving PDF progress for {PdfId}", query.PdfId);
+            return null;
+        }
+#pragma warning restore CA1031
+    }
+
+    /// <summary>The progress the pipeline recorded, deserialized as the endpoint used to (default options).</summary>
+    private ProcessingProgress? ReadRecordedProgress(Guid pdfId, string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<ProcessingProgress>(json);
+        }
+#pragma warning disable CA1031 // A corrupt progress falls back to the one derived from the state
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to deserialize progress for PDF {PdfId}", pdfId);
             return null;
         }
 #pragma warning restore CA1031

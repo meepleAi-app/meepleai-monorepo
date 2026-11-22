@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/data-display/card';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
+import { api, type ProcessingProgress, type ProcessingStepDto } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 // ========== Types ==========
@@ -124,6 +125,35 @@ const LEGACY_STAGE_ORDER: Record<IndexingStage, number> = {
   failed: -1,
 };
 
+/**
+ * #5106: GET /pdfs/{id}/progress answers with a ProcessingProgress (`currentStep`, `percentComplete`, …), derived
+ * from the PDF's state when none is recorded. This component used to read `status` and `progress`, which the
+ * response does not have: a PDF without recorded progress showed an error, one with it never completed.
+ */
+const STAGE_BY_STEP: Record<ProcessingStepDto, IndexingStage> = {
+  Uploading: 'uploaded',
+  Extracting: 'processing',
+  Chunking: 'chunked',
+  Embedding: 'embedding',
+  Indexing: 'embedding',
+  Completed: 'indexed',
+  Failed: 'failed',
+};
+
+export function toIndexingStatus(
+  pdfId: string,
+  progress: ProcessingProgress
+): PdfIndexingStatusData {
+  return {
+    pdfId,
+    status: STAGE_BY_STEP[progress.currentStep],
+    progress: progress.percentComplete,
+    currentStep: progress.currentStep,
+    error: progress.errorMessage ?? undefined,
+    completedAt: progress.completedAt ?? undefined,
+  };
+}
+
 // ========== Component ==========
 
 export function PdfIndexingStatus({
@@ -135,8 +165,6 @@ export function PdfIndexingStatus({
 }: PdfIndexingStatusProps) {
   const [hasCompleted, setHasCompleted] = useState(false);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-
   // Poll status endpoint
   const {
     data: status,
@@ -146,13 +174,11 @@ export function PdfIndexingStatus({
   } = useQuery<PdfIndexingStatusData>({
     queryKey: ['pdf-indexing-status', pdfId],
     queryFn: async () => {
-      const response = await fetch(`${API_BASE}/api/v1/pdfs/${pdfId}/progress`, {
-        credentials: 'include',
-      });
-      if (!response.ok) {
+      const progress = await api.pdf.getProcessingProgress(pdfId);
+      if (!progress) {
         throw new Error('Errore nel recupero dello stato');
       }
-      return response.json();
+      return toIndexingStatus(pdfId, progress);
     },
     refetchInterval: query => {
       // Stop polling when complete or failed
@@ -187,15 +213,13 @@ export function PdfIndexingStatus({
     if (isComplete) return 100;
     if (isFailed) return 0;
 
-    const baseProgress = (currentStageIndex / (STAGES.length - 1)) * 100;
-
-    // Add partial progress within current stage
+    // #5106: `progress` is the backend's percentComplete, already the overall percentage of the pipeline — not the
+    // progress within the current stage, which this used to add on top of the stage (40% while chunking showed 68%).
     if (status.progress) {
-      const stageWeight = 100 / (STAGES.length - 1);
-      return Math.min(baseProgress + (status.progress / 100) * stageWeight, 99);
+      return Math.min(status.progress, 99);
     }
 
-    return baseProgress;
+    return (currentStageIndex / (STAGES.length - 1)) * 100;
   };
 
   if (isLoading) {

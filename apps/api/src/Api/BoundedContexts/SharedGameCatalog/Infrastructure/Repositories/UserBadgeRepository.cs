@@ -25,6 +25,8 @@ internal sealed class UserBadgeRepository : RepositoryBase, IUserBadgeRepository
     public async Task AddAsync(UserBadge userBadge, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(userBadge);
+        // #5110: BadgeEarnedEvent reaches its handlers only through the collector, which SaveChangesAsync reads.
+        CollectDomainEvents(userBadge);
         var entity = MapToEntity(userBadge);
         await DbContext.Set<UserBadgeEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }

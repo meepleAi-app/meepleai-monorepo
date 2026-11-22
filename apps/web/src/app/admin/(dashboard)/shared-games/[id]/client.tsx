@@ -87,7 +87,7 @@ function DocTypeBadge({ documentType }: { documentType: number }) {
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 
-function DocumentItem({
+export function DocumentItem({
   document,
   onDelete,
   isDeleting,
@@ -153,8 +153,8 @@ function DocumentItem({
         </DropdownMenu>
       </div>
 
-      {/* Inline RAG indexing status */}
-      <PdfIndexingStatus pdfId={document.id} compact={true} />
+      {/* Inline RAG indexing status. #5103: the PDF's id; document.id is the link between game and PDF. */}
+      <PdfIndexingStatus pdfId={document.pdfDocumentId} compact={true} />
     </div>
   );
 }

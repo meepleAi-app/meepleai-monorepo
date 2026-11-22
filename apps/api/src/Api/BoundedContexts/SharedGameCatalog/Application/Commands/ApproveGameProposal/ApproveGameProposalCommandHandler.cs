@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -24,6 +25,7 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IShareRequestDocumentService _documentService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<ApproveGameProposalCommandHandler> _logger;
 
     public ApproveGameProposalCommandHandler(
@@ -32,6 +34,7 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
         ISharedGameRepository sharedGameRepository,
         IShareRequestDocumentService documentService,
         IUnitOfWork unitOfWork,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<ApproveGameProposalCommandHandler> logger)
     {
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
@@ -39,6 +42,7 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _documentService = documentService ?? throw new ArgumentNullException(nameof(documentService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -69,8 +73,14 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
             var coverTargetId = await ApproveCoverChangeAsync(shareRequest, command, cancellationToken)
                 .ConfigureAwait(false);
 
-            return await FinalizeApprovalAsync(shareRequest, command, coverTargetId, cancellationToken)
+            var approved = await FinalizeApprovalAsync(shareRequest, command, coverTargetId, cancellationToken)
                 .ConfigureAwait(false);
+
+            // #5100: the approval is the only write of a proposed cover, so it evicts the catalog read model the
+            // PdfCoverGeneratedEvent handler used to evict at proposal time. After the save, as the invalidator wants.
+            await _cacheInvalidator.EvictDetailAndListAsync(coverTargetId, cancellationToken).ConfigureAwait(false);
+
+            return approved;
         }
 
         // 3. Validate request type

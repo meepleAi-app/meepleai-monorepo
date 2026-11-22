@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ApproveGameProposal;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -50,6 +51,7 @@ public class ApproveGameProposalCommandHandlerTests
             _sharedGameRepoMock.Object,
             _documentServiceMock.Object,
             _unitOfWorkMock.Object,
+            Mock.Of<ISharedGameCacheInvalidator>(),
             _loggerMock.Object);
     }
 

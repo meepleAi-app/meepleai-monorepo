@@ -1,21 +1,29 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.ProposeCoverChange;
 
 /// <summary>
 /// Command for the authenticated-user flow that proposes a cover-from-PDF for a
-/// SharedGame (Task 6, Game Cover-da-PDF plan). Orchestrates
-/// <see cref="MaterializePdfCoverCommand"/> (Task 3 — renders the PDF page, encodes
-/// WebP, uploads to R2) to materialize a pending cover artifact, then creates a
-/// <see cref="ShareRequest"/> of type <c>CoverChange</c> (Task 4) so an admin can
-/// review and promote it to the SharedGame's public L4 cover (Task 5).
+/// SharedGame (Task 6, Game Cover-da-PDF plan). Renders the page with
+/// <see cref="RenderPdfPageCoverCommand"/> (encodes WebP, uploads to R2) as a pending cover
+/// artifact, then creates a <see cref="ShareRequest"/> of type <c>CoverChange</c> (Task 4) so an
+/// admin can review and promote it to the SharedGame's public L4 cover (Task 5).
 /// </summary>
+/// <remarks>
+/// #5100: until the approval nothing changes, neither the game nor the PDF. The proposal used
+/// <c>MaterializePdfCoverCommand</c>, which makes the page the PDF's cover, and
+/// <c>PdfCoverGeneratedEvent</c> then copied it onto the game during the proposal. The PDF must be
+/// one of the game's documents: the same rule as <c>SetPdfCoverFromPageCommand</c>, the admin path.
+/// </remarks>
 /// <param name="UserId">The authenticated user proposing the cover.</param>
 /// <param name="SharedGameId">The target SharedGame the cover is proposed for.</param>
 /// <param name="PdfDocumentId">The source PDF the cover page is extracted from.</param>
@@ -41,23 +49,25 @@ internal sealed class ProposeCoverChangeCommandValidator : AbstractValidator<Pro
 }
 
 /// <summary>
-/// Handles <see cref="ProposeCoverChangeCommand"/>: materializes the pending cover
-/// (Task 3) then persists a Pending <see cref="ShareRequest"/> of type
+/// Handles <see cref="ProposeCoverChangeCommand"/>: renders the pending cover then persists a Pending <see cref="ShareRequest"/> of type
 /// <c>CoverChange</c> (Task 4) referencing it. Materialization failures
 /// (<c>CoverMaterializationException</c>) propagate unhandled — no proposal is
 /// created without a successfully materialized pending cover (no "half" state).
 /// </summary>
 internal sealed class ProposeCoverChangeCommandHandler : ICommandHandler<ProposeCoverChangeCommand, Guid>
 {
+    private readonly MeepleAiDbContext _dbContext;
     private readonly IMediator _mediator;
     private readonly IShareRequestRepository _shareRequests;
     private readonly IUnitOfWork _unitOfWork;
 
     public ProposeCoverChangeCommandHandler(
+        MeepleAiDbContext dbContext,
         IMediator mediator,
         IShareRequestRepository shareRequests,
         IUnitOfWork unitOfWork)
     {
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _shareRequests = shareRequests ?? throw new ArgumentNullException(nameof(shareRequests));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -66,6 +76,23 @@ internal sealed class ProposeCoverChangeCommandHandler : ICommandHandler<Propose
     public async Task<Guid> Handle(ProposeCoverChangeCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        var pdf = await _dbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.Id == command.PdfDocumentId)
+            .Select(p => new { p.SharedGameId, p.PageCount })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
+
+        if (pdf.SharedGameId != command.SharedGameId)
+        {
+            throw new ConflictException("The PDF is not one of this game's documents.");
+        }
+
+        if (pdf.PageCount is { } pageCount && command.PageNumber > pageCount)
+        {
+            throw new ConflictException($"The PDF has {pageCount} pages.");
+        }
 
         // I2 fix: the dbKey must be unique PER PROPOSAL, not deterministic per-game.
         // A per-game deterministic key (e.g. "covers/{gameId}/pdf-cover-pending")
@@ -81,7 +108,7 @@ internal sealed class ProposeCoverChangeCommandHandler : ICommandHandler<Propose
         var dbKey = $"covers/{command.SharedGameId:D}/pdf-cover-{Guid.NewGuid():N}";
 
         var pendingKey = await _mediator
-            .Send(new MaterializePdfCoverCommand(command.PdfDocumentId, command.PageNumber, dbKey), cancellationToken)
+            .Send(new RenderPdfPageCoverCommand(command.PdfDocumentId, command.PageNumber, dbKey), cancellationToken)
             .ConfigureAwait(false);
 
         // C1 fix: command.PageNumber is 1-based; ShareRequest.CoverPageIndex is documented

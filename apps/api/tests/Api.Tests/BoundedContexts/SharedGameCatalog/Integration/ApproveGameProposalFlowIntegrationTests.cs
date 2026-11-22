@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ApproveGameProposal;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.CheckPrivateGameDuplicates;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -67,6 +68,7 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
             _sharedGameRepo,
             _documentServiceMock.Object,
             _unitOfWork,
+            Mock.Of<ISharedGameCacheInvalidator>(),
             commandLogger.Object);
 
         var queryLogger = new Mock<Microsoft.Extensions.Logging.ILogger<CheckPrivateGameDuplicatesQueryHandler>>();

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ApproveGameProposal;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -40,6 +41,31 @@ public class ApproveCoverChangeTests
 
         sharedGame.PdfCoverR2Key.Should().Be("covers/g/pdf-cover");
         req.Status.Should().Be(ShareRequestStatus.Approved);
+    }
+
+    [Fact]
+    public async Task Approve_UpdateCover_EvictsTheGameFromTheCatalogCache_AfterTheSave()
+    {
+        // #5100: the approval is the only write of a proposed cover. The PdfCoverGeneratedEvent handler used to evict
+        // the catalog read model at proposal time; now the approval does, once the new key is saved.
+        var target = Guid.NewGuid();
+        var sharedGame = SharedGameTestFactory.Existing(target);
+        var req = ShareRequest.CreateCoverChange(Guid.NewGuid(), target, Guid.NewGuid(), "covers/g/pdf-cover", 3, null);
+        var (handler, adminId, unitOfWork, cacheInvalidator) = ApproveHandlerBuilder.WithDoubles(req, sharedGame);
+        var order = new List<string>();
+        unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("save"))
+            .ReturnsAsync(1);
+        cacheInvalidator.Setup(c => c.EvictDetailAndListAsync(target, It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add($"evict {sharedGame.PdfCoverR2Key}"))
+            .Returns(Task.CompletedTask);
+
+        await handler.Handle(
+            new ApproveGameProposalCommand(ShareRequestId: req.Id, AdminId: adminId,
+                ApprovalAction: ProposalApprovalAction.UpdateCover, TargetSharedGameId: target, AdminNotes: null),
+            TestContext.Current.CancellationToken);
+
+        order.Should().Equal("save", "evict covers/g/pdf-cover");
     }
 
     [Fact]
@@ -147,6 +173,16 @@ internal static class ApproveHandlerBuilder
         ShareRequest shareRequest,
         SharedGame? sharedGame)
     {
+        var (handler, adminId, _, _) = WithDoubles(shareRequest, sharedGame);
+        return (handler, adminId);
+    }
+
+    /// <summary>The same handler, with the unit of work and the cache invalidator it was given.</summary>
+    public static (ApproveGameProposalCommandHandler Handler, Guid AdminId, Mock<IUnitOfWork> UnitOfWork,
+        Mock<ISharedGameCacheInvalidator> CacheInvalidator) WithDoubles(
+        ShareRequest shareRequest,
+        SharedGame? sharedGame)
+    {
         var adminId = Guid.NewGuid();
         shareRequest.StartReview(adminId);
 
@@ -164,6 +200,7 @@ internal static class ApproveHandlerBuilder
 
         var documentServiceMock = new Mock<IShareRequestDocumentService>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
+        var cacheInvalidatorMock = new Mock<ISharedGameCacheInvalidator>();
         var loggerMock = new Mock<ILogger<ApproveGameProposalCommandHandler>>();
 
         var handler = new ApproveGameProposalCommandHandler(
@@ -172,8 +209,9 @@ internal static class ApproveHandlerBuilder
             sharedGameRepoMock.Object,
             documentServiceMock.Object,
             unitOfWorkMock.Object,
+            cacheInvalidatorMock.Object,
             loggerMock.Object);
 
-        return (handler, adminId);
+        return (handler, adminId, unitOfWorkMock, cacheInvalidatorMock);
     }
 }

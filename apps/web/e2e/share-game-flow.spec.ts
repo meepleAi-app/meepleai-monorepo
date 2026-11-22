@@ -1,11 +1,13 @@
 /**
  * E2E Tests - Share Game User Flows
  *
- * Tests the complete user-facing share game wizard flow and admin approval workflow.
+ * Tests the complete user-facing share game wizard flow.
  * Covers:
  * - Complete 3-step share wizard (game preview, documents, notes & confirm)
- * - Admin approval flow (lock, review, approve)
  * - Rate limit warning display
+ *
+ * #5080: the admin approval part was written for the review screen deleted on 2026-02-23 (a request id that is not a
+ * GUID, kept in localStorage). The review on the screen #5076 restored is in `admin-share-requests.spec.ts`.
  *
  * Issue #2954: E2E Tests - User Flows (Playwright)
  * Parent: #2751 (Integration Tests - Full Share Flow)
@@ -34,39 +36,6 @@ async function seedGameInLibrary(page: Page, userEmail: string): Promise<string>
   });
 
   return 'test-game-id-123';
-}
-
-/**
- * Helper: Seed a pending share request via API
- * Returns shareRequestId for use in tests
- */
-async function seedPendingShareRequest(page: Page): Promise<string> {
-  // Mocked approach: Use localStorage to simulate pending request
-  // In real scenario, this would call POST /api/v1/share-requests
-  const requestId = 'test-request-id-456';
-
-  await page.evaluate((id) => {
-    const mockRequest = {
-      shareRequestId: id,
-      sourceGame: {
-        title: 'Test Board Game',
-        description: 'A test game for E2E testing',
-      },
-      status: 'Pending',
-      lockStatus: {
-        isLocked: false,
-        isLockedByCurrentAdmin: false,
-        lockedByAdminName: null,
-        lockExpiresAt: null,
-      },
-      attachedDocuments: [],
-      contributorUserId: 'user-123',
-      contributorEmail: 'user@test.com',
-    };
-    localStorage.setItem(`test-request-${id}`, JSON.stringify(mockRequest));
-  }, requestId);
-
-  return requestId;
 }
 
 /**
@@ -106,21 +75,27 @@ test.describe('Share Game Flow - User Wizard', () => {
     // Wizard should open
     await expect(page.locator('[data-testid="share-game-wizard"]')).toBeVisible();
     await expect(page.locator('[data-testid="wizard-title"]')).toContainText('Share');
-    await expect(page.locator('[data-testid="wizard-step-indicator"]')).toContainText('Step 1 of 3');
+    await expect(page.locator('[data-testid="wizard-step-indicator"]')).toContainText(
+      'Step 1 of 3'
+    );
 
     // Step 1: Game Preview - should be visible
     await expect(page.locator('[data-testid="wizard-step-1"]')).toBeVisible();
 
     // Continue to step 2
     await page.click('[data-testid="wizard-next"]');
-    await expect(page.locator('[data-testid="wizard-step-indicator"]')).toContainText('Step 2 of 3');
+    await expect(page.locator('[data-testid="wizard-step-indicator"]')).toContainText(
+      'Step 2 of 3'
+    );
 
     // Step 2: Document Selection - should be visible
     await expect(page.locator('[data-testid="wizard-step-2"]')).toBeVisible();
 
     // Continue to step 3 (no documents selected - optional)
     await page.click('[data-testid="wizard-next"]');
-    await expect(page.locator('[data-testid="wizard-step-indicator"]')).toContainText('Step 3 of 3');
+    await expect(page.locator('[data-testid="wizard-step-indicator"]')).toContainText(
+      'Step 3 of 3'
+    );
 
     // Step 3: Notes and Confirmation - should be visible
     await expect(page.locator('[data-testid="wizard-step-3"]')).toBeVisible();
@@ -133,9 +108,7 @@ test.describe('Share Game Flow - User Wizard', () => {
     );
 
     // Verify notes character count updates
-    await expect(page.locator('[data-testid="wizard-notes-remaining"]')).toContainText(
-      'remaining'
-    );
+    await expect(page.locator('[data-testid="wizard-notes-remaining"]')).toContainText('remaining');
 
     // Submit button should be visible
     await expect(page.locator('[data-testid="wizard-submit"]')).toBeVisible();
@@ -208,107 +181,6 @@ test.describe('Share Game Flow - User Wizard', () => {
   });
 });
 
-test.describe('Share Game Flow - Admin Approval', () => {
-  test('should complete admin approval flow with lock', async ({ page }) => {
-    // Step 0: Setup - Seed a pending request
-    const requestId = await seedPendingShareRequest(page);
-
-    // Step 1: Authenticate as admin
-    await authenticateViaAPI(page, 'admin@test.com', 'Admin123!');
-
-    // Navigate to admin share requests page
-    await page.goto('/admin/share-requests');
-    await page.waitForLoadState('networkidle');
-
-    // NOTE: This assumes admin page lists requests - adjust selectors as needed
-    // Click on the first pending request
-    await page.goto(`/admin/share-requests/${requestId}`);
-    await page.waitForLoadState('networkidle');
-
-    // Step 2: Verify page loaded and request details visible
-    // Status should be Pending
-    await expect(page.locator('[data-testid="status-badge"]')).toBeVisible();
-
-    // Step 3: Acquire review lock
-    const startReviewButton = page.locator('[data-testid="start-review-button"]');
-    await expect(startReviewButton).toBeVisible();
-    await startReviewButton.click();
-
-    // Verify lock acquired - button should change to Release Review
-    await expect(page.locator('[data-testid="release-review-button"]')).toBeVisible({
-      timeout: 5000,
-    });
-    await expect(startReviewButton).not.toBeVisible();
-
-    // Step 4: Approve the request
-    await page.click('[data-testid="approve-button"]');
-
-    // Approve dialog should open
-    await expect(page.locator('[data-testid="approve-dialog"]')).toBeVisible();
-
-    // Fill in admin notes (optional)
-    await page.fill(
-      '[data-testid="approve-notes-textarea"]',
-      'Approved via E2E test - looks good!'
-    );
-
-    // Confirm approval
-    await page.click('[data-testid="confirm-approve-button"]');
-
-    // Step 5: Verify approval success
-    // Should redirect to list or show success message
-    // Status should change to Approved (if still on page)
-    await page.waitForTimeout(2000); // Wait for approval processing
-
-    // NOTE: Adjust based on actual post-approval behavior
-    // If stays on page: expect status badge to show Approved
-    // If redirects: expect navigation to /admin/share-requests
-  });
-
-  test('should show locked message when locked by another admin', async ({ page }) => {
-    // Setup: Create request locked by another admin
-    const requestId = 'locked-request-789';
-
-    await page.evaluate((id) => {
-      const mockRequest = {
-        shareRequestId: id,
-        sourceGame: { title: 'Locked Game', description: 'Test' },
-        status: 'InReview',
-        lockStatus: {
-          isLocked: true,
-          isLockedByCurrentAdmin: false,
-          lockedByAdminName: 'Another Admin',
-          lockExpiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-        },
-        attachedDocuments: [],
-      };
-      localStorage.setItem(`test-request-${id}`, JSON.stringify(mockRequest));
-    }, requestId);
-
-    // Authenticate as admin
-    await authenticateViaAPI(page, 'admin@test.com', 'Admin123!');
-
-    // Navigate to request
-    await page.goto(`/admin/share-requests/${requestId}`);
-    await page.waitForLoadState('networkidle');
-
-    // Should show locked by other admin message
-    await expect(page.locator('[data-testid="locked-by-other-message"]')).toBeVisible();
-    await expect(page.locator('[data-testid="locked-by-other-message"]')).toContainText(
-      'Another Admin'
-    );
-
-    // Start Review button should NOT be visible
-    await expect(page.locator('[data-testid="start-review-button"]')).not.toBeVisible();
-
-    // Approve button should be disabled (or not visible)
-    const approveButton = page.locator('[data-testid="approve-button"]');
-    if (await approveButton.isVisible()) {
-      await expect(approveButton).toBeDisabled();
-    }
-  });
-});
-
 test.describe('Share Game Flow - Rate Limit Warning', () => {
   test('should display rate limit warning and disable submit', async ({ page }) => {
     // Step 0: Setup - Seed user at rate limit
@@ -336,9 +208,7 @@ test.describe('Share Game Flow - Rate Limit Warning', () => {
 
       // Rate limit warning should be visible
       // NOTE: Adjust selector based on actual implementation
-      const rateLimitWarning = page.locator(
-        'text=/rate limit|limit reached|monthly limit|3\\/3/i'
-      );
+      const rateLimitWarning = page.locator('text=/rate limit|limit reached|monthly limit|3\\/3/i');
       await expect(rateLimitWarning).toBeVisible();
 
       // Submit button should be disabled

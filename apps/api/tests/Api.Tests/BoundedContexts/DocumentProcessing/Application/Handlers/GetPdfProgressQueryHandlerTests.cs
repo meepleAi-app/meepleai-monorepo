@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Infrastructure;
+using Api.Models;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -85,29 +86,15 @@ public class GetPdfProgressQueryHandlerTests
         // Arrange
         var id = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var progressJson = "{\"stage\":\"extraction\",\"progress\":50}";
+        var progress = new ProcessingProgress { CurrentStep = ProcessingStep.Extracting, PercentComplete = 50 };
 
         // Act
-        var result = new PdfProgressResult(id, userId, progressJson);
+        var result = new PdfProgressResult(id, userId, progress);
 
         // Assert
         result.Id.Should().Be(id);
         result.UploadedByUserId.Should().Be(userId);
-        result.ProcessingProgressJson.Should().Be(progressJson);
-    }
-
-    [Fact]
-    public void PdfProgressResult_WithNullProgressJson_AllowsNull()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-
-        // Act
-        var result = new PdfProgressResult(id, userId, null);
-
-        // Assert
-        result.ProcessingProgressJson.Should().BeNull();
+        result.Progress.Should().BeSameAs(progress);
     }
     // NOTE: Full integration tests for Handle method should be in integration test suite
     // due to DbContext dependency complexity. See integration-tests.yml workflow.

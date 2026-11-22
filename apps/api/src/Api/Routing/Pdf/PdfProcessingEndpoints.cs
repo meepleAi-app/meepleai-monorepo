@@ -255,23 +255,9 @@ internal static class PdfProcessingEndpoints
             return Results.Forbid();
         }
 
-        ProcessingProgress? progress = null;
-        if (!string.IsNullOrEmpty(pdf.ProcessingProgressJson))
-        {
-            try
-            {
-                progress = System.Text.Json.JsonSerializer.Deserialize<ProcessingProgress>(pdf.ProcessingProgressJson);
-            }
-#pragma warning disable CA1031
-            catch (Exception ex)
-            {
-                var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogWarning(ex, "Failed to deserialize progress for PDF {PdfId}", pdfId);
-            }
-#pragma warning restore CA1031
-        }
-
-        return Results.Ok(progress);
+        // #5106: never null. The query derives the progress from the PDF's state when none is recorded; an empty 200
+        // was what the admin screens read as an error.
+        return Results.Ok(pdf.Progress);
     }
 
     private static async Task HandleStreamPdfStatus(Guid pdfId, HttpContext httpContext, IMediator mediator, CancellationToken ct)

@@ -1,3 +1,4 @@
+using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Query with Result record
@@ -13,10 +14,11 @@ internal sealed record GetPdfProgressQuery(
 ) : IQuery<PdfProgressResult?>;
 
 /// <summary>
-/// Result containing PDF progress data and ownership.
+/// Result containing PDF progress data and ownership. #5106: <see cref="Progress"/> is never null: the recorded
+/// progress, or one derived from the PDF's state when none is recorded (<see cref="PdfProgressFromState"/>).
 /// </summary>
 internal record PdfProgressResult(
     Guid Id,
     Guid UploadedByUserId,
-    string? ProcessingProgressJson
+    ProcessingProgress Progress
 );

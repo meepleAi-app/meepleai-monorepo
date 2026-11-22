@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
@@ -69,7 +70,7 @@ internal sealed class AdminShareRequestDigestJob : IJob
             // NOTE: Can be refactored to IUserRepository.GetByRoleAsync when implemented
             var admins = await _dbContext.Set<UserEntity>()
                 .AsNoTracking()
-                .Where(u => u.Role == "admin")
+                .WhereShareRequestAlertRecipient()
                 .Select(u => new { u.Id, u.Email, u.DisplayName })
                 .ToListAsync(context.CancellationToken)
                 .ConfigureAwait(false);

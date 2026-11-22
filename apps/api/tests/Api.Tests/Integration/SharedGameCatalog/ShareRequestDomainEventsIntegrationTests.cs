@@ -106,6 +106,28 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
     }
 
     [Fact]
+    public async Task ANewShareRequest_AlertsEveryoneWhoCanReviewIt()
+    {
+        // #5113: the alert went to Role == "admin" only; the review routes admit SuperAdmin and Admin.
+        Guid userId, adminId, superAdminId, editorId, gameId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            (userId, _) = await TestSessionHelper.CreateUserSessionAsync(db, cancellationToken: Ct);
+            (adminId, _) = await TestSessionHelper.CreateAdminSessionAsync(db, cancellationToken: Ct);
+            (superAdminId, _) = await TestSessionHelper.CreateSuperAdminSessionAsync(db, cancellationToken: Ct);
+            (editorId, _) = await TestSessionHelper.CreateEditorSessionAsync(db, cancellationToken: Ct);
+            gameId = await TestSessionHelper.SeedSharedGameAsync(db, $"Gioco 5113 {Guid.NewGuid():N}");
+        }
+
+        await SaveNewAsync(ShareRequest.Create(userId, gameId, ContributionType.NewGame));
+
+        (await NotificationsAsync(adminId, "admin_new_share_request")).Should().ContainSingle();
+        (await NotificationsAsync(superAdminId, "admin_new_share_request")).Should().ContainSingle();
+        (await NotificationsAsync(editorId, "admin_new_share_request")).Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task AProposal_NotifiesItsAuthor_WithThePrivateGameTitle_AtEveryStepOfItsReview()
     {
         var (userId, adminId) = await SeedUserAndAdminAsync();

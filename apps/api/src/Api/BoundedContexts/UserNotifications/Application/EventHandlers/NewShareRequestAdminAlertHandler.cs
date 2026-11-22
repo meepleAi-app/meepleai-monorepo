@@ -38,7 +38,7 @@ internal sealed class NewShareRequestAdminAlertHandler : INotificationHandler<Sh
             // Get all admin users
             var adminUsers = await _dbContext.Set<UserEntity>()
                 .AsNoTracking()
-                .Where(u => u.Role == "admin")
+                .WhereShareRequestAlertRecipient()
                 .Select(u => u.Id)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);

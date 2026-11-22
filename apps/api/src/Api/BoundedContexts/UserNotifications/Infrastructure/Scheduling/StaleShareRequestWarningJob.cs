@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Application.Constants;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -70,7 +71,7 @@ internal sealed class StaleShareRequestWarningJob : IJob
             // Get all admin users
             var admins = await _dbContext.Set<UserEntity>()
                 .AsNoTracking()
-                .Where(u => u.Role == "admin")
+                .WhereShareRequestAlertRecipient()
                 .Select(u => u.Id)
                 .ToListAsync(context.CancellationToken)
                 .ConfigureAwait(false);

@@ -50,10 +50,20 @@ export type AgentMode = z.infer<typeof AgentModeSchema>;
 export const LlmProviderSchema = z.enum(['OpenRouter', 'Ollama']);
 export type LlmProvider = z.infer<typeof LlmProviderSchema>;
 
+const SHARED_GAME_DOCUMENT_TYPE_BY_NAME = { Rulebook: 0, Errata: 1, Homerule: 2 } as const;
+
 /**
- * Numeric document type (for API storage - matches C# enum)
+ * Numeric document type (for API storage - matches C# enum).
+ *
+ * #5099: the API serializes enums by name (`JsonStringEnumConverter` in Program.cs), so the documents arrive with
+ * `"Rulebook"`, while every screen here works with the number. Both are accepted, the number comes out.
  */
-export const SharedGameDocumentTypeNumericSchema = z.number().int().min(0).max(2);
+export const SharedGameDocumentTypeNumericSchema = z.union([
+  z.number().int().min(0).max(2),
+  z
+    .enum(['Rulebook', 'Errata', 'Homerule'])
+    .transform(name => SHARED_GAME_DOCUMENT_TYPE_BY_NAME[name]),
+]);
 export type SharedGameDocumentTypeNumeric = z.infer<typeof SharedGameDocumentTypeNumericSchema>;
 
 // ========== Reference Data ==========

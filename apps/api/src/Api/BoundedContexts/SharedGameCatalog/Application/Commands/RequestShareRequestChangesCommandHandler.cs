@@ -57,7 +57,7 @@ internal sealed class RequestShareRequestChangesCommandHandler : ICommandHandler
             "Changes requested on share request {ShareRequestId}. User will be notified.",
             shareRequest.Id);
 
-        // Domain event ShareRequestChangesRequestedEvent is dispatched automatically
+        // ShareRequestChangesRequestedEvent: the repository collects it and SaveChangesAsync hands it to its handlers (#5078).
 
         return new RequestShareRequestChangesResponse(
             shareRequest.Id,

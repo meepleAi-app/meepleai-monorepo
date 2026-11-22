@@ -5,7 +5,6 @@ using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.EventHandlers;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserLibrary.Application.EventHandlers;
 
@@ -18,7 +17,6 @@ internal sealed class CreateProposalMigrationOnApprovalHandler : DomainEventHand
 {
     private readonly IShareRequestRepository _shareRequestRepo;
     private readonly IProposalMigrationRepository _migrationRepo;
-    private readonly MeepleAiDbContext _meepleContext;
 
     public CreateProposalMigrationOnApprovalHandler(
         MeepleAiDbContext dbContext,
@@ -29,7 +27,6 @@ internal sealed class CreateProposalMigrationOnApprovalHandler : DomainEventHand
     {
         _shareRequestRepo = shareRequestRepo;
         _migrationRepo = migrationRepo;
-        _meepleContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     protected override async Task HandleEventAsync(
@@ -67,30 +64,14 @@ internal sealed class CreateProposalMigrationOnApprovalHandler : DomainEventHand
             return;
         }
 
-        // Get the PrivateGameId from the UserLibraryEntry that was used for the proposal
-        // IMPORTANT: For NewGameProposal, SourceGameId should reference the UserLibraryEntry.Id
-        // (not PrivateGameId or SharedGameId) that contains the proposed private game.
-        // This differs from other ContributionTypes where SourceGameId references SharedGameId.
-        var libraryEntry = await _meepleContext.UserLibraryEntries
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == shareRequest.SourceGameId, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (libraryEntry == null)
+        // #5078: the proposed game is the proposal's private game (ShareRequest.CreateGameProposal), as
+        // ApproveGameProposalCommandHandler reads it (#5076). This used to read a UserLibraryEntry at SourceGameId,
+        // which is Guid.Empty for a proposal: no migration would ever have been recorded.
+        if (shareRequest.SourcePrivateGameId is not { } privateGameId || privateGameId == Guid.Empty)
         {
             Logger.LogError(
-                "ShareRequest {ShareRequestId}: UserLibraryEntry {SourceGameId} not found",
-                domainEvent.ShareRequestId,
-                shareRequest.SourceGameId);
-            return;
-        }
-
-        if (!libraryEntry.PrivateGameId.HasValue || libraryEntry.PrivateGameId.Value == Guid.Empty)
-        {
-            Logger.LogError(
-                "ShareRequest {ShareRequestId}: UserLibraryEntry {LibraryEntryId} has no valid PrivateGameId",
-                domainEvent.ShareRequestId,
-                libraryEntry.Id);
+                "ShareRequest {ShareRequestId} approved as NewGameProposal but has no proposed private game",
+                domainEvent.ShareRequestId);
             return;
         }
 
@@ -99,7 +80,7 @@ internal sealed class CreateProposalMigrationOnApprovalHandler : DomainEventHand
         // event id and the UNIQUE partial index blocks duplicate inserts on retry/replay.
         var migration = ProposalMigration.Create(
             shareRequestId: shareRequest.Id,
-            privateGameId: libraryEntry.PrivateGameId.Value,
+            privateGameId: privateGameId,
             sharedGameId: domainEvent.TargetSharedGameId.Value,
             userId: shareRequest.UserId,
             sourceEventId: domainEvent.EventId);
@@ -121,7 +102,7 @@ internal sealed class CreateProposalMigrationOnApprovalHandler : DomainEventHand
             "Created ProposalMigration {MigrationId} for ShareRequest {ShareRequestId}: PrivateGame {PrivateGameId} → SharedGame {SharedGameId}",
             migration.Id,
             shareRequest.Id,
-            libraryEntry.PrivateGameId.Value,
+            privateGameId,
             domainEvent.TargetSharedGameId.Value);
     }
 

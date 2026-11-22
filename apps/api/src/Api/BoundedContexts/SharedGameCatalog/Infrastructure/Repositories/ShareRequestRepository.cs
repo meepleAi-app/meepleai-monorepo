@@ -24,6 +24,9 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
     public async Task AddAsync(ShareRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        // #5078: the events reach their handlers only through the collector, which SaveChangesAsync reads. Without
+        // this every ShareRequest*Event stayed on the aggregate, and no handler of one ever ran.
+        CollectDomainEvents(request);
         var entity = MapToEntity(request);
         await DbContext.Set<ShareRequestEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
@@ -77,6 +80,7 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
     public void Update(ShareRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        CollectDomainEvents(request);
 
         // Find the tracked entity (loaded by GetByIdForUpdateAsync)
         var trackedEntity = DbContext.Set<ShareRequestEntity>()

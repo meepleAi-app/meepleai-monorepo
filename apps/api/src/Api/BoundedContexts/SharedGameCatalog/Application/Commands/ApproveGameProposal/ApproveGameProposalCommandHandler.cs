@@ -162,8 +162,8 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
             "Game proposal {ShareRequestId} approved successfully. Action: {Action}, Target game: {TargetSharedGameId}",
             shareRequest.Id, command.ApprovalAction, targetSharedGameId);
 
-        // Domain event ShareRequestApprovedEvent is dispatched automatically
-        // ProposalMigration is created by event handler
+        // ShareRequestApprovedEvent: the repository collects it and SaveChangesAsync hands it to its handlers (#5078).
+        // CreateProposalMigrationOnApprovalHandler records the ProposalMigration of the private game.
 
         // Verify ResolvedAt was set by Approve() (defensive programming)
         if (!shareRequest.ResolvedAt.HasValue)

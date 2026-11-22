@@ -4,12 +4,10 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Application.EventHandlers;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
-using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -114,11 +112,8 @@ public sealed class CreateProposalMigrationOnApprovalHandlerTests : IDisposable
     public async Task Handle_WhenTargetSharedGameIdIsNull_DoesNotCreateMigration()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var sourceGameId = Guid.NewGuid();
-
-        var shareRequest = Api.BoundedContexts.SharedGameCatalog.Domain.Entities.ShareRequest.Create(
-            userId, sourceGameId, ContributionType.NewGameProposal);
+        var shareRequest = Api.BoundedContexts.SharedGameCatalog.Domain.Entities.ShareRequest.CreateGameProposal(
+            Guid.NewGuid(), Guid.NewGuid());
 
         var domainEvent = new ShareRequestApprovedEvent(
             shareRequestId: shareRequest.Id,
@@ -142,14 +137,12 @@ public sealed class CreateProposalMigrationOnApprovalHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WhenLibraryEntryNotFound_DoesNotCreateMigration()
+    public async Task Handle_WhenANewGameProposalHasNoPrivateGame_DoesNotCreateMigration()
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var sourceGameId = Guid.NewGuid(); // used as UserLibraryEntry.Id in query
-
+        // #5078: the private game is the proposal's own (ShareRequest.CreateGameProposal). A NewGameProposal built
+        // with Create has none, and there is nothing to migrate.
         var shareRequest = Api.BoundedContexts.SharedGameCatalog.Domain.Entities.ShareRequest.Create(
-            userId, sourceGameId, ContributionType.NewGameProposal);
+            Guid.NewGuid(), Guid.NewGuid(), ContributionType.NewGameProposal);
 
         var domainEvent = new ShareRequestApprovedEvent(
             shareRequestId: shareRequest.Id,
@@ -159,8 +152,6 @@ public sealed class CreateProposalMigrationOnApprovalHandlerTests : IDisposable
         _mockShareRequestRepo
             .Setup(r => r.GetByIdAsync(shareRequest.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(shareRequest);
-
-        // No UserLibraryEntry seeded → FirstOrDefaultAsync returns null
 
         // Act
         var act = () => _handler.Handle(domainEvent, TestContext.Current.CancellationToken);
@@ -175,19 +166,15 @@ public sealed class CreateProposalMigrationOnApprovalHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WhenAddAndCommitLostRace_LogsAndReturnsWithoutThrowing()
+    public async Task Handle_ForAProposal_RecordsTheMigrationOfItsPrivateGame()
     {
-        // CF-2 deferred follow-up (#1938): when the partial UNIQUE index on
-        // proposal_migrations.source_event_id blocks our insert (outbox replay
-        // already won the race) AddAndCommitAsync returns false. The handler
-        // must log and exit silently — no rethrow, no further work.
+        // #5078: this used to look for a UserLibraryEntry at SourceGameId, which is Guid.Empty for a proposal, so no
+        // migration was ever recorded.
         var userId = Guid.NewGuid();
-        var libraryEntryId = Guid.NewGuid();
-        var sharedGameId = Guid.NewGuid();
         var privateGameId = Guid.NewGuid();
-
-        var shareRequest = Api.BoundedContexts.SharedGameCatalog.Domain.Entities.ShareRequest.Create(
-            userId, libraryEntryId, ContributionType.NewGameProposal);
+        var sharedGameId = Guid.NewGuid();
+        var shareRequest = Api.BoundedContexts.SharedGameCatalog.Domain.Entities.ShareRequest.CreateGameProposal(
+            userId, privateGameId);
 
         var domainEvent = new ShareRequestApprovedEvent(
             shareRequestId: shareRequest.Id,
@@ -198,13 +185,40 @@ public sealed class CreateProposalMigrationOnApprovalHandlerTests : IDisposable
             .Setup(r => r.GetByIdAsync(shareRequest.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(shareRequest);
 
-        _db.UserLibraryEntries.Add(new UserLibraryEntryEntity
-        {
-            Id = libraryEntryId,
-            UserId = userId,
-            PrivateGameId = privateGameId
-        });
-        await _db.SaveChangesAsync();
+        // Act
+        await _handler.Handle(domainEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        _mockMigrationRepo.Verify(
+            r => r.AddAndCommitAsync(
+                It.Is<Api.BoundedContexts.UserLibrary.Domain.Entities.ProposalMigration>(m =>
+                    m.ShareRequestId == shareRequest.Id &&
+                    m.PrivateGameId == privateGameId &&
+                    m.SharedGameId == sharedGameId &&
+                    m.UserId == userId &&
+                    m.SourceEventId == domainEvent.EventId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenAddAndCommitLostRace_LogsAndReturnsWithoutThrowing()
+    {
+        // CF-2 deferred follow-up (#1938): when the partial UNIQUE index on
+        // proposal_migrations.source_event_id blocks our insert (outbox replay
+        // already won the race) AddAndCommitAsync returns false. The handler
+        // must log and exit silently — no rethrow, no further work.
+        var shareRequest = Api.BoundedContexts.SharedGameCatalog.Domain.Entities.ShareRequest.CreateGameProposal(
+            Guid.NewGuid(), Guid.NewGuid());
+
+        var domainEvent = new ShareRequestApprovedEvent(
+            shareRequestId: shareRequest.Id,
+            adminId: Guid.NewGuid(),
+            targetSharedGameId: Guid.NewGuid());
+
+        _mockShareRequestRepo
+            .Setup(r => r.GetByIdAsync(shareRequest.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(shareRequest);
 
         // Override the default setup: a concurrent dispatch already inserted
         // the row, so AddAndCommitAsync now returns false.
@@ -224,46 +238,6 @@ public sealed class CreateProposalMigrationOnApprovalHandlerTests : IDisposable
                 It.IsAny<Api.BoundedContexts.UserLibrary.Domain.Entities.ProposalMigration>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task Handle_WhenLibraryEntryHasNoPrivateGameId_DoesNotCreateMigration()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var libraryEntryId = Guid.NewGuid();
-
-        var shareRequest = Api.BoundedContexts.SharedGameCatalog.Domain.Entities.ShareRequest.Create(
-            userId, libraryEntryId, ContributionType.NewGameProposal);
-
-        var domainEvent = new ShareRequestApprovedEvent(
-            shareRequestId: shareRequest.Id,
-            adminId: Guid.NewGuid(),
-            targetSharedGameId: Guid.NewGuid());
-
-        _mockShareRequestRepo
-            .Setup(r => r.GetByIdAsync(shareRequest.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(shareRequest);
-
-        // Seed a library entry with no PrivateGameId
-        _db.UserLibraryEntries.Add(new UserLibraryEntryEntity
-        {
-            Id = libraryEntryId,
-            UserId = userId,
-            PrivateGameId = null
-        });
-        await _db.SaveChangesAsync();
-
-        // Act
-        var act = () => _handler.Handle(domainEvent, TestContext.Current.CancellationToken);
-
-        // Assert
-        await act.Should().NotThrowAsync();
-        _mockMigrationRepo.Verify(
-            r => r.AddAndCommitAsync(
-                It.IsAny<Api.BoundedContexts.UserLibrary.Domain.Entities.ProposalMigration>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
     }
 
     #endregion

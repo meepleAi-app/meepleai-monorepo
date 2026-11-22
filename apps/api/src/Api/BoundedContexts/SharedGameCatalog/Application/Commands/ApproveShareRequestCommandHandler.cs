@@ -54,10 +54,11 @@ internal sealed class ApproveShareRequestCommandHandler : ICommandHandler<Approv
                 $"ShareRequest {shareRequest.Id} is a {shareRequest.ContributionType}: approve it with approve-game-proposal");
         }
 
-        // #5076, decision of 2026-11-19: approval cannot copy attached documents yet. The copy lives only in
-        // ShareRequestApprovedDocumentHandler, which no event reaches (#5078); since #5082 the copy itself works with
-        // S3 too. Approved here, the request would close with its documents left out, and nothing recovers them
-        // later: it waits instead.
+        // #5076, decision of 2026-11-19: approval cannot copy attached documents yet. Nothing copies them for this
+        // command: ApproveGameProposal copies a proposal's in its own command, and the event handler meant to copy
+        // these (ShareRequestApprovedDocumentHandler) is gone, because it copied a proposal's a second time (#5078).
+        // Approved here, the request would close with its documents left out, and nothing recovers them later: it
+        // waits instead (#5109).
         if (shareRequest.AttachedDocuments.Count > 0)
         {
             throw new ConflictException(
@@ -80,7 +81,7 @@ internal sealed class ApproveShareRequestCommandHandler : ICommandHandler<Approv
             "Share request {ShareRequestId} approved successfully. Target game: {TargetSharedGameId}",
             shareRequest.Id, shareRequest.TargetSharedGameId);
 
-        // Domain event ShareRequestApprovedEvent is dispatched automatically
+        // ShareRequestApprovedEvent: the repository collects it and SaveChangesAsync hands it to its handlers (#5078).
 
         return new ApproveShareRequestResponse(
             shareRequest.Id,

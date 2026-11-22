@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -22,6 +23,7 @@ internal sealed class ShareRequestApprovedNotificationHandler
     private readonly IUserRepository _userRepository;
     private readonly IShareRequestRepository _shareRequestRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
+    private readonly IPrivateGameRepository _privateGameRepository;
 
     public ShareRequestApprovedNotificationHandler(
         MeepleAiDbContext dbContext,
@@ -29,6 +31,7 @@ internal sealed class ShareRequestApprovedNotificationHandler
         IUserRepository userRepository,
         IShareRequestRepository shareRequestRepository,
         ISharedGameRepository sharedGameRepository,
+        IPrivateGameRepository privateGameRepository,
         ILogger<ShareRequestApprovedNotificationHandler> logger)
         : base(dbContext, logger)
     {
@@ -36,6 +39,7 @@ internal sealed class ShareRequestApprovedNotificationHandler
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
+        _privateGameRepository = privateGameRepository ?? throw new ArgumentNullException(nameof(privateGameRepository));
     }
 
     protected override async Task HandleEventAsync(
@@ -70,18 +74,15 @@ internal sealed class ShareRequestApprovedNotificationHandler
             return;
         }
 
-        // Get source game to retrieve title
-        var sourceGame = await _sharedGameRepository.GetByIdAsync(
-            shareRequest.SourceGameId, cancellationToken).ConfigureAwait(false);
-        if (sourceGame == null)
+        var game = await ShareRequestNotificationGame.FindAsync(
+            shareRequest, _sharedGameRepository, _privateGameRepository, cancellationToken).ConfigureAwait(false);
+        if (game == null)
         {
             Logger.LogWarning(
-                "Source game {SourceGameId} not found for share request notification",
-                shareRequest.SourceGameId);
+                "Game of share request {ShareRequestId} not found for notification",
+                domainEvent.ShareRequestId);
             return;
         }
-
-        var gameTitle = sourceGame.Title;
 
         // ISSUE-3668: Determine if this is a MergeKnowledgeBase approval
         var targetGame = await _sharedGameRepository.GetByIdAsync(
@@ -108,8 +109,8 @@ internal sealed class ShareRequestApprovedNotificationHandler
             Payload = new ShareRequestPayload(
                 domainEvent.ShareRequestId,
                 user.DisplayName,
-                gameTitle,
-                sourceGame.ImageUrl),
+                game.Title,
+                game.ImageUrl),
             DeepLinkPath = NotificationRoutes.SharedGame(targetSharedGameId),
             // Issue #1937 / CF-1: propagate event id for dispatcher dedup
             SourceEventId = domainEvent.EventId

@@ -188,8 +188,8 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
         updatedRequest.TargetSharedGameId.Should().Be(sharedGame.Id);
         updatedRequest.ResolvedAt.Should().NotBeNull();
 
-        // Verify ProposalMigration is created by event handler (in real scenario)
-        // Note: Event handlers not executed in unit tests, but checked in E2E tests
+        // The ProposalMigration is recorded by CreateProposalMigrationOnApprovalHandler, which this InMemory setup
+        // does not run: ShareRequestDomainEventsIntegrationTests covers it on the real host (#5078).
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -104,7 +105,7 @@ internal sealed class ModelDeprecatedAutoFallbackHandler
             // Notify admins about the automatic switch
             var adminIds = await _dbContext.Set<UserEntity>()
                 .AsNoTracking()
-                .Where(u => u.Role == "admin")
+                .WhereOperationalAlertRecipient()
                 .Select(u => u.Id)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);

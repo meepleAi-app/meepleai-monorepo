@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
@@ -169,6 +170,19 @@ public sealed class ModelDeprecatedAutoFallbackHandlerTests : IDisposable
         notification.Title.Should().Contain("deprecated-model");
         notification.Message.Should().Contain("fallback-1");
         notification.Link.Should().Be("/admin/agents/strategy");
+    }
+
+    [Fact]
+    public async Task Handle_WithFallbacks_NotifiesTheAdminsAndTheSuperAdmins_OnlyThem()
+    {
+        // #5119: the recipients were filtered with Role == "admin", so a superadmin, who manages the providers,
+        // was never told. The recipients are the roles AdminOnlyPolicy admits, as for share requests (#5113).
+        var ids = await UserRoleSeeds.SeedOnePerRoleAsync(_dbContext);
+        await SeedMapping("BALANCED", "deprecated-model", new[] { "fallback-1" });
+
+        await _handler.Handle(CreateEvent(), CancellationToken.None);
+
+        _capturedNotifications.Select(n => n.UserId).Should().BeEquivalentTo([ids["admin"], ids["superadmin"]]);
     }
 
     [Fact]

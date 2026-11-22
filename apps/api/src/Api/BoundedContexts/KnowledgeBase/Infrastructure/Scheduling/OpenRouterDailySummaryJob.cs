@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using System.Globalization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Application.Constants;
@@ -68,7 +69,7 @@ internal sealed class OpenRouterDailySummaryJob : IJob
 
             var adminIds = await _dbContext.Set<UserEntity>()
                 .AsNoTracking()
-                .Where(u => u.Role == "admin")
+                .WhereOperationalAlertRecipient()
                 .Select(u => u.Id)
                 .ToListAsync(ct)
                 .ConfigureAwait(false);

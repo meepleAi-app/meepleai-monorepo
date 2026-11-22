@@ -133,7 +133,7 @@ internal sealed class OpenRouterRpmAlertBackgroundService : BackgroundService
 
         var adminIds = await dbContext.Set<UserEntity>()
             .AsNoTracking()
-            .Where(u => u.Role == "admin")
+            .WhereOperationalAlertRecipient()
             .Select(u => u.Id)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

@@ -247,6 +247,23 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         capturedUserIds.Should().Contain(adminId2);
     }
 
+    [Fact]
+    public async Task Handle_NotifiesTheAdminsAndTheSuperAdmins_OnlyThem()
+    {
+        // #5119: the recipients were filtered with Role == "admin", so a superadmin, who manages the providers,
+        // was never told. The recipients are the roles AdminOnlyPolicy admits, as for share requests (#5113).
+        var ids = await UserRoleSeeds.SeedOnePerRoleAsync(_dbContext);
+        List<Guid>? notified = null;
+        _notificationRepoMock
+            .Setup(r => r.AddBatchAndCommitAsync(It.IsAny<IEnumerable<Notification>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<Notification>, CancellationToken>((ns, _) => notified = ns.Select(n => n.UserId).ToList())
+            .ReturnsAsync(2);
+
+        await _handler.Handle(MakeEvent(CircuitState.Open), CancellationToken.None);
+
+        notified.Should().BeEquivalentTo([ids["admin"], ids["superadmin"]]);
+    }
+
     // ── Exception swallowing ──────────────────────────────────────────────────
 
     [Fact]

@@ -221,6 +221,27 @@ public sealed class OpenRouterBudgetAlertBackgroundServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CheckBudget_AtAThreshold_NotifiesTheAdminsAndTheSuperAdmins_OnlyThem()
+    {
+        // #5119: the recipients were filtered with Role == "admin", so a superadmin, who manages the providers,
+        // was never told. The recipients are the roles AdminOnlyPolicy admits, as for share requests (#5113).
+        var ids = await UserRoleSeeds.SeedOnePerRoleAsync(_dbContext);
+        var notified = new List<Guid>();
+        _notificationRepoMock
+            .Setup(r => r.AddAsync(
+                It.IsAny<Api.BoundedContexts.UserNotifications.Domain.Aggregates.Notification>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<Api.BoundedContexts.UserNotifications.Domain.Aggregates.Notification, CancellationToken>(
+                (n, _) => notified.Add(n.UserId))
+            .Returns(Task.CompletedTask);
+        SetupSpend(5.00m);
+
+        await InvokeCheckBudgetAsync(CreateSut(dailyBudget: 10m, thresholds: "50"));
+
+        notified.Should().BeEquivalentTo([ids["admin"], ids["superadmin"]]);
+    }
+
+    [Fact]
     public async Task CheckBudget_At50PercentThreshold_CreatesInfoSeverityNotification()
     {
         // Arrange

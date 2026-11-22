@@ -197,7 +197,7 @@ internal sealed class RedisRateLimitingHealthMonitor : BackgroundService
 
             var adminIds = await dbContext.Set<UserEntity>()
                 .AsNoTracking()
-                .Where(u => u.Role == "admin")
+                .WhereOperationalAlertRecipient()
                 .Select(u => u.Id)
                 .ToListAsync(ct)
                 .ConfigureAwait(false);

@@ -324,18 +324,16 @@ public sealed class GetFriendsActivityQueryHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_FriendDiscoveredFromCrossRsvp_StillSurfacesTheirActivity()
+    [Trait("Issue", "4760")]
+    public async Task Handle_FriendsNightTheUserIsNotAt_DoesNotSurface()
     {
-        // Arrange: Alice and Bob are both RSVP'd to Charlie's GameNight
-        // (Charlie is NOT a User-linked friend if his night is outside window).
-        // The shared night between Alice/Bob is Charlie's night within window
-        // → Bob qualifies as Alice's friend. Verify Bob's own organized activity
-        // (different night) surfaces.
+        // #4760, decision of 2026-11-23: the feed shows only the nights the viewer sits at, the rule of the
+        // detail (403 otherwise) and of the lists (#4748). Bob is Alice's friend through Charlie's night; his
+        // own night, where Alice is not invited, stays out: neither its title nor its id reach her.
         var alice = await SeedUserAsync("Alice");
         var bob = await SeedUserAsync("Bob");
         var charlie = await SeedUserAsync("Charlie");
 
-        // Shared night: Charlie organized, Alice + Bob both RSVP'd within window.
         var sharedNight = await SeedNightAsync(
             charlie.Id,
             "Charlie's Night",
@@ -343,25 +341,90 @@ public sealed class GetFriendsActivityQueryHandlerTests : IDisposable
         await SeedRsvpAsync(sharedNight.Id, alice.Id);
         await SeedRsvpAsync(sharedNight.Id, bob.Id);
 
-        // Bob organized another night (Alice not RSVP'd) — should still surface
-        // since Bob is now Alice's qualified friend.
         var bobsNight = await SeedNightAsync(
             bob.Id,
             "Bob's Solo Night",
             status: "Published",
             updatedAt: DateTimeOffset.UtcNow.AddHours(-1));
 
-        var query = new GetFriendsActivityQuery(alice.Id);
+        var result = await _sut.Handle(new GetFriendsActivityQuery(alice.Id), CancellationToken.None);
 
-        // Act
-        var result = await _sut.Handle(query, CancellationToken.None);
-
-        // Assert: Bob's organized night surfaces ("created"). Charlie also surfaces
-        // (since he's also Alice's friend via the shared night).
+        result.Should().NotContain(a => a.GameOrEventId == bobsNight.Id);
+        result.Should().NotContain(a => a.GameOrEventName == "Bob's Solo Night");
         result.Should().Contain(a =>
             a.FriendUserId == bob.Id
-            && a.Verb == "created"
-            && a.GameOrEventId == bobsNight.Id);
+            && a.Verb == "joined"
+            && a.GameOrEventId == sharedNight.Id,
+            "Bob is still Alice's friend, and what he did at her table is still shown");
+    }
+
+    [Fact]
+    [Trait("Issue", "4760")]
+    public async Task Handle_FriendsDraftNight_DoesNotSurface_EvenIfTheUserIsInvited()
+    {
+        // #4760: a Draft is not activity yet, for anybody. The issue's case: Marco prepares in draft a
+        // surprise night; nobody sees it in their feed, invited or not.
+        var luca = await SeedUserAsync("Luca");
+        var marco = await SeedUserAsync("Marco");
+
+        var playedTogether = await SeedNightAsync(marco.Id, "Venerdì Catan", status: "Completed");
+        await SeedRsvpAsync(playedTogether.Id, luca.Id);
+
+        var draft = await SeedNightAsync(
+            marco.Id,
+            "Sorpresa per Giulia",
+            status: "Draft",
+            updatedAt: DateTimeOffset.UtcNow.AddHours(-1));
+        await SeedRsvpAsync(draft.Id, luca.Id, status: "Pending");
+
+        var result = await _sut.Handle(new GetFriendsActivityQuery(luca.Id), CancellationToken.None);
+
+        result.Should().NotContain(a => a.GameOrEventId == draft.Id);
+        result.Should().ContainSingle(a => a.GameOrEventId == playedTogether.Id && a.Verb == "completed");
+    }
+
+    [Fact]
+    [Trait("Issue", "4760")]
+    public async Task Handle_TheUsersOwnDraft_DoesNotSurface_EvenWithAFriendWhoAccepted()
+    {
+        var alice = await SeedUserAsync("Alice");
+        var bob = await SeedUserAsync("Bob");
+
+        var shared = await SeedNightAsync(alice.Id, "Alice's Night", status: "Published");
+        await SeedRsvpAsync(shared.Id, bob.Id);
+
+        var draft = await SeedNightAsync(alice.Id, "Alice's Draft", status: "Draft");
+        await SeedRsvpAsync(draft.Id, bob.Id, respondedAt: DateTimeOffset.UtcNow.AddHours(-1));
+
+        var result = await _sut.Handle(new GetFriendsActivityQuery(alice.Id), CancellationToken.None);
+
+        result.Should().NotContain(a => a.GameOrEventId == draft.Id);
+        result.Should().Contain(a => a.FriendUserId == bob.Id && a.GameOrEventId == shared.Id);
+    }
+
+    [Fact]
+    [Trait("Issue", "4760")]
+    public async Task Handle_ADraftMakesNobodyAFriend()
+    {
+        // #4760: a Draft is not activity, so it does not pick the friends either. Luca and Marco last played
+        // together outside the window; Marco's draft, where Luca is invited, must not bring Marco back as a
+        // friend and, with him, Marco's join at Luca's old table.
+        var luca = await SeedUserAsync("Luca");
+        var marco = await SeedUserAsync("Marco");
+
+        var oldNight = await SeedNightAsync(luca.Id, "Da Luca", scheduledAt: DateTimeOffset.UtcNow.AddDays(-120));
+        await SeedRsvpAsync(oldNight.Id, marco.Id, respondedAt: DateTimeOffset.UtcNow.AddDays(-125));
+
+        var draft = await SeedNightAsync(
+            marco.Id,
+            "Sorpresa per Giulia",
+            status: "Draft",
+            scheduledAt: DateTimeOffset.UtcNow.AddDays(5));
+        await SeedRsvpAsync(draft.Id, luca.Id, status: "Pending");
+
+        var result = await _sut.Handle(new GetFriendsActivityQuery(luca.Id), CancellationToken.None);
+
+        result.Should().BeEmpty();
     }
 
     [Fact]

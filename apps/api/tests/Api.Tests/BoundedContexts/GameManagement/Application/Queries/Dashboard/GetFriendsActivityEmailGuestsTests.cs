@@ -198,7 +198,26 @@ public sealed class GetFriendsActivityEmailGuestsTests : IDisposable
     public async Task AFriendsNightJoinedByEmailOnly_IsLoadedAsAnActivity_EvenIfNobodyThereHasAnRsvpRow()
     {
         // Step 2 loads the nights a friend touched; a night the friend joined only by email has no RSVP row to
-        // find it by, and used to be missed.
+        // find it by, and used to be missed. Since #4760 it must also be a night I sit at: here by email too.
+        var me = User("Marta");
+        var friend = User("Giulia");
+        var host = User("Pietro");
+        var shared = Night(me.Id, "La nostra serata");
+        Rsvp(shared.Id, friend.Id);
+        var elsewhere = Night(host.Id, "Da Pietro");
+        Invitation(elsewhere.Id, friend.Id, friend.Email);
+        Invitation(elsewhere.Id, me.Id, me.Email);
+
+        var feed = await FeedOf(me.Id);
+
+        feed.Should().Contain(a => a.FriendUserId == friend.Id && a.Verb == "joined" && a.GameOrEventId == elsewhere.Id);
+    }
+
+    [Fact]
+    [Trait("Issue", "4760")]
+    public async Task AFriendsNightJoinedByEmail_WhereIDoNotSit_IsNotShown()
+    {
+        // #4760: the email seat of a friend does not open a night to me; mine would (the test above).
         var me = User("Marta");
         var friend = User("Giulia");
         var host = User("Pietro");
@@ -209,6 +228,7 @@ public sealed class GetFriendsActivityEmailGuestsTests : IDisposable
 
         var feed = await FeedOf(me.Id);
 
-        feed.Should().Contain(a => a.FriendUserId == friend.Id && a.Verb == "joined" && a.GameOrEventId == elsewhere.Id);
+        feed.Should().NotContain(a => a.GameOrEventId == elsewhere.Id);
+        feed.Should().Contain(a => a.FriendUserId == friend.Id && a.GameOrEventId == shared.Id);
     }
 }

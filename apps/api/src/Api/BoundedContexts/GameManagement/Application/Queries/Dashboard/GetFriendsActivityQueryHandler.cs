@@ -1,6 +1,9 @@
+using System.Linq.Expressions;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Services;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.GameManagement;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,11 +22,14 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.Dashboard;
 ///   <item>Collect distinct other User-linked participants from those nights:
 ///         organizers, RSVP user ids and accepted email guests bound to their account, excluding the
 ///         current user. These are qualified "friends" (MAJ-5).</item>
-///   <item>Project recent activities by those friends across all their GameNights
-///         (not only the shared ones) into three verbs:
+///   <item>Project recent activities by those friends on the GameNights the current user also sits at
+///         (the same rule as step 1, the lists and the detail gate: #4760, decision of 2026-11-23), Draft
+///         excluded, into three verbs:
 ///         <c>created</c> (friend is organizer, status != Completed),
 ///         <c>completed</c> (friend is organizer, status == Completed),
-///         <c>joined</c> (friend has an Accepted RSVP, or accepted an email invitation).</item>
+///         <c>joined</c> (friend has an Accepted RSVP, or accepted an email invitation).
+///         A friend's night the current user is not at stays out, title and id included: the detail would
+///         answer 403 to the link, and a title is what a surprise gives away.</item>
 ///   <item>Order by timestamp DESC and take <see cref="GetFriendsActivityQuery.Limit"/>.</item>
 /// </list></para>
 ///
@@ -44,6 +50,8 @@ internal sealed class GetFriendsActivityQueryHandler
 
     private const string GameNightEntityType = "gameNight";
     private const string CompletedStatus = "Completed";
+    // nameof, not a literal: a rename of the enum member must not reopen the feed to Drafts in silence (#4760).
+    private const string DraftStatus = nameof(GameNightStatus.Draft);
     private const string AcceptedRsvp = "Accepted";
 
     private readonly MeepleAiDbContext _context;
@@ -67,9 +75,16 @@ internal sealed class GetFriendsActivityQueryHandler
         var now = DateTimeOffset.UtcNow;
         var windowStart = now.AddDays(-FriendsWindowDays);
 
+        // «The current user sits at this night», read once: it picks the friends (step 1) and the nights
+        // whose activity the current user may see (step 2).
+        var participatedBy = await GameNightInvitationQueries
+            .ParticipatedByAsync(_context, request.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
         // Step 1: discover friend user ids from shared game nights in the window.
         var friendUserIds = await DiscoverFriendUserIdsAsync(
             request.UserId,
+            participatedBy,
             windowStart,
             cancellationToken).ConfigureAwait(false);
 
@@ -88,13 +103,17 @@ internal sealed class GetFriendsActivityQueryHandler
             .ToDictionary(g => g.Key, g => g.ToList());
         var friendGuestNightIds = guestSeatsByNight.Keys.ToList();
 
-        // Step 2: load recent GameNights touched by any of those friends.
+        // Step 2: load recent GameNights touched by any of those friends, among the ones the current user
+        // sits at and that are no longer a Draft (#4760). Both filters come before the Take, or the nights
+        // they drop would eat the overfetch.
         // Overfetch (Limit * 3) so the per-night fan-out (1 organizer activity +
         // N accepted-RSVP activities) still has enough material after the final
         // timestamp-desc sort.
         var overfetchCount = Math.Max(request.Limit * 3, request.Limit);
         var recentNights = await _context.GameNightEvents
             .AsNoTracking()
+            .Where(participatedBy)
+            .Where(gn => gn.Status != DraftStatus)
             .Where(gn => friendUserIds.Contains(gn.OrganizerId)
                 || gn.Rsvps.Any(r => friendUserIds.Contains(r.UserId))
                 || friendGuestNightIds.Contains(gn.Id))
@@ -192,22 +211,21 @@ internal sealed class GetFriendsActivityQueryHandler
     /// GameNights scheduled within the friends window where the current user sits at the table
     /// (<see cref="GameNightInvitationQueries.ParticipatedByAsync"/>: organizer, RSVP row, or an email
     /// invitation accepted while logged in). The friends are everybody else at those tables: the
-    /// organizer, the RSVP rows, and the email guests bound to their account (#4943).
+    /// organizer, the RSVP rows, and the email guests bound to their account (#4943). A Draft makes
+    /// nobody a friend (#4760): it is not activity yet, so it does not decide whose activity is shown.
     /// </summary>
     private async Task<HashSet<Guid>> DiscoverFriendUserIdsAsync(
         Guid userId,
+        Expression<Func<GameNightEventEntity, bool>> participatedBy,
         DateTimeOffset windowStart,
         CancellationToken cancellationToken)
     {
-        var participatedBy = await GameNightInvitationQueries
-            .ParticipatedByAsync(_context, userId, cancellationToken)
-            .ConfigureAwait(false);
-
         // Composite query: pull (Id, OrganizerId, RsvpUserIds) for shared nights only.
         var sharedNights = await _context.GameNightEvents
             .AsNoTracking()
             .Where(gn => gn.ScheduledAt >= windowStart)
             .Where(participatedBy)
+            .Where(gn => gn.Status != DraftStatus)
             .Select(gn => new SharedNightProjection(
                 gn.Id,
                 gn.OrganizerId,

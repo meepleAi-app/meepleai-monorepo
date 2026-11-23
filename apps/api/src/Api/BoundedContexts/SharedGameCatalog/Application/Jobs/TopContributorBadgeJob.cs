@@ -1,35 +1,51 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 
 /// <summary>
-/// Background job that periodically recalculates and awards/revokes TopContributor badges.
-/// Runs monthly to identify the top 10 contributors and manage badge assignments.
+/// Background job that awards and revokes the leaderboard badges, the ones with requirement TopContributor
+/// (TOP_CONTRIBUTOR, TOP_THREE, NUMBER_ONE). It judges the month just closed (#5136, decision of 2026-11-23): it
+/// recalculates everyone ranked within the largest TopContributorRank of those badges, and every current holder of one
+/// of them, so the ones who left the ranking lose it. RecalculateBadges decides, through BadgeEvaluator, which reads the
+/// same ranks.
 /// </summary>
 /// <remarks>
-/// STUB IMPLEMENTATION - Requires background job infrastructure (Hangfire/Quartz).
+/// <para>
+/// It runs every day, not only on the 1st: the ranks of a closed month do not change, so every run of a month gives the
+/// same result, and the badges change once, at the first run after the month closes. A monthly trigger on Quartz's
+/// in-memory store would lose a whole month to a restart at 00:00 UTC on the 1st (review of #5137).
+/// </para>
+/// <para>
+/// Each candidate is recalculated in a DI scope of its own. One scope shares one DbContext: a failed save left its
+/// entities tracked, and every later candidate's save retried them and failed too (review of #5137).
+/// </para>
 /// Issue #2728: Application - Badge Assignment Handlers
 /// </remarks>
 [DisallowConcurrentExecution]
 internal sealed class TopContributorBadgeJob : IJob
 {
     private readonly IMediator _mediator;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IBadgeRepository _badgeRepository;
     private readonly IUserBadgeRepository _userBadgeRepository;
     private readonly ILogger<TopContributorBadgeJob> _logger;
 
     public TopContributorBadgeJob(
         IMediator mediator,
+        IServiceScopeFactory scopeFactory,
         IBadgeRepository badgeRepository,
         IUserBadgeRepository userBadgeRepository,
         ILogger<TopContributorBadgeJob> logger)
     {
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _badgeRepository = badgeRepository ?? throw new ArgumentNullException(nameof(badgeRepository));
         _userBadgeRepository = userBadgeRepository ?? throw new ArgumentNullException(nameof(userBadgeRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -43,64 +59,54 @@ internal sealed class TopContributorBadgeJob : IJob
 
         try
         {
-            // Get top 10 contributors for the current month
-            var leaderboard = await _mediator.Send(
-                new GetBadgeLeaderboardQuery
-                {
-                    Period = LeaderboardPeriod.Month,
-                    PageSize = 10
-                },
-                context.CancellationToken).ConfigureAwait(false);
+            // The leaderboard badges and their ranks come from the badge definitions, not from a list written here: a new
+            // one, or a different rank, is picked up without touching the job.
+            var leaderboardBadges = (await _badgeRepository.GetAllActiveAsync(context.CancellationToken).ConfigureAwait(false))
+                .Where(b => b.Requirement.Type == BadgeRequirementType.TopContributor && b.Requirement.TopContributorRank.HasValue)
+                .ToList();
 
-            if (leaderboard.Count == 0)
+            if (leaderboardBadges.Count == 0)
             {
-                _logger.LogInformation("No contributors found for TopContributor badge assignment");
-
-                context.Result = new
-                {
-                    Success = true,
-                    Awarded = 0,
-                    Revoked = 0,
-                    Message = "No contributors found"
-                };
+                _logger.LogWarning("No active leaderboard badge: nothing to award");
+                context.Result = new { Success = true, Awarded = 0, Revoked = 0, Message = "No leaderboard badges" };
                 return;
             }
 
-            // Get TopContributor badge definition
-            var topContributorBadge = await _badgeRepository.GetByCodeAsync(
-                "TOP_CONTRIBUTOR",
-                context.CancellationToken).ConfigureAwait(false);
+            var widestRank = leaderboardBadges.Max(b => b.Requirement.TopContributorRank!.Value);
 
-            if (topContributorBadge == null)
+            // The ranks of the month just closed. Empty or not, the holders below are recalculated: a month with no
+            // contributor takes the badges away from last month's (review of #5137).
+            var ranks = await _mediator.Send(new GetPreviousMonthContributionRanksQuery(), context.CancellationToken)
+                .ConfigureAwait(false);
+            var candidates = ranks.Where(r => r.Value <= widestRank).Select(r => r.Key).ToHashSet();
+
+            foreach (var badge in leaderboardBadges)
             {
-                _logger.LogError("TOP_CONTRIBUTOR badge definition not found in system");
-
-                context.Result = new
-                {
-                    Success = false,
-                    Error = "TOP_CONTRIBUTOR badge not found"
-                };
-                return;
+                var holders = await _userBadgeRepository.GetUsersByBadgeCodeAsync(badge.Code, context.CancellationToken)
+                    .ConfigureAwait(false);
+                candidates.UnionWith(holders.Select(h => h.UserId));
             }
 
-            var topUserIds = leaderboard.Take(10).Select(l => l.UserId).ToHashSet();
-
-            // Award badge to top 10 using RecalculateBadgesCommand for each user
             int awardedCount = 0;
-            foreach (var userId in topUserIds)
+            int revokedCount = 0;
+            foreach (var userId in candidates)
             {
                 try
                 {
-                    var response = await _mediator.Send(
+                    var scope = _scopeFactory.CreateAsyncScope();
+                    await using var disposal = scope.ConfigureAwait(false);
+                    var response = await scope.ServiceProvider.GetRequiredService<IMediator>().Send(
                         new RecalculateBadgesCommand { UserId = userId },
                         context.CancellationToken).ConfigureAwait(false);
 
                     awardedCount += response.BadgesAwarded;
+                    revokedCount += response.BadgesRevoked;
 
                     _logger.LogDebug(
-                        "Recalculated badges for top contributor: UserId={UserId}, Awarded={Awarded}",
+                        "Recalculated badges for leaderboard candidate: UserId={UserId}, Awarded={Awarded}, Revoked={Revoked}",
                         userId,
-                        response.BadgesAwarded);
+                        response.BadgesAwarded,
+                        response.BadgesRevoked);
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
@@ -111,50 +117,16 @@ internal sealed class TopContributorBadgeJob : IJob
                 catch (Exception ex)
                 {
                     _logger.LogError(ex,
-                        "Failed to recalculate badges for top contributor: UserId={UserId}",
+                        "Failed to recalculate badges for leaderboard candidate: UserId={UserId}",
                         userId);
                     // Continue with next user
                 }
 #pragma warning restore CA1031
             }
 
-            // Revoke badge from users no longer in top 10
-            var currentHolders = await _userBadgeRepository.GetUsersByBadgeCodeAsync(
-                "TOP_CONTRIBUTOR",
-                context.CancellationToken).ConfigureAwait(false);
-
-            int revokedCount = 0;
-            foreach (var holder in currentHolders.Where(h => !topUserIds.Contains(h.UserId)))
-            {
-                try
-                {
-                    var response = await _mediator.Send(
-                        new RecalculateBadgesCommand { UserId = holder.UserId },
-                        context.CancellationToken).ConfigureAwait(false);
-
-                    revokedCount += response.BadgesRevoked;
-
-                    _logger.LogInformation(
-                        "Revoked TOP_CONTRIBUTOR badge from user: UserId={UserId}",
-                        holder.UserId);
-                }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-                // BACKGROUND SERVICE: BACKGROUND TASK PATTERN - Scheduled task error isolation
-#pragma warning restore S125
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex,
-                        "Failed to revoke badge from user: UserId={UserId}",
-                        holder.UserId);
-                    // Continue with next user
-                }
-#pragma warning restore CA1031
-            }
-
             _logger.LogInformation(
-                "TopContributorBadgeJob completed: Processed={ProcessedCount} top contributors, Awarded={Awarded}, Revoked={Revoked}",
-                topUserIds.Count,
+                "TopContributorBadgeJob completed: Candidates={Candidates}, Awarded={Awarded}, Revoked={Revoked}",
+                candidates.Count,
                 awardedCount,
                 revokedCount);
 
@@ -162,16 +134,11 @@ internal sealed class TopContributorBadgeJob : IJob
             {
                 Success = true,
                 Awarded = awardedCount,
-                Revoked = revokedCount,
-                TopContributorsCount = topUserIds.Count
+                Revoked = revokedCount
             };
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // BACKGROUND SERVICE: BACKGROUND TASK PATTERN - Scheduled task error isolation
-        // Background tasks must not throw exceptions (would terminate task scheduler).
-        // Errors logged for monitoring; task failures don't impact application.
-#pragma warning restore S125
+        // BACKGROUND SERVICE: Job-level error isolation
         catch (Exception ex)
         {
             _logger.LogError(ex,

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -5,6 +6,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Tests.Constants;
+using MediatR;
 using Moq;
 using Xunit;
 using FluentAssertions;
@@ -17,6 +19,7 @@ public class BadgeEvaluatorTests
     private readonly Mock<IBadgeRepository> _badgeRepositoryMock;
     private readonly Mock<IShareRequestRepository> _shareRequestRepositoryMock;
     private readonly Mock<ISharedGameDocumentRepository> _sharedGameDocumentRepositoryMock;
+    private readonly Mock<IMediator> _mediatorMock;
     private readonly IBadgeEvaluator _evaluator;
 
     public BadgeEvaluatorTests()
@@ -24,10 +27,12 @@ public class BadgeEvaluatorTests
         _badgeRepositoryMock = new Mock<IBadgeRepository>();
         _shareRequestRepositoryMock = new Mock<IShareRequestRepository>();
         _sharedGameDocumentRepositoryMock = new Mock<ISharedGameDocumentRepository>();
+        _mediatorMock = new Mock<IMediator>();
         _evaluator = new BadgeEvaluator(
             _badgeRepositoryMock.Object,
             _shareRequestRepositoryMock.Object,
-            _sharedGameDocumentRepositoryMock.Object);
+            _sharedGameDocumentRepositoryMock.Object,
+            _mediatorMock.Object);
     }
 
     [Fact]
@@ -185,22 +190,58 @@ public class BadgeEvaluatorTests
     // Unit testing QualityStreak logic would require making ShareRequest mockable or
     // extracting streak validation to a separate service.
 
+    // #5136: it answered false («handled by scheduled job») while the job asked this evaluator, so no leaderboard badge
+    // was ever awarded. Decision of 2026-11-23: a rank within N among the contributors of the previous calendar month.
     [Fact]
-    public async Task CheckBadgeRequirementAsync_TopContributor_ReturnsFalse()
+    public async Task CheckBadgeRequirementAsync_TopContributor_RankedWithinTheBadgesRank_ReturnsTrue()
     {
-        // Arrange
         var userId = Guid.NewGuid();
-        var requirement = BadgeRequirement.ForTopContributor(10);
+        GivenTheRanks((Guid.NewGuid(), 1), (userId, 3));
 
-        // Act
         var result = await _evaluator.CheckBadgeRequirementAsync(
-            userId,
-            requirement,
-            TestContext.Current.CancellationToken);
+            userId, BadgeRequirement.ForTopContributor(3), TestContext.Current.CancellationToken);
 
-        // Assert
-        result.Should().BeFalse(); // TopContributor is handled by scheduled job, not real-time evaluation
+        result.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task CheckBadgeRequirementAsync_TopContributor_RankedBeyondOrAbsent_ReturnsFalse()
+    {
+        var fourth = Guid.NewGuid();
+        GivenTheRanks((Guid.NewGuid(), 1), (fourth, 4));
+
+        (await _evaluator.CheckBadgeRequirementAsync(fourth, BadgeRequirement.ForTopContributor(3), TestContext.Current.CancellationToken))
+            .Should().BeFalse();
+        (await _evaluator.CheckBadgeRequirementAsync(Guid.NewGuid(), BadgeRequirement.ForTopContributor(10), TestContext.Current.CancellationToken))
+            .Should().BeFalse("a user with no contribution last month has no rank");
+    }
+
+    [Fact]
+    public async Task EvaluateEligibleBadgesAsync_ReadsThePreviousMonthsRanksOnce_ForAllTheLeaderboardBadges()
+    {
+        // Review of #5137: one full ranking per badge; a closed month's ranks do not change within an evaluation.
+        var userId = Guid.NewGuid();
+        GivenTheRanks((userId, 1));
+        _badgeRepositoryMock
+            .Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Badge>
+            {
+                Badge.Create("TOP_CONTRIBUTOR", "Top", "d", BadgeTier.Gold, BadgeCategory.Engagement, BadgeRequirement.ForTopContributor(10)),
+                Badge.Create("TOP_THREE", "Three", "d", BadgeTier.Platinum, BadgeCategory.Engagement, BadgeRequirement.ForTopContributor(3)),
+                Badge.Create("NUMBER_ONE", "One", "d", BadgeTier.Platinum, BadgeCategory.Engagement, BadgeRequirement.ForTopContributor(1)),
+            });
+
+        var eligible = await _evaluator.EvaluateEligibleBadgesAsync(userId, TestContext.Current.CancellationToken);
+
+        eligible.Select(b => b.Code).Should().BeEquivalentTo(["TOP_CONTRIBUTOR", "TOP_THREE", "NUMBER_ONE"]);
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<GetPreviousMonthContributionRanksQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private void GivenTheRanks(params (Guid UserId, int Rank)[] ranks) =>
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetPreviousMonthContributionRanksQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyDictionary<Guid, int>)ranks.ToDictionary(r => r.UserId, r => r.Rank));
 
     [Fact]
     public async Task EvaluateEligibleBadgesAsync_ReturnsOnlyEligibleBadges()

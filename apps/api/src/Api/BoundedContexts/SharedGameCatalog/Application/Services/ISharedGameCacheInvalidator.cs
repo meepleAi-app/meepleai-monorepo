@@ -102,4 +102,10 @@ internal interface ISharedGameCacheInvalidator
     /// elenco vuoto non fa niente, lista e rail comprese.
     /// </summary>
     Task EvictDetailsAndListAsync(IReadOnlyCollection<Guid> gameIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// #5139: the contributors of these games (<c>GetGameContributorsQuery</c>), after an approval that recorded
+    /// one. Same rules as the other evictions: after the commit, logged and not rethrown on failure.
+    /// </summary>
+    Task EvictContributorsAsync(IReadOnlyCollection<Guid> gameIds, CancellationToken cancellationToken);
 }

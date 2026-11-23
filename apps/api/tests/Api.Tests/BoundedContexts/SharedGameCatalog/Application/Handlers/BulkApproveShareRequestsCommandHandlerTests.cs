@@ -9,6 +9,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -44,8 +45,10 @@ public class BulkApproveShareRequestsCommandHandlerTests
         _handler = new BulkApproveShareRequestsCommandHandler(
             _mockShareRequestRepository.Object,
             _mockDocuments.Object,
+            Mock.Of<IContributorRepository>(),
             _mockAuditLogRepository.Object,
             _mockUnitOfWork.Object,
+            Mock.Of<ISharedGameCacheInvalidator>(),
             Mock.Of<ILogger<BulkApproveShareRequestsCommandHandler>>(),
             TimeProvider.System);
     }

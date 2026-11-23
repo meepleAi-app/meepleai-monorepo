@@ -40,13 +40,13 @@ internal static class ShareRequestApprovalDocuments
     /// so a save that fails afterwards leaves them there. Call it after <see cref="ShareRequest.Approve"/>, which can
     /// still refuse, so that at least a refused approval leaves no copied file behind.
     /// </summary>
-    /// <returns>The number of documents copied: all the attached ones.</returns>
+    /// <returns>The ids of the copies in the shared game, one for each attached document; empty when none is attached.</returns>
     /// <exception cref="ConflictException">
     /// A document could not be copied. <c>CopyDocumentsToSharedGame</c> logs and skips one that is missing from storage,
     /// fails to store, or no longer exists; approved anyway, the request would close with that document left out, and
     /// nothing recovers it later (from the review of #5131).
     /// </exception>
-    public static async Task<int> CopyAttachedAsync(
+    public static async Task<IReadOnlyList<Guid>> CopyAttachedAsync(
         IShareRequestDocumentService documentService,
         ShareRequest shareRequest,
         Guid destinationId,
@@ -57,7 +57,7 @@ internal static class ShareRequestApprovalDocuments
 
         var documentIds = shareRequest.AttachedDocuments.Select(d => d.DocumentId).ToList();
         if (documentIds.Count == 0)
-            return 0;
+            return [];
 
         var copies = await documentService
             .CopyDocumentsToSharedGame(documentIds, destinationId, shareRequest.UserId, cancellationToken)
@@ -69,6 +69,6 @@ internal static class ShareRequestApprovalDocuments
                 $"ShareRequest {shareRequest.Id}: {copies.Count} of {documentIds.Count} attached documents could be copied to SharedGame {destinationId}, so it is not approved");
         }
 
-        return copies.Count;
+        return copies;
     }
 }

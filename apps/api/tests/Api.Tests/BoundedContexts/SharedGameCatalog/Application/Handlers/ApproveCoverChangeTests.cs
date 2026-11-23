@@ -26,6 +26,33 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 [Trait("BoundedContext", "SharedGameCatalog")]
 public class ApproveCoverChangeTests
 {
+    // #5139: a cover is a contribution to the game's metadata, recorded for the author of the request.
+    [Fact]
+    public async Task Approve_UpdateCover_RecordsAMetadataUpdate_ForItsAuthor()
+    {
+        var target = Guid.NewGuid();
+        var author = Guid.NewGuid();
+        var req = ShareRequest.CreateCoverChange(author, target, Guid.NewGuid(), "covers/g/pdf-cover", 3, null);
+        var recorded = new List<Contributor>();
+        var contributors = new Mock<IContributorRepository>();
+        contributors
+            .Setup(r => r.AddAsync(It.IsAny<Contributor>(), It.IsAny<CancellationToken>()))
+            .Callback<Contributor, CancellationToken>((c, _) => recorded.Add(c))
+            .Returns(Task.CompletedTask);
+        var (handler, adminId, _, _) = ApproveHandlerBuilder.WithDoubles(
+            req, SharedGameTestFactory.Existing(target), contributors.Object);
+
+        await handler.Handle(
+            new ApproveGameProposalCommand(req.Id, adminId, ProposalApprovalAction.UpdateCover, target, null),
+            TestContext.Current.CancellationToken);
+
+        var contributor = recorded.Should().ContainSingle().Subject;
+        contributor.UserId.Should().Be(author);
+        contributor.SharedGameId.Should().Be(target);
+        contributor.Contributions.Should().ContainSingle()
+            .Which.Type.Should().Be(ContributionRecordType.MetadataUpdate);
+    }
+
     [Fact]
     public async Task Approve_UpdateCover_SetsL4KeyOnSharedGameAndApproves()
     {
@@ -181,7 +208,8 @@ internal static class ApproveHandlerBuilder
     public static (ApproveGameProposalCommandHandler Handler, Guid AdminId, Mock<IUnitOfWork> UnitOfWork,
         Mock<ISharedGameCacheInvalidator> CacheInvalidator) WithDoubles(
         ShareRequest shareRequest,
-        SharedGame? sharedGame)
+        SharedGame? sharedGame,
+        IContributorRepository? contributors = null)
     {
         var adminId = Guid.NewGuid();
         shareRequest.StartReview(adminId);
@@ -208,6 +236,7 @@ internal static class ApproveHandlerBuilder
             privateGameRepoMock.Object,
             sharedGameRepoMock.Object,
             documentServiceMock.Object,
+            contributors ?? Mock.Of<IContributorRepository>(),
             unitOfWorkMock.Object,
             cacheInvalidatorMock.Object,
             loggerMock.Object);

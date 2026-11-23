@@ -15,18 +15,24 @@ internal sealed class ApproveShareRequestCommandHandler : ICommandHandler<Approv
 {
     private readonly IShareRequestRepository _shareRequestRepository;
     private readonly IShareRequestDocumentService _documentService;
+    private readonly IContributorRepository _contributorRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<ApproveShareRequestCommandHandler> _logger;
 
     public ApproveShareRequestCommandHandler(
         IShareRequestRepository shareRequestRepository,
         IShareRequestDocumentService documentService,
+        IContributorRepository contributorRepository,
         IUnitOfWork unitOfWork,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<ApproveShareRequestCommandHandler> logger)
     {
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
         _documentService = documentService ?? throw new ArgumentNullException(nameof(documentService));
+        _contributorRepository = contributorRepository ?? throw new ArgumentNullException(nameof(contributorRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -75,18 +81,29 @@ internal sealed class ApproveShareRequestCommandHandler : ICommandHandler<Approv
         var copied = await ShareRequestApprovalDocuments
             .CopyAttachedAsync(_documentService, shareRequest, destination, cancellationToken)
             .ConfigureAwait(false);
-        if (copied > 0)
+        if (copied.Count > 0)
         {
             _logger.LogInformation(
                 "Copied {Count} documents from ShareRequest {ShareRequestId} to SharedGame {SharedGameId}",
-                copied, shareRequest.Id, destination);
+                copied.Count, shareRequest.Id, destination);
         }
+
+        // #5139: the author becomes a contributor of the game, saved with the approval.
+        var contributions = new ShareRequestApprovalContributions(_contributorRepository);
+        await contributions.RecordAsync(
+                shareRequest,
+                destination,
+                ShareRequestApprovalContributions.KindOf(shareRequest),
+                copied,
+                cancellationToken)
+            .ConfigureAwait(false);
 
         // 3. Update repository
         _shareRequestRepository.Update(shareRequest);
 
-        // 4. Persist changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // 4. Persist changes, with the contribution (#5139)
+        await contributions.SaveWithTheApprovalAsync(_unitOfWork, _cacheInvalidator, cancellationToken)
+            .ConfigureAwait(false);
 
         _logger.LogInformation(
             "Share request {ShareRequestId} approved successfully. Target game: {TargetSharedGameId}",

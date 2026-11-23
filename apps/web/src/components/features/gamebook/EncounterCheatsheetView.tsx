@@ -379,7 +379,7 @@ function RenderedState({
         )}
         {conditions.loss && (
           <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
-            <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-destructive">
+            <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-destructive-text">
               {labels.conditionsLoss}
             </span>
             <span className="block text-sm leading-snug text-foreground">{conditions.loss}</span>

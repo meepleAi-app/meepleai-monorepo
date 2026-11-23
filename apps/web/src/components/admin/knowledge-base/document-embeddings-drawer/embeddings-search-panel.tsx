@@ -74,7 +74,7 @@ export function EmbeddingsSearchPanel({ docId }: EmbeddingsSearchPanelProps): JS
       </form>
 
       {queryTooLong ? (
-        <p id="embeddings-query-too-long" className="mt-1 text-xs text-destructive">
+        <p id="embeddings-query-too-long" className="mt-1 text-xs text-destructive-text">
           Query troppo lunga (max {MAX_QUERY_LENGTH} caratteri)
         </p>
       ) : null}
@@ -87,9 +87,11 @@ export function EmbeddingsSearchPanel({ docId }: EmbeddingsSearchPanelProps): JS
             ))}
           </div>
         ) : search.isError ? (
-          <p className="p-4 text-sm text-destructive">Errore ricerca: {search.error.message}</p>
+          <p className="p-4 text-sm text-destructive-text">
+            Errore ricerca: {search.error.message}
+          </p>
         ) : serverError ? (
-          <p className="p-4 text-sm text-destructive">{serverError}</p>
+          <p className="p-4 text-sm text-destructive-text">{serverError}</p>
         ) : hasResults ? (
           <>
             <p

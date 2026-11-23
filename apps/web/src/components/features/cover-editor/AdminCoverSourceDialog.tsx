@@ -191,7 +191,7 @@ export function AdminCoverSourceDialog({
           </p>
         )}
         {isError && (
-          <p role="alert" className="py-6 text-center text-sm text-destructive">
+          <p role="alert" className="py-6 text-center text-sm text-destructive-text">
             Impossibile caricare le sorgenti copertina.
           </p>
         )}
@@ -345,7 +345,7 @@ export function AdminCoverSourceDialog({
               </label>
             </div>
             {setManual.isError && (
-              <p role="alert" className="text-xs text-destructive">
+              <p role="alert" className="text-xs text-destructive-text">
                 Impossibile aggiungere la copertina: verifica che l&apos;URL sia HTTPS e che la
                 licenza sia consentita.
               </p>

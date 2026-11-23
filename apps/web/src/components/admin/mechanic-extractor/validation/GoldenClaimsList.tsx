@@ -169,7 +169,7 @@ export function GoldenClaimsList({ sharedGameId, claims }: GoldenClaimsListProps
                           aria-label={`Deactivate claim ${claim.id}`}
                           onClick={() => setDeactivatingId(claim.id)}
                         >
-                          <Trash2Icon className="h-4 w-4 text-destructive" />
+                          <Trash2Icon className="h-4 w-4 text-destructive-text" />
                         </Button>
                       </div>
                     </TableCell>

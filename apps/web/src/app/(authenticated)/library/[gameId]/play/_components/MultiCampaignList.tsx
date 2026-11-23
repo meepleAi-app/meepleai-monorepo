@@ -144,7 +144,7 @@ export function MultiCampaignList({
                         onClick={() => handleDelete(campaign.id, campaign.title)}
                         disabled={busyId === campaign.id}
                         data-testid={`gamebook-resume-multi-delete-${campaign.id}`}
-                        className="rounded px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                        className="rounded px-2 py-1 text-xs font-medium text-destructive-text hover:bg-destructive/10 disabled:opacity-50"
                       >
                         Elimina
                       </button>

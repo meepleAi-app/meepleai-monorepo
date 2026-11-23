@@ -75,7 +75,7 @@ export const RateLimitBanner: React.FC<RateLimitBannerProps> = ({
         {dismissible && onDismiss && (
           <button
             onClick={onDismiss}
-            className="ml-4 text-destructive hover:text-destructive/80 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2"
+            className="ml-4 text-destructive-text hover:text-destructive-text/80 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2"
             aria-label="Dismiss rate limit notification"
           >
             <svg

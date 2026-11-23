@@ -7,13 +7,7 @@
 
 import { useState } from 'react';
 
-import {
-  CheckCircle,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  XCircle,
-} from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Filter, XCircle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -106,7 +100,7 @@ export function RecentRequestsTable({
               variant="ghost"
               size="sm"
               className="h-6 px-2 text-xs gap-1"
-              onClick={() => setShowFilters((v) => !v)}
+              onClick={() => setShowFilters(v => !v)}
             >
               <Filter className="h-3 w-3" />
               Filters
@@ -119,11 +113,11 @@ export function RecentRequestsTable({
           <div className="flex flex-wrap gap-2 mt-2">
             <select
               value={filters.source ?? ''}
-              onChange={(e) => setFilter('source', e.target.value || undefined)}
+              onChange={e => setFilter('source', e.target.value || undefined)}
               className="h-7 rounded-md border bg-background px-2 text-xs text-foreground"
               aria-label="Filter by source"
             >
-              {SOURCE_OPTIONS.map((s) => (
+              {SOURCE_OPTIONS.map(s => (
                 <option key={s} value={s}>
                   {s || 'All sources'}
                 </option>
@@ -134,7 +128,7 @@ export function RecentRequestsTable({
               type="text"
               placeholder="Model filter..."
               value={filters.model ?? ''}
-              onChange={(e) => setFilter('model', e.target.value || undefined)}
+              onChange={e => setFilter('model', e.target.value || undefined)}
               className="h-7 rounded-md border bg-background px-2 text-xs placeholder:text-muted-foreground"
               aria-label="Filter by model"
             />
@@ -143,7 +137,7 @@ export function RecentRequestsTable({
               value={
                 filters.successOnly === undefined ? '' : filters.successOnly ? 'true' : 'false'
               }
-              onChange={(e) =>
+              onChange={e =>
                 setFilter(
                   'successOnly',
                   e.target.value === '' ? undefined : e.target.value === 'true'
@@ -163,7 +157,7 @@ export function RecentRequestsTable({
       <CardContent className="p-0">
         {isLoading ? (
           <div className="space-y-2 p-4">
-            {[1, 2, 3, 4, 5].map((i) => (
+            {[1, 2, 3, 4, 5].map(i => (
               <Skeleton key={i} className="h-8 w-full" />
             ))}
           </div>
@@ -179,23 +173,26 @@ export function RecentRequestsTable({
                   <tr className="border-b bg-muted/50">
                     <th className="px-3 py-2 text-left font-medium text-muted-foreground">Time</th>
                     <th className="px-3 py-2 text-left font-medium text-muted-foreground">Model</th>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Source</th>
-                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">Tokens</th>
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                      Source
+                    </th>
+                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                      Tokens
+                    </th>
                     <th className="px-3 py-2 text-right font-medium text-muted-foreground">Cost</th>
-                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">Latency</th>
+                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                      Latency
+                    </th>
                     <th className="px-3 py-2 text-center font-medium text-muted-foreground">OK</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.items.map((req) => (
+                  {data.items.map(req => (
                     <tr key={req.id} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="px-3 py-1.5 font-mono text-muted-foreground whitespace-nowrap">
                         {formatTime(req.requestedAt)}
                       </td>
-                      <td
-                        className="px-3 py-1.5 max-w-[140px] truncate"
-                        title={req.modelId}
-                      >
+                      <td className="px-3 py-1.5 max-w-[140px] truncate" title={req.modelId}>
                         {req.modelId.split('/').pop() ?? req.modelId}
                         {req.isFreeModel && (
                           <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0 h-3.5">
@@ -218,7 +215,7 @@ export function RecentRequestsTable({
                           <CheckCircle className="h-3.5 w-3.5 text-emerald-500 mx-auto" />
                         ) : (
                           <XCircle
-                            className="h-3.5 w-3.5 text-destructive mx-auto"
+                            className="h-3.5 w-3.5 text-destructive-text mx-auto"
                             aria-label={req.errorMessage ?? 'Error'}
                           />
                         )}

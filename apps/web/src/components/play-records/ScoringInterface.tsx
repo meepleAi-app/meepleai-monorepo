@@ -213,7 +213,7 @@ export function ScoringInterface({
                         {!isSaving && existingScore && <Check className="w-4 h-4 text-green-500" />}
                       </div>
                       {hasError && (
-                        <p className="text-xs text-destructive mt-1">{errors[stateKey]}</p>
+                        <p className="text-xs text-destructive-text mt-1">{errors[stateKey]}</p>
                       )}
                     </TableCell>
                   );

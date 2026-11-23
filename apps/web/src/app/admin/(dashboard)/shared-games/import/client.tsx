@@ -117,7 +117,7 @@ export function AdminGameImportWizardClient() {
       fallback={(_err, resetBoundary) => (
         <div className="container mx-auto max-w-5xl py-8">
           <Card className="p-8 text-center">
-            <h2 className="mb-2 text-2xl font-bold text-destructive">Errore nel wizard</h2>
+            <h2 className="mb-2 text-2xl font-bold text-destructive-text">Errore nel wizard</h2>
             <p className="mb-6 text-muted-foreground">
               Si è verificato un errore. Prova a ricominciare o contatta il supporto.
             </p>
@@ -188,7 +188,7 @@ export function AdminGameImportWizardClient() {
 
         {/* Global error */}
         {error && !isStep4 && (
-          <div className="mb-6 rounded-md border border-destructive bg-destructive/10 p-4 text-destructive">
+          <div className="mb-6 rounded-md border border-destructive bg-destructive/10 p-4 text-destructive-text">
             <p className="font-medium">Errore</p>
             <p className="text-sm">{error}</p>
           </div>

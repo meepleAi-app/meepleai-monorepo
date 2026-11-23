@@ -47,7 +47,7 @@ function getProgressColor(percentage: number): string {
  */
 function getTextColor(percentage: number): string {
   if (percentage > 90) {
-    return 'text-destructive';
+    return 'text-destructive-text';
   }
   if (percentage >= 70) {
     return 'text-amber-600 dark:text-amber-400';
@@ -115,7 +115,10 @@ export function QuotaStickyHeader({
             {currentCount}
           </span>
           <span className="text-muted-foreground">/</span>
-          <span className="tabular-nums text-muted-foreground" data-testid="quota-sticky-header-max">
+          <span
+            className="tabular-nums text-muted-foreground"
+            data-testid="quota-sticky-header-max"
+          >
             {maxAllowed >= 2147483647 ? '∞' : maxAllowed}
           </span>
           <span className="text-muted-foreground hidden sm:inline">giochi</span>

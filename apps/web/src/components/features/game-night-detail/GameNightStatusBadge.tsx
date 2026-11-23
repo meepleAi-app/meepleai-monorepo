@@ -57,7 +57,7 @@ const STATUS_VISUALS: Record<GameNightStatus, StatusVisualConfig> = {
     icon: '✓',
   },
   Cancelled: {
-    entityClass: 'bg-destructive/10 text-destructive border-destructive/30',
+    entityClass: 'bg-destructive/10 text-destructive-text border-destructive/30',
     showPulsingDot: false,
     icon: '✕',
   },

@@ -124,7 +124,7 @@ export function TagInput({
               Aggiungi
             </Button>
           </div>
-          {error && <p className="text-sm text-destructive mt-1">{error}</p>}
+          {error && <p className="text-sm text-destructive-text mt-1">{error}</p>}
           <p className="text-sm text-muted-foreground mt-1">
             {tags.length}/{maxTags} tag utilizzati
           </p>

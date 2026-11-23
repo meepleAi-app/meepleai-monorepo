@@ -95,7 +95,8 @@ const BUTTONS: readonly ButtonConfig[] = [
     response: 'Declined',
     icon: '×',
     labelKey: 'decline',
-    selectedClass: 'border-destructive bg-destructive/10 text-destructive hover:bg-destructive/15',
+    selectedClass:
+      'border-destructive bg-destructive/10 text-destructive-text hover:bg-destructive/15',
   },
 ];
 

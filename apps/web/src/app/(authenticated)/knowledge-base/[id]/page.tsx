@@ -141,7 +141,7 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
             ) : chunksQuery.isError ? (
               <div
                 role="alert"
-                className="flex h-full items-center justify-center text-sm text-destructive"
+                className="flex h-full items-center justify-center text-sm text-destructive-text"
               >
                 Errore caricamento chunk.
               </div>

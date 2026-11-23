@@ -90,7 +90,7 @@ function GameHeroError({ compact }: { compact: boolean }) {
       role="alert"
       data-slot="game-hero-error"
       className={cn(
-        'flex w-full items-center justify-center bg-destructive/10 text-sm text-destructive',
+        'flex w-full items-center justify-center bg-destructive/10 text-sm text-destructive-text',
         compact ? 'h-[180px]' : 'h-[240px]'
       )}
     >

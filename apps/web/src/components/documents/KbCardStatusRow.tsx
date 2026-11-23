@@ -123,7 +123,7 @@ export const KbCardStatusRow = memo(function KbCardStatusRow({
             aria-label={`Riprova elaborazione di ${document.fileName}`}
             className={cn(
               'ml-1 shrink-0 inline-flex items-center gap-1 rounded px-1.5 py-0.5',
-              'text-[10px] font-semibold text-destructive border border-destructive/40',
+              'text-[10px] font-semibold text-destructive-text border border-destructive/40',
               'hover:bg-destructive/10 transition-colors',
               'disabled:opacity-50 disabled:cursor-not-allowed'
             )}

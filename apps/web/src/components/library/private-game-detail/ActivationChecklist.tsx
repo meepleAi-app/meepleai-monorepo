@@ -76,7 +76,7 @@ export function ActivationChecklist({
         {(pdfStatus === 'uploading' || pdfStatus === 'processing') && children}
         {pdfStatus === 'failed' && (
           <div className="space-y-2">
-            <p className="text-sm text-destructive">Elaborazione fallita.</p>
+            <p className="text-sm text-destructive-text">Elaborazione fallita.</p>
             <Button variant="outline" size="sm" onClick={onUploadPdf}>
               Riprova
             </Button>

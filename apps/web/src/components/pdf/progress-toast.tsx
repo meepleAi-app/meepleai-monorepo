@@ -136,7 +136,7 @@ export function ProgressToast({
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {isComplete && <Check className="h-5 w-5 text-green-500 shrink-0" />}
-          {isFailed && <AlertCircle className="h-5 w-5 text-destructive shrink-0" />}
+          {isFailed && <AlertCircle className="h-5 w-5 text-destructive-text shrink-0" />}
           <div className="flex-1 min-w-0">
             <h4 className="font-semibold font-quicksand text-sm truncate">{title}</h4>
             <p className="text-xs text-muted-foreground font-nunito">
@@ -173,7 +173,7 @@ export function ProgressToast({
       {/* Error Message */}
       {isFailed && status?.errorMessage && (
         <div className="mb-3 p-2 rounded bg-destructive/10 border border-destructive/30">
-          <p className="text-xs text-destructive font-nunito">{status.errorMessage}</p>
+          <p className="text-xs text-destructive-text font-nunito">{status.errorMessage}</p>
         </div>
       )}
 

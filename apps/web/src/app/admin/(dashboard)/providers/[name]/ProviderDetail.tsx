@@ -34,7 +34,7 @@ export function ProviderDetail({ name }: { name: ProviderName }) {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           {isLoading && <span>Caricamento…</span>}
-          {isError && <span className="text-destructive">Errore caricamento</span>}
+          {isError && <span className="text-destructive-text">Errore caricamento</span>}
           {data && !data.quotaSupported && (
             <div className="text-muted-foreground">
               {data.errorMessage ?? 'Quota tracking non supportato dal provider'}
@@ -46,7 +46,7 @@ export function ProviderDetail({ name }: { name: ProviderName }) {
           {/* #3045: quota supportata + token ok ma fetch degradato → messaggio esplicito,
               non un <dl> quasi-vuoto silenzioso. */}
           {data?.quotaSupported && data.tokenConfigured && data.errorCode && (
-            <div className="text-destructive" data-testid="quota-degraded">
+            <div className="text-destructive-text" data-testid="quota-degraded">
               Sorgente non disponibile: {data.errorMessage ?? data.errorCode}
             </div>
           )}

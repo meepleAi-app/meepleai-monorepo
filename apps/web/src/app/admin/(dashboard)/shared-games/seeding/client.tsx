@@ -504,7 +504,7 @@ export function SeedingPageClient() {
 
         <CardContent className="p-0">
           {error ? (
-            <div className="px-6 py-8 text-center text-sm text-destructive">{error}</div>
+            <div className="px-6 py-8 text-center text-sm text-destructive-text">{error}</div>
           ) : loading && games.length === 0 ? (
             <div className="px-6 py-8 text-center text-sm text-muted-foreground">Loading…</div>
           ) : filteredGames.length === 0 ? (

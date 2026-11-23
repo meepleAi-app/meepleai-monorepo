@@ -72,7 +72,7 @@ export function BrandMark({
         </span>
       )}
       {adminBadge && (
-        <span className="ml-1 rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-destructive">
+        <span className="ml-1 rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-destructive-text">
           Admin
         </span>
       )}

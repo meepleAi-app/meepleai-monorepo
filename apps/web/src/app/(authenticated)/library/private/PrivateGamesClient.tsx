@@ -343,8 +343,8 @@ export default function PrivateGamesClient() {
       ) : error ? (
         <Card data-testid="error-state">
           <CardContent className="flex flex-col items-center py-12">
-            <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-            <p className="text-lg font-medium text-destructive">{error}</p>
+            <AlertTriangle className="h-12 w-12 text-destructive-text mb-4" />
+            <p className="text-lg font-medium text-destructive-text">{error}</p>
             <Button variant="outline" className="mt-4" onClick={() => loadGames()}>
               {t('common.refresh')}
             </Button>
@@ -471,7 +471,7 @@ export default function PrivateGamesClient() {
           </AlertDialogHeader>
           {deleteProblem === 'proposal' && selectedGame && (
             <div className="space-y-2" data-testid="delete-blocked-by-proposal">
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-sm text-destructive-text">
                 {t('privateGames.deleteBlockedByProposal')}
               </p>
               <WithdrawProposalButton
@@ -486,7 +486,7 @@ export default function PrivateGamesClient() {
             </p>
           )}
           {deleteProblem === 'failed' && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive-text">
               {t('privateGames.deleteFailed')}
             </p>
           )}
@@ -711,16 +711,16 @@ function EditPrivateGameFormInner({
     <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="edit-title">
-          {t('privateGameForm.title')} <span className="text-destructive">*</span>
+          {t('privateGameForm.title')} <span className="text-destructive-text">*</span>
         </Label>
         <Input id="edit-title" {...register('title')} disabled={isSubmitting} />
-        {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+        {errors.title && <p className="text-sm text-destructive-text">{errors.title.message}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="edit-minPlayers">
-            {t('privateGameForm.minPlayers')} <span className="text-destructive">*</span>
+            {t('privateGameForm.minPlayers')} <span className="text-destructive-text">*</span>
           </Label>
           <Input
             id="edit-minPlayers"
@@ -731,12 +731,12 @@ function EditPrivateGameFormInner({
             disabled={isSubmitting}
           />
           {errors.minPlayers && (
-            <p className="text-sm text-destructive">{errors.minPlayers.message}</p>
+            <p className="text-sm text-destructive-text">{errors.minPlayers.message}</p>
           )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="edit-maxPlayers">
-            {t('privateGameForm.maxPlayers')} <span className="text-destructive">*</span>
+            {t('privateGameForm.maxPlayers')} <span className="text-destructive-text">*</span>
           </Label>
           <Input
             id="edit-maxPlayers"
@@ -747,7 +747,7 @@ function EditPrivateGameFormInner({
             disabled={isSubmitting}
           />
           {errors.maxPlayers && (
-            <p className="text-sm text-destructive">{errors.maxPlayers.message}</p>
+            <p className="text-sm text-destructive-text">{errors.maxPlayers.message}</p>
           )}
         </div>
       </div>
@@ -814,7 +814,7 @@ function EditPrivateGameFormInner({
           aria-describedby={errors.description ? 'edit-description-error' : undefined}
         />
         {errors.description && (
-          <p id="edit-description-error" role="alert" className="text-sm text-destructive">
+          <p id="edit-description-error" role="alert" className="text-sm text-destructive-text">
             {errors.description.message}
           </p>
         )}
@@ -835,7 +835,7 @@ function EditPrivateGameFormInner({
       </div>
 
       {saveProblem === 'failed' && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive-text">
           {t('privateGames.saveFailed')}
         </p>
       )}

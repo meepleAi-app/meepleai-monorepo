@@ -61,7 +61,7 @@ export function QuotaStatusBar({
           La tua libreria: {currentCount}/{maxAllowed >= 2147483647 ? '∞' : maxAllowed} giochi
         </h3>
         {isAtLimit && (
-          <div className="flex items-center gap-1 text-xs text-destructive">
+          <div className="flex items-center gap-1 text-xs text-destructive-text">
             <AlertCircle className="h-3 w-3" />
             <span>Limite raggiunto</span>
           </div>
@@ -91,7 +91,7 @@ export function QuotaStatusBar({
             className={cn(
               'flex items-center gap-1 font-medium transition-colors hover:text-foreground',
               isNearLimit && 'text-yellow-700 dark:text-yellow-400',
-              isAtLimit && 'text-destructive'
+              isAtLimit && 'text-destructive-text'
             )}
           >
             Passa a {upgradeInfo.next} per +{upgradeInfo.additionalSlots}
@@ -108,7 +108,7 @@ export function QuotaStatusBar({
       )}
 
       {isAtLimit && (
-        <div className="mt-3 rounded-md bg-destructive/10 p-2 text-xs text-destructive">
+        <div className="mt-3 rounded-md bg-destructive/10 p-2 text-xs text-destructive-text">
           <p>
             Hai raggiunto il limite di {maxAllowed} giochi.{' '}
             {canUpgrade && (

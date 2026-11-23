@@ -143,7 +143,7 @@ export function UploadRulesStep({
       </div>
 
       {uploadError && (
-        <p className="text-sm text-destructive" data-testid="upload-error">
+        <p className="text-sm text-destructive-text" data-testid="upload-error">
           {uploadError}
         </p>
       )}

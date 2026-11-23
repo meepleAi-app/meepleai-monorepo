@@ -93,7 +93,7 @@ export default function CoverGapPage() {
       {isLoading && <p className="text-sm text-muted-foreground">Caricamento…</p>}
 
       {isError && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive-text">
           Impossibile caricare l&apos;elenco: {error?.message ?? 'errore sconosciuto'}
         </p>
       )}

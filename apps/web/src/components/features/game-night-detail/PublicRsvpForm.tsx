@@ -183,7 +183,10 @@ export function PublicRsvpForm({
               id={showError ? errorId : helperId}
               data-slot={showError ? 'public-rsvp-error' : 'public-rsvp-helper'}
               aria-live="polite"
-              className={clsx('text-xs', showError ? 'text-destructive' : 'text-muted-foreground')}
+              className={clsx(
+                'text-xs',
+                showError ? 'text-destructive-text' : 'text-muted-foreground'
+              )}
             >
               {showError ? labels.displayNameTooLong : labels.displayNameHelper}
             </p>

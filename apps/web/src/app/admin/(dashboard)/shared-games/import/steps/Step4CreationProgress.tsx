@@ -80,7 +80,7 @@ export function Step4CreationProgress(): JSX.Element {
         {phase === 'done' ? (
           <CheckCircle className="h-12 w-12 text-green-500" />
         ) : phase === 'error' ? (
-          <AlertCircle className="h-12 w-12 text-destructive" />
+          <AlertCircle className="h-12 w-12 text-destructive-text" />
         ) : (
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         )}
@@ -126,7 +126,7 @@ export function Step4CreationProgress(): JSX.Element {
                       ? 'bg-primary text-primary-foreground'
                       : isPending
                         ? 'bg-muted text-muted-foreground'
-                        : 'bg-destructive/20 text-destructive'
+                        : 'bg-destructive/20 text-destructive-text'
                 }`}
               >
                 {isDone ? '✓' : stepIndex + 1}

@@ -93,7 +93,7 @@ export function DowngradeTierModal({
         {isLoading ? (
           <p className="text-muted-foreground py-8 text-center">Caricamento...</p>
         ) : previewError ? (
-          <p className="text-destructive py-8 text-center text-sm">
+          <p className="text-destructive-text py-8 text-center text-sm">
             Impossibile caricare l&apos;anteprima. Riprova più tardi.
           </p>
         ) : (
@@ -122,7 +122,7 @@ export function DowngradeTierModal({
 
             {/* Games suggested for removal */}
             <div>
-              <h3 className="font-medium mb-2 text-destructive">
+              <h3 className="font-medium mb-2 text-destructive-text">
                 Seleziona giochi da rimuovere ({selectedToRemove.size} selezionati)
               </h3>
               {suggestedRemove.length > 0 ? (

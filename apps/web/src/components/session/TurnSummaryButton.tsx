@@ -82,7 +82,7 @@ export function TurnSummaryButton({
       </Button>
 
       {error && (
-        <div role="alert" className="mt-2 text-sm text-destructive">
+        <div role="alert" className="mt-2 text-sm text-destructive-text">
           {error}
         </div>
       )}

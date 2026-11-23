@@ -69,7 +69,9 @@ export const PipelineEdgeComponent = memo(function PipelineEdgeComponent({
       return CONDITION_PRESETS[edgeData.conditionPreset as ConditionPreset].label;
     }
     if (edgeData.condition && edgeData.condition !== 'always') {
-      return edgeData.condition.length > 20 ? `${edgeData.condition.slice(0, 20)}...` : edgeData.condition;
+      return edgeData.condition.length > 20
+        ? `${edgeData.condition.slice(0, 20)}...`
+        : edgeData.condition;
     }
     return '';
   };
@@ -92,10 +94,7 @@ export const PipelineEdgeComponent = memo(function PipelineEdgeComponent({
               ? 'hsl(var(--destructive))'
               : 'hsl(var(--muted-foreground))',
         }}
-        className={cn(
-          'transition-all duration-200',
-          animated && 'animate-pulse'
-        )}
+        className={cn('transition-all duration-200', animated && 'animate-pulse')}
       />
 
       {/* Animated flow dots during execution */}
@@ -138,24 +137,20 @@ export const PipelineEdgeComponent = memo(function PipelineEdgeComponent({
                 edgeData?.isValid === false && 'border-destructive bg-destructive/10'
               )}
             >
-              <span className="text-muted-foreground">
-                {conditionLabel}
-              </span>
+              <span className="text-muted-foreground">{conditionLabel}</span>
             </motion.div>
           )}
 
           {/* Timeout indicator */}
           {edgeData?.timeout && edgeData.timeout > 0 && (
             <div className="mt-1 text-center">
-              <span className="text-[10px] text-muted-foreground/60">
-                ⏱ {edgeData.timeout}ms
-              </span>
+              <span className="text-[10px] text-muted-foreground/60">⏱ {edgeData.timeout}ms</span>
             </div>
           )}
 
           {/* Validation error */}
           {edgeData?.validationError && (
-            <div className="mt-1 px-2 py-0.5 bg-destructive/10 rounded text-[10px] text-destructive">
+            <div className="mt-1 px-2 py-0.5 bg-destructive/10 rounded text-[10px] text-destructive-text">
               {edgeData.validationError}
             </div>
           )}

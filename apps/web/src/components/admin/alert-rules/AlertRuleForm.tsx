@@ -105,7 +105,7 @@ export function AlertRuleForm({ rule, initialData, onSubmit, onCancel }: AlertRu
       <div>
         <Label htmlFor="name">Name *</Label>
         <Input id="name" {...register('name')} placeholder="High Error Rate" />
-        {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
+        {errors.name && <p className="text-sm text-destructive-text mt-1">{errors.name.message}</p>}
       </div>
 
       <div>
@@ -116,7 +116,7 @@ export function AlertRuleForm({ rule, initialData, onSubmit, onCancel }: AlertRu
           placeholder="HighErrorRate, HighLatency, ServiceDown..."
         />
         {errors.alertType && (
-          <p className="text-sm text-destructive mt-1">{errors.alertType.message}</p>
+          <p className="text-sm text-destructive-text mt-1">{errors.alertType.message}</p>
         )}
       </div>
 
@@ -144,7 +144,7 @@ export function AlertRuleForm({ rule, initialData, onSubmit, onCancel }: AlertRu
           )}
         />
         {errors.severity && (
-          <p className="text-sm text-destructive mt-1">{errors.severity.message}</p>
+          <p className="text-sm text-destructive-text mt-1">{errors.severity.message}</p>
         )}
       </div>
 
@@ -159,7 +159,7 @@ export function AlertRuleForm({ rule, initialData, onSubmit, onCancel }: AlertRu
             placeholder="5.0"
           />
           {errors.thresholdValue && (
-            <p className="text-sm text-destructive mt-1">{errors.thresholdValue.message}</p>
+            <p className="text-sm text-destructive-text mt-1">{errors.thresholdValue.message}</p>
           )}
         </div>
         <div>
@@ -170,7 +170,7 @@ export function AlertRuleForm({ rule, initialData, onSubmit, onCancel }: AlertRu
             placeholder="%, ms, count, req/s"
           />
           {errors.thresholdUnit && (
-            <p className="text-sm text-destructive mt-1">{errors.thresholdUnit.message}</p>
+            <p className="text-sm text-destructive-text mt-1">{errors.thresholdUnit.message}</p>
           )}
         </div>
       </div>
@@ -184,7 +184,7 @@ export function AlertRuleForm({ rule, initialData, onSubmit, onCancel }: AlertRu
           placeholder="5"
         />
         {errors.durationMinutes && (
-          <p className="text-sm text-destructive mt-1">{errors.durationMinutes.message}</p>
+          <p className="text-sm text-destructive-text mt-1">{errors.durationMinutes.message}</p>
         )}
         <p className="text-sm text-muted-foreground mt-1">
           Alert triggers only if condition persists for this duration
@@ -200,7 +200,7 @@ export function AlertRuleForm({ rule, initialData, onSubmit, onCancel }: AlertRu
           rows={3}
         />
         {errors.description && (
-          <p className="text-sm text-destructive mt-1">{errors.description.message}</p>
+          <p className="text-sm text-destructive-text mt-1">{errors.description.message}</p>
         )}
       </div>
 

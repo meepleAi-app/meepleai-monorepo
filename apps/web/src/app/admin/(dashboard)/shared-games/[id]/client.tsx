@@ -152,7 +152,7 @@ export function DocumentItem({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => onDelete(document.id)}
-              className="text-destructive focus:text-destructive"
+              className="text-destructive-text focus:text-destructive-text"
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete

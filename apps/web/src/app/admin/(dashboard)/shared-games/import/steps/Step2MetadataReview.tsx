@@ -130,7 +130,7 @@ export function Step2MetadataReview(): JSX.Element {
           {/* Title */}
           <div className="space-y-1">
             <Label htmlFor="meta-title">
-              Titolo <span className="text-destructive">*</span>
+              Titolo <span className="text-destructive-text">*</span>
             </Label>
             <Input
               id="meta-title"
@@ -266,7 +266,7 @@ export function Step2MetadataReview(): JSX.Element {
           {/* Description */}
           <div className="space-y-1">
             <Label htmlFor="meta-description">
-              Descrizione <span className="text-destructive">*</span>
+              Descrizione <span className="text-destructive-text">*</span>
             </Label>
             <Textarea
               id="meta-description"

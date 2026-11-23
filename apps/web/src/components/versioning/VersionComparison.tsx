@@ -151,7 +151,7 @@ export function VersionComparison({
           )}
         </CardHeader>
         <CardContent>
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-md">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive-text px-4 py-3 rounded-md">
             <strong className="font-semibold">Error:</strong> {error}
           </div>
         </CardContent>

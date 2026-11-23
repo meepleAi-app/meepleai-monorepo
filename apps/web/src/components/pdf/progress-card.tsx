@@ -179,7 +179,7 @@ export function ProgressCard({
           progress={progressValue}
           color={
             currentState === 'failed'
-              ? 'text-destructive'
+              ? 'text-destructive-text'
               : currentState === 'ready'
                 ? 'text-green-500'
                 : 'text-amber-500'
@@ -250,7 +250,7 @@ export function ProgressCard({
           {/* Error Message */}
           {currentState === 'failed' && status?.errorMessage && (
             <div className="mt-2 p-2 rounded bg-destructive/10 border border-destructive/30">
-              <p className="text-xs text-destructive font-nunito">{status.errorMessage}</p>
+              <p className="text-xs text-destructive-text font-nunito">{status.errorMessage}</p>
             </div>
           )}
 

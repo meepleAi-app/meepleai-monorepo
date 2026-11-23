@@ -378,7 +378,11 @@ export function AddPlayerDialog({
 
           {/* Error message */}
           {errorMessage != null && (
-            <p role="alert" data-slot="add-player-error" className="mb-3 text-sm text-destructive">
+            <p
+              role="alert"
+              data-slot="add-player-error"
+              className="mb-3 text-sm text-destructive-text"
+            >
               {errorMessage}
             </p>
           )}

@@ -127,7 +127,9 @@ function NoteCard({ note, isOwner, onReveal, onHide, onEdit, onDelete, isLoading
             transition={{ duration: 0.3 }}
             className="p-3 rounded bg-muted/30 min-h-[60px]"
           >
-            <p className="text-sm whitespace-pre-wrap">{note.content || note.obscuredText || '...'}</p>
+            <p className="text-sm whitespace-pre-wrap">
+              {note.content || note.obscuredText || '...'}
+            </p>
           </motion.div>
         )}
       </div>
@@ -137,36 +139,21 @@ function NoteCard({ note, isOwner, onReveal, onHide, onEdit, onDelete, isLoading
         {isOwner && (
           <>
             {note.isRevealed ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onHide}
-                disabled={isLoading}
-              >
+              <Button variant="outline" size="sm" onClick={onHide} disabled={isLoading}>
                 Hide
               </Button>
             ) : (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={onReveal}
-                disabled={isLoading}
-              >
+              <Button variant="default" size="sm" onClick={onReveal} disabled={isLoading}>
                 Reveal to All
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onEdit}
-              disabled={isLoading}
-            >
+            <Button variant="ghost" size="sm" onClick={onEdit} disabled={isLoading}>
               Edit
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="text-destructive hover:text-destructive"
+              className="text-destructive-text hover:text-destructive-text"
               onClick={onDelete}
               disabled={isLoading}
             >
@@ -175,11 +162,7 @@ function NoteCard({ note, isOwner, onReveal, onHide, onEdit, onDelete, isLoading
           </>
         )}
         {!isOwner && !note.isRevealed && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowContent(!showContent)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setShowContent(!showContent)}>
             {showContent ? 'Hide Preview' : 'Show Hint'}
           </Button>
         )}
@@ -224,7 +207,7 @@ function NoteEditor({
           <label className="text-sm font-medium mb-1 block">Note Content (Private)</label>
           <textarea
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={e => setContent(e.target.value)}
             placeholder="Write your private note..."
             className={cn(
               'w-full h-24 p-3 rounded-md border resize-none',
@@ -241,7 +224,7 @@ function NoteEditor({
           <input
             type="text"
             value={obscuredText}
-            onChange={(e) => setObscuredText(e.target.value)}
+            onChange={e => setObscuredText(e.target.value)}
             placeholder="e.g., 'Strategy hint...'"
             className={cn(
               'w-full p-2 rounded-md border',
@@ -290,8 +273,8 @@ export function PrivateNotes({
   const [isEditing, setIsEditing] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
-  const myNotes = notes.filter((n) => n.isOwner);
-  const revealedNotes = notes.filter((n) => !n.isOwner && n.isRevealed);
+  const myNotes = notes.filter(n => n.isOwner);
+  const revealedNotes = notes.filter(n => !n.isOwner && n.isRevealed);
 
   const handleSave = useCallback(
     async (content: string, obscuredText?: string) => {
@@ -313,7 +296,7 @@ export function PrivateNotes({
     setEditingNoteId(null);
   }, []);
 
-  const editingNote = editingNoteId ? notes.find((n) => n.id === editingNoteId) : null;
+  const editingNote = editingNoteId ? notes.find(n => n.id === editingNoteId) : null;
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -350,7 +333,7 @@ export function PrivateNotes({
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground">Your Notes</h4>
           <AnimatePresence mode="popLayout">
-            {myNotes.map((note) => (
+            {myNotes.map(note => (
               <NoteCard
                 key={note.id}
                 note={note}
@@ -371,13 +354,8 @@ export function PrivateNotes({
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground">Revealed by Others</h4>
           <AnimatePresence mode="popLayout">
-            {revealedNotes.map((note) => (
-              <NoteCard
-                key={note.id}
-                note={note}
-                isOwner={false}
-                isLoading={isLoading}
-              />
+            {revealedNotes.map(note => (
+              <NoteCard key={note.id} note={note} isOwner={false} isLoading={isLoading} />
             ))}
           </AnimatePresence>
         </div>

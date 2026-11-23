@@ -508,11 +508,11 @@ const LabelStylesComponent = () => {
           )}
         />
         <div className="space-y-2">
-          <label className="font-semibold text-destructive font-quicksand">
+          <label className="font-semibold text-destructive-text font-quicksand">
             Error Label (simulated)
           </label>
           <Input placeholder="Field with error" className="border-destructive" />
-          <p className="text-sm font-medium text-destructive">Validation error message</p>
+          <p className="text-sm font-medium text-destructive-text">Validation error message</p>
         </div>
       </form>
     </Form>

@@ -42,13 +42,7 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export type ActivityKind =
-  | 'play'
-  | 'add'
-  | 'kb-indexed'
-  | 'rating-changed'
-  | 'removed'
-  | 'agent'
-  | 'chat';
+  'play' | 'add' | 'kb-indexed' | 'rating-changed' | 'removed' | 'agent' | 'chat';
 
 export interface ActivityItem {
   readonly id: string;
@@ -209,7 +203,7 @@ export function RecentActivityRail({
 
           {state === 'error' ? (
             <p
-              className="text-sm text-destructive"
+              className="text-sm text-destructive-text"
               role="alert"
               data-slot="library-activity-error"
               data-testid="library-activity-error"

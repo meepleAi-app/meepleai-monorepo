@@ -83,7 +83,7 @@ export function KbChunkPreview({
         data-slot="kb-chunk-preview-error"
         role="alert"
         className={clsx(
-          'flex h-full items-center justify-center bg-background p-6 text-sm text-destructive',
+          'flex h-full items-center justify-center bg-background p-6 text-sm text-destructive-text',
           className
         )}
       >

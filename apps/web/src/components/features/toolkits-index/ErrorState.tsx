@@ -37,7 +37,7 @@ export function ErrorState({ labels, onRetry, className }: ErrorStateProps): JSX
     >
       <div
         aria-hidden="true"
-        className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/15 text-2xl text-destructive"
+        className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/15 text-2xl text-destructive-text"
       >
         ⚠
       </div>

@@ -86,7 +86,7 @@ export function GamebookResumeShell({
         data-testid="gamebook-resume-shell-error"
         className="max-w-screen-sm mx-auto px-4 py-6"
       >
-        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive-text">
           Impossibile caricare le tue campagne. Riprova più tardi.
         </div>
       </div>

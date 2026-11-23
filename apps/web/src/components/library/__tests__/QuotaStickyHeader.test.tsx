@@ -42,7 +42,9 @@ vi.mock('next/link', () => ({
 // Test Data Factory
 // ============================================================================
 
-const createQuotaProps = (overrides: Partial<QuotaStickyHeaderProps> = {}): QuotaStickyHeaderProps => ({
+const createQuotaProps = (
+  overrides: Partial<QuotaStickyHeaderProps> = {}
+): QuotaStickyHeaderProps => ({
   currentCount: 10,
   maxAllowed: 20,
   percentageUsed: 50,
@@ -190,7 +192,7 @@ describe('QuotaStickyHeader - Percentage Text Color', () => {
     render(<QuotaStickyHeader {...createQuotaProps({ percentageUsed: 95 })} />);
 
     const percentage = screen.getByTestId('quota-sticky-header-percentage');
-    expect(percentage).toHaveClass('text-destructive');
+    expect(percentage).toHaveClass('text-destructive-text');
   });
 });
 
@@ -286,22 +288,30 @@ describe('QuotaStickyHeader - Percentage Rounding', () => {
 
 describe('QuotaStickyHeader - Edge Cases', () => {
   it('handles zero games', () => {
-    render(<QuotaStickyHeader {...createQuotaProps({
-      currentCount: 0,
-      maxAllowed: 10,
-      percentageUsed: 0,
-    })} />);
+    render(
+      <QuotaStickyHeader
+        {...createQuotaProps({
+          currentCount: 0,
+          maxAllowed: 10,
+          percentageUsed: 0,
+        })}
+      />
+    );
 
     expect(screen.getByTestId('quota-sticky-header-current')).toHaveTextContent('0');
     expect(screen.getByTestId('quota-sticky-header-percentage')).toHaveTextContent('0%');
   });
 
   it('handles full library', () => {
-    render(<QuotaStickyHeader {...createQuotaProps({
-      currentCount: 20,
-      maxAllowed: 20,
-      percentageUsed: 100,
-    })} />);
+    render(
+      <QuotaStickyHeader
+        {...createQuotaProps({
+          currentCount: 20,
+          maxAllowed: 20,
+          percentageUsed: 100,
+        })}
+      />
+    );
 
     expect(screen.getByTestId('quota-sticky-header-current')).toHaveTextContent('20');
     expect(screen.getByTestId('quota-sticky-header-max')).toHaveTextContent('20');
@@ -343,11 +353,15 @@ describe('QuotaStickyHeader - Edge Cases', () => {
   });
 
   it('handles large numbers', () => {
-    render(<QuotaStickyHeader {...createQuotaProps({
-      currentCount: 999,
-      maxAllowed: 1000,
-      percentageUsed: 99.9,
-    })} />);
+    render(
+      <QuotaStickyHeader
+        {...createQuotaProps({
+          currentCount: 999,
+          maxAllowed: 1000,
+          percentageUsed: 99.9,
+        })}
+      />
+    );
 
     expect(screen.getByTestId('quota-sticky-header-current')).toHaveTextContent('999');
     expect(screen.getByTestId('quota-sticky-header-max')).toHaveTextContent('1000');
@@ -355,34 +369,46 @@ describe('QuotaStickyHeader - Edge Cases', () => {
   });
 
   it('displays infinity symbol for admin unlimited quota', () => {
-    render(<QuotaStickyHeader {...createQuotaProps({
-      currentCount: 42,
-      maxAllowed: 2147483647,
-      percentageUsed: 0,
-      userTier: 'premium',
-    })} />);
+    render(
+      <QuotaStickyHeader
+        {...createQuotaProps({
+          currentCount: 42,
+          maxAllowed: 2147483647,
+          percentageUsed: 0,
+          userTier: 'premium',
+        })}
+      />
+    );
 
     expect(screen.getByTestId('quota-sticky-header-current')).toHaveTextContent('42');
     expect(screen.getByTestId('quota-sticky-header-max')).toHaveTextContent('∞');
   });
 
   it('displays infinity symbol for values greater than Int32.MaxValue', () => {
-    render(<QuotaStickyHeader {...createQuotaProps({
-      currentCount: 100,
-      maxAllowed: 9999999999,
-      percentageUsed: 0,
-      userTier: 'premium',
-    })} />);
+    render(
+      <QuotaStickyHeader
+        {...createQuotaProps({
+          currentCount: 100,
+          maxAllowed: 9999999999,
+          percentageUsed: 0,
+          userTier: 'premium',
+        })}
+      />
+    );
 
     expect(screen.getByTestId('quota-sticky-header-max')).toHaveTextContent('∞');
   });
 
   it('displays normal number for non-admin quota', () => {
-    render(<QuotaStickyHeader {...createQuotaProps({
-      currentCount: 15,
-      maxAllowed: 50,
-      percentageUsed: 30,
-    })} />);
+    render(
+      <QuotaStickyHeader
+        {...createQuotaProps({
+          currentCount: 15,
+          maxAllowed: 50,
+          percentageUsed: 30,
+        })}
+      />
+    );
 
     expect(screen.getByTestId('quota-sticky-header-max')).toHaveTextContent('50');
     expect(screen.queryByText(/∞/)).not.toBeInTheDocument();

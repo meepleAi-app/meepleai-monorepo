@@ -285,7 +285,7 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
                 {!showRevokeConfirm ? (
                   <Button
                     variant="outline"
-                    className="w-full text-destructive hover:bg-destructive/10"
+                    className="w-full text-destructive-text hover:bg-destructive/10"
                     onClick={() => setShowRevokeConfirm(true)}
                     disabled={isRevoking}
                   >
@@ -295,8 +295,8 @@ export function ShareLibraryModal({ isOpen, onClose }: ShareLibraryModalProps) {
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-5 w-5 text-destructive" />
-                      <p className="text-sm text-destructive">
+                      <AlertTriangle className="h-5 w-5 text-destructive-text" />
+                      <p className="text-sm text-destructive-text">
                         Questa azione disabiliterà permanentemente il link di condivisione. Chiunque
                         abbia il link non potrà più accedere alla tua libreria.
                       </p>

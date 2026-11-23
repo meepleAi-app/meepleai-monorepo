@@ -117,7 +117,7 @@ export function GameNightForm({
               />
             </div>
             {scheduledAtInvalid && (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-sm text-destructive-text">
                 La data non è valida.
               </p>
             )}

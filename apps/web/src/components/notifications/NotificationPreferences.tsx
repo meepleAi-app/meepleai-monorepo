@@ -407,7 +407,7 @@ export function NotificationPreferences() {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Bell className="h-12 w-12 text-muted-foreground/30 mb-3" />
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-destructive-text">{error}</p>
         <Button
           variant="outline"
           size="sm"

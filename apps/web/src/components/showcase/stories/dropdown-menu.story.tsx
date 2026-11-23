@@ -52,7 +52,7 @@ export const dropdownMenuStory: ShowcaseStory<DropdownMenuShowcaseProps> = {
               Edit Details
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive">
+            <DropdownMenuItem className="text-destructive-text focus:text-destructive-text">
               {showIcons && <Trash2 className="h-4 w-4 mr-2" />}
               Remove
             </DropdownMenuItem>

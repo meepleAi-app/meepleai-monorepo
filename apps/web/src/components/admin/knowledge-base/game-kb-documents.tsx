@@ -60,7 +60,7 @@ export function GameKbDocuments({ gameId }: Props) {
           <Button
             size="sm"
             variant="ghost"
-            className="text-destructive hover:text-destructive"
+            className="text-destructive-text hover:text-destructive-text"
             disabled={removeMutation.isPending}
             onClick={() => removeMutation.mutate(doc.id)}
           >

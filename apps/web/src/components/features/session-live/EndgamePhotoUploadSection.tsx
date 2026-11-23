@@ -271,7 +271,7 @@ export function EndgamePhotoUploadSection({
 
       {/* Global warning (too many files, bad format, too large) */}
       {globalWarning && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive-text">
           {globalWarning}
         </p>
       )}
@@ -314,7 +314,7 @@ export function EndgamePhotoUploadSection({
 
               {photo.status === 'error' && (
                 <span className="flex items-center gap-2">
-                  <span role="alert" className="text-xs text-destructive">
+                  <span role="alert" className="text-xs text-destructive-text">
                     {photo.errorMsg ??
                       t('pages.sessionLive.endgameDialog.photoUpload.errorGeneric')}
                   </span>

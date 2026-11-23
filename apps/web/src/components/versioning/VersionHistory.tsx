@@ -147,7 +147,7 @@ export function VersionHistory({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-md">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive-text px-4 py-3 rounded-md">
             <strong className="font-semibold">Error:</strong> {error}
           </div>
         </CardContent>
@@ -191,12 +191,8 @@ export function VersionHistory({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-lg">{version.version}</span>
-                        {version.isCurrentVersion && (
-                          <Badge variant="default">Current</Badge>
-                        )}
-                        {index === versions.length - 1 && (
-                          <Badge variant="outline">Initial</Badge>
-                        )}
+                        {version.isCurrentVersion && <Badge variant="default">Current</Badge>}
+                        {index === versions.length - 1 && <Badge variant="outline">Initial</Badge>}
                       </div>
                       {version.description && (
                         <p className="text-sm text-muted-foreground">
@@ -270,8 +266,8 @@ export function VersionHistory({
           <DialogHeader>
             <DialogTitle>Restore Version</DialogTitle>
             <DialogDescription>
-              Are you sure you want to restore version <strong>{versionToRestore}</strong>?
-              This will create a new version based on the selected one.
+              Are you sure you want to restore version <strong>{versionToRestore}</strong>? This
+              will create a new version based on the selected one.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

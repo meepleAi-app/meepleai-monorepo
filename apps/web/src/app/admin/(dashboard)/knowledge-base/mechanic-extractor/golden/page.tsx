@@ -53,7 +53,7 @@ export default function GoldenSetGamePickerPage() {
           )}
 
           {error && (
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-destructive-text">
               Failed to load shared games:{' '}
               {error instanceof Error ? error.message : 'unknown error'}
             </p>

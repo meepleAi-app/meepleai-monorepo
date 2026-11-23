@@ -88,7 +88,7 @@ function MetricGauge({
         <span
           className={cn(
             'font-mono',
-            isError && 'text-destructive',
+            isError && 'text-destructive-text',
             isWarning && !isError && 'text-yellow-600'
           )}
         >
@@ -137,7 +137,7 @@ interface ValidationItemProps {
 
 function ValidationItem({ type, code, message, nodeId, edgeId }: ValidationItemProps) {
   const Icon = type === 'error' ? AlertCircle : AlertTriangle;
-  const colorClass = type === 'error' ? 'text-destructive' : 'text-yellow-600';
+  const colorClass = type === 'error' ? 'text-destructive-text' : 'text-yellow-600';
 
   return (
     <div className="flex items-start gap-2 p-2 rounded bg-muted/50">
@@ -250,7 +250,7 @@ export function ValidationPanel({
               <span className="font-medium">Pipeline Valid</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-destructive">
+            <div className="flex items-center gap-2 text-destructive-text">
               <AlertCircle className="h-5 w-5" />
               <span className="font-medium">Validation Failed</span>
             </div>
@@ -325,7 +325,7 @@ export function ValidationPanel({
             {validation.errors.length > 0 && (
               <AccordionItem value="errors">
                 <AccordionTrigger className="py-2">
-                  <div className="flex items-center gap-2 text-destructive">
+                  <div className="flex items-center gap-2 text-destructive-text">
                     <AlertCircle className="h-4 w-4" />
                     <span className="text-sm font-medium">Errors ({validation.errors.length})</span>
                   </div>

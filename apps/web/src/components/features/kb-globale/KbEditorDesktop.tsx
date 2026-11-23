@@ -158,7 +158,7 @@ export function KbEditorDesktop(props: KbEditorDesktopProps): JSX.Element {
     >
       <h2 className="font-semibold text-foreground">{labels.heading}</h2>
       {topError && (
-        <div role="alert" className="text-sm text-destructive">
+        <div role="alert" className="text-sm text-destructive-text">
           {topError}
         </div>
       )}
@@ -178,7 +178,7 @@ export function KbEditorDesktop(props: KbEditorDesktopProps): JSX.Element {
             className="border border-input rounded px-2 py-1"
           />
           {errors.title && (
-            <p id={titleErrId} className="text-sm text-destructive">
+            <p id={titleErrId} className="text-sm text-destructive-text">
               {errors.title}
             </p>
           )}
@@ -240,7 +240,7 @@ export function KbEditorDesktop(props: KbEditorDesktopProps): JSX.Element {
             className="border border-input rounded px-2 py-1"
           />
           {errors.tags && (
-            <p id={tagsErrId} className="text-sm text-destructive">
+            <p id={tagsErrId} className="text-sm text-destructive-text">
               {errors.tags}
             </p>
           )}

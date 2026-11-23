@@ -66,7 +66,7 @@ export function PerformanceMetrics({
       await onRefresh();
     } else {
       // Simulate refresh with mock data
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 500));
       setInternalMetrics(generateMockMetrics());
     }
     setIsRefreshing(false);
@@ -86,7 +86,7 @@ export function PerformanceMetrics({
   if (error) {
     return (
       <div className={cn('p-6 border rounded-lg bg-destructive/10', className)}>
-        <div className="flex items-center gap-3 text-destructive">
+        <div className="flex items-center gap-3 text-destructive-text">
           <AlertCircle className="h-5 w-5" />
           <div>
             <p className="font-medium">Failed to load metrics</p>
@@ -114,12 +114,7 @@ export function PerformanceMetrics({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExport}
-                  disabled={isLoading}
-                >
+                <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading}>
                   <Download className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -151,10 +146,7 @@ export function PerformanceMetrics({
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="h-48 rounded-lg bg-muted/50 animate-pulse"
-            />
+            <div key={i} className="h-48 rounded-lg bg-muted/50 animate-pulse" />
           ))}
         </div>
       ) : (

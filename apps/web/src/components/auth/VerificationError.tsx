@@ -89,7 +89,7 @@ function getIconColorClass(errorType: EmailVerificationErrorType): string {
     case 'rate_limited':
       return 'text-orange-500 dark:text-orange-400';
     default:
-      return 'text-destructive';
+      return 'text-destructive-text';
   }
 }
 
@@ -144,10 +144,7 @@ export function VerificationError({
     >
       {/* Icon */}
       <div
-        className={cn(
-          'w-16 h-16 rounded-full flex items-center justify-center',
-          backgroundClass
-        )}
+        className={cn('w-16 h-16 rounded-full flex items-center justify-center', backgroundClass)}
       >
         <Icon className={cn('w-8 h-8', iconColorClass)} aria-hidden="true" />
       </div>
@@ -187,12 +184,7 @@ export function VerificationError({
 
         {/* Retry Button (for invalid/not_found errors) */}
         {showRetry && (
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={onRetry}
-            data-testid="retry-button"
-          >
+          <Button variant="outline" className="w-full" onClick={onRetry} data-testid="retry-button">
             {t('auth.emailVerification.error.tryAgain')}
           </Button>
         )}
@@ -206,9 +198,7 @@ export function VerificationError({
       </div>
 
       {/* Help Text */}
-      <p className="text-xs text-muted-foreground">
-        {t('auth.emailVerification.error.helpText')}
-      </p>
+      <p className="text-xs text-muted-foreground">{t('auth.emailVerification.error.helpText')}</p>
     </div>
   );
 }

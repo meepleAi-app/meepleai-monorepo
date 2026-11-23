@@ -108,7 +108,7 @@ export function CustomCoverDialog({
               className="mt-1 block w-full"
             />
           </label>
-          {validationError && <p className="text-sm text-destructive">{validationError}</p>}
+          {validationError && <p className="text-sm text-destructive-text">{validationError}</p>}
           {hasCustomCover && (
             <div className="border-t pt-4">
               <Button

@@ -1,4 +1,3 @@
- 
 /**
  * SelectedDocumentsList Component - Issue #2399
  *
@@ -13,7 +12,13 @@ import * as React from 'react';
 import { FileText, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import type { SelectedDocumentDto } from '@/lib/api/schemas';
@@ -171,7 +176,7 @@ export function SelectedDocumentsList({
                               size="icon"
                               onClick={() => onRemove(doc.id)}
                               disabled={isSaving}
-                              className="flex-shrink-0 hover:bg-destructive/20 hover:text-destructive"
+                              className="flex-shrink-0 hover:bg-destructive/20 hover:text-destructive-text"
                               aria-label={`Rimuovi documento ${typeConfig?.label ?? ''} v${doc.version}`}
                             >
                               <X className="h-4 w-4" />

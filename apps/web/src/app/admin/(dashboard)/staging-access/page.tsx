@@ -166,7 +166,7 @@ export default function StagingAccessPage() {
               <Skeleton className="h-10 w-full" />
             </div>
           ) : listQuery.isError ? (
-            <div className="p-6 text-sm text-destructive">
+            <div className="p-6 text-sm text-destructive-text">
               Failed to load allowlist: {listQuery.error.message ?? 'unknown error'}
             </div>
           ) : entries.length === 0 ? (

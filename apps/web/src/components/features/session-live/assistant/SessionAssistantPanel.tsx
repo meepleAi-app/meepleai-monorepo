@@ -131,7 +131,7 @@ export function SessionAssistantPanel({
       ) : null}
 
       {assistant.loadError ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive-text">
           {t('pages.sessionLive.assistant.loadError')}
         </p>
       ) : null}
@@ -201,7 +201,7 @@ export function SessionAssistantPanel({
         <p
           role="alert"
           data-slot="session-assistant-turn-error"
-          className="text-sm text-destructive"
+          className="text-sm text-destructive-text"
         >
           {t(`pages.sessionLive.assistant.turnError.${turnErrorKey}`)}
         </p>

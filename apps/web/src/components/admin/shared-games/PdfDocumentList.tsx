@@ -1,4 +1,3 @@
- 
 /**
  * PdfDocumentList Component - Issue #2391 Sprint 1
  *
@@ -11,7 +10,13 @@
 import { FileText, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { type SharedGameDocument } from '@/lib/api/schemas/shared-games.schemas';
 
@@ -101,7 +106,7 @@ export function PdfDocumentList({
                       variant="ghost"
                       onClick={() => onRemove(doc.id)}
                       disabled={isLoading}
-                      className="text-destructive hover:text-destructive"
+                      className="text-destructive-text hover:text-destructive-text"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

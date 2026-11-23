@@ -106,7 +106,7 @@ export function WinnerPickerModal({
         </fieldset>
 
         {errorMessage ? (
-          <p role="alert" className="mt-2 font-mono text-xs text-destructive">
+          <p role="alert" className="mt-2 font-mono text-xs text-destructive-text">
             {errorMessage}
           </p>
         ) : null}

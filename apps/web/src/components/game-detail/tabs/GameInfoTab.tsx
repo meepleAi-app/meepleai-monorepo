@@ -48,7 +48,7 @@ export function GameInfoTab({ gameId, variant, isNotInLibrary }: GameTabProps) {
   if (isError || !game) {
     return (
       <div role="tabpanel" aria-labelledby="game-tab-info" className={containerClass}>
-        <p className="text-sm text-destructive">Impossibile caricare i dettagli del gioco.</p>
+        <p className="text-sm text-destructive-text">Impossibile caricare i dettagli del gioco.</p>
       </div>
     );
   }

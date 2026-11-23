@@ -227,7 +227,7 @@ function BaseBlockNodeComponent({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-destructive hover:text-destructive"
+                  className="h-6 w-6 text-destructive-text hover:text-destructive-text"
                   onClick={e => {
                     e.stopPropagation();
                     handleDelete();

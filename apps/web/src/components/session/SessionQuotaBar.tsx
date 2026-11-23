@@ -131,7 +131,7 @@ export function SessionQuotaBar({
         {isAtLimit && (
           <div
             className={cn(
-              'flex items-center gap-1 text-destructive',
+              'flex items-center gap-1 text-destructive-text',
               compact ? 'text-[10px]' : 'text-xs'
             )}
           >
@@ -169,7 +169,7 @@ export function SessionQuotaBar({
             className={cn(
               'flex items-center gap-1 font-medium transition-colors hover:text-foreground',
               isNearLimit && 'text-yellow-700 dark:text-yellow-400',
-              isAtLimit && 'text-destructive'
+              isAtLimit && 'text-destructive-text'
             )}
           >
             {compact ? (
@@ -197,7 +197,7 @@ export function SessionQuotaBar({
           )}
 
           {isAtLimit && (
-            <div className="mt-3 rounded-md bg-destructive/10 p-2 text-xs text-destructive">
+            <div className="mt-3 rounded-md bg-destructive/10 p-2 text-xs text-destructive-text">
               <p>
                 Hai raggiunto il limite di {maxSessions} sessioni attive.{' '}
                 {canUpgrade && upgradeInfo ? (

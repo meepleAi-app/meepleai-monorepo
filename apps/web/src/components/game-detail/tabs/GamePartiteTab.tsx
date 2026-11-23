@@ -40,7 +40,7 @@ export function GamePartiteTab({ gameId, variant, isNotInLibrary }: GameTabProps
   if (isError || !game) {
     return (
       <div role="tabpanel" aria-labelledby="game-tab-partite" className={containerClass}>
-        <p className="text-sm text-destructive">Impossibile caricare lo storico partite.</p>
+        <p className="text-sm text-destructive-text">Impossibile caricare lo storico partite.</p>
       </div>
     );
   }

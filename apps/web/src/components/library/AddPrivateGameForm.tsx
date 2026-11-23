@@ -94,7 +94,7 @@ export function AddPrivateGameForm({
       {/* Title */}
       <div className="space-y-2">
         <Label htmlFor="title">
-          {t('privateGameForm.title')} <span className="text-destructive">*</span>
+          {t('privateGameForm.title')} <span className="text-destructive-text">*</span>
         </Label>
         <Input
           id="title"
@@ -102,14 +102,14 @@ export function AddPrivateGameForm({
           placeholder={t('privateGameForm.titlePlaceholder')}
           disabled={isSubmitting}
         />
-        {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+        {errors.title && <p className="text-sm text-destructive-text">{errors.title.message}</p>}
       </div>
 
       {/* Player Count */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="minPlayers">
-            {t('privateGameForm.minPlayers')} <span className="text-destructive">*</span>
+            {t('privateGameForm.minPlayers')} <span className="text-destructive-text">*</span>
           </Label>
           <Input
             id="minPlayers"
@@ -120,13 +120,13 @@ export function AddPrivateGameForm({
             disabled={isSubmitting}
           />
           {errors.minPlayers && (
-            <p className="text-sm text-destructive">{errors.minPlayers.message}</p>
+            <p className="text-sm text-destructive-text">{errors.minPlayers.message}</p>
           )}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="maxPlayers">
-            {t('privateGameForm.maxPlayers')} <span className="text-destructive">*</span>
+            {t('privateGameForm.maxPlayers')} <span className="text-destructive-text">*</span>
           </Label>
           <Input
             id="maxPlayers"
@@ -137,7 +137,7 @@ export function AddPrivateGameForm({
             disabled={isSubmitting}
           />
           {errors.maxPlayers && (
-            <p className="text-sm text-destructive">{errors.maxPlayers.message}</p>
+            <p className="text-sm text-destructive-text">{errors.maxPlayers.message}</p>
           )}
         </div>
       </div>
@@ -155,7 +155,7 @@ export function AddPrivateGameForm({
             disabled={isSubmitting}
           />
           {errors.yearPublished && (
-            <p className="text-sm text-destructive">{errors.yearPublished.message}</p>
+            <p className="text-sm text-destructive-text">{errors.yearPublished.message}</p>
           )}
         </div>
 
@@ -171,7 +171,7 @@ export function AddPrivateGameForm({
             disabled={isSubmitting}
           />
           {errors.playingTimeMinutes && (
-            <p className="text-sm text-destructive">{errors.playingTimeMinutes.message}</p>
+            <p className="text-sm text-destructive-text">{errors.playingTimeMinutes.message}</p>
           )}
         </div>
       </div>
@@ -189,7 +189,9 @@ export function AddPrivateGameForm({
             placeholder={t('privateGameForm.minAgePlaceholder')}
             disabled={isSubmitting}
           />
-          {errors.minAge && <p className="text-sm text-destructive">{errors.minAge.message}</p>}
+          {errors.minAge && (
+            <p className="text-sm text-destructive-text">{errors.minAge.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -205,7 +207,7 @@ export function AddPrivateGameForm({
             disabled={isSubmitting}
           />
           {errors.complexityRating && (
-            <p className="text-sm text-destructive">{errors.complexityRating.message}</p>
+            <p className="text-sm text-destructive-text">{errors.complexityRating.message}</p>
           )}
         </div>
       </div>
@@ -221,7 +223,7 @@ export function AddPrivateGameForm({
           disabled={isSubmitting}
         />
         {errors.description && (
-          <p className="text-sm text-destructive">{errors.description.message}</p>
+          <p className="text-sm text-destructive-text">{errors.description.message}</p>
         )}
       </div>
 

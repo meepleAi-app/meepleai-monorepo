@@ -16,12 +16,7 @@ import { PlayerAvatars, type AvatarPlayer } from './PlayerAvatars';
 import { StatusPill, type StatusPillLabels } from './StatusPill';
 
 export type GameNightListCardAction =
-  | 'edit'
-  | 'viewSummary'
-  | 'reschedule'
-  | 'accept'
-  | 'maybe'
-  | 'decline';
+  'edit' | 'viewSummary' | 'reschedule' | 'accept' | 'maybe' | 'decline';
 
 export interface GameNightListCardCtaLabels {
   readonly edit: string;
@@ -186,7 +181,7 @@ const RSVP_BUTTONS = [
     action: 'decline',
     status: 'Declined',
     labelKey: 'decline',
-    selectedClass: 'border-destructive bg-destructive/10 text-destructive',
+    selectedClass: 'border-destructive bg-destructive/10 text-destructive-text',
   },
 ] as const;
 

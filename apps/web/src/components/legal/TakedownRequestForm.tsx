@@ -224,7 +224,7 @@ export function TakedownRequestForm() {
         <p
           role="alert"
           data-testid="takedown-error-summary"
-          className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-text"
         >
           {t('legal.takedown.form.errorSummary')}
         </p>
@@ -239,7 +239,7 @@ export function TakedownRequestForm() {
             <div key={key} className="flex flex-col gap-1.5">
               <Label htmlFor={fieldId}>
                 {labelFor[key]}
-                <span aria-hidden="true" className="ml-0.5 text-destructive">
+                <span aria-hidden="true" className="ml-0.5 text-destructive-text">
                   *
                 </span>
               </Label>
@@ -256,7 +256,7 @@ export function TakedownRequestForm() {
                 aria-describedby={error ? errorId : undefined}
               />
               {error && (
-                <p id={errorId} role="alert" className="text-sm text-destructive">
+                <p id={errorId} role="alert" className="text-sm text-destructive-text">
                   {error}
                 </p>
               )}
@@ -273,7 +273,7 @@ export function TakedownRequestForm() {
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={fieldId}>
                 {labelFor.description}
-                <span aria-hidden="true" className="ml-0.5 text-destructive">
+                <span aria-hidden="true" className="ml-0.5 text-destructive-text">
                   *
                 </span>
               </Label>
@@ -289,7 +289,7 @@ export function TakedownRequestForm() {
                 aria-describedby={error ? errorId : undefined}
               />
               {error && (
-                <p id={errorId} role="alert" className="text-sm text-destructive">
+                <p id={errorId} role="alert" className="text-sm text-destructive-text">
                   {error}
                 </p>
               )}
@@ -319,7 +319,7 @@ export function TakedownRequestForm() {
                 </Label>
               </div>
               {error && (
-                <p id={errorId} role="alert" className="text-sm text-destructive">
+                <p id={errorId} role="alert" className="text-sm text-destructive-text">
                   {error}
                 </p>
               )}

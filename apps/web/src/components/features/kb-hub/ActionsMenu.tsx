@@ -97,7 +97,7 @@ export function ActionsMenu(props: ActionsMenuProps): ReactElement {
                   aria-hidden="true"
                   className={
                     isDestructive
-                      ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-destructive/10 text-sm text-destructive'
+                      ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-destructive/10 text-sm text-destructive-text'
                       : 'flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-entity-kb/10 text-sm text-entity-kb'
                   }
                 >
@@ -107,7 +107,7 @@ export function ActionsMenu(props: ActionsMenuProps): ReactElement {
                   <div
                     className={
                       isDestructive
-                        ? 'font-display text-xs font-bold text-destructive'
+                        ? 'font-display text-xs font-bold text-destructive-text'
                         : 'font-display text-xs font-bold text-foreground'
                     }
                   >

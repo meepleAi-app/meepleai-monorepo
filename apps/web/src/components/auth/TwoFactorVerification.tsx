@@ -277,7 +277,7 @@ export function TwoFactorVerification({
             </p>
           )}
           {errors.code && (
-            <p id="2fa-code-error" className="text-sm text-destructive" role="alert">
+            <p id="2fa-code-error" className="text-sm text-destructive-text" role="alert">
               {errors.code.message}
             </p>
           )}
@@ -291,7 +291,7 @@ export function TwoFactorVerification({
             aria-live="polite"
             data-testid="2fa-error"
           >
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-destructive-text">{error}</p>
           </div>
         )}
 

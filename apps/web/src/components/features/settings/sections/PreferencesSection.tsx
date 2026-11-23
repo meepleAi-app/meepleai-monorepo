@@ -52,7 +52,7 @@ export function PreferencesSection(): React.JSX.Element {
     return (
       <div
         role="alert"
-        className="bg-destructive/5 border border-destructive/30 rounded-lg p-5 text-destructive"
+        className="bg-destructive/5 border border-destructive/30 rounded-lg p-5 text-destructive-text"
       >
         Errore caricamento preferenze.
       </div>
@@ -117,7 +117,7 @@ export function PreferencesSection(): React.JSX.Element {
           className={
             feedback.kind === 'ok'
               ? 'flex items-center gap-2 p-2 rounded-md bg-[hsl(var(--c-success)/0.1)] text-[hsl(var(--c-success-ink))] text-sm'
-              : 'flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-sm'
+              : 'flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive-text text-sm'
           }
         >
           {feedback.kind === 'ok' ? (

@@ -7,9 +7,20 @@ import { Edit2, Plus, Trash2, Play } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
-  Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea,
-  ScrollArea, Badge,
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Textarea,
+  ScrollArea,
+  Badge,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from '@/components/ui';
 import { playgroundScenariosApi } from '@/lib/api/playground-scenarios.api';
 import type {
@@ -41,7 +52,10 @@ const emptyForm: ScenarioFormData = {
   tags: '',
 };
 
-function formToCreate(form: ScenarioFormData, agentDefinitionId: string): CreatePlaygroundTestScenario {
+function formToCreate(
+  form: ScenarioFormData,
+  agentDefinitionId: string
+): CreatePlaygroundTestScenario {
   return {
     name: form.name.trim(),
     description: form.description.trim(),
@@ -49,10 +63,16 @@ function formToCreate(form: ScenarioFormData, agentDefinitionId: string): Create
     userMessage: form.userMessage.trim(),
     systemMessage: form.systemMessage.trim() || undefined,
     expectedTopics: form.expectedTopics.trim()
-      ? form.expectedTopics.split(',').map((s) => s.trim()).filter(Boolean)
+      ? form.expectedTopics
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean)
       : undefined,
     tags: form.tags.trim()
-      ? form.tags.split(',').map((s) => s.trim()).filter(Boolean)
+      ? form.tags
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean)
       : undefined,
   };
 }
@@ -64,10 +84,16 @@ function formToUpdate(form: ScenarioFormData): UpdatePlaygroundTestScenario {
     userMessage: form.userMessage.trim(),
     systemMessage: form.systemMessage.trim() || undefined,
     expectedTopics: form.expectedTopics.trim()
-      ? form.expectedTopics.split(',').map((s) => s.trim()).filter(Boolean)
+      ? form.expectedTopics
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean)
       : undefined,
     tags: form.tags.trim()
-      ? form.tags.split(',').map((s) => s.trim()).filter(Boolean)
+      ? form.tags
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean)
       : undefined,
   };
 }
@@ -188,7 +214,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
 
       <ScrollArea className="max-h-[500px]">
         <div className="space-y-3">
-          {scenarios.map((scenario) => (
+          {scenarios.map(scenario => (
             <Card key={scenario.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -215,7 +241,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-destructive"
+                      className="h-7 w-7 text-destructive-text"
                       onClick={() => deleteMutation.mutate(scenario.id)}
                       title="Delete scenario"
                     >
@@ -231,7 +257,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
                 </div>
                 {scenario.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {scenario.tags.map((tag) => (
+                    {scenario.tags.map(tag => (
                       <Badge key={tag} variant="outline" className="text-xs py-0 px-1.5">
                         {tag}
                       </Badge>
@@ -245,7 +271,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
       </ScrollArea>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={(open) => !open && closeDialog()}>
+      <Dialog open={isDialogOpen} onOpenChange={open => !open && closeDialog()}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Scenario' : 'New Scenario'}</DialogTitle>
@@ -256,7 +282,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
               <label className="text-sm font-medium mb-1 block">Name *</label>
               <Input
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="e.g. Catan setup rules"
               />
             </div>
@@ -265,7 +291,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
               <label className="text-sm font-medium mb-1 block">Description</label>
               <Input
                 value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 placeholder="Brief description of what this tests"
               />
             </div>
@@ -274,7 +300,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
               <label className="text-sm font-medium mb-1 block">User Message *</label>
               <Textarea
                 value={form.userMessage}
-                onChange={(e) => setForm((f) => ({ ...f, userMessage: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, userMessage: e.target.value }))}
                 placeholder="The message to send to the agent"
                 rows={3}
               />
@@ -284,7 +310,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
               <label className="text-sm font-medium mb-1 block">System Message Override</label>
               <Textarea
                 value={form.systemMessage}
-                onChange={(e) => setForm((f) => ({ ...f, systemMessage: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, systemMessage: e.target.value }))}
                 placeholder="Optional system message override"
                 rows={2}
               />
@@ -294,7 +320,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
               <label className="text-sm font-medium mb-1 block">Expected Topics</label>
               <Input
                 value={form.expectedTopics}
-                onChange={(e) => setForm((f) => ({ ...f, expectedTopics: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, expectedTopics: e.target.value }))}
                 placeholder="Comma-separated: setup, board, pieces"
               />
             </div>
@@ -303,7 +329,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
               <label className="text-sm font-medium mb-1 block">Tags</label>
               <Input
                 value={form.tags}
-                onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
                 placeholder="Comma-separated: rules, beginner, catan"
               />
             </div>

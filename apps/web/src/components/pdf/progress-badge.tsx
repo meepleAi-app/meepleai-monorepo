@@ -66,7 +66,7 @@ function getStateColor(state: string): string {
     indexing: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30',
     ready: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30',
     indexed: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30',
-    failed: 'text-destructive bg-destructive/10',
+    failed: 'text-destructive-text bg-destructive/10',
   };
   return colors[state.toLowerCase()] || colors['pending'];
 }
@@ -194,7 +194,7 @@ export function ProgressBadge({
               </>
             )}
             {state === 'ready' && <p className="text-green-600 dark:text-green-400">Complete</p>}
-            {state === 'failed' && <p className="text-destructive">Processing failed</p>}
+            {state === 'failed' && <p className="text-destructive-text">Processing failed</p>}
           </div>
         </TooltipContent>
       </Tooltip>

@@ -122,7 +122,7 @@ describe('EditNotesModal - Character Counter', () => {
     render(<EditNotesModal {...defaultProps} currentNotes={longNotes} />);
 
     const counter = screen.getByTestId('char-counter');
-    expect(counter).toHaveClass('text-destructive');
+    expect(counter).toHaveClass('text-destructive-text');
   });
 
   it('shows normal style when more than 50 characters remaining', () => {
@@ -364,9 +364,7 @@ describe('EditNotesModal - Props Sync', () => {
   beforeEach(resetMocks);
 
   it('syncs notes when currentNotes prop changes', () => {
-    const { rerender } = render(
-      <EditNotesModal {...defaultProps} currentNotes="First" />
-    );
+    const { rerender } = render(<EditNotesModal {...defaultProps} currentNotes="First" />);
 
     const textarea = screen.getByRole('textbox');
     expect(textarea).toHaveValue('First');

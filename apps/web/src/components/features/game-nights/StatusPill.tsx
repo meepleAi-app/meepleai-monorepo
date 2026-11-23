@@ -27,7 +27,7 @@ export interface StatusPillProps {
 const VARIANT: Record<StatusKey, string> = {
   confirmed: 'bg-entity-toolkit/12 text-entity-toolkit border-entity-toolkit/30',
   planned: 'bg-entity-agent/12 text-entity-agent border-entity-agent/30',
-  cancelled: 'bg-destructive/12 text-destructive border-destructive/30',
+  cancelled: 'bg-destructive/12 text-destructive-text border-destructive/30',
   completed: 'bg-muted text-muted-foreground border-border',
 };
 

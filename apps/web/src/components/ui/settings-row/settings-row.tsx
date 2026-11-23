@@ -86,7 +86,7 @@ export function SettingsRow({
 
   const labelClasses = clsx(
     'text-sm font-medium truncate',
-    destructive ? 'text-[hsl(var(--destructive))]' : 'text-foreground'
+    destructive ? 'text-destructive-text' : 'text-foreground'
   );
 
   const body = (

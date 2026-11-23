@@ -243,7 +243,7 @@ export function NewGameClient() {
             {/* Title */}
             <div className="space-y-1.5">
               <Label htmlFor="title">
-                Title <span className="text-destructive">*</span>
+                Title <span className="text-destructive-text">*</span>
               </Label>
               <Input
                 id="title"
@@ -251,13 +251,15 @@ export function NewGameClient() {
                 {...register('title')}
                 className={`${errors.title ? 'border-destructive' : ''} ${bggFieldClass('title')}`}
               />
-              {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+              {errors.title && (
+                <p className="text-xs text-destructive-text">{errors.title.message}</p>
+              )}
             </div>
 
             {/* Description */}
             <div className="space-y-1.5">
               <Label htmlFor="description">
-                Description <span className="text-destructive">*</span>
+                Description <span className="text-destructive-text">*</span>
               </Label>
               <Textarea
                 id="description"
@@ -267,7 +269,7 @@ export function NewGameClient() {
                 className={`${errors.description ? 'border-destructive' : ''} ${bggFieldClass('description')}`}
               />
               {errors.description && (
-                <p className="text-xs text-destructive">{errors.description.message}</p>
+                <p className="text-xs text-destructive-text">{errors.description.message}</p>
               )}
             </div>
 
@@ -275,7 +277,7 @@ export function NewGameClient() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="yearPublished">
-                  Year Published <span className="text-destructive">*</span>
+                  Year Published <span className="text-destructive-text">*</span>
                 </Label>
                 <Input
                   id="yearPublished"
@@ -284,13 +286,13 @@ export function NewGameClient() {
                   className={`${errors.yearPublished ? 'border-destructive' : ''} ${bggFieldClass('yearPublished')}`}
                 />
                 {errors.yearPublished && (
-                  <p className="text-xs text-destructive">{errors.yearPublished.message}</p>
+                  <p className="text-xs text-destructive-text">{errors.yearPublished.message}</p>
                 )}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="playingTimeMinutes">
-                  Playing Time (min) <span className="text-destructive">*</span>
+                  Playing Time (min) <span className="text-destructive-text">*</span>
                 </Label>
                 <Input
                   id="playingTimeMinutes"
@@ -299,7 +301,9 @@ export function NewGameClient() {
                   className={`${errors.playingTimeMinutes ? 'border-destructive' : ''} ${bggFieldClass('playingTimeMinutes')}`}
                 />
                 {errors.playingTimeMinutes && (
-                  <p className="text-xs text-destructive">{errors.playingTimeMinutes.message}</p>
+                  <p className="text-xs text-destructive-text">
+                    {errors.playingTimeMinutes.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -308,7 +312,7 @@ export function NewGameClient() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="minPlayers">
-                  Min Players <span className="text-destructive">*</span>
+                  Min Players <span className="text-destructive-text">*</span>
                 </Label>
                 <Input
                   id="minPlayers"
@@ -317,13 +321,13 @@ export function NewGameClient() {
                   className={`${errors.minPlayers ? 'border-destructive' : ''} ${bggFieldClass('minPlayers')}`}
                 />
                 {errors.minPlayers && (
-                  <p className="text-xs text-destructive">{errors.minPlayers.message}</p>
+                  <p className="text-xs text-destructive-text">{errors.minPlayers.message}</p>
                 )}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="maxPlayers">
-                  Max Players <span className="text-destructive">*</span>
+                  Max Players <span className="text-destructive-text">*</span>
                 </Label>
                 <Input
                   id="maxPlayers"
@@ -332,7 +336,7 @@ export function NewGameClient() {
                   className={`${errors.maxPlayers ? 'border-destructive' : ''} ${bggFieldClass('maxPlayers')}`}
                 />
                 {errors.maxPlayers && (
-                  <p className="text-xs text-destructive">{errors.maxPlayers.message}</p>
+                  <p className="text-xs text-destructive-text">{errors.maxPlayers.message}</p>
                 )}
               </div>
 
@@ -360,7 +364,7 @@ export function NewGameClient() {
                 className={`${errors.imageUrl ? 'border-destructive' : ''} ${bggFieldClass('imageUrl')}`}
               />
               {errors.imageUrl && (
-                <p className="text-xs text-destructive">{errors.imageUrl.message}</p>
+                <p className="text-xs text-destructive-text">{errors.imageUrl.message}</p>
               )}
               <p className="text-xs text-muted-foreground">
                 Leave empty to use a placeholder. You can update it later.

@@ -93,7 +93,7 @@ export function EditProfileSheet({ currentDisplayName }: EditProfileSheetProps) 
               className="font-nunito"
             />
           </div>
-          {error && <p className="text-sm text-destructive font-nunito">{error}</p>}
+          {error && <p className="text-sm text-destructive-text font-nunito">{error}</p>}
         </div>
 
         <SheetFooter>

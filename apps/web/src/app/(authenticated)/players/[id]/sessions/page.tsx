@@ -130,7 +130,7 @@ export default function PlayerSessionsPage() {
       {error && !loading && (
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-destructive font-nunito">{error}</p>
+            <p className="text-destructive-text font-nunito">{error}</p>
           </CardContent>
         </Card>
       )}

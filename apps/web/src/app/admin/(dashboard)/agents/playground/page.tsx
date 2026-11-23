@@ -329,7 +329,7 @@ function ChatDebugTab() {
           {state.error && (
             <div
               data-testid="playground-error"
-              className="border-t border-destructive/20 bg-destructive/5 px-4 py-2 text-xs text-destructive"
+              className="border-t border-destructive/20 bg-destructive/5 px-4 py-2 text-xs text-destructive-text"
             >
               {state.error}
             </div>

@@ -81,12 +81,7 @@ export interface TranslateViewerProps {
 }
 
 export type Phase =
-  | 'idle'
-  | 'uploading'
-  | 'segmenting'
-  | 'segments_ready'
-  | 'translating'
-  | 'translated';
+  'idle' | 'uploading' | 'segmenting' | 'segments_ready' | 'translating' | 'translated';
 
 type ModalMode = 'auto-low' | 'auto-medium-tap' | 'manual';
 type ModalState = { open: boolean; mode: ModalMode; preselect?: SourceLangCode };
@@ -421,7 +416,7 @@ export function TranslateViewer({
 
       {books !== undefined && narrativeBooks.length === 0 && (
         <p
-          className="text-sm text-destructive"
+          className="text-sm text-destructive-text"
           role="alert"
           data-testid="translate-viewer-no-narrative-books"
         >
@@ -460,7 +455,7 @@ export function TranslateViewer({
         {errorMessage && (
           <>
             <p
-              className="text-sm text-destructive"
+              className="text-sm text-destructive-text"
               role="alert"
               data-testid="translate-viewer-error"
             >

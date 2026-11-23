@@ -398,7 +398,7 @@ export function NewPlayRecordSheet({
                       <button
                         type="button"
                         onClick={() => removePlayer(p.id)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:text-destructive"
+                        className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:text-destructive-text"
                         aria-label={`Rimuovi ${p.name}`}
                       >
                         <X className="h-3.5 w-3.5" />
@@ -514,7 +514,7 @@ export function NewPlayRecordSheet({
               {/* Error */}
               {errorMsg && (
                 <div
-                  className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                  className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive-text"
                   data-testid="save-error"
                 >
                   {errorMsg}

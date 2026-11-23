@@ -131,7 +131,7 @@ export default function GoldenForGamePage({ params }: GoldenForGamePageProps) {
           )}
 
           {goldenQuery.error && (
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-destructive-text">
               Failed to load golden set:{' '}
               {goldenQuery.error instanceof Error ? goldenQuery.error.message : 'unknown error'}
             </p>

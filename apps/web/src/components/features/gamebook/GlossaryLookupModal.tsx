@@ -88,7 +88,7 @@ export function GlossaryLookupModal({
           )}
           {isError && (
             <p
-              className="text-sm text-destructive"
+              className="text-sm text-destructive-text"
               role="alert"
               data-testid="glossary-lookup-error"
             >

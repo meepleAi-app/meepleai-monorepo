@@ -451,7 +451,7 @@ export function BulkActionBar({
                 variant="secondary"
                 size="sm"
                 onClick={() => setShowRemoveDialog(true)}
-                className="hidden sm:flex bg-destructive/10 text-destructive hover:bg-destructive/20"
+                className="hidden sm:flex bg-destructive/10 text-destructive-text hover:bg-destructive/20"
               >
                 <Trash2 className="mr-1 h-4 w-4" />
                 Rimuovi
@@ -461,7 +461,7 @@ export function BulkActionBar({
                 variant="secondary"
                 size="icon"
                 onClick={() => setShowRemoveDialog(true)}
-                className="sm:hidden h-8 w-8 min-w-[44px] min-h-[44px] bg-destructive/10 text-destructive hover:bg-destructive/20"
+                className="sm:hidden h-8 w-8 min-w-[44px] min-h-[44px] bg-destructive/10 text-destructive-text hover:bg-destructive/20"
                 aria-label="Rimuovi"
               >
                 <Trash2 className="h-4 w-4" />

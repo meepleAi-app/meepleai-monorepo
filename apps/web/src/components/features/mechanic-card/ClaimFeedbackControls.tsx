@@ -86,7 +86,7 @@ export function ClaimFeedbackControls({
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           'disabled:cursor-not-allowed disabled:opacity-50',
           downActive
-            ? 'border-destructive/40 bg-destructive/10 text-destructive'
+            ? 'border-destructive/40 bg-destructive/10 text-destructive-text'
             : 'border-border bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
         )}
       >

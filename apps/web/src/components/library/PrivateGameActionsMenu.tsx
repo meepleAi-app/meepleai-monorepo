@@ -72,7 +72,7 @@ export function PrivateGameActionsMenu({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={choose(onDelete)}
-              className="text-destructive focus:text-destructive"
+              className="text-destructive-text focus:text-destructive-text"
             >
               {t('privateGames.actionDelete')}
             </DropdownMenuItem>

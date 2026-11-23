@@ -157,7 +157,7 @@ export function PlayerInviteAutocomplete({
           </button>
         )}
         {emailError && (
-          <p role="alert" className="text-xs text-destructive">
+          <p role="alert" className="text-xs text-destructive-text">
             {emailError}
           </p>
         )}
@@ -264,7 +264,7 @@ export function PlayerInviteAutocomplete({
                     type="button"
                     onClick={() => onRemoveInvitee(key)}
                     aria-label={`${labels.remove} ${display}`}
-                    className="text-muted-foreground hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive-text"
                   >
                     ×
                   </button>

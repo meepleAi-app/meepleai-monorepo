@@ -10,12 +10,7 @@
 import { Trash2, Zap, Scale, Target, Sparkles, Users } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/data-display/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
   Select,
   SelectContent,
@@ -107,7 +102,7 @@ export function ConfigSelector({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive-text"
               onClick={() => onRemove(config.id)}
             >
               <Trash2 className="h-4 w-4" />
@@ -121,7 +116,7 @@ export function ConfigSelector({
           <label className="text-sm font-medium">Strategy</label>
           <Select
             value={config.strategy}
-            onValueChange={(value) => onUpdate(config.id, 'strategy', value)}
+            onValueChange={value => onUpdate(config.id, 'strategy', value)}
           >
             <SelectTrigger>
               <SelectValue>
@@ -138,9 +133,7 @@ export function ConfigSelector({
                     {STRATEGY_ICONS[strategy.value]}
                     <div className="flex flex-col">
                       <span>{strategy.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {strategy.description}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{strategy.description}</span>
                     </div>
                   </div>
                 </SelectItem>
@@ -152,10 +145,7 @@ export function ConfigSelector({
         {/* Model Selector */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Model</label>
-          <Select
-            value={config.model}
-            onValueChange={(value) => onUpdate(config.id, 'model', value)}
-          >
+          <Select value={config.model} onValueChange={value => onUpdate(config.id, 'model', value)}>
             <SelectTrigger>
               <SelectValue>
                 <div className="flex items-center gap-2">

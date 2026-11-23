@@ -114,7 +114,9 @@ export function RagQualityDashboard() {
       {error && (
         <Card className="border-destructive">
           <CardContent className="py-4">
-            <p className="text-destructive">Failed to load RAG quality report. Please try again.</p>
+            <p className="text-destructive-text">
+              Failed to load RAG quality report. Please try again.
+            </p>
           </CardContent>
         </Card>
       )}

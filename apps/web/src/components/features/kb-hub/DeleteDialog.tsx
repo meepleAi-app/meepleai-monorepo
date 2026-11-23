@@ -56,7 +56,7 @@ export function DeleteDialog(props: DeleteDialogProps): ReactElement {
     <Dialog open={open} onOpenChange={(isOpen: boolean) => !isOpen && onCancel()}>
       <DialogContent data-slot="kb-hub-delete-dialog" className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-destructive">{labels.title}</DialogTitle>
+          <DialogTitle className="text-destructive-text">{labels.title}</DialogTitle>
           <DialogDescription>
             {labels.subtitlePrefix} <span className="font-semibold">{pdfName}</span>
           </DialogDescription>
@@ -67,7 +67,7 @@ export function DeleteDialog(props: DeleteDialogProps): ReactElement {
             data-slot="kb-hub-delete-cleanup-list"
             className="rounded-md border border-destructive/15 bg-destructive/5 px-4 py-3"
           >
-            <div className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-destructive">
+            <div className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-destructive-text">
               {labels.listHeader}
             </div>
             <ul className="space-y-1">
@@ -86,7 +86,7 @@ export function DeleteDialog(props: DeleteDialogProps): ReactElement {
 
         <div
           data-slot="kb-hub-delete-warning"
-          className="flex items-center gap-1.5 text-xs font-bold text-destructive"
+          className="flex items-center gap-1.5 text-xs font-bold text-destructive-text"
         >
           <span aria-hidden="true">⚠️</span>
           <span>{labels.warning}</span>

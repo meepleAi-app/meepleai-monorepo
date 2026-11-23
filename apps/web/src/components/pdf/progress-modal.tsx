@@ -207,7 +207,7 @@ export function ProgressModal({
             <DialogTitle className="flex items-center gap-2 font-quicksand text-2xl">
               {hasError ? (
                 <>
-                  <AlertCircle className="h-6 w-6 text-destructive" />
+                  <AlertCircle className="h-6 w-6 text-destructive-text" />
                   Processing Failed
                 </>
               ) : isTerminalState ? (
@@ -267,7 +267,7 @@ export function ProgressModal({
                       isCurrent &&
                         !isFailed &&
                         'border-amber-500 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 animate-pulse',
-                      isFailed && 'border-destructive bg-destructive/10 text-destructive',
+                      isFailed && 'border-destructive bg-destructive/10 text-destructive-text',
                       !isComplete && !isCurrent && 'border-muted bg-muted/30 text-muted-foreground'
                     )}
                     aria-label={`Step ${stepOrder + 1}: ${getStepLabel(step)}`}
@@ -324,7 +324,7 @@ export function ProgressModal({
           {/* Error Message */}
           {hasError && (
             <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/30">
-              <p className="text-sm text-destructive font-nunito">
+              <p className="text-sm text-destructive-text font-nunito">
                 {status?.errorMessage ||
                   error?.message ||
                   metricsError?.message ||

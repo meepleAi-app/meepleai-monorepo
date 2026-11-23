@@ -608,7 +608,7 @@ export default function DocumentsLibraryPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-destructive"
+                              className="h-7 w-7 text-destructive-text"
                               title="Delete document"
                             >
                               <TrashIcon className="h-3.5 w-3.5" />

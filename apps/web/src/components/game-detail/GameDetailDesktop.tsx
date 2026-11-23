@@ -84,7 +84,7 @@ export function GameDetailDesktop({
 
   if (isError) {
     return (
-      <div className="p-6 text-sm text-destructive" data-testid="game-detail-desktop-error">
+      <div className="p-6 text-sm text-destructive-text" data-testid="game-detail-desktop-error">
         Impossibile caricare il gioco.
       </div>
     );

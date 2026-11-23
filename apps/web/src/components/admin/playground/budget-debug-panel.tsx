@@ -66,7 +66,7 @@ export function BudgetDebugPanel({ className }: BudgetDebugPanelProps) {
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-destructive">
+          <CardTitle className="text-sm font-medium text-destructive-text">
             <AlertCircle className="mr-2 inline h-4 w-4" />
             Budget Error
           </CardTitle>
@@ -192,9 +192,9 @@ export function BudgetDebugPanel({ className }: BudgetDebugPanelProps) {
         {(dailyStatus === 'critical' || weeklyStatus === 'critical') && (
           <div className="rounded-lg border border-destructive bg-destructive/10 p-3">
             <div className="flex items-start">
-              <AlertCircle className="mr-2 mt-0.5 h-4 w-4 text-destructive" />
+              <AlertCircle className="mr-2 mt-0.5 h-4 w-4 text-destructive-text" />
               <div className="text-xs">
-                <div className="font-semibold text-destructive">Budget Alert</div>
+                <div className="font-semibold text-destructive-text">Budget Alert</div>
                 <div className="text-muted-foreground">System may auto-switch to free models</div>
               </div>
             </div>

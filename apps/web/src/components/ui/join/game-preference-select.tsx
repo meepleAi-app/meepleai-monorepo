@@ -139,7 +139,7 @@ export function GamePreferenceSelect({
       <label
         id={labelId}
         htmlFor={`${reactId}-button`}
-        className="mb-1.5 block font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[hsl(var(--text-sec))]"
+        className="mb-1.5 block font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-sec)]"
       >
         {labels.fieldLabel}
       </label>
@@ -185,13 +185,13 @@ export function GamePreferenceSelect({
                 <span>{selected.label}</span>
               </>
             ) : (
-              <span className="text-[hsl(var(--text-muted))]">{labels.placeholder}</span>
+              <span className="text-muted-foreground">{labels.placeholder}</span>
             )}
           </span>
           <span
             aria-hidden="true"
             className={clsx(
-              'font-mono text-[11px] text-[hsl(var(--text-muted))]',
+              'font-mono text-[11px] text-muted-foreground',
               'transition-transform duration-150',
               open && 'rotate-180'
             )}
@@ -232,7 +232,7 @@ export function GamePreferenceSelect({
                       ? 'mt-1 border-t border-[var(--border-light)] pt-3 pb-1.5 font-mono'
                       : 'py-1.5 font-body',
                     'text-[13px] text-foreground',
-                    isAct && 'bg-[hsl(var(--bg-hover))]',
+                    isAct && 'bg-[var(--bg-hover)]',
                     isSel ? 'font-bold' : 'font-medium'
                   )}
                 >

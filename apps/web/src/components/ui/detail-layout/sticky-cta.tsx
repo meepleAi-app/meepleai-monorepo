@@ -104,7 +104,7 @@ export function StickyCta({ signInHref, labels, className }: StickyCtaProps): JS
         <span aria-hidden="true" className="text-base">
           🔒
         </span>
-        <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[hsl(var(--text-muted))]">
+        <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
           {labels.desktopHint}
         </span>
         <a

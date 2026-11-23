@@ -254,7 +254,7 @@ export function JoinForm({
             isSubmitting && 'cursor-not-allowed opacity-65'
           )}
         />
-        <span className="text-[11px] leading-[1.55] text-[hsl(var(--text-sec))]">
+        <span className="text-[11px] leading-[1.55] text-[var(--text-sec)]">
           {labels.newsletterLabel}
         </span>
       </label>
@@ -280,7 +280,7 @@ export function JoinForm({
         {isSubmitting ? labels.submitting : labels.submitDefault}
       </button>
 
-      <div className="mt-3 text-center font-mono text-[11px] tracking-[0.02em] text-[hsl(var(--text-muted))]">
+      <div className="mt-3 text-center font-mono text-[11px] tracking-[0.02em] text-muted-foreground">
         {labels.alreadyHaveInvite}{' '}
         <a href={loginHref} className="font-display font-bold text-[hsl(var(--c-game))]">
           {labels.loginLink}
@@ -329,11 +329,11 @@ function Field({
     <div className="mb-3">
       <label
         htmlFor={id}
-        className="mb-1.5 block font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[hsl(var(--text-sec))]"
+        className="mb-1.5 block font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-sec)]"
       >
         {label}
         {optionalLabel && (
-          <span className="ml-1 font-mono text-[hsl(var(--text-muted))]">{optionalLabel}</span>
+          <span className="ml-1 font-mono text-muted-foreground">{optionalLabel}</span>
         )}
       </label>
       <input
@@ -369,7 +369,7 @@ function Field({
         </div>
       )}
       {hint && !error && (
-        <div id={hintId} className="mt-1 text-[11px] text-[hsl(var(--text-muted))]">
+        <div id={hintId} className="mt-1 text-[11px] text-muted-foreground">
           {hint}
         </div>
       )}

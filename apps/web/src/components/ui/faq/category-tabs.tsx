@@ -61,7 +61,7 @@ export function CategoryTabs({
     <div
       data-slot="category-tabs"
       className={clsx(
-        'border-b border-border bg-[hsl(var(--glass-bg))] backdrop-blur-md',
+        'border-b border-border bg-[var(--glass-bg)] backdrop-blur-md',
         sticky && 'sticky top-0 z-[3]',
         className
       )}
@@ -97,7 +97,7 @@ export function CategoryTabs({
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game))] focus-visible:ring-offset-2',
                 isActive
                   ? 'border border-[hsl(var(--c-game)/0.3)] bg-[hsl(var(--c-game)/0.12)] text-[hsl(var(--c-game-text))] font-bold'
-                  : 'border border-border bg-transparent text-[hsl(var(--text-sec))] font-semibold hover:bg-[hsl(var(--bg-hover))]'
+                  : 'border border-border bg-transparent text-[var(--text-sec)] font-semibold hover:bg-[var(--bg-hover)]'
               )}
             >
               <span aria-hidden="true">{cat.icon}</span>
@@ -113,7 +113,7 @@ export function CategoryTabs({
                       // inside the orange-tinted pill — pill itself remains the entity
                       // visual cue, count is neutral readable. (#1094 follow-up)
                       'bg-[hsl(var(--c-game)/0.12)] text-foreground dark:bg-[hsl(var(--c-game)/0.4)]'
-                    : 'bg-[hsl(var(--bg-muted))] text-[hsl(var(--text-muted))]'
+                    : 'bg-[var(--bg-muted)] text-muted-foreground'
                 )}
               >
                 {count}

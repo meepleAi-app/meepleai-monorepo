@@ -28,12 +28,12 @@ export function SkeletonCard({ compact = false, className }: SkeletonCardProps):
       )}
     >
       <div
-        className={clsx(coverH, 'mai-shimmer bg-[hsl(var(--bg-muted))] motion-reduce:animate-none')}
+        className={clsx(coverH, 'mai-shimmer bg-[var(--bg-muted)] motion-reduce:animate-none')}
       />
       <div className="flex flex-col gap-1.5 px-3 pb-3 pt-2">
-        <div className="mai-shimmer h-[13px] w-3/4 rounded bg-[hsl(var(--bg-muted))] motion-reduce:animate-none" />
-        <div className="mai-shimmer h-[10px] w-1/2 rounded bg-[hsl(var(--bg-muted))] motion-reduce:animate-none" />
-        <div className="mai-shimmer mt-1 h-4 w-2/3 rounded-full bg-[hsl(var(--bg-muted))] motion-reduce:animate-none" />
+        <div className="mai-shimmer h-[13px] w-3/4 rounded bg-[var(--bg-muted)] motion-reduce:animate-none" />
+        <div className="mai-shimmer h-[10px] w-1/2 rounded bg-[var(--bg-muted)] motion-reduce:animate-none" />
+        <div className="mai-shimmer mt-1 h-4 w-2/3 rounded-full bg-[var(--bg-muted)] motion-reduce:animate-none" />
       </div>
     </div>
   );

@@ -70,7 +70,7 @@ export function InviteHero({
         {inviteVerb}{' '}
         <strong className="font-extrabold text-[hsl(var(--c-toolkit))]">{gameName}</strong>
       </h1>
-      <p className="m-0 font-mono text-[11px] tracking-[0.04em] text-[hsl(var(--text-muted))]">
+      <p className="m-0 font-mono text-[11px] tracking-[0.04em] text-muted-foreground">
         {dateShort} · {time}
       </p>
     </div>

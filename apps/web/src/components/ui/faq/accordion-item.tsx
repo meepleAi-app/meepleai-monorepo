@@ -64,7 +64,7 @@ export function AccordionItem({
       >
         <span
           aria-hidden="true"
-          className="mt-0.5 inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-[hsl(var(--bg-muted))] px-[7px] py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.04em] text-[hsl(var(--text-muted))]"
+          className="mt-0.5 inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-[var(--bg-muted)] px-[7px] py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.04em] text-muted-foreground"
         >
           <span>{categoryIcon}</span>
           <span>{categoryLabel}</span>
@@ -79,7 +79,7 @@ export function AccordionItem({
             'transition-[transform,background-color,color] duration-200 ease-out',
             isOpen
               ? 'bg-[hsl(var(--c-game))] text-white rotate-180'
-              : 'bg-[hsl(var(--bg-muted))] text-[hsl(var(--text-sec))] rotate-0'
+              : 'bg-[var(--bg-muted)] text-[var(--text-sec)] rotate-0'
           )}
         >
           <ChevronDown size={18} strokeWidth={2.5} />
@@ -95,7 +95,7 @@ export function AccordionItem({
           isOpen ? 'max-h-[800px] duration-300' : 'max-h-0 duration-200'
         )}
       >
-        <div className="max-w-[720px] px-1 pb-[18px] text-[13.5px] leading-[1.65] text-[hsl(var(--text-sec))]">
+        <div className="max-w-[720px] px-1 pb-[18px] text-[13.5px] leading-[1.65] text-[var(--text-sec)]">
           {answer}
         </div>
       </div>

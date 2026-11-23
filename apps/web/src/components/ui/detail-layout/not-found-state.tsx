@@ -56,7 +56,7 @@ export function NotFoundState({
         🔍
       </span>
       <h2 className="m-0 font-display text-base font-semibold text-foreground">{labels.title}</h2>
-      <p className="m-0 max-w-md text-sm text-[hsl(var(--text-muted))]">{labels.description}</p>
+      <p className="m-0 max-w-md text-sm text-muted-foreground">{labels.description}</p>
       <a
         href={backHref}
         className="mt-2 inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

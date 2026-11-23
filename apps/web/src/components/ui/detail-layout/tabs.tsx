@@ -119,7 +119,7 @@ export function Tabs({
               'relative inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.06em]',
               'transition-[color,background-color] duration-200',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game))] focus-visible:ring-offset-2',
-              isActive ? 'text-foreground' : 'text-[hsl(var(--text-muted))] hover:text-foreground'
+              isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
             )}
             style={isActive ? { backgroundColor: entityHsl('game', 0.12) } : undefined}
           >

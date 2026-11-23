@@ -53,7 +53,7 @@ export function FeatureMiniCard({
       <div className="font-display text-[13px] font-bold leading-tight text-foreground">
         {title}
       </div>
-      <div className="text-[11px] leading-[1.5] text-[hsl(var(--text-sec))]">{description}</div>
+      <div className="text-[11px] leading-[1.5] text-[var(--text-sec)]">{description}</div>
       <div
         style={{
           backgroundColor: entityHsl(entity, 0.12),

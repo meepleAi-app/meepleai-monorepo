@@ -50,7 +50,7 @@ export function QuickAnswerCard({
         className
       )}
     >
-      <div className="flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--text-muted))]">
+      <div className="flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
         <span aria-hidden="true">{categoryIcon}</span>
         <span>{categoryLabel}</span>
         <span className="ml-auto tabular-nums text-[hsl(var(--c-game))]">#{popularRank}</span>
@@ -58,7 +58,7 @@ export function QuickAnswerCard({
       <h3 className="m-0 font-display text-sm font-bold leading-[1.35] text-foreground">
         {question}
       </h3>
-      <p className="m-0 line-clamp-2 text-[12.5px] leading-[1.55] text-[hsl(var(--text-sec))]">
+      <p className="m-0 line-clamp-2 text-[12.5px] leading-[1.55] text-[var(--text-sec)]">
         {short}
       </p>
       <div className="mt-auto font-mono text-[11px] font-bold text-[hsl(var(--c-game))]">

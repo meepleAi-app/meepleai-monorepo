@@ -80,7 +80,7 @@ export function ContributorsSidebar({
       </h2>
 
       {isEmpty ? (
-        <p className="m-0 text-[12.5px] leading-[1.55] text-[hsl(var(--text-sec))]">
+        <p className="m-0 text-[12.5px] leading-[1.55] text-[var(--text-sec)]">
           {labels.emptyTitle}
         </p>
       ) : (
@@ -97,7 +97,7 @@ export function ContributorsSidebar({
               >
                 <span
                   aria-label={labels.rankAriaLabel(rank)}
-                  className="font-mono text-[11px] font-bold tabular-nums text-[hsl(var(--text-muted))]"
+                  className="font-mono text-[11px] font-bold tabular-nums text-muted-foreground"
                 >
                   #{rank}
                 </span>
@@ -112,7 +112,7 @@ export function ContributorsSidebar({
                   <span className="truncate font-display text-[13px] font-bold text-foreground">
                     {c.displayName}
                   </span>
-                  <span className="font-mono text-[10px] text-[hsl(var(--text-muted))]">
+                  <span className="font-mono text-[10px] text-muted-foreground">
                     {labels.meta(c.totalSessions, c.totalWins)}
                   </span>
                 </span>
@@ -123,7 +123,7 @@ export function ContributorsSidebar({
       )}
 
       <div className="flex flex-col gap-2 border-t border-border pt-3">
-        <h3 className="m-0 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--text-muted))]">
+        <h3 className="m-0 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
           {labels.statsHeading}
         </h3>
         <div className="grid grid-cols-2 gap-2">

@@ -56,18 +56,16 @@ export function DeclinedShell({
     >
       <div
         aria-hidden="true"
-        className="mb-3.5 flex h-[60px] w-[60px] items-center justify-center rounded-full border bg-[hsl(var(--bg-muted))] text-[26px]"
+        className="mb-3.5 flex h-[60px] w-[60px] items-center justify-center rounded-full border bg-[var(--bg-muted)] text-[26px]"
       >
         🌙
       </div>
       <h2 className="m-0 mb-1.5 font-display text-[18px] font-bold text-foreground">{headline}</h2>
-      <p className="m-0 mb-4 text-[12px] leading-relaxed text-[hsl(var(--text-muted))]">
-        {subText}
-      </p>
+      <p className="m-0 mb-4 text-[12px] leading-relaxed text-muted-foreground">{subText}</p>
       <div className="flex w-full flex-col gap-2">
         <a
           href={returnHomeHref}
-          className="inline-flex items-center justify-center rounded-md border bg-[hsl(var(--bg-muted))] px-3.5 py-2.5 font-display text-[13px] font-bold text-foreground no-underline"
+          className="inline-flex items-center justify-center rounded-md border bg-[var(--bg-muted)] px-3.5 py-2.5 font-display text-[13px] font-bold text-foreground no-underline"
         >
           {returnHomeLabel}
         </a>
@@ -75,7 +73,7 @@ export function DeclinedShell({
           <button
             type="button"
             onClick={onUndo}
-            className="cursor-pointer border-0 bg-transparent p-2 text-[11px] text-[hsl(var(--text-muted))] underline"
+            className="cursor-pointer border-0 bg-transparent p-2 text-[11px] text-muted-foreground underline"
           >
             {undoLabel}
           </button>

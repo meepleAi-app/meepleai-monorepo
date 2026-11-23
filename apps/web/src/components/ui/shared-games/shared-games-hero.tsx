@@ -57,7 +57,7 @@ export function SharedGamesHero({
         </span>
         {headingTail ? <> {headingTail}</> : null}
       </h1>
-      <p className="m-0 max-w-[540px] text-[14px] leading-[1.55] text-[hsl(var(--text-sec))]">
+      <p className="m-0 max-w-[540px] text-[14px] leading-[1.55] text-[var(--text-sec)]">
         {subtitle}
       </p>
     </section>

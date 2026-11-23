@@ -168,7 +168,7 @@ export function JoinPageClient(): JSX.Element {
               <h2 className="m-0 mb-1 font-display text-[18px] font-bold tracking-[-0.01em] text-foreground">
                 {t('pages.join.hero.alphaPill')}
               </h2>
-              <p className="m-0 mb-4 text-[12px] leading-[1.55] text-[hsl(var(--text-muted))]">
+              <p className="m-0 mb-4 text-[12px] leading-[1.55] text-muted-foreground">
                 {t('pages.join.hero.subTagline')}
               </p>
               <JoinForm

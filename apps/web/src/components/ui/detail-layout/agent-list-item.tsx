@@ -88,7 +88,7 @@ export function AgentListItem({
           {name}
         </h3>
 
-        <p className="m-0 font-mono text-[10px] uppercase tracking-[0.06em] text-[hsl(var(--text-muted))]">
+        <p className="m-0 font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
           <span data-dynamic="number">{labels.invocationsLabel(invocationCount)}</span> ·{' '}
           {labels.updatedPrefix}{' '}
           <time dateTime={lastUpdatedAt} data-dynamic="datetime">

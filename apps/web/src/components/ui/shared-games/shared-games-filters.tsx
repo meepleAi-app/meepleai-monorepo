@@ -114,7 +114,7 @@ export function SharedGamesFilters({
         <div className="relative flex-1">
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute left-[11px] top-1/2 -translate-y-1/2 text-[14px] text-[hsl(var(--text-muted))]"
+            className="pointer-events-none absolute left-[11px] top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground"
           >
             🔍
           </span>
@@ -127,7 +127,7 @@ export function SharedGamesFilters({
             aria-label={labels.searchAriaLabel}
             className={clsx(
               'h-9 w-full rounded-full border border-border bg-card pl-8 pr-3 text-[13px]',
-              'placeholder:text-[hsl(var(--text-muted))]',
+              'placeholder:text-muted-foreground',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game))]'
             )}
           />
@@ -136,7 +136,7 @@ export function SharedGamesFilters({
               type="button"
               onClick={() => onSearchChange('')}
               aria-label={labels.clearSearchAriaLabel}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-[hsl(var(--text-muted))] hover:text-foreground"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:text-foreground"
             >
               ✕
             </button>
@@ -200,7 +200,7 @@ export function SharedGamesFilters({
                 'inline-flex h-8 items-center rounded-full border px-3 font-mono text-[11px] font-bold uppercase tracking-[0.06em] transition-colors',
                 active
                   ? 'border-[hsl(var(--c-game))] bg-[hsl(var(--c-game)/0.12)] text-[hsl(var(--c-game))]'
-                  : 'border-border bg-card text-[hsl(var(--text-sec))] hover:border-[hsl(var(--c-game)/0.4)]',
+                  : 'border-border bg-card text-[var(--text-sec)] hover:border-[hsl(var(--c-game)/0.4)]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game))]'
               )}
             >
@@ -215,7 +215,7 @@ export function SharedGamesFilters({
         data-slot="shared-games-result-counter"
         role="status"
         aria-live="polite"
-        className="m-0 font-mono text-[11px] text-[hsl(var(--text-muted))]"
+        className="m-0 font-mono text-[11px] text-muted-foreground"
       >
         {counterText}
       </p>

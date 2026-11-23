@@ -52,7 +52,7 @@ export default function SharedGameDetailError({
           onRetry={reset}
         />
         {process.env.NODE_ENV === 'development' && error.digest && (
-          <p className="mt-3 text-center font-mono text-xs text-[hsl(var(--text-muted))]">
+          <p className="mt-3 text-center font-mono text-xs text-muted-foreground">
             Digest: {error.digest}
           </p>
         )}

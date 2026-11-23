@@ -125,6 +125,13 @@ public class ShareRequestApprovalContributionsTests
         cache.Verify(c => c.EvictContributorsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData("ix_contributors_user_shared_game_unique")]
+    [InlineData("ix_contributors_one_primary_per_shared_game_unique")]
+    [InlineData("ix_contribution_records_contributor_version_unique")]
+    public void IsAConcurrentApproval_TheIndexesAReadThenWriteCannotSee(string constraint) =>
+        ShareRequestApprovalContributions.IsAConcurrentApproval(UniqueViolation(constraint)).Should().BeTrue();
+
     [Fact]
     public async Task SaveWithTheApproval_AnotherUniqueViolation_IsNotTurnedIntoAConflict()
     {

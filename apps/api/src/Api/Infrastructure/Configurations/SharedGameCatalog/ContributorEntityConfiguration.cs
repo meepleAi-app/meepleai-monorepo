@@ -50,6 +50,13 @@ internal sealed class ContributorEntityConfiguration : IEntityTypeConfiguration<
             .IsUnique()
             .HasDatabaseName("ix_contributors_user_shared_game_unique");
 
+        // #5143: at most one primary contributor per game. Two NewGame approvals of different authors at the same time
+        // both found no primary before either saved. A plain partial index, not a deferred exclusion constraint: no
+        // code changes IsPrimaryContributor after the insert, so no save moves the flag from one row to another.
+        builder.HasIndex(e => e.SharedGameId, "ix_contributors_one_primary_per_shared_game_unique")
+            .IsUnique()
+            .HasFilter("is_primary_contributor");
+
         // Relationships
         builder.HasOne(e => e.SharedGame)
             .WithMany(g => g.Contributors)

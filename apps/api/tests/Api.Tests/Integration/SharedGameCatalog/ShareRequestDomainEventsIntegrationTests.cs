@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ApproveGameProp
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameContributors;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -383,6 +384,73 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
         contributors.Single(c => c.UserId == otherId).Contributions.Should().ContainSingle()
             .Which.Type.Should().Be((int)ContributionRecordType.ContentEnhancement);
     }
+
+    // #5143: the two races #5142 left open, closed by unique indexes. Each is recreated with two units of work that both
+    // read before either saves, as two approvals at the same time do: the first saves, the second is a 409.
+    [Fact]
+    [Trait("Issue", "5143")]
+    public async Task TwoAuthorsNewGames_ApprovedAtTheSameTime_GiveOnePrimary_AndTheSecondIsAConflict()
+    {
+        var gameId = await SeedSharedGameAsync();
+        var (first, _) = await SeedUserAndAdminAsync();
+        var (second, _) = await SeedUserAndAdminAsync();
+        using var a = _factory.Services.CreateScope();
+        using var b = _factory.Services.CreateScope();
+        var approvalA = Contributions(a);
+        var approvalB = Contributions(b);
+        await approvalA.RecordAsync(ShareRequest.Create(first, gameId, ContributionType.NewGame), gameId,
+            ShareRequestApprovalContributions.Kind.NewGame, [], Ct);
+        await approvalB.RecordAsync(ShareRequest.Create(second, gameId, ContributionType.NewGame), gameId,
+            ShareRequestApprovalContributions.Kind.NewGame, [], Ct);
+
+        await SaveAsync(approvalA, a);
+        var act = () => SaveAsync(approvalB, b);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        (await ContributorsAsync(gameId)).Should().ContainSingle(c => c.IsPrimaryContributor)
+            .Which.UserId.Should().Be(first);
+    }
+
+    [Fact]
+    [Trait("Issue", "5143")]
+    public async Task TwoApprovals_AddingToOneContributorAtTheSameTime_WriteOneNextVersion_AndTheSecondIsAConflict()
+    {
+        var gameId = await SeedSharedGameAsync();
+        var (userId, _) = await SeedUserAndAdminAsync();
+        using (var seed = _factory.Services.CreateScope())
+        {
+            var first = Contributions(seed);
+            await first.RecordAsync(ShareRequest.Create(userId, gameId, ContributionType.NewGame), gameId,
+                ShareRequestApprovalContributions.Kind.Content, [], Ct);
+            await SaveAsync(first, seed);
+        }
+
+        using var a = _factory.Services.CreateScope();
+        using var b = _factory.Services.CreateScope();
+        var approvalA = Contributions(a);
+        var approvalB = Contributions(b);
+        foreach (var approval in new[] { approvalA, approvalB })
+        {
+            await approval.RecordAsync(ShareRequest.Create(userId, gameId, ContributionType.NewGame), gameId,
+                ShareRequestApprovalContributions.Kind.Content, [], Ct);
+        }
+
+        await SaveAsync(approvalA, a);
+        var act = () => SaveAsync(approvalB, b);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        (await ContributorsAsync(gameId)).Should().ContainSingle()
+            .Which.Contributions.Select(c => c.Version).Should().BeEquivalentTo([1, 2]);
+    }
+
+    private static ShareRequestApprovalContributions Contributions(IServiceScope scope) =>
+        new(scope.ServiceProvider.GetRequiredService<IContributorRepository>());
+
+    private Task SaveAsync(ShareRequestApprovalContributions contributions, IServiceScope scope) =>
+        contributions.SaveWithTheApprovalAsync(
+            scope.ServiceProvider.GetRequiredService<IUnitOfWork>(),
+            scope.ServiceProvider.GetRequiredService<ISharedGameCacheInvalidator>(),
+            Ct);
 
     // The query behind the game page, cache included.
     private async Task<List<GameContributorDto>> ContributorsOnThePageAsync(Guid sharedGameId)

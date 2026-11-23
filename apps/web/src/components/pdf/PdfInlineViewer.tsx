@@ -320,7 +320,7 @@ export function PdfInlineViewer({
               value={jumpInput}
               disabled={controlsDisabled}
               onChange={e => setJumpInput(e.target.value)}
-              className="w-14 rounded-sm border border-border bg-card px-1 py-0.5 text-center disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="w-14 rounded-sm border border-input bg-card px-1 py-0.5 text-center disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </form>
         )}

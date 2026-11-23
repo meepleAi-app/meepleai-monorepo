@@ -642,7 +642,7 @@ export function EditorClient() {
                 onBlur={handleJsonBlur}
                 className={cn(
                   'flex-1 min-h-[600px] font-mono text-sm p-3 rounded resize-y',
-                  isValid ? 'border-2 border-border' : 'border-2 border-red-600'
+                  isValid ? 'border-2 border-input' : 'border-2 border-red-600'
                 )}
                 spellCheck={false}
               />

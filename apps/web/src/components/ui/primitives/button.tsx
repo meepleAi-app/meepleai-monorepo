@@ -52,7 +52,7 @@ const buttonVariants = cva(
       variant: {
         default: `bg-primary/(--btn-fill) text-primary-foreground ${FILL_90}`,
         destructive: `bg-destructive/(--btn-fill) text-destructive-foreground shadow-sm ${FILL_90}`,
-        outline: `border border-border/50 dark:border-border/70 ${OUTLINE_FILL} backdrop-blur-[8px] dark:backdrop-blur-none text-foreground shadow-sm`,
+        outline: `border border-border ${OUTLINE_FILL} backdrop-blur-[8px] dark:backdrop-blur-none text-foreground shadow-sm`,
         secondary: `bg-secondary/(--btn-fill) text-secondary-foreground shadow-sm ${FILL_85}`,
         ghost: `text-foreground ${GHOST_FILL}`,
         link: `${LINK_INK} underline underline-offset-4`,

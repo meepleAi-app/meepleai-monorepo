@@ -116,7 +116,7 @@ export function GameCandidatesPicker({
             placeholder={labels.searchLabel}
             autoComplete="off"
             data-slot="game-night-create-step4-search"
-            className="mt-2 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
+            className="mt-2 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground"
           />
         )}
 

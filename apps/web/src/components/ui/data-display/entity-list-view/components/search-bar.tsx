@@ -84,7 +84,7 @@ export const SearchBar = React.memo(function SearchBar({
         placeholder={placeholder}
         className={cn(
           'w-full h-10 pl-10 pr-10 rounded-lg',
-          'bg-muted/50 border border-border/50',
+          'bg-muted/50 border border-input',
           'text-sm text-foreground placeholder:text-muted-foreground',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           'transition-colors duration-200'

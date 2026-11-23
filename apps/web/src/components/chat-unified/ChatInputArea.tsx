@@ -75,7 +75,7 @@ export function ChatInputArea({
           placeholder="Scrivi un messaggio..."
           rows={1}
           className={cn(
-            'flex-1 resize-none rounded-xl border border-border/50 px-4 py-3',
+            'flex-1 resize-none rounded-xl border border-input px-4 py-3',
             'bg-card/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito',
             'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40',
             'max-h-32'

@@ -95,7 +95,7 @@ export function WikidataSearchForm() {
           value={term}
           onChange={e => setTerm(e.target.value)}
           placeholder="board game title…"
-          className="flex-1 rounded border border-border bg-background px-2 py-1.5 text-sm"
+          className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-sm"
         />
         <Button type="submit" disabled={term.trim().length < 2 || search.isPending}>
           {search.isPending ? (

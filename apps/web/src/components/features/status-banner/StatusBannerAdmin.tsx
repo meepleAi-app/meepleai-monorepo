@@ -181,7 +181,7 @@ export function StatusBannerAdmin() {
           required
           placeholder={t('common.statusBanner.admin.messagePlaceholder')}
           aria-invalid={messageInvalid || undefined}
-          className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         />
         <p className="text-xs text-muted-foreground">{form.message.length} / 500</p>
       </div>
@@ -203,7 +203,7 @@ export function StatusBannerAdmin() {
               severity: e.target.value as StatusBannerSeverity,
             }))
           }
-          className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <option value="Info">{t('common.statusBanner.severityLabel.info')}</option>
           <option value="Warning">{t('common.statusBanner.severityLabel.warning')}</option>
@@ -218,7 +218,7 @@ export function StatusBannerAdmin() {
           id="status-banner-isactive"
           checked={form.isActive}
           onChange={e => setForm(prev => ({ ...prev, isActive: e.target.checked }))}
-          className="h-4 w-4 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-primary"
+          className="h-4 w-4 rounded border-input text-primary focus-visible:ring-2 focus-visible:ring-primary"
         />
         <label htmlFor="status-banner-isactive" className="text-sm text-foreground">
           {t('common.statusBanner.admin.isActiveLabel')}
@@ -239,7 +239,7 @@ export function StatusBannerAdmin() {
             id="status-banner-startsat"
             value={form.startsAt}
             onChange={e => setForm(prev => ({ ...prev, startsAt: e.target.value }))}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           />
         </div>
         <div className="space-y-1">
@@ -254,7 +254,7 @@ export function StatusBannerAdmin() {
             id="status-banner-endsat"
             value={form.endsAt}
             onChange={e => setForm(prev => ({ ...prev, endsAt: e.target.value }))}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           />
         </div>
       </div>

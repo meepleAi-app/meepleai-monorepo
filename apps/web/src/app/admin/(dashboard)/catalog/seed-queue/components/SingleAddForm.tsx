@@ -83,7 +83,7 @@ export function SingleAddForm() {
             inputMode="numeric"
             value={bggIdRaw}
             onChange={e => setBggIdRaw(e.target.value)}
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 font-mono text-sm"
+            className="mt-1 w-full rounded border border-input bg-background px-2 py-1.5 font-mono text-sm"
             placeholder="e.g. 13"
           />
         </label>
@@ -97,7 +97,7 @@ export function SingleAddForm() {
             aria-label="Wikidata QID"
             value={wikidataQid}
             onChange={e => setWikidataQid(e.target.value.toUpperCase())}
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 font-mono text-sm"
+            className="mt-1 w-full rounded border border-input bg-background px-2 py-1.5 font-mono text-sm"
             placeholder="e.g. Q170416"
           />
         </label>
@@ -109,7 +109,7 @@ export function SingleAddForm() {
             aria-label="Search term"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+            className="mt-1 w-full rounded border border-input bg-background px-2 py-1.5 text-sm"
             placeholder="e.g. catan"
           />
         </label>

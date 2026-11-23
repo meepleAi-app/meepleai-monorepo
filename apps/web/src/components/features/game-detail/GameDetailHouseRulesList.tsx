@@ -120,7 +120,7 @@ export function GameDetailHouseRulesList(props: GameDetailHouseRulesListProps): 
             maxLength={2000}
             autoFocus
             data-slot="game-detail-house-rules-add-input"
-            className="min-h-[64px] resize-y rounded-md border border-border bg-background p-2 font-mono text-[12px] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-[64px] resize-y rounded-md border border-input bg-background p-2 font-mono text-[12px] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <div className="flex items-center justify-end gap-2">
             <button
@@ -176,7 +176,7 @@ export function GameDetailHouseRulesList(props: GameDetailHouseRulesListProps): 
                       maxLength={2000}
                       autoFocus
                       data-slot="game-detail-house-rules-edit-input"
-                      className="min-h-[56px] resize-y rounded-md border border-border bg-background p-2 font-mono text-[12px] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="min-h-[56px] resize-y rounded-md border border-input bg-background p-2 font-mono text-[12px] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                     <div className="flex items-center justify-end gap-2">
                       <button

@@ -74,7 +74,7 @@ export function PreferencesSection(): React.JSX.Element {
           id="pref-theme"
           value={theme}
           onChange={e => setTheme(e.target.value as Theme)}
-          className="block w-full h-10 px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
+          className="block w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm text-foreground"
         >
           <option value="light">Light</option>
           <option value="dark">Dark</option>
@@ -93,7 +93,7 @@ export function PreferencesSection(): React.JSX.Element {
           id="pref-language"
           value={language}
           onChange={e => setLanguage(e.target.value)}
-          className="block w-full h-10 px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
+          className="block w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm text-foreground"
         >
           <option value="it">Italiano</option>
           <option value="en">English</option>

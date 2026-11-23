@@ -54,13 +54,13 @@ export function EmbeddingsSearchPanel({ docId }: EmbeddingsSearchPanelProps): JS
           aria-label="Query semantica"
           aria-invalid={queryTooLong || undefined}
           aria-describedby={queryTooLong ? 'embeddings-query-too-long' : undefined}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="rounded-md border border-input bg-card px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
         <select
           value={limit}
           onChange={e => setLimit(Number.parseInt(e.target.value, 10))}
           aria-label="Limit"
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+          className="rounded-md border border-input bg-card px-3 py-1.5 text-sm"
         >
           {LIMIT_OPTIONS.map(opt => (
             <option key={opt} value={opt}>

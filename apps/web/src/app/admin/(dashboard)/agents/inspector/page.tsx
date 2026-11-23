@@ -796,7 +796,7 @@ export default function InspectorPage() {
                     'bg-card/70 font-nunito text-sm text-zinc-800 backdrop-blur-sm',
                     'cursor-pointer appearance-none transition-colors',
                     'hover:bg-card/90 focus:outline-none focus:ring-2 focus:ring-amber-500',
-                    'dark:border-border dark:bg-zinc-700/70 dark:text-zinc-100'
+                    'dark:border-input dark:bg-zinc-700/70 dark:text-zinc-100'
                   )}
                 >
                   {executions.map(exec => (

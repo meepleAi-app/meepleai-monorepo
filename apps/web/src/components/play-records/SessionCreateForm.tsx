@@ -604,7 +604,7 @@ function Step3Punteggi({
                   readOnly={isReadonly}
                   aria-readonly={isReadonly}
                   className={cn(
-                    'w-16 rounded-lg bg-muted border border-border px-2 py-1 text-center text-sm font-mono font-bold text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30',
+                    'w-16 rounded-lg bg-muted border border-input px-2 py-1 text-center text-sm font-mono font-bold text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30',
                     isReadonly && 'opacity-60 cursor-not-allowed'
                   )}
                   aria-label={`Punteggio di ${p.name}`}
@@ -643,7 +643,7 @@ function Step3Punteggi({
           disabled={isReadonly}
           placeholder={t('step3.addPlayerPlaceholder')}
           className={cn(
-            'flex-1 rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30',
+            'flex-1 rounded-xl bg-muted border border-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30',
             isReadonly && 'opacity-50 cursor-not-allowed'
           )}
           data-testid="new-player-input"

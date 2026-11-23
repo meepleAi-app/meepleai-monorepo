@@ -369,7 +369,7 @@ function PriceEditor({
             value={input}
             onChange={e => setInput(e.target.value)}
             aria-invalid={invalid}
-            className="w-24 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-24 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         </div>
         <div>
@@ -386,7 +386,7 @@ function PriceEditor({
             value={output}
             onChange={e => setOutput(e.target.value)}
             aria-invalid={invalid}
-            className="w-24 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-24 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         </div>
       </div>

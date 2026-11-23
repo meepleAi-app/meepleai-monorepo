@@ -51,7 +51,7 @@ export function CodenamesCurrentClueStrip({
             placeholder={labels.wordPlaceholder}
             value={word}
             onChange={e => setWord(e.target.value)}
-            className="w-24 rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
+            className="w-24 rounded border border-input bg-background px-2 py-1 text-xs text-foreground"
           />
           <input
             type="number"
@@ -59,7 +59,7 @@ export function CodenamesCurrentClueStrip({
             aria-label={labels.numberAria}
             value={num}
             onChange={e => setNum(Number(e.target.value))}
-            className="w-14 rounded border border-border bg-background px-2 py-1 text-xs tabular-nums text-foreground"
+            className="w-14 rounded border border-input bg-background px-2 py-1 text-xs tabular-nums text-foreground"
           />
           <button
             type="button"

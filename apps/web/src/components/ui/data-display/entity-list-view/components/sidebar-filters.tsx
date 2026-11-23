@@ -196,7 +196,7 @@ function SidebarContent<T>({
               placeholder={searchPlaceholder}
               className={cn(
                 'w-full h-9 pl-9 pr-8 rounded-lg',
-                'bg-card/40 dark:bg-card/10 border border-border/50',
+                'bg-card/40 dark:bg-card/10 border border-input',
                 'text-sm placeholder:text-muted-foreground',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'backdrop-blur-sm',

@@ -247,7 +247,7 @@ export function RotateKeyModal({ providerName }: RotateKeyModalProps): React.JSX
                   value={confirmName}
                   onChange={e => setConfirmName(e.target.value)}
                   placeholder={`Digita "${providerName}" per confermare`}
-                  className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                   autoComplete="off"
                   data-testid={`rotate-key-confirm-input-${providerName}`}
                 />
@@ -267,7 +267,7 @@ export function RotateKeyModal({ providerName }: RotateKeyModalProps): React.JSX
                   onChange={e => setNewApiKey(e.target.value)}
                   minLength={MIN_KEY_LENGTH}
                   maxLength={MAX_KEY_LENGTH}
-                  className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                   autoComplete="off"
                   required
                   data-testid={`rotate-key-new-input-${providerName}`}

@@ -344,7 +344,7 @@ export function NewGameNightContent(): ReactElement {
           onChange={e => setTitle(e.target.value)}
           placeholder={t('gameNightCreate.title')}
           maxLength={200}
-          className="mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-foreground"
+          className="mt-1 w-full rounded-md border border-input bg-card px-3 py-2 text-foreground"
           data-slot="game-night-create-title-input"
         />
       </div>

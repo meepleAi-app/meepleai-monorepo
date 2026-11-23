@@ -229,7 +229,7 @@ export function GamePreferenceSelect({
                     'flex cursor-pointer items-center gap-2.5',
                     'rounded-sm px-2.5',
                     isOtherRow
-                      ? 'mt-1 border-t border-[hsl(var(--border-light))] pt-3 pb-1.5 font-mono'
+                      ? 'mt-1 border-t border-[var(--border-light)] pt-3 pb-1.5 font-mono'
                       : 'py-1.5 font-body',
                     'text-[13px] text-foreground',
                     isAct && 'bg-[hsl(var(--bg-hover))]',
@@ -263,7 +263,7 @@ export function GamePreferenceSelect({
           disabled={disabled}
           className={clsx(
             'mt-2 block w-full px-3 py-2',
-            'rounded-md border-[1.5px] border-border bg-background',
+            'rounded-md border-[1.5px] border-input bg-background',
             'font-body text-[13px] text-foreground',
             'outline-none',
             'focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game))] focus-visible:ring-offset-2',

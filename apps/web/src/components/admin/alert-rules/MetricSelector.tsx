@@ -55,7 +55,7 @@ export function MetricSelector({
         disabled={disabled || isLoading}
         required={required}
         placeholder={isLoading ? 'Carico metriche…' : placeholder}
-        className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
+        className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
         aria-describedby={isFallback || isError ? `${listId}-warning` : undefined}
         autoComplete="off"
         spellCheck={false}

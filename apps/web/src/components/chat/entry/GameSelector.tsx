@@ -79,7 +79,7 @@ function GameGrid({
           placeholder="Cerca gioco..."
           value={search}
           onChange={e => onSearchChange(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 rounded-lg border border-border/50 bg-card/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+          className="w-full pl-9 pr-3 py-2 rounded-lg border border-input bg-card/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40"
           data-testid="game-search-input"
         />
       </div>

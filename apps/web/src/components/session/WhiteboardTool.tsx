@@ -673,7 +673,7 @@ export function WhiteboardTool({
               onChange={e => handleGridSizeChange(e.target.value as GridSize)}
               aria-label="Dimensione griglia"
               disabled={isPending}
-              className="px-2 py-1 rounded-lg border border-border bg-card text-sm text-foreground"
+              className="px-2 py-1 rounded-lg border border-input bg-card text-sm text-foreground"
             >
               <option value="4x4">4×4</option>
               <option value="6x6">6×6</option>
@@ -736,7 +736,7 @@ export function WhiteboardTool({
             placeholder="Iniziale"
             maxLength={3}
             aria-label="Etichetta token"
-            className="w-20 px-2 py-1 rounded-lg border border-border bg-card text-sm text-foreground"
+            className="w-20 px-2 py-1 rounded-lg border border-input bg-card text-sm text-foreground"
           />
 
           {/* Color picker */}

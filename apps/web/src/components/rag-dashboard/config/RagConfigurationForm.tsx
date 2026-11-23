@@ -97,7 +97,7 @@ function ConfigurableInput<T extends number | string>({
               max={max}
               step={step}
               className={`w-full px-3 py-2 border rounded-md text-sm ${
-                !hasMeasured ? 'border-blue-300 bg-blue-50' : 'border-border bg-muted'
+                !hasMeasured ? 'border-blue-300 bg-blue-50' : 'border-input bg-muted'
               }`}
             />
             {suffix && (
@@ -127,7 +127,7 @@ function ConfigurableInput<T extends number | string>({
               step={step}
               placeholder="Non misurato"
               className={`w-full px-3 py-2 border rounded-md text-sm ${
-                hasMeasured ? 'border-green-300 bg-green-50' : 'border-border bg-card'
+                hasMeasured ? 'border-green-300 bg-green-50' : 'border-input bg-card'
               }`}
             />
             {suffix && (

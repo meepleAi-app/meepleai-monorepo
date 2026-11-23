@@ -57,7 +57,7 @@ export function SessionMetaGrid({
           className={clsx(
             'flex items-center gap-2.5',
             compact ? 'px-3 py-2' : 'px-3.5 py-2.5',
-            i === 0 ? 'border-t-0' : 'border-t border-[hsl(var(--border-light))]'
+            i === 0 ? 'border-t-0' : 'border-t border-[var(--border-light)]'
           )}
         >
           <span

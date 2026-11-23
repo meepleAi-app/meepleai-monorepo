@@ -74,7 +74,7 @@ export function ShowcaseSidebar({ stories }: ShowcaseSidebarProps) {
             placeholder="Search components..."
             value={query}
             onChange={e => setQuery(e.target.value)}
-            className="h-8 w-full rounded-md border border-border/60 bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
       </div>

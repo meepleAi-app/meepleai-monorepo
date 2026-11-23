@@ -255,7 +255,7 @@ export function CommentItem({
             value={editText}
             onChange={e => setEditText(e.target.value)}
             disabled={isDisabled}
-            className="w-full min-h-[80px] p-2 border border-border rounded text-sm font-[inherit] mb-2 resize-y"
+            className="w-full min-h-[80px] p-2 border border-input rounded text-sm font-[inherit] mb-2 resize-y"
           />
           <div className="flex gap-2">
             <button
@@ -383,7 +383,7 @@ export function CommentItem({
             onChange={e => setReplyText(e.target.value)}
             placeholder="Scrivi una risposta..."
             disabled={isDisabled}
-            className="w-full min-h-[60px] p-2 border border-border rounded text-sm font-[inherit] resize-y"
+            className="w-full min-h-[60px] p-2 border border-input rounded text-sm font-[inherit] resize-y"
           />
           <div className="flex gap-2 mt-2">
             <button

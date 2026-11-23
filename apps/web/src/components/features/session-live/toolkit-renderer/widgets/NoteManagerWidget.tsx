@@ -73,7 +73,7 @@ export function NoteManagerWidget({
           onChange={e => setLocalText(e.target.value)}
           aria-label={labels.noteManager.inputAriaLabel}
           rows={3}
-          className="w-full resize-y rounded border border-border bg-card px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full resize-y rounded border border-input bg-card px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
         <p
           aria-live="polite"

@@ -148,7 +148,7 @@ export function CostSimulator({ className }: CostSimulatorProps) {
               id="sim-strategy"
               value={strategy}
               onChange={e => setStrategy(e.target.value)}
-              className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             >
               {STRATEGY_OPTIONS.map(s => (
                 <option key={s} value={s}>
@@ -164,7 +164,7 @@ export function CostSimulator({ className }: CostSimulatorProps) {
               id="sim-model"
               value={modelId}
               onChange={e => setModelId(e.target.value)}
-              className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             >
               {MODEL_OPTIONS.map(m => (
                 <option key={m.value} value={m.value}>
@@ -183,7 +183,7 @@ export function CostSimulator({ className }: CostSimulatorProps) {
                 value={messagesPerDay}
                 onChange={e => setMessagesPerDay(e.target.value)}
                 min={0}
-                className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
             <div className="space-y-1">
@@ -194,7 +194,7 @@ export function CostSimulator({ className }: CostSimulatorProps) {
                 value={activeUsers}
                 onChange={e => setActiveUsers(e.target.value)}
                 min={0}
-                className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
           </div>
@@ -207,7 +207,7 @@ export function CostSimulator({ className }: CostSimulatorProps) {
               value={avgTokens}
               onChange={e => setAvgTokens(e.target.value)}
               min={1}
-              className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
 

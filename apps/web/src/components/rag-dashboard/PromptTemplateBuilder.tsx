@@ -578,7 +578,7 @@ ${template.outputFormat}
                 value={userQuery}
                 onChange={e => setUserQuery(e.target.value)}
                 placeholder="Enter your question..."
-                className="w-full p-3 rounded-lg bg-muted/50 border border-border focus:border-primary focus:ring-1 focus:ring-primary text-sm resize-none"
+                className="w-full p-3 rounded-lg bg-muted/50 border border-input focus:border-primary focus:ring-1 focus:ring-primary text-sm resize-none"
                 rows={3}
               />
             </div>

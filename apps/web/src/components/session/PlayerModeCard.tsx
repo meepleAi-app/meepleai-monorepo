@@ -75,7 +75,7 @@ export function PlayerModeCard({
               value={scoreInput}
               onChange={e => setScoreInput(e.target.value)}
               placeholder="Score"
-              className="w-20 rounded-md border border-border px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-20 rounded-md border border-input px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
               aria-label="Score value"
             />
             <button

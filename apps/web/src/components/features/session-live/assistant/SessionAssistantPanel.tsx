@@ -220,7 +220,7 @@ export function SessionAssistantPanel({
           placeholder={t('pages.sessionLive.assistant.placeholder')}
           disabled={!enabled || assistant.turn.running}
           onChange={event => setDraft(event.target.value)}
-          className="h-9 min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-sm text-foreground"
+          className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground"
         />
         <Button type="submit" size="sm" data-slot="session-assistant-send" disabled={!canSend}>
           {t('pages.sessionLive.assistant.send')}

@@ -44,7 +44,7 @@ export default function ToolkitPlayPage() {
           value={actorLabel}
           onChange={e => setActorLabel(e.target.value)}
           placeholder="Chi gioca?"
-          className="rounded-md border border-border px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="rounded-md border border-input px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400"
           maxLength={30}
         />
       </div>

@@ -82,7 +82,7 @@ export function AcknowledgeSelectedModal({
           value={note}
           onChange={e => setNote(e.target.value)}
           rows={3}
-          className="mt-1 w-full rounded border border-border bg-background p-2 text-sm text-foreground"
+          className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground"
           placeholder="e.g. Commons deleted file"
           disabled={submitting}
         />

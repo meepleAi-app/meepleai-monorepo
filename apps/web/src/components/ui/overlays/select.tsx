@@ -80,7 +80,7 @@ const SelectContent = React.forwardRef<
       className={cn(
         'relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[8rem]',
         'overflow-y-auto overflow-x-hidden rounded-md',
-        'border border-border/50 dark:border-border/70',
+        'border border-border',
         // Light mode: Glass morphism dropdown
         'bg-popover/95 backdrop-blur-[16px]',
         // Dark mode: Solid popover

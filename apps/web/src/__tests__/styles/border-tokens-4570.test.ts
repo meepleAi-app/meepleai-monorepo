@@ -97,7 +97,8 @@ describe('border tokens (#4570)', () => {
         resolve(path) !== resolve(__filename)
     ).flatMap(path => {
       const text = readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-      return /hsl\(\s*var\(\s*--border(-strong)?\s*\)/.test(text)
+      // --border-strong and --border-light are canonical rgba() too (#5134's review found four hsl() reads of the latter).
+      return /hsl\(\s*var\(\s*--border(-strong|-light)?\s*\)/.test(text)
         ? [relative(SRC, path).replace(/\\/g, '/')]
         : [];
     });
@@ -110,10 +111,12 @@ describe('border tokens (#4570)', () => {
   });
 
   it('a form control does not take the decorative border-border', () => {
-    // Text scan of the opening tag of <input>, <select>, <textarea>: the shape all 28 sites had when #4570 moved them
-    // to border-input. A class built elsewhere and passed in by name is not seen.
+    // Text scan of the opening tag of <input>, <select>, <textarea>, the shape of the ~175 sites #4570 moved to
+    // border-input. An `=>` in the tag (onChange={e => …}) is not its end: the first draft of this scan stopped there and
+    // passed with most controls still on border-border (review of #5134). Not seen: a comparison `a > b` before the
+    // class, a class built elsewhere and passed in by name, and a control styled from a CSS file.
     const tag =
-      /<(input|select|textarea)\b[^>]*?(?<![\w-])(?:[\w-]+:)*border-border(?:\/\d+)?(?![\w-])/;
+      /<(input|select|textarea)\b(?:=>|[^>])*?(?<![\w-])(?:[\w-]+:)*border-border(?:\/\d+)?(?![\w-])/;
     const offenders = files(
       SRC,
       path => path.endsWith('.tsx') && !path.includes('__tests__') && !path.endsWith('.test.tsx')

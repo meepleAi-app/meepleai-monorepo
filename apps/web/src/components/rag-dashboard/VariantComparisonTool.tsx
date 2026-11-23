@@ -844,7 +844,7 @@ export function VariantComparisonTool({ className }: VariantComparisonToolProps)
             placeholder="Search by model, strategy, template, or feature..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-muted/50 border border-border focus:border-primary focus:ring-1 focus:ring-primary text-sm"
+            className="w-full pl-10 pr-4 py-2 rounded-lg bg-muted/50 border border-input focus:border-primary focus:ring-1 focus:ring-primary text-sm"
           />
         </div>
 

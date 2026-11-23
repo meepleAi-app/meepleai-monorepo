@@ -310,12 +310,13 @@
 }
 
 .rag-query-input input {
+  /* #4570: a form control's border is --input (>= 3:1), not the decorative --border. */
   width: 100%;
   padding: 1rem 1.5rem;
   padding-left: 3rem;
   font-size: 1rem;
   background: hsl(var(--card));
-  border: 2px solid var(--border);
+  border: 2px solid hsl(var(--input));
   border-radius: 12px;
   color: hsl(var(--foreground));
   transition: all var(--rag-transition-smooth);

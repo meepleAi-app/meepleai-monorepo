@@ -261,7 +261,7 @@ export function ScoreTabContent({
                         onKeyDown={event => {
                           if (event.key === 'Enter') event.currentTarget.blur();
                         }}
-                        className="w-16 rounded-md border border-border bg-background px-2 py-1 text-right text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="w-16 rounded-md border border-input bg-background px-2 py-1 text-right text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       />
                     ) : (
                       <span className="block text-right text-foreground">{current ?? '—'}</span>

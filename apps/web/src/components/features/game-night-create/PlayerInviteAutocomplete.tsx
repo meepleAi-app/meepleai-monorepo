@@ -142,7 +142,7 @@ export function PlayerInviteAutocomplete({
           placeholder={labels.searchPlaceholder}
           aria-label={labels.searchAriaLabel}
           disabled={atLimit}
-          className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
+          className="rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground"
           data-slot="game-night-create-step3-search"
         />
         {queryLooksLikeEmail && (

@@ -108,7 +108,7 @@ export function GameNightLocationToggle({
             maxLength={maxDetailsLength}
             placeholder={labels.detailsPlaceholder}
             rows={3}
-            className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
+            className="rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground"
             data-slot="game-night-create-step2-details"
           />
           <p className="text-xs text-muted-foreground">{labels.detailsHelper}</p>

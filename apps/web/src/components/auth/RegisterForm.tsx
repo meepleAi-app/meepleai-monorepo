@@ -190,7 +190,7 @@ export function RegisterForm({
               checked={field.value}
               onChange={e => field.onChange(e.target.checked)}
               disabled={isLoading}
-              className="mt-0.5 w-4 h-4 rounded border-border text-[hsl(var(--c-toolkit))] focus:ring-2 focus:ring-[hsl(var(--c-toolkit)/0.3)]"
+              className="mt-0.5 w-4 h-4 rounded border-input text-[hsl(var(--c-toolkit))] focus:ring-2 focus:ring-[hsl(var(--c-toolkit)/0.3)]"
               aria-invalid={!!errors.termsAccepted}
               data-testid="register-terms"
             />

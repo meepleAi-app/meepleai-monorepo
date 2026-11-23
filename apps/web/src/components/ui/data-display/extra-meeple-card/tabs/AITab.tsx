@@ -211,7 +211,7 @@ export function AITab({ data, onSendMessage }: AITabProps) {
           placeholder="Ask about rules, scores, strategy..."
           rows={1}
           className={cn(
-            'flex-1 resize-none rounded-lg border border-border/60',
+            'flex-1 resize-none rounded-lg border border-input',
             'bg-card/60 px-3 py-2 font-nunito text-xs text-foreground',
             'placeholder:text-muted-foreground',
             'focus:outline-none focus:ring-1 focus:ring-indigo-300'

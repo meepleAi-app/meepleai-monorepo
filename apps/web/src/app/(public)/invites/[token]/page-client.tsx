@@ -455,7 +455,7 @@ function PendingSurface({
         invitation.primaryGameName ? (
           <div
             data-slot="invites-token-game-thumb"
-            className="flex items-center gap-2.5 rounded-md border border-[hsl(var(--border-light))] bg-[hsl(var(--bg-muted))] px-3 py-2"
+            className="flex items-center gap-2.5 rounded-md border border-[var(--border-light)] bg-[hsl(var(--bg-muted))] px-3 py-2"
           >
             <SafeImg
               src={invitation.primaryGameImageUrl}

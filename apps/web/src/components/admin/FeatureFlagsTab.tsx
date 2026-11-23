@@ -564,7 +564,7 @@ export default function FeatureFlagsTab({
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleFlagSelection(flag.id)}
-                          className="rounded border-border"
+                          className="rounded border-input"
                           aria-label={`Select ${flag.key}`}
                         />
                       </td>

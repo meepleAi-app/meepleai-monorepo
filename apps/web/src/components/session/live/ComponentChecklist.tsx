@@ -40,7 +40,7 @@ export function ComponentChecklist({ components, onToggle }: ComponentChecklistP
             type="checkbox"
             checked={component.checked}
             onChange={() => onToggle(index)}
-            className="h-4 w-4 rounded border-border text-amber-500 focus:ring-amber-400"
+            className="h-4 w-4 rounded border-input text-amber-500 focus:ring-amber-400"
           />
           <span
             className={[

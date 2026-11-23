@@ -195,7 +195,7 @@ export function EmailManagementTab() {
             value={testEmailTo}
             onChange={e => setTestEmailTo(e.target.value)}
             placeholder="recipient@example.com"
-            className="flex-1 rounded-lg border border-border/60 bg-card/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+            className="flex-1 rounded-lg border border-input bg-card/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/40"
           />
           <button
             onClick={() => testEmailTo && sendTestMutation.mutate(testEmailTo)}
@@ -320,7 +320,7 @@ export function EmailManagementTab() {
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Search by email or subject..."
-              className="w-full rounded-lg border border-border/60 bg-card/50 pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+              className="w-full rounded-lg border border-input bg-card/50 pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/40"
             />
           </div>
         </div>

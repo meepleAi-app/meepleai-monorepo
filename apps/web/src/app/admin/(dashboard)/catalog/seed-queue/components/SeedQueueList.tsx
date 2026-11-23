@@ -172,7 +172,7 @@ function SeedRow({ draft, expanded, onToggle }: SeedRowProps) {
             onChange={e => setRejectReason(e.target.value)}
             rows={2}
             maxLength={500}
-            className="mt-1 w-full rounded-md border border-border bg-background p-2 text-sm"
+            className="mt-1 w-full rounded-md border border-input bg-background p-2 text-sm"
             placeholder="Why reject this draft?"
             autoFocus
           />

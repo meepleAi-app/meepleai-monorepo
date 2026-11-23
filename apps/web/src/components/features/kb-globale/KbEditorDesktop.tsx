@@ -175,7 +175,7 @@ export function KbEditorDesktop(props: KbEditorDesktopProps): JSX.Element {
             onChange={e => setTitle(e.target.value)}
             aria-describedby={errors.title ? titleErrId : undefined}
             aria-invalid={errors.title ? true : undefined}
-            className="border border-border rounded px-2 py-1"
+            className="border border-input rounded px-2 py-1"
           />
           {errors.title && (
             <p id={titleErrId} className="text-sm text-destructive">
@@ -193,7 +193,7 @@ export function KbEditorDesktop(props: KbEditorDesktopProps): JSX.Element {
             id={`${titleId}-doctype`}
             value={documentType}
             onChange={e => setDocumentType(e.target.value)}
-            className="border border-border rounded px-2 py-1"
+            className="border border-input rounded px-2 py-1"
           >
             <option value="">—</option>
             {docTypeOptions.map(opt => (
@@ -213,7 +213,7 @@ export function KbEditorDesktop(props: KbEditorDesktopProps): JSX.Element {
             id={`${titleId}-lang`}
             value={language}
             onChange={e => setLanguage(e.target.value)}
-            className="border border-border rounded px-2 py-1"
+            className="border border-input rounded px-2 py-1"
           >
             <option value="">—</option>
             {languageOptions.map(opt => (
@@ -237,7 +237,7 @@ export function KbEditorDesktop(props: KbEditorDesktopProps): JSX.Element {
             placeholder="tag1, tag2, …"
             aria-describedby={errors.tags ? tagsErrId : undefined}
             aria-invalid={errors.tags ? true : undefined}
-            className="border border-border rounded px-2 py-1"
+            className="border border-input rounded px-2 py-1"
           />
           {errors.tags && (
             <p id={tagsErrId} className="text-sm text-destructive">

@@ -88,7 +88,7 @@ export default function BudgetPage() {
             id="business-range"
             value={range}
             onChange={e => handleRangeChange(e.target.value as CostBreakdownRange)}
-            className="rounded border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            className="rounded border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             data-testid="business-range-select"
           >
             {(Object.keys(RANGE_LABELS) as CostBreakdownRange[]).map(r => (

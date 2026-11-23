@@ -547,7 +547,7 @@ export default function DocumentsLibraryPage() {
                         type="checkbox"
                         checked={selectedIds.includes(item.id)}
                         onChange={() => toggleSelect(item.id)}
-                        className="rounded border-border dark:border-zinc-600"
+                        className="rounded border-input dark:border-zinc-600"
                       />
                     </td>
                     <td className="p-3">

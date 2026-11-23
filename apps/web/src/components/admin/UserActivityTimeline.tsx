@@ -62,7 +62,7 @@ function Pagination({
         <select
           value={pageSize}
           onChange={e => onPageSizeChange(Number(e.target.value))}
-          className="border border-border/50 dark:border-border/70 rounded px-2 py-1 text-sm"
+          className="border border-input rounded px-2 py-1 text-sm"
           aria-label="Items per page"
         >
           {PAGE_SIZES.map(size => (

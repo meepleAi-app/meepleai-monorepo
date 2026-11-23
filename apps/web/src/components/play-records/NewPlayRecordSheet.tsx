@@ -317,7 +317,7 @@ export function NewPlayRecordSheet({
                     value={gameName}
                     onChange={e => setGameName(e.target.value)}
                     placeholder="Es. Catan, Puerto Rico…"
-                    className="w-full rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                    className="w-full rounded-xl bg-muted border border-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
                     data-testid="game-name-input"
                   />
                 </div>
@@ -331,7 +331,7 @@ export function NewPlayRecordSheet({
                   type="date"
                   value={sessionDate}
                   onChange={e => setSessionDate(e.target.value)}
-                  className="w-full rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                  className="w-full rounded-xl bg-muted border border-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
                   data-testid="session-date-input"
                 />
               </div>
@@ -392,7 +392,7 @@ export function NewPlayRecordSheet({
                         value={p.score}
                         onChange={e => updateScore(p.id, e.target.value)}
                         placeholder="Pts"
-                        className="w-16 rounded-lg bg-muted border border-border px-2 py-1 text-center text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                        className="w-16 rounded-lg bg-muted border border-input px-2 py-1 text-center text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
                         data-testid={`player-score-${p.name}`}
                       />
                       <button
@@ -416,7 +416,7 @@ export function NewPlayRecordSheet({
                   onChange={e => setNewPlayerName(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && addPlayer()}
                   placeholder="Nome giocatore…"
-                  className="flex-1 rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+                  className="flex-1 rounded-xl bg-muted border border-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
                   data-testid="new-player-input"
                 />
                 <button
@@ -506,7 +506,7 @@ export function NewPlayRecordSheet({
                   onChange={e => setNotes(e.target.value)}
                   placeholder="Come è andata la partita?"
                   rows={3}
-                  className="w-full rounded-xl bg-muted border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30 resize-none"
+                  className="w-full rounded-xl bg-muted border border-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30 resize-none"
                   data-testid="notes-input"
                 />
               </div>

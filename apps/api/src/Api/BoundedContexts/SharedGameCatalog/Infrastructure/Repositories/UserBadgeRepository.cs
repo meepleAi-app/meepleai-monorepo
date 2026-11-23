@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -29,6 +30,27 @@ internal sealed class UserBadgeRepository : RepositoryBase, IUserBadgeRepository
         CollectDomainEvents(userBadge);
         var entity = MapToEntity(userBadge);
         await DbContext.Set<UserBadgeEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task UpdateAsync(UserBadge userBadge, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(userBadge);
+
+        // #5116: the reads are AsNoTracking and map to the domain, so a revocation reaches the row only here. The
+        // row is loaded tracked and gets the fields a revocation or a reinstatement changes; the others keep theirs.
+        // AsTracking, not FindAsync: the context defaults to NoTracking, and FindAsync would hand back a row no
+        // SaveChanges writes (measured: the first draft of this method saved nothing).
+        var entity = await DbContext.Set<UserBadgeEntity>()
+            .AsTracking()
+            .FirstOrDefaultAsync(e => e.Id == userBadge.Id, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new NotFoundException("UserBadge", userBadge.Id.ToString());
+
+        entity.IsDisplayed = userBadge.IsDisplayed;
+        entity.RevokedAt = userBadge.RevokedAt;
+        entity.RevocationReason = userBadge.RevocationReason;
+
+        CollectDomainEvents(userBadge);
     }
 
     public async Task<HashSet<Guid>> GetBadgeIdsByUserAsync(

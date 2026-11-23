@@ -15,6 +15,14 @@ public interface IUserBadgeRepository
     Task AddAsync(UserBadge userBadge, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Writes a revocation or a reinstatement of an existing user badge, and collects its domain events
+    /// (#5116). Until then <see cref="UserBadge.Revoke"/> changed only the object in memory.
+    /// </summary>
+    /// <param name="userBadge">The user badge, read from this repository.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task UpdateAsync(UserBadge userBadge, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves all badge IDs that a user currently has (active only).
     /// </summary>
     /// <param name="userId">The user ID.</param>
@@ -45,7 +53,8 @@ public interface IUserBadgeRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves a specific user badge by user ID and badge ID.
+    /// Retrieves a specific user badge by user ID and badge ID, revoked or not: the unique (UserId, BadgeId)
+    /// index allows one row per pair, and a revoked one is given back by reinstating it (#5116).
     /// </summary>
     /// <param name="userId">The user ID.</param>
     /// <param name="badgeId">The badge ID.</param>

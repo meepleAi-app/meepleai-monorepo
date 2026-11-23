@@ -297,6 +297,49 @@ public class UserBadgeTests
 
     #endregion
 
+    #region Reinstate Tests (#5116)
+
+    [Fact]
+    public void Reinstate_ARevokedBadge_IsActiveAndShownAgain_AndKeepsItsFirstEarnedAt()
+    {
+        var userBadge = CreateTestUserBadge();
+        var earnedAt = userBadge.EarnedAt;
+        userBadge.Revoke("No longer meets badge requirements");
+
+        userBadge.Reinstate();
+
+        userBadge.IsActive.Should().BeTrue();
+        userBadge.RevokedAt.Should().BeNull();
+        userBadge.RevocationReason.Should().BeNull();
+        userBadge.IsDisplayed.Should().BeTrue();
+        userBadge.EarnedAt.Should().Be(earnedAt);
+    }
+
+    [Fact]
+    public void Reinstate_RaisesNoBadgeEarnedEvent_SoTheUserIsNotNotifiedAgain()
+    {
+        var userBadge = CreateTestUserBadge();
+        userBadge.Revoke("No longer meets badge requirements");
+        var eventsBefore = userBadge.DomainEvents.Count;
+
+        userBadge.Reinstate();
+
+        userBadge.DomainEvents.Should().HaveCount(eventsBefore);
+        userBadge.DomainEvents.OfType<BadgeEarnedEvent>().Should().ContainSingle("only the Award raised one");
+    }
+
+    [Fact]
+    public void Reinstate_WhenNotRevoked_ThrowsInvalidOperationException()
+    {
+        var userBadge = CreateTestUserBadge();
+
+        var act = () => userBadge.Reinstate();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("Badge is not revoked");
+    }
+
+    #endregion
+
     #region IsActive Tests
 
     [Fact]

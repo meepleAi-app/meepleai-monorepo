@@ -194,4 +194,21 @@ public sealed class UserBadge : AggregateRoot<Guid>
             _badgeId,
             reason));
     }
+
+    /// <summary>
+    /// Gives a revoked badge back to its user (#5116): the same row, active and shown again, so the unique
+    /// (UserId, BadgeId) index never sees a second one. <see cref="EarnedAt"/> stays the first conquest.
+    /// No <see cref="BadgeEarnedEvent"/>: the user was told when they first earned it, and a leaderboard
+    /// badge can come and go at every recalculation.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the badge is not revoked.</exception>
+    public void Reinstate()
+    {
+        if (IsActive)
+            throw new InvalidOperationException("Badge is not revoked");
+
+        _revokedAt = null;
+        _revocationReason = null;
+        _isDisplayed = true;
+    }
 }

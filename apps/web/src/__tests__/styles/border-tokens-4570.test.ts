@@ -158,7 +158,7 @@ describe('canonical tokens that are not HSL triplets (#5135)', () => {
 
   it('none of them is read as an HSL triplet, in any source', () => {
     const read = new RegExp(
-      `hsl\\(\\s*var\\(\\s*(${NOT_HSL.map(n => n.replace(/[-]/g, '\\-')).join('|')})\\s*\\)`,
+      `hsl\\(\\s*var\\(\\s*(${NOT_HSL.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s*\\)`,
       'g'
     );
     const offenders = files(

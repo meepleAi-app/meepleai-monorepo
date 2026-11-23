@@ -89,7 +89,7 @@ function getIconColorClass(errorType: EmailVerificationErrorType): string {
     case 'rate_limited':
       return 'text-orange-500 dark:text-orange-400';
     default:
-      return 'text-destructive';
+      return 'text-destructive-text';
   }
 }
 

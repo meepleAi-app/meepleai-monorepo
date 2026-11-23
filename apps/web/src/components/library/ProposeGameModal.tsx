@@ -149,7 +149,7 @@ export function ProposeGameModal({
           </div>
 
           {error && (
-            <p role="alert" data-testid="propose-error" className="text-sm text-destructive">
+            <p role="alert" data-testid="propose-error" className="text-sm text-destructive-text">
               {error}
             </p>
           )}

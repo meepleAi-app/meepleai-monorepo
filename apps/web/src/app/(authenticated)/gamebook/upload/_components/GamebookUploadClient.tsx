@@ -84,7 +84,7 @@ function GamePicker({ onSelect }: GamePickerProps): JSX.Element {
 
       {/* Error */}
       {isError && (
-        <p role="alert" className="text-sm text-destructive" data-testid="picker-error">
+        <p role="alert" className="text-sm text-destructive-text" data-testid="picker-error">
           {t('gamebook.upload.pickerError', 'Could not load games. Please try again.')}
         </p>
       )}

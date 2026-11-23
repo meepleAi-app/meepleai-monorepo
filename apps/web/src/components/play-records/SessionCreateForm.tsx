@@ -615,7 +615,7 @@ function Step3Punteggi({
                   onClick={() => onRemovePlayer(p.id)}
                   disabled={isReadonly}
                   className={cn(
-                    'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:text-destructive',
+                    'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:text-destructive-text',
                     isReadonly && 'opacity-40 cursor-not-allowed hover:text-muted-foreground'
                   )}
                   aria-label={`Rimuovi ${p.name}`}

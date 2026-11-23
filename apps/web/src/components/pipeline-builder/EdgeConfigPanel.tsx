@@ -157,7 +157,7 @@ function ExpressionEditor({
       </AnimatePresence>
 
       {error && (
-        <p className="text-xs text-destructive flex items-center gap-1">
+        <p className="text-xs text-destructive-text flex items-center gap-1">
           <AlertCircle className="h-3 w-3" />
           {error}
         </p>

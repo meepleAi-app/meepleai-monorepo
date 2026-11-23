@@ -116,7 +116,7 @@ export function StatusBannerAdmin() {
 
   if (isError) {
     return (
-      <div className="text-sm text-destructive" data-slot="status-banner-admin-error">
+      <div className="text-sm text-destructive-text" data-slot="status-banner-admin-error">
         {t('common.statusBanner.admin.loadError')}
       </div>
     );

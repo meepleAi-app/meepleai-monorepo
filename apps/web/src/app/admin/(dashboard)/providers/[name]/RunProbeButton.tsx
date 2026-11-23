@@ -43,11 +43,11 @@ export function RunProbeButton({ name }: { name: ProviderName }) {
         <span className="text-sm text-muted-foreground">
           {lastResult.tokenAuthenticated ? '✓ autenticato' : '✗ fallita'} · {lastResult.latencyMs}ms
           {lastResult.errorCode && (
-            <span className="ml-1 text-destructive">({lastResult.errorCode})</span>
+            <span className="ml-1 text-destructive-text">({lastResult.errorCode})</span>
           )}
         </span>
       )}
-      {error && <span className="text-sm text-destructive">{error}</span>}
+      {error && <span className="text-sm text-destructive-text">{error}</span>}
     </div>
   );
 }

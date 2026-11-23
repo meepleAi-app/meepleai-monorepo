@@ -169,7 +169,9 @@ export function EditGameDrawer({ open, onOpenChange, game }: EditGameDrawerProps
           <div className="space-y-1.5">
             <Label htmlFor="edit-title">Titolo *</Label>
             <Input id="edit-title" {...register('title')} aria-invalid={!!errors.title} />
-            {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+            {errors.title && (
+              <p className="text-xs text-destructive-text">{errors.title.message}</p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -181,7 +183,7 @@ export function EditGameDrawer({ open, onOpenChange, game }: EditGameDrawerProps
               aria-invalid={!!errors.description}
             />
             {errors.description && (
-              <p className="text-xs text-destructive">{errors.description.message}</p>
+              <p className="text-xs text-destructive-text">{errors.description.message}</p>
             )}
           </div>
 
@@ -195,7 +197,7 @@ export function EditGameDrawer({ open, onOpenChange, game }: EditGameDrawerProps
                 aria-invalid={!!errors.yearPublished}
               />
               {errors.yearPublished && (
-                <p className="text-xs text-destructive">{errors.yearPublished.message}</p>
+                <p className="text-xs text-destructive-text">{errors.yearPublished.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
@@ -207,7 +209,7 @@ export function EditGameDrawer({ open, onOpenChange, game }: EditGameDrawerProps
                 aria-invalid={!!errors.playingTimeMinutes}
               />
               {errors.playingTimeMinutes && (
-                <p className="text-xs text-destructive">{errors.playingTimeMinutes.message}</p>
+                <p className="text-xs text-destructive-text">{errors.playingTimeMinutes.message}</p>
               )}
             </div>
           </div>
@@ -231,7 +233,7 @@ export function EditGameDrawer({ open, onOpenChange, game }: EditGameDrawerProps
                 aria-invalid={!!errors.maxPlayers}
               />
               {errors.maxPlayers && (
-                <p className="text-xs text-destructive">{errors.maxPlayers.message}</p>
+                <p className="text-xs text-destructive-text">{errors.maxPlayers.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
@@ -250,7 +252,7 @@ export function EditGameDrawer({ open, onOpenChange, game }: EditGameDrawerProps
               aria-invalid={!!errors.imageUrl}
             />
             {errors.imageUrl && (
-              <p className="text-xs text-destructive">{errors.imageUrl.message}</p>
+              <p className="text-xs text-destructive-text">{errors.imageUrl.message}</p>
             )}
           </div>
 

@@ -241,7 +241,7 @@ export function ScenarioManager({ agentDefinitionId, onRunScenario }: ScenarioMa
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-destructive"
+                      className="h-7 w-7 text-destructive-text"
                       onClick={() => deleteMutation.mutate(scenario.id)}
                       title="Delete scenario"
                     >

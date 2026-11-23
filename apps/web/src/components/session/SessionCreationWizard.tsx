@@ -353,7 +353,7 @@ function AddPlayersStep({
       </div>
 
       {duplicateName && (
-        <p className="text-sm text-destructive" role="status">
+        <p className="text-sm text-destructive-text" role="status">
           {duplicatePlayerNameMessage(duplicateName)}
         </p>
       )}

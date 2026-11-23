@@ -63,8 +63,8 @@ interface AggregatedDataItemProps {
 function AggregatedDataItem({ icon: Icon, label }: AggregatedDataItemProps) {
   return (
     <div className="flex items-center gap-3 p-2 rounded-lg bg-destructive/10 border border-destructive/20">
-      <Icon className="w-4 h-4 text-destructive flex-shrink-0" aria-hidden="true" />
-      <span className="text-sm text-destructive font-medium">{label}</span>
+      <Icon className="w-4 h-4 text-destructive-text flex-shrink-0" aria-hidden="true" />
+      <span className="text-sm text-destructive-text font-medium">{label}</span>
     </div>
   );
 }

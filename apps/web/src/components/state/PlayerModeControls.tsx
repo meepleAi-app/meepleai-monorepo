@@ -217,7 +217,7 @@ export function PlayerModeControls({
       {suggestionState.error && (
         <Card className="border-destructive">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
+            <CardTitle className="flex items-center gap-2 text-destructive-text">
               <X className="h-5 w-5" />
               Errore
             </CardTitle>

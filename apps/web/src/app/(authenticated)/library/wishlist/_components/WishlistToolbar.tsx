@@ -53,7 +53,7 @@ const SORT_OPTIONS: readonly WishlistSort[] = ['priority', 'recent', 'oldest', '
  * non-existent "warning" token.
  */
 const PRIORITY_CHIP_CLASSNAMES: Record<Priority, string> = {
-  high: 'border-destructive/40 text-destructive hover:bg-destructive/10 aria-checked:border-destructive aria-checked:bg-destructive/10',
+  high: 'border-destructive/40 text-destructive-text hover:bg-destructive/10 aria-checked:border-destructive aria-checked:bg-destructive/10',
   medium:
     'border-border text-foreground hover:bg-muted aria-checked:border-foreground/60 aria-checked:bg-muted',
   low: 'border-border text-muted-foreground hover:bg-muted aria-checked:border-muted-foreground aria-checked:bg-muted',

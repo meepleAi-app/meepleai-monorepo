@@ -487,7 +487,7 @@ function NumberField({
       />
       {invalid && (
         <p id={errorId} className="flex items-center gap-1 text-xs font-medium text-foreground">
-          <AlertTriangle className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
+          <AlertTriangle className="h-3.5 w-3.5 text-destructive-text" aria-hidden="true" />
           Enter a number.
         </p>
       )}
@@ -629,7 +629,10 @@ function ModelField({
           }
         >
           {price.warn && (
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-destructive" aria-hidden="true" />
+            <AlertTriangle
+              className="h-3.5 w-3.5 shrink-0 text-destructive-text"
+              aria-hidden="true"
+            />
           )}
           {price.text}
         </p>

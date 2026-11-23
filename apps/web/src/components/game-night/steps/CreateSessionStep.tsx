@@ -235,7 +235,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
                 variant="ghost"
                 size="icon"
                 onClick={() => handleRemovePlayer(player.id)}
-                className="flex-shrink-0 text-muted-foreground hover:text-destructive"
+                className="flex-shrink-0 text-muted-foreground hover:text-destructive-text"
                 aria-label={`Rimuovi giocatore ${index + 1}`}
               >
                 <Trash2 className="h-4 w-4" />
@@ -248,7 +248,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       {duplicateName && (
         // A status, not an alert: while typing, a name passes through names that clash («Luca»,
         // «Luca »), and the field already says it is invalid.
-        <p id={nameConflictId} className="text-sm text-destructive" role="status">
+        <p id={nameConflictId} className="text-sm text-destructive-text" role="status">
           {duplicatePlayerNameMessage(duplicateName)}
         </p>
       )}
@@ -283,7 +283,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       )}
 
       {error && (
-        <p className="text-sm text-destructive text-center" data-testid="create-session-error">
+        <p className="text-sm text-destructive-text text-center" data-testid="create-session-error">
           {error}
         </p>
       )}

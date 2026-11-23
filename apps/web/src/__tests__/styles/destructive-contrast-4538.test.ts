@@ -7,9 +7,9 @@ import { AA_NORMAL_TEXT, contrastRatio } from '@/test-utils/wcag';
 // #4538: `--destructive` colours three pairs in the light theme, and each must be AA (4.5:1) for normal text, since the
 // badges are `text-xs`:
 // - `bg-destructive` under `text-destructive-foreground` (Button `destructive`, Badge, at rest);
-// - `text-destructive` on the cream page background, the form errors: the body paints `var(--bg)` from
+// - `text-destructive-text` on the cream page background, the form errors: the body paints `var(--bg)` from
 //   design-tokens-canonical.css (#f7f3ee), darker than globals.css's `--background`, so that is the one measured;
-// - `text-destructive` on a white card (`--card`).
+// - `text-destructive-text` on a white card (`--card`).
 // Decision of 2026-11-23: one token for the three, `0 72% 47%`, no dedicated text token. The dark theme is unchanged.
 // design-tokens-canonical.css does not redefine `--destructive` (it has `--c-danger`, a different red outside this
 // decision). The pairs this decision does not reach (the Alert tint, the Badge hover fill, the dark theme's text) are

@@ -73,7 +73,7 @@ export function CropDialog({ open, imageFile, onConfirm, onCancel }: CropDialogP
             onCropComplete={handleCropComplete}
           />
         </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive-text">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel} disabled={isProcessing}>
             Annulla

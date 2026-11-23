@@ -215,7 +215,7 @@ export function RecentRequestsTable({
                           <CheckCircle className="h-3.5 w-3.5 text-emerald-500 mx-auto" />
                         ) : (
                           <XCircle
-                            className="h-3.5 w-3.5 text-destructive mx-auto"
+                            className="h-3.5 w-3.5 text-destructive-text mx-auto"
                             aria-label={req.errorMessage ?? 'Error'}
                           />
                         )}

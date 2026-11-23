@@ -83,7 +83,7 @@ export function InvitationRow({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="gap-1 text-destructive hover:text-destructive"
+                  className="gap-1 text-destructive-text hover:text-destructive-text"
                   aria-label={`Revoke invitation for ${invitation.email}`}
                   disabled={isRevoking}
                 >

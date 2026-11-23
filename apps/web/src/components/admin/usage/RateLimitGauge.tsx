@@ -25,7 +25,7 @@ interface RateLimitGaugeProps {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getUtilizationColor(percent: number): string {
-  if (percent >= 0.9) return 'text-destructive';
+  if (percent >= 0.9) return 'text-destructive-text';
   if (percent >= 0.7) return 'text-amber-500';
   return 'text-emerald-500';
 }
@@ -148,8 +148,8 @@ export function RateLimitGauge({ status, isLoading }: RateLimitGaugeProps) {
               <span className="flex items-center gap-1">
                 {status.isThrottled ? (
                   <>
-                    <AlertTriangle className="h-3 w-3 text-destructive" />
-                    <span className="text-destructive font-medium">Throttled</span>
+                    <AlertTriangle className="h-3 w-3 text-destructive-text" />
+                    <span className="text-destructive-text font-medium">Throttled</span>
                   </>
                 ) : (
                   <>

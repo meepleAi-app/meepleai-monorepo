@@ -217,7 +217,7 @@ export function PhotoUploader({ gameId }: PhotoUploaderProps): JSX.Element {
 
       {/* Validation error */}
       {validationError && (
-        <p role="alert" data-testid="validation-error" className="text-sm text-destructive">
+        <p role="alert" data-testid="validation-error" className="text-sm text-destructive-text">
           {validationError}
         </p>
       )}
@@ -249,7 +249,7 @@ export function PhotoUploader({ gameId }: PhotoUploaderProps): JSX.Element {
                     handleRemoveFile(file.name);
                   }}
                   aria-label={`Remove ${file.name}`}
-                  className="ml-2 text-muted-foreground hover:text-destructive"
+                  className="ml-2 text-muted-foreground hover:text-destructive-text"
                 >
                   ×
                 </button>
@@ -274,7 +274,7 @@ export function PhotoUploader({ gameId }: PhotoUploaderProps): JSX.Element {
 
       {/* Mutation error */}
       {isError && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive-text">
           {mutationError?.message ??
             t('gamebook.upload.uploadError', 'Upload failed. Please try again.')}
         </p>
@@ -323,7 +323,7 @@ export function PhotoUploader({ gameId }: PhotoUploaderProps): JSX.Element {
 
           {/* Error message */}
           {batchStatus.errorMessage && (
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-destructive-text">
               {t('gamebook.upload.errorMessage', { message: batchStatus.errorMessage })}
             </p>
           )}

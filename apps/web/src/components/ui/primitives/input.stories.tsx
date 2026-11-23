@@ -175,7 +175,7 @@ export const WithError: Story = {
         placeholder="email@example.com"
         className="border-destructive"
       />
-      <p className="text-sm text-destructive">Invalid email address</p>
+      <p className="text-sm text-destructive-text">Invalid email address</p>
     </div>
   ),
 };

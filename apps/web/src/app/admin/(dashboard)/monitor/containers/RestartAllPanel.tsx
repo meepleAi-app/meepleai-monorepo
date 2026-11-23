@@ -187,7 +187,7 @@ export function RestartAllPanel() {
       {/* Header */}
       <div className="mb-5 flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10 dark:bg-destructive/20">
-          <Shield className="h-5 w-5 text-destructive" />
+          <Shield className="h-5 w-5 text-destructive-text" />
         </div>
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-foreground">Restart All Services</h2>

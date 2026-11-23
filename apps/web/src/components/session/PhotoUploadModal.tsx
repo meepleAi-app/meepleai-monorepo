@@ -396,7 +396,7 @@ export function PhotoUploadModal({
           {/* Error message */}
           {error && (
             <div
-              className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+              className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-text"
               role="alert"
               data-testid="upload-error"
             >

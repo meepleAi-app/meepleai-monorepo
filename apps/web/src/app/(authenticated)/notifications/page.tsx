@@ -312,7 +312,7 @@ export default function NotificationsPage() {
       )}
 
       {error && (
-        <div className="flex items-center justify-center py-12 text-destructive text-sm">
+        <div className="flex items-center justify-center py-12 text-destructive-text text-sm">
           {error}
         </div>
       )}

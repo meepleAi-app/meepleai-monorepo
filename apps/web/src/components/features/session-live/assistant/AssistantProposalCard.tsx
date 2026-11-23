@@ -134,7 +134,7 @@ export function AssistantProposalCard({
         <p
           role="alert"
           data-slot="assistant-proposal-error"
-          className="mt-1 text-xs text-destructive"
+          className="mt-1 text-xs text-destructive-text"
         >
           {t(`pages.sessionLive.assistant.card.error.${errorKey}`)}
         </p>

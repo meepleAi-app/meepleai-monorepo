@@ -223,7 +223,7 @@ export function LlmConfigTab() {
       {error && (
         <div
           role="alert"
-          className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+          className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive-text"
         >
           <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
           {error}

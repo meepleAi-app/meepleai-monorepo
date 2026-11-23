@@ -116,7 +116,7 @@ function StageIndicator({ stage, currentStatus, index }: StageIndicatorProps) {
           isCompleted && 'border-green-500 bg-green-500/10 text-green-600',
           isActive && 'border-primary bg-primary/10 text-primary animate-pulse',
           !isCompleted && !isActive && 'border-muted-foreground/30 text-muted-foreground/40',
-          isFailed && 'border-destructive bg-destructive/10 text-destructive'
+          isFailed && 'border-destructive bg-destructive/10 text-destructive-text'
         )}
       >
         {isActive && !isFailed ? (
@@ -226,9 +226,9 @@ export function RagReadyIndicator({
         data-testid="rag-indicator-error"
       >
         <div className="flex items-center gap-3">
-          <XCircle className="h-5 w-5 shrink-0 text-destructive" />
+          <XCircle className="h-5 w-5 shrink-0 text-destructive-text" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-destructive">Errore di connessione</p>
+            <p className="text-sm font-medium text-destructive-text">Errore di connessione</p>
             <p className="text-xs text-muted-foreground">{error.message}</p>
           </div>
           <Button variant="outline" size="sm" onClick={refetch}>
@@ -317,9 +317,9 @@ export function RagReadyIndicator({
       {isFailed && (
         <div role="alert" aria-live="assertive" data-testid="rag-failed">
           <div className="flex items-center gap-3">
-            <XCircle className="h-5 w-5 shrink-0 text-destructive" />
+            <XCircle className="h-5 w-5 shrink-0 text-destructive-text" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-destructive">Elaborazione fallita</p>
+              <p className="text-sm font-medium text-destructive-text">Elaborazione fallita</p>
               {data?.errorMessage && (
                 <p className="text-xs text-muted-foreground">{data.errorMessage}</p>
               )}

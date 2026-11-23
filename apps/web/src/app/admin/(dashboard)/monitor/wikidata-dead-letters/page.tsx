@@ -356,7 +356,7 @@ export default function WikidataDeadLettersPage() {
           </span>
         )}
         {bulkState.state === 'error' && (
-          <span className="text-xs text-destructive" role="alert">
+          <span className="text-xs text-destructive-text" role="alert">
             ✗ {bulkState.error}
           </span>
         )}
@@ -370,7 +370,7 @@ export default function WikidataDeadLettersPage() {
           </span>
         )}
         {ackState.state === 'error' && (
-          <span className="text-xs text-destructive" role="alert">
+          <span className="text-xs text-destructive-text" role="alert">
             ✗ {ackState.error}
           </span>
         )}

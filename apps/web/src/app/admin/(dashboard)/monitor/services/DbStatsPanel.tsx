@@ -252,7 +252,7 @@ export function DbStatsPanel() {
         <div className="flex items-center gap-2">
           {vacuumConfirm ? (
             <div className="flex items-center gap-1.5" data-testid="db-vacuum-confirm">
-              <span className="text-xs text-destructive font-medium">Run VACUUM?</span>
+              <span className="text-xs text-destructive-text font-medium">Run VACUUM?</span>
               <Button
                 variant="destructive"
                 size="sm"

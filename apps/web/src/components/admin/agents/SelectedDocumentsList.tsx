@@ -176,7 +176,7 @@ export function SelectedDocumentsList({
                               size="icon"
                               onClick={() => onRemove(doc.id)}
                               disabled={isSaving}
-                              className="flex-shrink-0 hover:bg-destructive/20 hover:text-destructive"
+                              className="flex-shrink-0 hover:bg-destructive/20 hover:text-destructive-text"
                               aria-label={`Rimuovi documento ${typeConfig?.label ?? ''} v${doc.version}`}
                             >
                               <X className="h-4 w-4" />

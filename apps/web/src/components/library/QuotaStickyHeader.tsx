@@ -47,7 +47,7 @@ function getProgressColor(percentage: number): string {
  */
 function getTextColor(percentage: number): string {
   if (percentage > 90) {
-    return 'text-destructive';
+    return 'text-destructive-text';
   }
   if (percentage >= 70) {
     return 'text-amber-600 dark:text-amber-400';

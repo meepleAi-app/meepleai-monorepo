@@ -85,7 +85,7 @@ function NumberParamRenderer({ param, value, onChange }: ParamRendererProps<Numb
       <div className="flex items-center justify-between">
         <Label htmlFor={param.id} className="text-sm">
           {param.name}
-          {param.required && <span className="text-destructive ml-1">*</span>}
+          {param.required && <span className="text-destructive-text ml-1">*</span>}
         </Label>
         <span className="text-xs text-muted-foreground font-mono">{numValue}</span>
       </div>
@@ -110,7 +110,7 @@ function StringParamRenderer({ param, value, onChange }: ParamRendererProps<Stri
     <div className="space-y-2" data-testid={`param-${param.id}`}>
       <Label htmlFor={param.id} className="text-sm">
         {param.name}
-        {param.required && <span className="text-destructive ml-1">*</span>}
+        {param.required && <span className="text-destructive-text ml-1">*</span>}
       </Label>
       <Input
         id={param.id}
@@ -152,7 +152,7 @@ function SelectParamRenderer({ param, value, onChange }: ParamRendererProps<Sele
     <div className="space-y-2">
       <Label htmlFor={param.id} className="text-sm">
         {param.name}
-        {param.required && <span className="text-destructive ml-1">*</span>}
+        {param.required && <span className="text-destructive-text ml-1">*</span>}
       </Label>
       <Select value={selectValue} onValueChange={onChange}>
         <SelectTrigger id={param.id} className="h-8">
@@ -179,7 +179,7 @@ function RangeParamRenderer({ param, value, onChange }: ParamRendererProps<Range
       <div className="flex items-center justify-between">
         <Label htmlFor={param.id} className="text-sm">
           {param.name}
-          {param.required && <span className="text-destructive ml-1">*</span>}
+          {param.required && <span className="text-destructive-text ml-1">*</span>}
         </Label>
         <span className="text-xs text-muted-foreground font-mono">
           {rangeValue[0].toFixed(2)} - {rangeValue[1].toFixed(2)}
@@ -206,7 +206,7 @@ function ModelParamRenderer({ param, value, onChange }: ParamRendererProps<Model
     <div className="space-y-2">
       <Label htmlFor={param.id} className="text-sm">
         {param.name}
-        {param.required && <span className="text-destructive ml-1">*</span>}
+        {param.required && <span className="text-destructive-text ml-1">*</span>}
       </Label>
       <Select value={modelValue} onValueChange={onChange}>
         <SelectTrigger id={param.id} className="h-8">

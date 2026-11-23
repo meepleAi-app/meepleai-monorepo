@@ -138,7 +138,10 @@ export function BuilderTable({
               )}
 
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onDelete(agent.id)} className="text-destructive">
+              <DropdownMenuItem
+                onClick={() => onDelete(agent.id)}
+                className="text-destructive-text"
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Elimina
               </DropdownMenuItem>

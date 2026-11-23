@@ -80,7 +80,7 @@ const ACCENT_TEXT_BY_STATUS: Record<GameNightStatus, string> = {
   Published: 'text-entity-toolkit',
   InProgress: 'text-entity-session',
   Completed: 'text-muted-foreground',
-  Cancelled: 'text-destructive',
+  Cancelled: 'text-destructive-text',
 };
 
 export function GameNightDetailHero({

@@ -237,7 +237,7 @@ export function PdfIndexingStatus({
     return (
       <Card className={cn(compact && 'border-0 shadow-none')}>
         <CardContent className="py-6">
-          <div className="flex items-center gap-2 text-destructive">
+          <div className="flex items-center gap-2 text-destructive-text">
             <AlertTriangle className="h-5 w-5" />
             <span>Errore nel recupero dello stato</span>
           </div>
@@ -268,7 +268,7 @@ export function PdfIndexingStatus({
               <XCircle className="h-3 w-3 mr-1" />
               Errore
             </Badge>
-            {status?.error && <span className="text-sm text-destructive">{status.error}</span>}
+            {status?.error && <span className="text-sm text-destructive-text">{status.error}</span>}
           </>
         ) : (
           <>
@@ -293,7 +293,7 @@ export function PdfIndexingStatus({
               {isComplete ? (
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
               ) : isFailed ? (
-                <XCircle className="h-5 w-5 text-destructive" />
+                <XCircle className="h-5 w-5 text-destructive-text" />
               ) : (
                 <Clock className="h-5 w-5 text-amber-500" />
               )}
@@ -348,7 +348,7 @@ export function PdfIndexingStatus({
                     isCurrentStage &&
                       !isFailed &&
                       'bg-amber-100 dark:bg-amber-800 text-amber-600 dark:text-amber-400',
-                    isFailedAtStage && 'bg-destructive/20 text-destructive',
+                    isFailedAtStage && 'bg-destructive/20 text-destructive-text',
                     !isCompletedStage && !isCurrentStage && 'bg-muted text-muted-foreground'
                   )}
                 >
@@ -368,7 +368,7 @@ export function PdfIndexingStatus({
                       'font-medium text-sm',
                       isCompletedStage && 'text-green-700 dark:text-green-300',
                       isCurrentStage && !isFailed && 'text-amber-700 dark:text-amber-300',
-                      isFailedAtStage && 'text-destructive',
+                      isFailedAtStage && 'text-destructive-text',
                       !isCompletedStage && !isCurrentStage && 'text-muted-foreground'
                     )}
                   >
@@ -389,7 +389,7 @@ export function PdfIndexingStatus({
         {/* Error Message */}
         {isFailed && status?.error && (
           <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-destructive-text">
               <strong>Errore:</strong> {status.error}
             </p>
           </div>

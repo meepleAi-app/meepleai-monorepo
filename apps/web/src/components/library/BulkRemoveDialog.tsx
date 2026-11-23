@@ -78,7 +78,7 @@ export function BulkRemoveDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5 text-destructive" />
+            <Trash2 className="h-5 w-5 text-destructive-text" />
             Rimuovi {gameIds.length} giochi
           </AlertDialogTitle>
           <AlertDialogDescription asChild>

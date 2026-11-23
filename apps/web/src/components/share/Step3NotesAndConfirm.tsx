@@ -49,7 +49,7 @@ export function Step3NotesAndConfirm({
           <span
             className={cn(
               'font-medium',
-              remaining < 50 ? 'text-destructive' : 'text-muted-foreground'
+              remaining < 50 ? 'text-destructive-text' : 'text-muted-foreground'
             )}
             data-testid="wizard-notes-remaining"
           >

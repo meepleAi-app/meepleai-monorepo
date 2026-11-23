@@ -28,7 +28,9 @@ export function ActivityFeed(): React.ReactElement {
 
   if (error) {
     return (
-      <p className="text-sm text-destructive font-nunito">Errore nel caricamento delle attività.</p>
+      <p className="text-sm text-destructive-text font-nunito">
+        Errore nel caricamento delle attività.
+      </p>
     );
   }
 

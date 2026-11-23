@@ -258,7 +258,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
             <p
               role="alert"
               data-testid="start-next-error"
-              className="max-w-md rounded-md border border-border bg-card px-3 py-1.5 text-center font-mono text-xs font-semibold text-destructive shadow"
+              className="max-w-md rounded-md border border-border bg-card px-3 py-1.5 text-center font-mono text-xs font-semibold text-destructive-text shadow"
             >
               {startErrorMessage}
             </p>
@@ -295,7 +295,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
           {finalizeErrorMessage ? (
             <p
               role="alert"
-              className="rounded-md border border-border bg-card px-3 py-1.5 font-mono text-xs font-semibold text-destructive shadow"
+              className="rounded-md border border-border bg-card px-3 py-1.5 font-mono text-xs font-semibold text-destructive-text shadow"
             >
               {finalizeErrorMessage}
             </p>

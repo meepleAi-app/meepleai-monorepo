@@ -76,7 +76,7 @@ export function NotificationPanel() {
 
         {/* Error State */}
         {error && (
-          <div className="flex items-center justify-center p-8 text-destructive text-sm">
+          <div className="flex items-center justify-center p-8 text-destructive-text text-sm">
             {error}
           </div>
         )}

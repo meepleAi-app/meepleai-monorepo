@@ -102,7 +102,7 @@ function ConfirmationDialog({ service, onConfirm, onCancel, isLoading }: Confirm
       data-testid={`confirm-dialog-${service.id}`}
       className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 dark:border-destructive/40 dark:bg-destructive/10"
     >
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-destructive">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-destructive-text">
         <AlertTriangle className="h-4 w-4" />
         <span>Level 2 Confirmation Required</span>
       </div>
@@ -347,7 +347,7 @@ export function RestartServicePanel() {
       {/* Header */}
       <div className="mb-5 flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10 dark:bg-destructive/20">
-          <Shield className="h-5 w-5 text-destructive" />
+          <Shield className="h-5 w-5 text-destructive-text" />
         </div>
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-foreground">Service Control</h2>

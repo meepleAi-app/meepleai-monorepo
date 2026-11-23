@@ -86,7 +86,7 @@ export function PerformanceMetrics({
   if (error) {
     return (
       <div className={cn('p-6 border rounded-lg bg-destructive/10', className)}>
-        <div className="flex items-center gap-3 text-destructive">
+        <div className="flex items-center gap-3 text-destructive-text">
           <AlertCircle className="h-5 w-5" />
           <div>
             <p className="font-medium">Failed to load metrics</p>

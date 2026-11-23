@@ -96,7 +96,7 @@ export function SessionStateRenderer({ state }: SessionStateRendererProps): Reac
           role="alert"
           className="flex flex-col gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4"
         >
-          <div className="flex items-center gap-2 text-destructive">
+          <div className="flex items-center gap-2 text-destructive-text">
             <AlertCircle className="h-5 w-5" aria-hidden="true" />
             <span className="text-sm font-medium">{state.errorTitle}</span>
           </div>

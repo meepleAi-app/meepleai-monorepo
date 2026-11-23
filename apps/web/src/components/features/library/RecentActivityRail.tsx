@@ -203,7 +203,7 @@ export function RecentActivityRail({
 
           {state === 'error' ? (
             <p
-              className="text-sm text-destructive"
+              className="text-sm text-destructive-text"
               role="alert"
               data-slot="library-activity-error"
               data-testid="library-activity-error"

@@ -291,7 +291,7 @@ function ChatMessage({ message }: { message: RagTestMessage }): JSX.Element {
                 Ricerca in corso...
               </span>
             ) : message.error ? (
-              <span className="text-destructive">{message.error}</span>
+              <span className="text-destructive-text">{message.error}</span>
             ) : (
               message.answer
             )}

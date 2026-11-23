@@ -196,14 +196,14 @@ export function StrategySelector({
     return (
       <Card className={cn('border-destructive/50', className)}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
+          <CardTitle className="flex items-center gap-2 text-destructive-text">
             <ShieldAlert className="h-5 w-5" />
             Authentication Required
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10">
-            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-destructive-text flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <p className="text-sm font-medium">Anonymous users cannot access the RAG system.</p>
               <p className="text-xs text-muted-foreground">

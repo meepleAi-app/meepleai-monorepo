@@ -386,7 +386,7 @@ export function PdfInlineViewer({
       >
         {loading && <PdfSpinner className="absolute inset-0 flex items-center justify-center" />}
         {loadError && (
-          <div className="flex h-full items-center justify-center p-6 text-sm text-destructive">
+          <div className="flex h-full items-center justify-center p-6 text-sm text-destructive-text">
             Errore caricamento PDF: {loadError}
           </div>
         )}

@@ -150,7 +150,7 @@ export const PipelineEdgeComponent = memo(function PipelineEdgeComponent({
 
           {/* Validation error */}
           {edgeData?.validationError && (
-            <div className="mt-1 px-2 py-0.5 bg-destructive/10 rounded text-[10px] text-destructive">
+            <div className="mt-1 px-2 py-0.5 bg-destructive/10 rounded text-[10px] text-destructive-text">
               {edgeData.validationError}
             </div>
           )}

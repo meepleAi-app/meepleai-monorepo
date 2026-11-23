@@ -112,7 +112,7 @@ export const PluginNodeComponent = memo(function PluginNodeComponent({
             {nodeData.category}
           </span>
           {!nodeData.isValid && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-destructive/20 text-destructive">
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-destructive/20 text-destructive-text">
               Invalid
             </span>
           )}
@@ -164,7 +164,7 @@ export const PluginNodeComponent = memo(function PluginNodeComponent({
         {/* Validation Errors */}
         {nodeData.validationErrors && nodeData.validationErrors.length > 0 && (
           <div className="mt-2 p-2 bg-destructive/10 rounded-md">
-            <ul className="text-xs text-destructive space-y-0.5">
+            <ul className="text-xs text-destructive-text space-y-0.5">
               {nodeData.validationErrors.map((error: string, i: number) => (
                 <li key={i} className="flex items-start gap-1">
                   <span>⚠</span>

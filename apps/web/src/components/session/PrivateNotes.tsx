@@ -153,7 +153,7 @@ function NoteCard({ note, isOwner, onReveal, onHide, onEdit, onDelete, isLoading
             <Button
               variant="ghost"
               size="sm"
-              className="text-destructive hover:text-destructive"
+              className="text-destructive-text hover:text-destructive-text"
               onClick={onDelete}
               disabled={isLoading}
             >

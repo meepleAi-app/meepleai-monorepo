@@ -193,7 +193,9 @@ export default function AgentAnalyticsPage() {
       {!is404(metricsError) && (metricsError || topAgentsError) && (
         <Card className="border-destructive">
           <CardContent className="py-4 flex items-center justify-between gap-4">
-            <p className="text-destructive text-sm">Impossibile caricare le metriche. Riprova.</p>
+            <p className="text-destructive-text text-sm">
+              Impossibile caricare le metriche. Riprova.
+            </p>
             <Button variant="outline" size="sm" onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Riprova

@@ -132,7 +132,7 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
           />
           {otpError && (
             <div
-              className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-sm"
+              className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive-text text-sm"
               role="alert"
             >
               <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />

@@ -77,7 +77,7 @@ export default function SessionNotesPage() {
   if (error || !session) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-3xl">
-        <p className="text-destructive mb-4">{error ?? 'Session not found'}</p>
+        <p className="text-destructive-text mb-4">{error ?? 'Session not found'}</p>
       </div>
     );
   }

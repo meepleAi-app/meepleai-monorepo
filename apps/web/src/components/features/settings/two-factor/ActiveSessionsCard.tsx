@@ -96,7 +96,9 @@ export function ActiveSessionsCard(): React.JSX.Element {
       </header>
 
       {sessionsQuery.isError && (
-        <p className="text-sm text-destructive">{t('settings.security.sessions.errorLoading')}</p>
+        <p className="text-sm text-destructive-text">
+          {t('settings.security.sessions.errorLoading')}
+        </p>
       )}
 
       <ul className="divide-y divide-border">

@@ -125,7 +125,7 @@ export function RagReadinessIndicator({ readiness }: RagReadinessIndicatorProps)
                     isCurrent &&
                       !isFailedStep &&
                       'border-amber-500 bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
-                    isFailedStep && 'border-destructive bg-destructive/10 text-destructive',
+                    isFailedStep && 'border-destructive bg-destructive/10 text-destructive-text',
                     !isComplete &&
                       !isCurrent &&
                       !isFailedStep &&
@@ -147,7 +147,7 @@ export function RagReadinessIndicator({ readiness }: RagReadinessIndicatorProps)
                     'text-xs font-medium',
                     isComplete && 'text-green-600 dark:text-green-400',
                     isCurrent && !isFailedStep && 'text-amber-600 dark:text-amber-400',
-                    isFailedStep && 'text-destructive',
+                    isFailedStep && 'text-destructive-text',
                     !isComplete && !isCurrent && !isFailedStep && 'text-muted-foreground'
                   )}
                 >
@@ -182,7 +182,7 @@ export function RagReadinessIndicator({ readiness }: RagReadinessIndicatorProps)
 
         {/* Failed documents warning */}
         {readiness.failedDocuments > 0 && (
-          <div className="mt-3 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive">
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive-text">
             <XCircle className="h-3.5 w-3.5 shrink-0" />
             <span>
               {readiness.failedDocuments} documento/i fallito/i

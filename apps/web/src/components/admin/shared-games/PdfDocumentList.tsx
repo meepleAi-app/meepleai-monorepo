@@ -106,7 +106,7 @@ export function PdfDocumentList({
                       variant="ghost"
                       onClick={() => onRemove(doc.id)}
                       disabled={isLoading}
-                      className="text-destructive hover:text-destructive"
+                      className="text-destructive-text hover:text-destructive-text"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

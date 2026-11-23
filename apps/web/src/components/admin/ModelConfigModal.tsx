@@ -181,7 +181,7 @@ export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfi
               className={maxTokensError ? 'border-destructive' : ''}
             />
             {maxTokensError ? (
-              <p id="maxTokens-error" className="text-sm text-destructive">
+              <p id="maxTokens-error" className="text-sm text-destructive-text">
                 {maxTokensError}
               </p>
             ) : (

@@ -279,7 +279,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 disabled={isSubmitting || isLoading}
               />
               {errors.title && (
-                <p className="text-sm text-destructive mt-1">{errors.title.message}</p>
+                <p className="text-sm text-destructive-text mt-1">{errors.title.message}</p>
               )}
             </div>
 
@@ -294,7 +294,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 disabled={isSubmitting || isLoading}
               />
               {errors.yearPublished && (
-                <p className="text-sm text-destructive mt-1">{errors.yearPublished.message}</p>
+                <p className="text-sm text-destructive-text mt-1">{errors.yearPublished.message}</p>
               )}
             </div>
 
@@ -323,7 +323,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 )}
               </div>
               {errors.bggId && (
-                <p className="text-sm text-destructive mt-1">{errors.bggId.message}</p>
+                <p className="text-sm text-destructive-text mt-1">{errors.bggId.message}</p>
               )}
             </div>
           </div>
@@ -339,7 +339,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
               disabled={isSubmitting || isLoading}
             />
             {errors.description && (
-              <p className="text-sm text-destructive mt-1">{errors.description.message}</p>
+              <p className="text-sm text-destructive-text mt-1">{errors.description.message}</p>
             )}
           </div>
         </CardContent>
@@ -365,7 +365,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 disabled={isSubmitting || isLoading}
               />
               {errors.minPlayers && (
-                <p className="text-sm text-destructive mt-1">{errors.minPlayers.message}</p>
+                <p className="text-sm text-destructive-text mt-1">{errors.minPlayers.message}</p>
               )}
             </div>
 
@@ -381,7 +381,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 disabled={isSubmitting || isLoading}
               />
               {errors.maxPlayers && (
-                <p className="text-sm text-destructive mt-1">{errors.maxPlayers.message}</p>
+                <p className="text-sm text-destructive-text mt-1">{errors.maxPlayers.message}</p>
               )}
             </div>
 
@@ -396,7 +396,9 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 disabled={isSubmitting || isLoading}
               />
               {errors.playingTimeMinutes && (
-                <p className="text-sm text-destructive mt-1">{errors.playingTimeMinutes.message}</p>
+                <p className="text-sm text-destructive-text mt-1">
+                  {errors.playingTimeMinutes.message}
+                </p>
               )}
             </div>
 
@@ -412,7 +414,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 disabled={isSubmitting || isLoading}
               />
               {errors.minAge && (
-                <p className="text-sm text-destructive mt-1">{errors.minAge.message}</p>
+                <p className="text-sm text-destructive-text mt-1">{errors.minAge.message}</p>
               )}
             </div>
           </div>
@@ -437,7 +439,9 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 Scala complessità: 1 = Leggero, 5 = Pesante
               </p>
               {errors.complexityRating && (
-                <p className="text-sm text-destructive mt-1">{errors.complexityRating.message}</p>
+                <p className="text-sm text-destructive-text mt-1">
+                  {errors.complexityRating.message}
+                </p>
               )}
             </div>
 
@@ -456,7 +460,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
               />
               <p className="text-sm text-muted-foreground mt-1">Rating medio dalla community</p>
               {errors.averageRating && (
-                <p className="text-sm text-destructive mt-1">{errors.averageRating.message}</p>
+                <p className="text-sm text-destructive-text mt-1">{errors.averageRating.message}</p>
               )}
             </div>
           </div>
@@ -481,7 +485,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 disabled={isSubmitting || isLoading}
               />
               {errors.imageUrl && (
-                <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>
+                <p className="text-sm text-destructive-text mt-1">{errors.imageUrl.message}</p>
               )}
               {/* Image Preview */}
               <div className="mt-2 border rounded-lg p-2 bg-muted/50">
@@ -512,7 +516,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 disabled={isSubmitting || isLoading}
               />
               {errors.thumbnailUrl && (
-                <p className="text-sm text-destructive mt-1">{errors.thumbnailUrl.message}</p>
+                <p className="text-sm text-destructive-text mt-1">{errors.thumbnailUrl.message}</p>
               )}
               {/* Thumbnail Preview */}
               <div className="mt-2 border rounded-lg p-2 bg-muted/50">

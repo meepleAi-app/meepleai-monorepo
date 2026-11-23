@@ -289,7 +289,7 @@ function PhaseConfigRow({
             size="icon"
             onClick={onRemove}
             disabled={disabled}
-            className="h-8 w-8 text-destructive hover:text-destructive"
+            className="h-8 w-8 text-destructive-text hover:text-destructive-text"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

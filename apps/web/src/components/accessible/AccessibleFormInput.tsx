@@ -119,7 +119,7 @@ export const AccessibleFormInput = forwardRef<HTMLInputElement, AccessibleFormIn
         >
           {label}
           {required && (
-            <span className="text-destructive ml-1" aria-label="required">
+            <span className="text-destructive-text ml-1" aria-label="required">
               *
             </span>
           )}
@@ -152,7 +152,7 @@ export const AccessibleFormInput = forwardRef<HTMLInputElement, AccessibleFormIn
         {error && (
           <div
             id={errorId}
-            className="text-sm text-destructive"
+            className="text-sm text-destructive-text"
             role="alert"
             aria-live="polite"
             aria-atomic="true"

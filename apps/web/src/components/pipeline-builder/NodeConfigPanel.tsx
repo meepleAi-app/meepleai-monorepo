@@ -325,7 +325,7 @@ function FormField({ name, schema, value, onChange, error, path = '' }: FieldPro
         <p className="text-[11px] text-muted-foreground">{schema.description}</p>
       )}
       {error && (
-        <p className="text-[11px] text-destructive flex items-center gap-1">
+        <p className="text-[11px] text-destructive-text flex items-center gap-1">
           <AlertCircle className="h-3 w-3" />
           {error}
         </p>

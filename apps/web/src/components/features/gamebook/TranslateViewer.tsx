@@ -416,7 +416,7 @@ export function TranslateViewer({
 
       {books !== undefined && narrativeBooks.length === 0 && (
         <p
-          className="text-sm text-destructive"
+          className="text-sm text-destructive-text"
           role="alert"
           data-testid="translate-viewer-no-narrative-books"
         >
@@ -455,7 +455,7 @@ export function TranslateViewer({
         {errorMessage && (
           <>
             <p
-              className="text-sm text-destructive"
+              className="text-sm text-destructive-text"
               role="alert"
               data-testid="translate-viewer-error"
             >

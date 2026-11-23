@@ -116,7 +116,7 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
 
           {/* Error state */}
           {error && !isFetching && (
-            <div className="flex items-center justify-center p-10 text-sm text-destructive">
+            <div className="flex items-center justify-center p-10 text-sm text-destructive-text">
               {error}
             </div>
           )}

@@ -34,7 +34,7 @@ export function BasicInfoStep({ agent, onChange }: BasicInfoStepProps) {
       {/* Name */}
       <div className="space-y-2">
         <Label htmlFor="agent-name">
-          Name <span className="text-destructive">*</span>
+          Name <span className="text-destructive-text">*</span>
         </Label>
         <Input
           id="agent-name"
@@ -75,7 +75,7 @@ export function BasicInfoStep({ agent, onChange }: BasicInfoStepProps) {
       {/* Model */}
       <div className="space-y-2">
         <Label htmlFor="agent-model">
-          Model <span className="text-destructive">*</span>
+          Model <span className="text-destructive-text">*</span>
         </Label>
         <Select value={agent.model} onValueChange={value => handleChange('model', value)}>
           <SelectTrigger id="agent-model">

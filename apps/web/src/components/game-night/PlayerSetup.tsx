@@ -323,7 +323,9 @@ export function PlayerSetup({
             </Button>
           </div>
           {isDuplicateGuest && guestName.trim() && (
-            <p className="text-xs text-destructive">Esiste già un giocatore con questo nome.</p>
+            <p className="text-xs text-destructive-text">
+              Esiste già un giocatore con questo nome.
+            </p>
           )}
         </TabsContent>
       </Tabs>

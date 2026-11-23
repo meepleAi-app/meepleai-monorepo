@@ -566,7 +566,9 @@ export function PipelineCanvas({
               </Badge>
             </div>
             {!validation.isValid && (
-              <p className="text-xs text-destructive font-medium">Pipeline exceeds constraints</p>
+              <p className="text-xs text-destructive-text font-medium">
+                Pipeline exceeds constraints
+              </p>
             )}
           </div>
         </Panel>

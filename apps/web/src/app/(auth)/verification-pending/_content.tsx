@@ -155,7 +155,7 @@ export function VerificationPendingContent({ emailParam = null }: VerificationPe
             role="alert"
             aria-live="assertive"
           >
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-destructive-text">{error}</p>
           </div>
         )}
 

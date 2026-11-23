@@ -348,7 +348,7 @@ export default function AdminTiersPage() {
           Caricamento tier…
         </div>
       ) : tiersQuery.isError ? (
-        <div className="py-12 text-center text-destructive text-sm">
+        <div className="py-12 text-center text-destructive-text text-sm">
           Errore nel caricamento dei tier.
         </div>
       ) : (

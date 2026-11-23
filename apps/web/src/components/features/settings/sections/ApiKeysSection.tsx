@@ -72,7 +72,7 @@ export function ApiKeysSection(): React.JSX.Element {
     return (
       <div
         role="alert"
-        className="bg-destructive/5 border border-destructive/30 rounded-lg p-5 text-destructive flex items-center gap-2"
+        className="bg-destructive/5 border border-destructive/30 rounded-lg p-5 text-destructive-text flex items-center gap-2"
       >
         <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
         Failed to load API keys.
@@ -106,7 +106,7 @@ export function ApiKeysSection(): React.JSX.Element {
           </Button>
         </div>
         {createMutation.isError && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-destructive-text text-sm">
             Failed to create key. Please try again.
           </p>
         )}

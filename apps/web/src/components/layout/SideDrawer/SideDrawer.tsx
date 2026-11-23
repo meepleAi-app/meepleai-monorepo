@@ -122,7 +122,7 @@ export function SideDrawer({ open, onClose }: SideDrawerProps) {
             type="button"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive-text hover:bg-destructive/10 transition-colors disabled:opacity-50"
           >
             <LogOut className="h-4 w-4 shrink-0" />
             <span>{isLoggingOut ? 'Disconnessione...' : 'Esci'}</span>

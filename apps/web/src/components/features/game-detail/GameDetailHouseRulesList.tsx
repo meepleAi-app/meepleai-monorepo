@@ -217,7 +217,7 @@ export function GameDetailHouseRulesList(props: GameDetailHouseRulesListProps): 
                         onClick={() => setConfirmDeleteId(rule.id)}
                         aria-label={labels.deleteLabel}
                         data-slot="game-detail-house-rules-delete-cta"
-                        className="rounded-md border-none bg-transparent px-2 py-1 font-mono text-[11px] font-extrabold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className="rounded-md border-none bg-transparent px-2 py-1 font-mono text-[11px] font-extrabold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive-text"
                       >
                         🗑️
                       </button>

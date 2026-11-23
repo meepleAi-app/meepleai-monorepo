@@ -142,7 +142,7 @@ export function QueryDrillPanel({
 
       {query.errorMessage && (
         <Section label="Error">
-          <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 font-mono text-[11px] text-destructive break-words">
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 font-mono text-[11px] text-destructive-text break-words">
             {query.errorMessage}
           </p>
         </Section>
@@ -175,7 +175,7 @@ function StatusPill({ status }: { status: string }) {
   const tone =
     status === 'Success'
       ? 'bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success-ink))]'
-      : 'bg-destructive/15 text-destructive';
+      : 'bg-destructive/15 text-destructive-text';
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${tone}`}

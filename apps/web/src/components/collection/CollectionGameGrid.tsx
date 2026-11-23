@@ -128,7 +128,7 @@ export const CollectionGameGrid = React.memo(function CollectionGameGrid({
   if (hasError) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <p className="text-destructive mb-4">Errore nel caricamento della collezione.</p>
+        <p className="text-destructive-text mb-4">Errore nel caricamento della collezione.</p>
         <Button onClick={() => window.location.reload()}>Riprova</Button>
       </div>
     );

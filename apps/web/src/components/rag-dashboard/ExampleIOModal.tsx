@@ -453,7 +453,7 @@ export function ExampleIOModal({
 
                 {/* Error state */}
                 {liveTestState.error && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive-text">
                     {liveTestState.error}
                   </div>
                 )}

@@ -96,7 +96,7 @@ export function AttemptTimelineDrawer({
         <div className="flex-1 overflow-y-auto p-4">
           {loading && <p className="text-sm text-muted-foreground">Loading timeline…</p>}
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive-text">
               {error}
             </p>
           )}

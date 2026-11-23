@@ -194,7 +194,7 @@ export function InlineChatPanel({ gameId, chatThreadId }: InlineChatPanelProps) 
           {state.error && (
             <div
               role="alert"
-              className="rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive"
+              className="rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive-text"
             >
               {state.error}
             </div>

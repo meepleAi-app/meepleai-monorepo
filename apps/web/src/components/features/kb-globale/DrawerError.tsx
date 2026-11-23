@@ -65,7 +65,7 @@ export function DrawerError({
         </div>
       )}
       {/* #4510: the reason is announced (role="alert"), and every text in the box is
-          `text-foreground`: `text-destructive` on `bg-destructive/10` is 3.30:1 (light) and 2.68:1
+          `text-foreground`: `text-destructive-text` on `bg-destructive/10` is 3.30:1 (light) and 2.68:1
           (dark), and white on `bg-destructive` 3.76:1 (light). */}
       <div
         role="alert"

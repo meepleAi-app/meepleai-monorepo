@@ -178,7 +178,7 @@ export function UserMenuDropdown({ variant = 'icon' }: UserMenuDropdownProps = {
         <DropdownMenuItem
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+          className="flex items-center gap-2 cursor-pointer text-destructive-text focus:text-destructive-text"
           data-testid="logout-menu-item"
         >
           <LogOut className="h-4 w-4" />

@@ -70,7 +70,7 @@ export function NewCampaignDialog({ gameId, trigger }: NewCampaignDialogProps): 
             />
           </label>
           {mutation.isError && (
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-destructive-text">
               {mutation.error instanceof Error
                 ? mutation.error.message
                 : 'Errore creazione campagna'}

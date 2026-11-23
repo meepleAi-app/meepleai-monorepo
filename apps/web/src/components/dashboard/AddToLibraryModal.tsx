@@ -189,13 +189,13 @@ export function AddToLibraryModal({ game, isOpen, onClose, onSuccess }: AddToLib
 
             {/* Error messages */}
             {state.phase === 'addFailed' && (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="text-sm text-destructive-text" role="alert">
                 {state.message}
               </p>
             )}
 
             {state.phase === 'threadFailed' && (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="text-sm text-destructive-text" role="alert">
                 {state.message}
               </p>
             )}

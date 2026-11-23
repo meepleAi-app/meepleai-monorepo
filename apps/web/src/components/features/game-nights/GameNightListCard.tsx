@@ -181,7 +181,7 @@ const RSVP_BUTTONS = [
     action: 'decline',
     status: 'Declined',
     labelKey: 'decline',
-    selectedClass: 'border-destructive bg-destructive/10 text-destructive',
+    selectedClass: 'border-destructive bg-destructive/10 text-destructive-text',
   },
 ] as const;
 

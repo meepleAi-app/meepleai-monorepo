@@ -189,7 +189,7 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
           <p
             role="alert"
             data-testid="game-picker-start-error"
-            className="mt-3 break-words rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            className="mt-3 break-words rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive-text"
           >
             {startGameErrorMessage(startGame.error)}
           </p>

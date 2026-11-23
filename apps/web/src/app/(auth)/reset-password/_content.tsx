@@ -288,7 +288,7 @@ export function ResetPasswordPageContent({
           <div
             role="alert"
             aria-live="polite"
-            className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg mb-4 text-sm"
+            className="bg-destructive/10 border border-destructive/30 text-destructive-text px-4 py-3 rounded-lg mb-4 text-sm"
             data-testid="reset-password-error"
           >
             {errorMessage}
@@ -345,7 +345,7 @@ export function ResetPasswordPageContent({
       >
         <div className="text-center py-4 space-y-4" data-testid="reset-password-invalid-token">
           {errorMessage && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive-text">
               {errorMessage}
             </p>
           )}
@@ -399,7 +399,7 @@ export function ResetPasswordPageContent({
           <div
             role="alert"
             aria-live="polite"
-            className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg mb-4 text-sm"
+            className="bg-destructive/10 border border-destructive/30 text-destructive-text px-4 py-3 rounded-lg mb-4 text-sm"
             data-testid="reset-password-error"
           >
             {errorMessage}

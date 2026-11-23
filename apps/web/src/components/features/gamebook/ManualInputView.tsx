@@ -177,7 +177,7 @@ export function ManualInputView({ campaignId, gameRef }: ManualInputViewProps): 
           />
           <span
             aria-live="polite"
-            className={`${counterClass} absolute bottom-2 right-3 rounded-sm px-2 py-0.5 font-mono text-[10px] tabular-nums ${overLimit ? 'bg-destructive/10 text-destructive' : warn ? 'bg-muted text-[var(--c-warning,orange)]' : 'bg-muted text-muted-foreground'}`}
+            className={`${counterClass} absolute bottom-2 right-3 rounded-sm px-2 py-0.5 font-mono text-[10px] tabular-nums ${overLimit ? 'bg-destructive/10 text-destructive-text' : warn ? 'bg-muted text-[var(--c-warning,orange)]' : 'bg-muted text-muted-foreground'}`}
           >
             {len}/{MAX_CHARS}
           </span>

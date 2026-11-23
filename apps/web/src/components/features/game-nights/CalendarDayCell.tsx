@@ -93,7 +93,7 @@ export function CalendarDayCell({
               'overflow-hidden text-ellipsis whitespace-nowrap rounded border-l-2 px-1.5 py-0.5',
               'font-display text-[10px] font-bold',
               isCancelled
-                ? 'border-l-destructive bg-destructive/12 text-destructive line-through opacity-70'
+                ? 'border-l-destructive bg-destructive/12 text-destructive-text line-through opacity-70'
                 : 'border-l-entity-event bg-entity-event/18 text-entity-event'
             )}
           >

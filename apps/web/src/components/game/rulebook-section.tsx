@@ -158,7 +158,7 @@ export function RulebookSection({
                     type="button"
                     aria-label="Rimuovi regolamento"
                     onClick={() => onRemove(rulebook.pdfDocumentId)}
-                    className="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
+                    className="rounded-md p-1 text-muted-foreground hover:text-destructive-text hover:bg-muted transition-colors"
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>

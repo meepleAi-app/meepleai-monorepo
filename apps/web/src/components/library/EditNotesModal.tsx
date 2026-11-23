@@ -113,7 +113,7 @@ export function EditNotesModal({
             id="notes-counter"
             className={cn(
               'text-xs text-right',
-              charsRemaining < 50 ? 'text-destructive' : 'text-muted-foreground'
+              charsRemaining < 50 ? 'text-destructive-text' : 'text-muted-foreground'
             )}
             data-testid="char-counter"
           >

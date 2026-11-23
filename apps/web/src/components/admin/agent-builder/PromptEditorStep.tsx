@@ -114,7 +114,7 @@ export function PromptEditorStep({ agent, onChange }: PromptEditorStepProps) {
                     className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
                     aria-label="Delete prompt"
                   >
-                    <Trash2 className="h-3 w-3 text-destructive" />
+                    <Trash2 className="h-3 w-3 text-destructive-text" />
                   </button>
                 )}
               </TabsTrigger>

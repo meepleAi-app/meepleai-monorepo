@@ -122,7 +122,7 @@ describe('EditNotesModal - Character Counter', () => {
     render(<EditNotesModal {...defaultProps} currentNotes={longNotes} />);
 
     const counter = screen.getByTestId('char-counter');
-    expect(counter).toHaveClass('text-destructive');
+    expect(counter).toHaveClass('text-destructive-text');
   });
 
   it('shows normal style when more than 50 characters remaining', () => {

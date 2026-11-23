@@ -34,7 +34,7 @@ export function LibraryQuotaBadge({
     <div
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium',
-        isCritical && 'border-destructive/50 bg-destructive/5 text-destructive',
+        isCritical && 'border-destructive/50 bg-destructive/5 text-destructive-text',
         isWarning &&
           'border-amber-500/40 bg-amber-50/60 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
         !isWarning && !isCritical && 'border-border bg-muted/40 text-muted-foreground',

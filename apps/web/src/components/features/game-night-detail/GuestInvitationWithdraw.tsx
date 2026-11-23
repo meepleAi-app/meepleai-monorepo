@@ -96,7 +96,7 @@ export function GuestInvitationWithdraw({
           <p
             role="alert"
             data-testid="guest-invitation-withdraw-error"
-            className="text-sm text-destructive"
+            className="text-sm text-destructive-text"
           >
             {t('gameNightDetail.participants.withdraw.error')}
           </p>

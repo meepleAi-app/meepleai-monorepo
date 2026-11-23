@@ -193,7 +193,7 @@ export default function WishlistPage(): JSX.Element {
       {!isLoading && isError && (
         <div
           role="alert"
-          className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive-text"
         >
           <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="flex-1">{t('pages.library.wishlist.error.message')}</span>

@@ -43,7 +43,7 @@ const STATE_CONFIG: Record<
   error: {
     label: 'Errore salvataggio',
     icon: AlertCircle,
-    className: 'text-destructive',
+    className: 'text-destructive-text',
   },
 };
 

@@ -192,7 +192,7 @@ describe('QuotaStickyHeader - Percentage Text Color', () => {
     render(<QuotaStickyHeader {...createQuotaProps({ percentageUsed: 95 })} />);
 
     const percentage = screen.getByTestId('quota-sticky-header-percentage');
-    expect(percentage).toHaveClass('text-destructive');
+    expect(percentage).toHaveClass('text-destructive-text');
   });
 });
 

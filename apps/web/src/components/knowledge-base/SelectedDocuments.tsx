@@ -284,7 +284,7 @@ export function SelectedDocuments({
               variant="outline"
               size="sm"
               onClick={() => onDocumentsChange([])}
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
             >
               Clear All ({documentCount})
             </Button>
@@ -422,7 +422,7 @@ function DocumentItemContent({
           variant="ghost"
           size="icon"
           onClick={() => onRemove(document.id)}
-          className="flex-shrink-0 hover:bg-destructive/10 hover:text-destructive"
+          className="flex-shrink-0 hover:bg-destructive/10 hover:text-destructive-text"
           aria-label={`Remove ${document.title}`}
         >
           <X className="h-4 w-4" />

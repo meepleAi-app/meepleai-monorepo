@@ -212,7 +212,7 @@ export function MeepleWishlistCard({
             onRemove(item.id);
           }}
           aria-label={t('pages.library.wishlist.card.removeAria', { name: resolvedGameName })}
-          className="rounded-md px-2 py-1 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10"
+          className="rounded-md px-2 py-1 text-xs font-semibold text-destructive-text transition-colors hover:bg-destructive/10"
         >
           {t('pages.library.wishlist.card.remove')}
         </button>

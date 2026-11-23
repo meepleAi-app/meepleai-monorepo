@@ -185,7 +185,7 @@ function StepIndicator({ step, currentStep, index }: StepIndicatorProps) {
           isCompleted && 'border-green-500 bg-green-500/10 text-green-600 dark:text-green-400',
           isActive && 'border-primary bg-primary/10 text-primary animate-pulse',
           isPending && 'border-muted-foreground/30 text-muted-foreground/50',
-          isFailed && 'border-destructive bg-destructive/10 text-destructive'
+          isFailed && 'border-destructive bg-destructive/10 text-destructive-text'
         )}
       >
         {isActive && !isFailed ? (
@@ -212,7 +212,7 @@ function StepIndicator({ step, currentStep, index }: StepIndicatorProps) {
           isCompleted && 'text-green-600 dark:text-green-400',
           isActive && 'text-primary',
           isPending && 'text-muted-foreground/50',
-          isFailed && 'text-destructive'
+          isFailed && 'text-destructive-text'
         )}
       >
         {config.label}
@@ -297,9 +297,9 @@ export function PdfProcessingProgressBar({
         data-testid="pdf-progress-error"
       >
         <div className="flex flex-col items-center gap-4">
-          <AlertCircle className="h-10 w-10 text-destructive" />
+          <AlertCircle className="h-10 w-10 text-destructive-text" />
           <div className="text-center">
-            <p className="font-medium text-destructive">Errore di connessione</p>
+            <p className="font-medium text-destructive-text">Errore di connessione</p>
             <p className="mt-1 text-sm text-muted-foreground">{error.message}</p>
           </div>
           <Button variant="outline" size="sm" onClick={handleRetry}>
@@ -385,9 +385,9 @@ export function PdfProcessingProgressBar({
           aria-live="assertive"
         >
           <div className="flex items-start gap-3">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive-text" />
             <div className="flex-1">
-              <p className="font-medium text-destructive">Elaborazione fallita</p>
+              <p className="font-medium text-destructive-text">Elaborazione fallita</p>
               {progress?.errorMessage && (
                 <p className="mt-1 text-sm text-muted-foreground">{progress.errorMessage}</p>
               )}

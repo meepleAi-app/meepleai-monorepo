@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Services;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.SharedKernel.Application.Interfaces;
@@ -49,7 +50,8 @@ internal sealed class GetFriendsActivityQueryHandler
 
     private const string GameNightEntityType = "gameNight";
     private const string CompletedStatus = "Completed";
-    private const string DraftStatus = "Draft";
+    // nameof, not a literal: a rename of the enum member must not reopen the feed to Drafts in silence (#4760).
+    private const string DraftStatus = nameof(GameNightStatus.Draft);
     private const string AcceptedRsvp = "Accepted";
 
     private readonly MeepleAiDbContext _context;
@@ -209,7 +211,8 @@ internal sealed class GetFriendsActivityQueryHandler
     /// GameNights scheduled within the friends window where the current user sits at the table
     /// (<see cref="GameNightInvitationQueries.ParticipatedByAsync"/>: organizer, RSVP row, or an email
     /// invitation accepted while logged in). The friends are everybody else at those tables: the
-    /// organizer, the RSVP rows, and the email guests bound to their account (#4943).
+    /// organizer, the RSVP rows, and the email guests bound to their account (#4943). A Draft makes
+    /// nobody a friend (#4760): it is not activity yet, so it does not decide whose activity is shown.
     /// </summary>
     private async Task<HashSet<Guid>> DiscoverFriendUserIdsAsync(
         Guid userId,
@@ -222,6 +225,7 @@ internal sealed class GetFriendsActivityQueryHandler
             .AsNoTracking()
             .Where(gn => gn.ScheduledAt >= windowStart)
             .Where(participatedBy)
+            .Where(gn => gn.Status != DraftStatus)
             .Select(gn => new SharedNightProjection(
                 gn.Id,
                 gn.OrganizerId,

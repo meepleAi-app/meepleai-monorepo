@@ -384,6 +384,50 @@ public sealed class GetFriendsActivityQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    [Trait("Issue", "4760")]
+    public async Task Handle_TheUsersOwnDraft_DoesNotSurface_EvenWithAFriendWhoAccepted()
+    {
+        var alice = await SeedUserAsync("Alice");
+        var bob = await SeedUserAsync("Bob");
+
+        var shared = await SeedNightAsync(alice.Id, "Alice's Night", status: "Published");
+        await SeedRsvpAsync(shared.Id, bob.Id);
+
+        var draft = await SeedNightAsync(alice.Id, "Alice's Draft", status: "Draft");
+        await SeedRsvpAsync(draft.Id, bob.Id, respondedAt: DateTimeOffset.UtcNow.AddHours(-1));
+
+        var result = await _sut.Handle(new GetFriendsActivityQuery(alice.Id), CancellationToken.None);
+
+        result.Should().NotContain(a => a.GameOrEventId == draft.Id);
+        result.Should().Contain(a => a.FriendUserId == bob.Id && a.GameOrEventId == shared.Id);
+    }
+
+    [Fact]
+    [Trait("Issue", "4760")]
+    public async Task Handle_ADraftMakesNobodyAFriend()
+    {
+        // #4760: a Draft is not activity, so it does not pick the friends either. Luca and Marco last played
+        // together outside the window; Marco's draft, where Luca is invited, must not bring Marco back as a
+        // friend and, with him, Marco's join at Luca's old table.
+        var luca = await SeedUserAsync("Luca");
+        var marco = await SeedUserAsync("Marco");
+
+        var oldNight = await SeedNightAsync(luca.Id, "Da Luca", scheduledAt: DateTimeOffset.UtcNow.AddDays(-120));
+        await SeedRsvpAsync(oldNight.Id, marco.Id, respondedAt: DateTimeOffset.UtcNow.AddDays(-125));
+
+        var draft = await SeedNightAsync(
+            marco.Id,
+            "Sorpresa per Giulia",
+            status: "Draft",
+            scheduledAt: DateTimeOffset.UtcNow.AddDays(5));
+        await SeedRsvpAsync(draft.Id, luca.Id, status: "Pending");
+
+        var result = await _sut.Handle(new GetFriendsActivityQuery(luca.Id), CancellationToken.None);
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Handle_PendingRsvp_DoesNotSurfaceAsJoined()
     {
         // Arrange: user organized a night, friend's RSVP is Pending (not Accepted).

@@ -80,7 +80,7 @@ export function SharePlayRecordDialog({
             <input
               readOnly
               value={shareUrl}
-              className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm"
+              className="w-full rounded-md border border-input bg-muted px-3 py-1.5 text-sm"
             />
             <div className="flex justify-between gap-2">
               <Button variant="outline" onClick={handleCopy}>

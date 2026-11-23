@@ -73,7 +73,7 @@ export const InputField = forwardRef<HTMLInputElement, InputFieldProps>(function
             'focus:outline-none focus:ring-2 focus:ring-offset-0',
             error
               ? 'border-[hsl(var(--c-danger))] focus:ring-[hsl(var(--c-danger)/0.3)]'
-              : 'border-border focus:ring-[hsl(var(--c-toolkit)/0.3)] focus:border-[hsl(var(--c-toolkit))]',
+              : 'border-input focus:ring-[hsl(var(--c-toolkit)/0.3)] focus:border-[hsl(var(--c-toolkit))]',
             right && 'pr-10',
             disabled && 'opacity-50 cursor-not-allowed'
           )}

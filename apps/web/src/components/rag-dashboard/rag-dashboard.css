@@ -100,7 +100,7 @@
 .rag-card {
   position: relative;
   background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
   transition: all var(--rag-transition-smooth);
@@ -154,7 +154,7 @@
     hsla(var(--muted), 0.5)
   );
   border-radius: 12px;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--border);
   transition: all var(--rag-transition-smooth);
 }
 
@@ -212,7 +212,7 @@
   gap: 1rem;
   padding: 1rem;
   background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--border);
   border-radius: 12px;
   cursor: pointer;
   transition: all var(--rag-transition-smooth);
@@ -315,7 +315,7 @@
   padding-left: 3rem;
   font-size: 1rem;
   background: hsl(var(--card));
-  border: 2px solid hsl(var(--border));
+  border: 2px solid var(--border);
   border-radius: 12px;
   color: hsl(var(--foreground));
   transition: all var(--rag-transition-smooth);
@@ -354,7 +354,7 @@
   font-weight: 600;
   font-size: 0.875rem;
   background: hsl(var(--card));
-  border: 2px solid hsl(var(--border));
+  border: 2px solid var(--border);
   border-radius: 8px;
   color: hsl(var(--foreground));
   cursor: pointer;
@@ -502,7 +502,7 @@
   position: relative;
   padding: 1rem;
   background: hsl(var(--card));
-  border: 2px solid hsl(var(--border));
+  border: 2px solid var(--border);
   border-radius: 12px;
   cursor: pointer;
   transition: all var(--rag-transition-smooth);
@@ -625,7 +625,7 @@
 .rag-hero {
   position: relative;
   border-radius: 16px;
-  border: 1px solid hsl(var(--border) / 0.5);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
   overflow: hidden;
   margin-bottom: 1.5rem;
   padding: 1.5rem;
@@ -667,7 +667,7 @@
   padding: 0.5rem 0.75rem;
   border-radius: 10px;
   background: hsl(var(--muted) / 0.4);
-  border: 1px solid hsl(var(--border) / 0.4);
+  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
   min-width: 70px;
 }
 
@@ -697,7 +697,7 @@
   gap: 0.25rem;
   padding: 0.25rem;
   background: hsl(var(--muted) / 0.5);
-  border: 1px solid hsl(var(--border) / 0.5);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
   border-radius: 10px;
 }
 
@@ -881,7 +881,7 @@
 }
 
 .rag-strategy-table thead tr {
-  border-bottom: 1px solid hsl(var(--border) / 0.5);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
 }
 
 .rag-strategy-table th {
@@ -897,7 +897,7 @@
 
 .rag-strategy-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid hsl(var(--border) / 0.25);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 25%, transparent);
   vertical-align: middle;
 }
 

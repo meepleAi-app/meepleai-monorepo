@@ -97,10 +97,7 @@ export default function ContactPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Name Field */}
                 <div>
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-medium text-foreground mb-1"
-                  >
+                  <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">
                     {t('pages.contact.form.name')}
                   </label>
                   <input
@@ -111,16 +108,13 @@ export default function ContactPage() {
                     onChange={handleChange}
                     required
                     placeholder={t('pages.contact.form.namePlaceholder')}
-                    className="w-full px-3 py-2 border border-border/50 dark:border-border/30 rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-input rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 {/* Email Field */}
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-foreground mb-1"
-                  >
+                  <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
                     {t('pages.contact.form.email')}
                   </label>
                   <input
@@ -131,7 +125,7 @@ export default function ContactPage() {
                     onChange={handleChange}
                     required
                     placeholder={t('pages.contact.form.emailPlaceholder')}
-                    className="w-full px-3 py-2 border border-border/50 dark:border-border/30 rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-input rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
@@ -149,7 +143,7 @@ export default function ContactPage() {
                     value={formData.subject}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-border/50 dark:border-border/30 rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-input rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">{t('pages.contact.form.subjectPlaceholder')}</option>
                     {SUBJECT_KEYS.map(key => (
@@ -176,7 +170,7 @@ export default function ContactPage() {
                     required
                     rows={5}
                     placeholder={t('pages.contact.form.messagePlaceholder')}
-                    className="w-full px-3 py-2 border border-border/50 dark:border-border/30 rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-3 py-2 border border-input rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   />
                 </div>
 

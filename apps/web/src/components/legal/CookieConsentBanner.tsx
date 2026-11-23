@@ -207,7 +207,7 @@ export function CookieConsentBanner({ className, forceShow, onDismiss }: CookieC
                   type="checkbox"
                   checked={true}
                   disabled
-                  className="rounded border-border"
+                  className="rounded border-input"
                   aria-label={t('legal.cookieBanner.essentialAriaLabel')}
                 />
                 <div>

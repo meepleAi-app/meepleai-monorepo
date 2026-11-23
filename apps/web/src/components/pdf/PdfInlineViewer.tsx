@@ -333,7 +333,7 @@ export function PdfInlineViewer({
               value={zoom === 'fit-width' ? 'fit-width' : String(zoom)}
               disabled={controlsDisabled}
               onChange={handleZoomChange}
-              className="rounded-sm border border-border bg-card px-1 py-0.5 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="rounded-sm border border-input bg-card px-1 py-0.5 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="50">50%</option>
               <option value="100">100%</option>

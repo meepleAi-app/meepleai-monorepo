@@ -43,7 +43,7 @@ export function DashboardContextBar() {
           type="search"
           placeholder="Cerca..."
           className={cn(
-            'pl-8 pr-3 py-1.5 rounded-full bg-muted/50 border border-border/50 text-sm',
+            'pl-8 pr-3 py-1.5 rounded-full bg-muted/50 border border-input text-sm',
             'focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all',
             'motion-reduce:transition-none',
             searchFocused ? 'w-full' : 'w-36'

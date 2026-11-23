@@ -196,7 +196,7 @@ export function CostStackedArea({ range, className }: CostStackedAreaProps) {
       <div className="p-4">
         <ResponsiveContainer width="100%" height={260}>
           <AreaChart data={flatData} margin={{ top: 12, right: 16, left: 0, bottom: 8 }}>
-            <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
+            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
               tickFormatter={formatDateShort}
@@ -204,7 +204,7 @@ export function CostStackedArea({ range, className }: CostStackedAreaProps) {
               fontSize={10}
               fontFamily="var(--font-mono)"
               tickLine={false}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
+              axisLine={{ stroke: 'var(--border)' }}
             />
             <YAxis
               tickFormatter={v => `$${v}`}

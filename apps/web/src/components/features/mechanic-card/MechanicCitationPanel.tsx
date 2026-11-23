@@ -187,7 +187,7 @@ function PanelBody({
             value={fallbackText}
             rows={6}
             aria-label="Testo della citazione"
-            className="w-full resize-none rounded-md border border-border bg-muted p-2 font-mono text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full resize-none rounded-md border border-input bg-muted p-2 font-mono text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <div className="flex justify-end">
             <DialogClose asChild>

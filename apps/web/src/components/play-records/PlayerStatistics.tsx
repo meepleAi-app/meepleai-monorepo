@@ -164,7 +164,7 @@ export function PlayerStatistics() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={gamePlayData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis
                   dataKey="game"
                   tick={{ fill: 'hsl(var(--muted-foreground))' }}
@@ -176,7 +176,7 @@ export function PlayerStatistics() {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
+                    border: '1px solid var(--border)',
                   }}
                 />
                 <Bar dataKey="count" fill="hsl(25 95% 45%)" />
@@ -211,7 +211,7 @@ export function PlayerStatistics() {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
+                    border: '1px solid var(--border)',
                   }}
                 />
               </PieChart>

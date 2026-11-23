@@ -352,7 +352,7 @@ function Field({
         }}
         className={clsx(
           'block w-full px-3 py-2.5',
-          'rounded-md border-[1.5px] border-border bg-background',
+          'rounded-md border-[1.5px] border-input bg-background',
           'font-body text-[13px] text-foreground',
           'outline-none transition-colors duration-150 ease-out',
           'focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game))] focus-visible:ring-offset-2',

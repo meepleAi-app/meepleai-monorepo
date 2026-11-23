@@ -160,7 +160,7 @@ export function ArbitroModal({ sessionId, players, onVerdictReceived }: ArbitroM
               </label>
               <textarea
                 id="arbitro-description"
-                className="w-full min-h-[100px] rounded-lg border border-border px-3 py-2 text-sm font-nunito text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none"
+                className="w-full min-h-[100px] rounded-lg border border-input px-3 py-2 text-sm font-nunito text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none"
                 placeholder="Es: È possibile giocare questa carta durante il turno dell'avversario?"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
@@ -177,7 +177,7 @@ export function ArbitroModal({ sessionId, players, onVerdictReceived }: ArbitroM
               </label>
               <select
                 id="arbitro-raised-by"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm font-nunito text-foreground focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-card"
+                className="w-full rounded-lg border border-input px-3 py-2 text-sm font-nunito text-foreground focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-card"
                 value={raisedBy}
                 onChange={e => setRaisedBy(e.target.value)}
                 required

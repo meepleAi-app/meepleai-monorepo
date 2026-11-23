@@ -397,7 +397,7 @@ export function ExampleIOModal({
                 <div>
                   <label className="text-sm font-medium mb-2 block">Game Context</label>
                   <select
-                    className="w-full p-2 rounded-md border border-border bg-background"
+                    className="w-full p-2 rounded-md border border-input bg-background"
                     value={liveGameContext}
                     onChange={e => setLiveGameContext(e.target.value)}
                     disabled={liveTestState.isStreaming}

@@ -294,7 +294,7 @@ function GraphView({ nodes, edges, loading }: { nodes: Node[]; edges: Edge[]; lo
         elementsSelectable={false}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="hsl(var(--border))" />
+        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--border)" />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={n => (n.style?.background as string | undefined) ?? 'hsl(var(--muted))'}

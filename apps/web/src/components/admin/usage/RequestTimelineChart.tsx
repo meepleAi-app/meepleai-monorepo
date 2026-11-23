@@ -82,7 +82,7 @@ export function RequestTimelineChart({
     );
   }
 
-  const chartData = (data?.buckets ?? []).map((b) => ({
+  const chartData = (data?.buckets ?? []).map(b => ({
     label: formatBucketLabel(b.bucket, data?.groupedByHour ?? true),
     manual: b.manual,
     ragPipeline: b.ragPipeline,
@@ -143,7 +143,7 @@ export function RequestTimelineChart({
                 contentStyle={{
                   fontSize: 12,
                   borderRadius: 8,
-                  border: '1px solid hsl(var(--border))',
+                  border: '1px solid var(--border)',
                   background: 'hsl(var(--popover))',
                   color: 'hsl(var(--popover-foreground))',
                 }}
@@ -153,7 +153,7 @@ export function RequestTimelineChart({
                 iconType="circle"
                 iconSize={8}
               />
-              {SOURCE_SERIES.map((s) => (
+              {SOURCE_SERIES.map(s => (
                 <Area
                   key={s.key}
                   type="monotone"

@@ -47,7 +47,7 @@ export function DiscoveryContextBar() {
         <input
           type="search"
           placeholder="Cerca catalogo..."
-          className="pl-7 pr-2 py-1 rounded-full bg-muted/50 border border-border/50 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="pl-7 pr-2 py-1 rounded-full bg-muted/50 border border-input text-sm w-32 focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
       </div>
     </div>

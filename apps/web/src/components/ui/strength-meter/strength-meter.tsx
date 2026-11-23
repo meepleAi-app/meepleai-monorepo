@@ -46,7 +46,7 @@ export function StrengthMeter({
             key={i}
             data-segment={i}
             className="h-1 flex-1 rounded-full transition-colors motion-reduce:transition-none"
-            style={{ background: i < score ? color : 'hsl(var(--border))' }}
+            style={{ background: i < score ? color : 'var(--border)' }}
           />
         ))}
       </div>

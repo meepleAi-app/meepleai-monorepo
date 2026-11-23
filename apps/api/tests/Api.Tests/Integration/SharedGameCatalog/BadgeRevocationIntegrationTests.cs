@@ -203,6 +203,22 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
         (await RowsAsync(userId, Leaderboard)).Should().ContainSingle().Which.RevokedAt.Should().NotBeNull();
     }
 
+    // The risk #5136 was opened for: since #5116 a revocation is saved, and the evaluator answered false, so a
+    // recalculation took the badge away from a user who was really in the ranking. Recalculated twice, as the daily job does.
+    [Fact]
+    [Trait("Issue", "5136")]
+    public async Task AHolderRankedInThePreviousMonth_KeepsTheLeaderboardBadge_RecalculationAfterRecalculation()
+    {
+        var userId = await SeedUserAsync();
+        await SeedApprovedShareRequestsAsync(userId, 2, StartOfThisMonth().AddDays(-3));
+        await AwardAsync(userId, Leaderboard);
+
+        await RecalculateWithTheRealEvaluatorAsync(userId);
+        await RecalculateWithTheRealEvaluatorAsync(userId);
+
+        (await RowsAsync(userId, Leaderboard)).Should().ContainSingle().Which.RevokedAt.Should().BeNull();
+    }
+
     // The month of the host's TimeProvider, the clock the ranks query reads.
     private DateTime StartOfThisMonth()
     {

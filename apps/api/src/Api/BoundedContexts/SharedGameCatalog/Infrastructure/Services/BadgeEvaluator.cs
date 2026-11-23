@@ -1,7 +1,9 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using MediatR;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 
@@ -13,12 +15,15 @@ internal sealed class BadgeEvaluator : IBadgeEvaluator
     private readonly IBadgeRepository _badgeRepository;
     private readonly IShareRequestRepository _shareRequestRepository;
     private readonly ISharedGameDocumentRepository _sharedGameDocumentRepository;
+    private readonly IMediator _mediator;
 
     public BadgeEvaluator(
         IBadgeRepository badgeRepository,
         IShareRequestRepository shareRequestRepository,
-        ISharedGameDocumentRepository sharedGameDocumentRepository)
+        ISharedGameDocumentRepository sharedGameDocumentRepository,
+        IMediator mediator)
     {
+        _mediator = mediator;
         _badgeRepository = badgeRepository;
         _shareRequestRepository = shareRequestRepository;
         _sharedGameDocumentRepository = sharedGameDocumentRepository;
@@ -61,11 +66,25 @@ internal sealed class BadgeEvaluator : IBadgeEvaluator
             BadgeRequirementType.QualityStreak =>
                 await CheckQualityStreakAsync(userId, requirement.ConsecutiveApprovalsWithoutChanges!.Value, cancellationToken).ConfigureAwait(false),
 
+            // #5136: it answered false ("handled by scheduled job") while the job asked this evaluator, so no leaderboard
+            // badge was ever awarded. Decision of 2026-11-23: the previous calendar month, judged once it is over.
             BadgeRequirementType.TopContributor =>
-                false, // Handled by scheduled job
+                await IsRankedInPreviousMonthAsync(userId, requirement.TopContributorRank!.Value, cancellationToken).ConfigureAwait(false),
 
             _ => false
         };
+    }
+
+    /// <summary>
+    /// Whether <paramref name="userId"/> is among the first <paramref name="topRank"/> of the previous calendar month's
+    /// leaderboard (#5136): 10 for TOP_CONTRIBUTOR, 3 for TOP_THREE, 1 for NUMBER_ONE.
+    /// </summary>
+    private async Task<bool> IsRankedInPreviousMonthAsync(Guid userId, int topRank, CancellationToken cancellationToken)
+    {
+        var leaderboard = await _mediator.Send(
+            new GetBadgeLeaderboardQuery { Period = LeaderboardPeriod.PreviousMonth, PageNumber = 1, PageSize = topRank },
+            cancellationToken).ConfigureAwait(false);
+        return leaderboard.Exists(entry => entry.UserId == userId);
     }
 
     private async Task<bool> CheckFirstContributionAsync(Guid userId, CancellationToken cancellationToken)

@@ -34,11 +34,46 @@ public class TopContributorBadgeJobTests
         _loggerMock = new Mock<ILogger<TopContributorBadgeJob>>();
         _jobContextMock = new Mock<IJobExecutionContext>();
         _jobContextMock.Setup(c => c.CancellationToken).Returns(TestContext.Current.CancellationToken);
+        // #5136: the job reads the holders of the three leaderboard badges; a test sets the ones it cares about.
+        foreach (var code in new[] { "TOP_CONTRIBUTOR", "TOP_THREE", "NUMBER_ONE" })
+        {
+            _userBadgeRepositoryMock
+                .Setup(r => r.GetUsersByBadgeCodeAsync(code, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<UserBadge>());
+        }
+
         _job = new TopContributorBadgeJob(
             _mediatorMock.Object,
             _badgeRepositoryMock.Object,
             _userBadgeRepositoryMock.Object,
             _loggerMock.Object);
+    }
+
+    [Fact]
+    public async Task Execute_RecalculatesTheHolderOfAnyLeaderboardBadge_OutOfTheRanking()
+    {
+        // #5136: last month's NUMBER_ONE may not hold TOP_CONTRIBUTOR; out of the ranking, it is recalculated (and loses it).
+        var formerNumberOne = Guid.NewGuid();
+        _mediatorMock
+            .Setup(m => m.Send(It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.PreviousMonth), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<LeaderboardEntryDto>
+            {
+                new() { Rank = 1, UserId = Guid.NewGuid(), UserName = "u", ContributionCount = 3, BadgeCount = 0, HighestBadgeTier = BadgeTier.Bronze, TopBadges = new List<UserBadgeDto>() },
+            });
+        var topContributor = CreateBadge("TOP_CONTRIBUTOR");
+        _badgeRepositoryMock.Setup(r => r.GetByCodeAsync("TOP_CONTRIBUTOR", It.IsAny<CancellationToken>())).ReturnsAsync(topContributor);
+        _userBadgeRepositoryMock
+            .Setup(r => r.GetUsersByBadgeCodeAsync("NUMBER_ONE", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserBadge> { UserBadge.Award(formerNumberOne, Guid.NewGuid(), "NUMBER_ONE", null) });
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<RecalculateBadgesCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RecalculateBadgesResponse { UsersProcessed = 1, BadgesAwarded = 0, BadgesRevoked = 1 });
+
+        await _job.Execute(_jobContextMock.Object);
+
+        _mediatorMock.Verify(
+            m => m.Send(It.Is<RecalculateBadgesCommand>(cmd => cmd.UserId == formerNumberOne), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -61,7 +96,7 @@ public class TopContributorBadgeJobTests
 
         _mediatorMock
             .Setup(m => m.Send(
-                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.Month && q.PageSize == 10),
+                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.PreviousMonth && q.PageSize == 10),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(leaderboard);
 
@@ -114,7 +149,7 @@ public class TopContributorBadgeJobTests
         // Arrange
         _mediatorMock
             .Setup(m => m.Send(
-                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.Month),
+                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.PreviousMonth),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<LeaderboardEntryDto>());
 
@@ -151,7 +186,7 @@ public class TopContributorBadgeJobTests
 
         _mediatorMock
             .Setup(m => m.Send(
-                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.Month),
+                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.PreviousMonth),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(leaderboard);
 
@@ -215,7 +250,7 @@ public class TopContributorBadgeJobTests
 
         _mediatorMock
             .Setup(m => m.Send(
-                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.Month),
+                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.PreviousMonth),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(leaderboard);
 

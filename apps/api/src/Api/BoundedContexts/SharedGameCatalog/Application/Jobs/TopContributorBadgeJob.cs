@@ -8,16 +8,19 @@ using Quartz;
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 
 /// <summary>
-/// Background job that periodically recalculates and awards/revokes TopContributor badges.
-/// Runs monthly to identify the top 10 contributors and manage badge assignments.
+/// Background job that awards and revokes the leaderboard badges (TOP_CONTRIBUTOR, TOP_THREE, NUMBER_ONE).
+/// Runs on the 1st of each month and judges the month just closed (#5136, decision of 2026-11-23): the first ten of
+/// that month are recalculated, and so is every current holder of a leaderboard badge, so the ones who left the ranking
+/// lose it. RecalculateBadges decides, through BadgeEvaluator, which reads the same leaderboard.
 /// </summary>
 /// <remarks>
-/// STUB IMPLEMENTATION - Requires background job infrastructure (Hangfire/Quartz).
 /// Issue #2728: Application - Badge Assignment Handlers
 /// </remarks>
 [DisallowConcurrentExecution]
 internal sealed class TopContributorBadgeJob : IJob
 {
+    private static readonly string[] LeaderboardBadgeCodes = ["TOP_CONTRIBUTOR", "TOP_THREE", "NUMBER_ONE"];
+
     private readonly IMediator _mediator;
     private readonly IBadgeRepository _badgeRepository;
     private readonly IUserBadgeRepository _userBadgeRepository;
@@ -43,11 +46,12 @@ internal sealed class TopContributorBadgeJob : IJob
 
         try
         {
-            // Get top 10 contributors for the current month
+            // The top 10 contributors of the previous calendar month, closed (#5136): a job on the 1st that read the
+            // current month would find it empty.
             var leaderboard = await _mediator.Send(
                 new GetBadgeLeaderboardQuery
                 {
-                    Period = LeaderboardPeriod.Month,
+                    Period = LeaderboardPeriod.PreviousMonth,
                     PageSize = 10
                 },
                 context.CancellationToken).ConfigureAwait(false);
@@ -118,13 +122,18 @@ internal sealed class TopContributorBadgeJob : IJob
 #pragma warning restore CA1031
             }
 
-            // Revoke badge from users no longer in top 10
-            var currentHolders = await _userBadgeRepository.GetUsersByBadgeCodeAsync(
-                "TOP_CONTRIBUTOR",
-                context.CancellationToken).ConfigureAwait(false);
+            // Revoke the leaderboard badges from users no longer in the top 10: the holders of any of the three, since a
+            // NUMBER_ONE or TOP_THREE of last month may not hold TOP_CONTRIBUTOR (#5136).
+            var currentHolders = new List<Domain.Entities.UserBadge>();
+            foreach (var code in LeaderboardBadgeCodes)
+            {
+                currentHolders.AddRange(await _userBadgeRepository.GetUsersByBadgeCodeAsync(
+                    code,
+                    context.CancellationToken).ConfigureAwait(false));
+            }
 
             int revokedCount = 0;
-            foreach (var holder in currentHolders.Where(h => !topUserIds.Contains(h.UserId)))
+            foreach (var holder in currentHolders.Where(h => !topUserIds.Contains(h.UserId)).DistinctBy(h => h.UserId))
             {
                 try
                 {

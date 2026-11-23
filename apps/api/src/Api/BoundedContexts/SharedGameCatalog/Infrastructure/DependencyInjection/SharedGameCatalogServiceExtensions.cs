@@ -162,12 +162,13 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithIdentity("top-contributor-badge-job", "shared-game-catalog")
                 .StoreDurably(true));
 
-            // Trigger: Run monthly on the 1st day at midnight UTC
+            // Trigger: monthly, on the 1st at midnight UTC (#5136). The cron was "0 0 1 * * ?" (seconds, minutes, hours:
+            // every day at 01:00) while this description said monthly; the job judges the month just closed.
             q.AddTrigger(opts => opts
                 .ForJob("top-contributor-badge-job", "shared-game-catalog")
                 .WithIdentity("top-contributor-badge-trigger", "shared-game-catalog")
-                .WithCronSchedule("0 0 1 * * ?")
-                .WithDescription("Runs monthly on the 1st day at midnight UTC to assign TOP_CONTRIBUTOR badge to top 10 contributors"));
+                .WithCronSchedule("0 0 0 1 * ?")
+                .WithDescription("Runs monthly on the 1st day at midnight UTC to award the leaderboard badges of the month just closed"));
 
             // Issue #3918: Register trending calculation job
             q.AddJob<CalculateTrendingJob>(opts => opts

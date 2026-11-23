@@ -16,6 +16,7 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -146,6 +147,108 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
         row.Id.Should().Be(awarded.Id);
         row.RevokedAt.Should().BeNull();
         (await RowsAsync(userId, Milestone)).Should().ContainSingle().Which.RevokedAt.Should().BeNull();
+    }
+
+    // #5136: the leaderboard badges were never awarded (the job asked the evaluator, the evaluator answered «handled by
+    // the job»). Decision of 2026-11-23: the first of the previous calendar month. These two go through the real
+    // evaluator and the real leaderboard, so they seed contributions; the other tests of this class seed none, and the
+    // leaderboard is the whole database's.
+    [Fact]
+    [Trait("Issue", "5136")]
+    public async Task TheLeaderboardBadges_GoToTheFirstOfThePreviousMonth_NotToThisMonths()
+    {
+        var gameId = await SeedSharedGameAsync();
+        var lastMonth = StartOfThisMonth().AddDays(-3);
+        var ranked = new List<Guid>();
+        foreach (var contributions in new[] { 5, 4, 3, 2 })
+        {
+            var userId = await SeedUserAsync();
+            await SeedContributionsAsync(userId, gameId, contributions, lastMonth);
+            ranked.Add(userId);
+        }
+
+        var onlyThisMonth = await SeedUserAsync();
+        await SeedContributionsAsync(onlyThisMonth, gameId, 9, DateTime.UtcNow);
+
+        foreach (var userId in ranked.Append(onlyThisMonth))
+            await RecalculateWithTheRealEvaluatorAsync(userId);
+
+        (await LeaderboardCodesAsync(ranked[0])).Should().BeEquivalentTo([Leaderboard, "TOP_THREE", "NUMBER_ONE"]);
+        (await LeaderboardCodesAsync(ranked[1])).Should().BeEquivalentTo([Leaderboard, "TOP_THREE"]);
+        (await LeaderboardCodesAsync(ranked[2])).Should().BeEquivalentTo([Leaderboard, "TOP_THREE"]);
+        (await LeaderboardCodesAsync(ranked[3])).Should().BeEquivalentTo([Leaderboard]);
+        (await LeaderboardCodesAsync(onlyThisMonth)).Should().BeEmpty("this month is judged once it is over");
+    }
+
+    [Fact]
+    [Trait("Issue", "5136")]
+    public async Task AHolderOutOfThePreviousMonthsRanking_LosesTheLeaderboardBadge()
+    {
+        var userId = await SeedUserAsync();
+        await AwardAsync(userId, Leaderboard);
+
+        await RecalculateWithTheRealEvaluatorAsync(userId);
+
+        (await RowsAsync(userId, Leaderboard)).Should().ContainSingle().Which.RevokedAt.Should().NotBeNull();
+    }
+
+    private static DateTime StartOfThisMonth()
+    {
+        var now = DateTime.UtcNow;
+        return new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+    }
+
+    private async Task<Guid> SeedSharedGameAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        return await TestSessionHelper.SeedSharedGameAsync(
+            scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>(), $"Gioco 5136 {Guid.NewGuid():N}");
+    }
+
+    private async Task SeedContributionsAsync(Guid userId, Guid sharedGameId, int count, DateTime contributedAt)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var contributor = new ContributorEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            SharedGameId = sharedGameId,
+            IsPrimaryContributor = false,
+            CreatedAt = contributedAt,
+        };
+        for (var i = 0; i < count; i++)
+        {
+            contributor.Contributions.Add(new ContributionRecordEntity
+            {
+                Id = Guid.NewGuid(),
+                ContributorId = contributor.Id,
+                Type = 0,
+                Description = "Contributo 5136",
+                Version = i + 1,
+                ContributedAt = contributedAt,
+            });
+        }
+
+        db.Set<ContributorEntity>().Add(contributor);
+        await db.SaveChangesAsync(Ct);
+    }
+
+    // As the job does it: the command through the mediator, so the real BadgeEvaluator and the real leaderboard decide.
+    private async Task RecalculateWithTheRealEvaluatorAsync(Guid userId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<IMediator>().Send(new RecalculateBadgesCommand { UserId = userId }, Ct);
+    }
+
+    private async Task<List<string>> LeaderboardCodesAsync(Guid userId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var codes = new[] { Leaderboard, "TOP_THREE", "NUMBER_ONE" };
+        return await scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>().Set<UserBadgeEntity>().AsNoTracking()
+            .Where(e => e.UserId == userId && e.RevokedAt == null && codes.Contains(e.Badge!.Code))
+            .Select(e => e.Badge!.Code)
+            .ToListAsync(Ct);
     }
 
     private async Task<Guid> SeedUserAsync()

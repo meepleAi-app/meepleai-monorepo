@@ -1,3 +1,5 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -5,6 +7,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Tests.Constants;
+using MediatR;
 using Moq;
 using Xunit;
 using FluentAssertions;
@@ -17,6 +20,7 @@ public class BadgeEvaluatorTests
     private readonly Mock<IBadgeRepository> _badgeRepositoryMock;
     private readonly Mock<IShareRequestRepository> _shareRequestRepositoryMock;
     private readonly Mock<ISharedGameDocumentRepository> _sharedGameDocumentRepositoryMock;
+    private readonly Mock<IMediator> _mediatorMock;
     private readonly IBadgeEvaluator _evaluator;
 
     public BadgeEvaluatorTests()
@@ -24,10 +28,12 @@ public class BadgeEvaluatorTests
         _badgeRepositoryMock = new Mock<IBadgeRepository>();
         _shareRequestRepositoryMock = new Mock<IShareRequestRepository>();
         _sharedGameDocumentRepositoryMock = new Mock<ISharedGameDocumentRepository>();
+        _mediatorMock = new Mock<IMediator>();
         _evaluator = new BadgeEvaluator(
             _badgeRepositoryMock.Object,
             _shareRequestRepositoryMock.Object,
-            _sharedGameDocumentRepositoryMock.Object);
+            _sharedGameDocumentRepositoryMock.Object,
+            _mediatorMock.Object);
     }
 
     [Fact]
@@ -185,22 +191,51 @@ public class BadgeEvaluatorTests
     // Unit testing QualityStreak logic would require making ShareRequest mockable or
     // extracting streak validation to a separate service.
 
+    // #5136: it answered false («handled by scheduled job») while the job asked this evaluator, so no leaderboard badge
+    // was ever awarded. Decision of 2026-11-23: the first N of the previous calendar month.
     [Fact]
-    public async Task CheckBadgeRequirementAsync_TopContributor_ReturnsFalse()
+    public async Task CheckBadgeRequirementAsync_TopContributor_RankedInThePreviousMonth_ReturnsTrue()
     {
-        // Arrange
         var userId = Guid.NewGuid();
-        var requirement = BadgeRequirement.ForTopContributor(10);
+        GetBadgeLeaderboardQuery? asked = null;
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetBadgeLeaderboardQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<List<LeaderboardEntryDto>>, CancellationToken>((q, _) => asked = (GetBadgeLeaderboardQuery)q)
+            .ReturnsAsync([Entry(Guid.NewGuid(), 1), Entry(Guid.NewGuid(), 2), Entry(userId, 3)]);
 
-        // Act
         var result = await _evaluator.CheckBadgeRequirementAsync(
-            userId,
-            requirement,
-            TestContext.Current.CancellationToken);
+            userId, BadgeRequirement.ForTopContributor(3), TestContext.Current.CancellationToken);
 
-        // Assert
-        result.Should().BeFalse(); // TopContributor is handled by scheduled job, not real-time evaluation
+        result.Should().BeTrue();
+        asked.Should().NotBeNull();
+        asked!.Period.Should().Be(LeaderboardPeriod.PreviousMonth);
+        asked.PageSize.Should().Be(3, "the first N of the ranking, N from the badge's requirement");
     }
+
+    [Fact]
+    public async Task CheckBadgeRequirementAsync_TopContributor_NotRankedInThePreviousMonth_ReturnsFalse()
+    {
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetBadgeLeaderboardQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Entry(Guid.NewGuid(), 1)]);
+
+        var result = await _evaluator.CheckBadgeRequirementAsync(
+            Guid.NewGuid(), BadgeRequirement.ForTopContributor(1), TestContext.Current.CancellationToken);
+
+        result.Should().BeFalse();
+    }
+
+    private static LeaderboardEntryDto Entry(Guid userId, int rank) =>
+        new()
+        {
+            Rank = rank,
+            UserId = userId,
+            UserName = "u",
+            ContributionCount = 10 - rank,
+            BadgeCount = 0,
+            HighestBadgeTier = BadgeTier.Bronze,
+            TopBadges = [],
+        };
 
     [Fact]
     public async Task EvaluateEligibleBadgesAsync_ReturnsOnlyEligibleBadges()

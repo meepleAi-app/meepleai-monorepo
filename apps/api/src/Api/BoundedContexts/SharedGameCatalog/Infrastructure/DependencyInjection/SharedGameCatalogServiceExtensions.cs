@@ -168,8 +168,10 @@ internal static class SharedGameCatalogServiceExtensions
                 .ForJob("top-contributor-badge-job", "shared-game-catalog")
                 .WithIdentity("top-contributor-badge-trigger", "shared-game-catalog")
                 // In UTC explicitly: Quartz reads a cron in the server's local zone, and the month is judged in UTC.
-                .WithCronSchedule("0 0 0 1 * ?", cron => cron.InTimeZone(TimeZoneInfo.Utc))
-                .WithDescription("Runs monthly on the 1st day at midnight UTC to award the leaderboard badges of the month just closed"));
+                // Daily, not monthly: every run of a month judges the same closed month, so the result is the same, and
+                // a restart at midnight on the 1st does not lose the month (the store is in memory; review of #5137).
+                .WithCronSchedule("0 0 0 * * ?", cron => cron.InTimeZone(TimeZoneInfo.Utc))
+                .WithDescription("Runs daily at midnight UTC to award the leaderboard badges of the month just closed"));
 
             // Issue #3918: Register trending calculation job
             q.AddJob<CalculateTrendingJob>(opts => opts

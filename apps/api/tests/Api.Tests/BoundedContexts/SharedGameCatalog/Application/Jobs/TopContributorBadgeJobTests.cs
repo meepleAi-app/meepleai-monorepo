@@ -8,6 +8,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Quartz;
@@ -29,6 +30,7 @@ public class TopContributorBadgeJobTests
     private readonly Mock<IJobExecutionContext> _jobContextMock = new();
     private readonly TopContributorBadgeJob _job;
     private readonly List<Guid> _recalculated = [];
+    private int _scopesOpened;
 
     public TopContributorBadgeJobTests()
     {
@@ -42,8 +44,20 @@ public class TopContributorBadgeJobTests
             .ReturnsAsync(new RecalculateBadgesResponse { UsersProcessed = 1, BadgesAwarded = 1, BadgesRevoked = 0 });
         GivenTheLeaderboardBadges(("TOP_CONTRIBUTOR", 10), ("TOP_THREE", 3), ("NUMBER_ONE", 1));
 
+        // The recalculations go through a mediator taken from a scope of their own; here every scope hands out the same
+        // double, and counts itself.
+        var scopes = new ServiceCollection()
+            .AddScoped<IMediator>(_ =>
+            {
+                _scopesOpened++;
+                return _mediatorMock.Object;
+            })
+            .BuildServiceProvider()
+            .GetRequiredService<IServiceScopeFactory>();
+
         _job = new TopContributorBadgeJob(
             _mediatorMock.Object,
+            scopes,
             _badgeRepositoryMock.Object,
             _userBadgeRepositoryMock.Object,
             Mock.Of<ILogger<TopContributorBadgeJob>>());
@@ -129,6 +143,19 @@ public class TopContributorBadgeJobTests
 
         _recalculated.Should().Contain(other);
         _jobContextMock.VerifySet(c => c.Result = It.Is<object>(r => Reported(r, "Success", true)));
+    }
+
+    [Fact]
+    public async Task Execute_RecalculatesEachCandidateInAScopeOfItsOwn()
+    {
+        // Review of #5137: one scope shares one DbContext, and a failed save left its entities tracked, so every later
+        // candidate's save retried them and failed too.
+        GivenTheRanks((Guid.NewGuid(), 1), (Guid.NewGuid(), 2), (Guid.NewGuid(), 3));
+
+        await _job.Execute(_jobContextMock.Object);
+
+        _recalculated.Should().HaveCount(3);
+        _scopesOpened.Should().Be(3);
     }
 
     [Fact]

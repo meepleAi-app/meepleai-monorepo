@@ -151,28 +151,35 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
 
     // #5136: the leaderboard badges were never awarded (the job asked the evaluator, the evaluator answered «handled by
     // the job»). Decision of 2026-11-23: the first of the previous calendar month. These two go through the real
-    // evaluator and the real leaderboard, so they seed contributions; the other tests of this class seed none, and the
-    // leaderboard is the whole database's.
+    // evaluator and the real ranks, so they seed approved share requests, what a contribution is (the first draft seeded
+    // contribution_records, which no production path writes: review of #5137). The other tests of this class seed none,
+    // and the ranks are the whole database's.
     [Fact]
     [Trait("Issue", "5136")]
     public async Task TheLeaderboardBadges_GoToTheFirstOfThePreviousMonth_NotToThisMonths()
     {
-        // 5, 5, 3, 2 contributions: ranks 1, 1, 3, 4. A tie shares the rank, whoever is recalculated first (review of #5137).
-        var gameId = await SeedSharedGameAsync();
+        // 5, 5, 3, 2 approvals: ranks 1, 1, 3, 4. A tie shares the rank, whoever is recalculated first (review of #5137).
         var thisMonth = StartOfThisMonth();
         var lastMonth = thisMonth.AddDays(-3);
         var ranked = new List<Guid>();
         foreach (var contributions in new[] { 5, 5, 3, 2 })
         {
             var userId = await SeedUserAsync();
-            await SeedContributionsAsync(userId, gameId, contributions, lastMonth);
+            await SeedApprovedShareRequestsAsync(userId, contributions, lastMonth);
             ranked.Add(userId);
         }
 
+        // Both edges of the window: after it (this month) and before it (the first of two months ago, the last day of it).
         var onlyThisMonth = await SeedUserAsync();
-        await SeedContributionsAsync(onlyThisMonth, gameId, 9, thisMonth);
+        await SeedApprovedShareRequestsAsync(onlyThisMonth, 9, thisMonth);
+        var twoMonthsAgo = await SeedUserAsync();
+        await SeedApprovedShareRequestsAsync(twoMonthsAgo, 9, thisMonth.AddMonths(-1).AddSeconds(-1));
 
-        foreach (var userId in ranked.Append(onlyThisMonth))
+        // A rejection also sets ResolvedAt: it is not a contribution.
+        var onlyRejected = await SeedUserAsync();
+        await SeedApprovedShareRequestsAsync(onlyRejected, 9, lastMonth, ShareRequestStatus.Rejected);
+
+        foreach (var userId in ranked.Append(onlyThisMonth).Append(twoMonthsAgo).Append(onlyRejected))
             await RecalculateWithTheRealEvaluatorAsync(userId);
 
         (await LeaderboardCodesAsync(ranked[0])).Should().BeEquivalentTo([Leaderboard, "TOP_THREE", "NUMBER_ONE"]);
@@ -180,6 +187,8 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
         (await LeaderboardCodesAsync(ranked[2])).Should().BeEquivalentTo([Leaderboard, "TOP_THREE"]);
         (await LeaderboardCodesAsync(ranked[3])).Should().BeEquivalentTo([Leaderboard]);
         (await LeaderboardCodesAsync(onlyThisMonth)).Should().BeEmpty("this month is judged once it is over");
+        (await LeaderboardCodesAsync(twoMonthsAgo)).Should().BeEmpty("only the month just closed is judged");
+        (await LeaderboardCodesAsync(onlyRejected)).Should().BeEmpty("only an approval is a contribution");
     }
 
     [Fact]
@@ -201,43 +210,30 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
         return new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
     }
 
-    private async Task<Guid> SeedSharedGameAsync()
-    {
-        using var scope = _factory.Services.CreateScope();
-        return await TestSessionHelper.SeedSharedGameAsync(
-            scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>(), $"Gioco 5136 {Guid.NewGuid():N}");
-    }
-
-    private async Task SeedContributionsAsync(Guid userId, Guid sharedGameId, int count, DateTime contributedAt)
+    // Rows as ShareRequest.Approve leaves them: Approved, ResolvedAt the moment of the approval. Or as Reject does.
+    private async Task SeedApprovedShareRequestsAsync(
+        Guid userId, int count, DateTime approvedAt, ShareRequestStatus status = ShareRequestStatus.Approved)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var contributor = new ContributorEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            SharedGameId = sharedGameId,
-            IsPrimaryContributor = false,
-            CreatedAt = contributedAt,
-        };
         for (var i = 0; i < count; i++)
         {
-            contributor.Contributions.Add(new ContributionRecordEntity
+            db.Set<ShareRequestEntity>().Add(new ShareRequestEntity
             {
                 Id = Guid.NewGuid(),
-                ContributorId = contributor.Id,
-                Type = 0,
-                Description = "Contributo 5136",
-                Version = i + 1,
-                ContributedAt = contributedAt,
+                UserId = userId,
+                Status = (int)status,
+                ContributionType = (int)ContributionType.NewGame,
+                ResolvedAt = approvedAt,
+                CreatedAt = approvedAt.AddDays(-1),
+                CreatedBy = userId,
             });
         }
 
-        db.Set<ContributorEntity>().Add(contributor);
         await db.SaveChangesAsync(Ct);
     }
 
-    // As the job does it: the command through the mediator, so the real BadgeEvaluator and the real leaderboard decide.
+    // As the job does it: the command through the mediator, so the real BadgeEvaluator and the real ranks decide.
     private async Task RecalculateWithTheRealEvaluatorAsync(Guid userId)
     {
         using var scope = _factory.Services.CreateScope();

@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderbo
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -10,29 +11,41 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 
 /// <summary>
 /// Background job that awards and revokes the leaderboard badges, the ones with requirement TopContributor
-/// (TOP_CONTRIBUTOR, TOP_THREE, NUMBER_ONE). Runs on the 1st of each month and judges the month just closed (#5136,
-/// decision of 2026-11-23). It recalculates everyone ranked within the largest TopContributorRank of those badges, and
-/// every current holder of one of them, so the ones who left the ranking lose it. RecalculateBadges decides, through
-/// BadgeEvaluator, which reads the same ranks.
+/// (TOP_CONTRIBUTOR, TOP_THREE, NUMBER_ONE). It judges the month just closed (#5136, decision of 2026-11-23): it
+/// recalculates everyone ranked within the largest TopContributorRank of those badges, and every current holder of one
+/// of them, so the ones who left the ranking lose it. RecalculateBadges decides, through BadgeEvaluator, which reads the
+/// same ranks.
 /// </summary>
 /// <remarks>
+/// <para>
+/// It runs every day, not only on the 1st: the ranks of a closed month do not change, so every run of a month gives the
+/// same result, and the badges change once, at the first run after the month closes. A monthly trigger on Quartz's
+/// in-memory store would lose a whole month to a restart at 00:00 UTC on the 1st (review of #5137).
+/// </para>
+/// <para>
+/// Each candidate is recalculated in a DI scope of its own. One scope shares one DbContext: a failed save left its
+/// entities tracked, and every later candidate's save retried them and failed too (review of #5137).
+/// </para>
 /// Issue #2728: Application - Badge Assignment Handlers
 /// </remarks>
 [DisallowConcurrentExecution]
 internal sealed class TopContributorBadgeJob : IJob
 {
     private readonly IMediator _mediator;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IBadgeRepository _badgeRepository;
     private readonly IUserBadgeRepository _userBadgeRepository;
     private readonly ILogger<TopContributorBadgeJob> _logger;
 
     public TopContributorBadgeJob(
         IMediator mediator,
+        IServiceScopeFactory scopeFactory,
         IBadgeRepository badgeRepository,
         IUserBadgeRepository userBadgeRepository,
         ILogger<TopContributorBadgeJob> logger)
     {
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _badgeRepository = badgeRepository ?? throw new ArgumentNullException(nameof(badgeRepository));
         _userBadgeRepository = userBadgeRepository ?? throw new ArgumentNullException(nameof(userBadgeRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -80,7 +93,9 @@ internal sealed class TopContributorBadgeJob : IJob
             {
                 try
                 {
-                    var response = await _mediator.Send(
+                    var scope = _scopeFactory.CreateAsyncScope();
+                    await using var disposal = scope.ConfigureAwait(false);
+                    var response = await scope.ServiceProvider.GetRequiredService<IMediator>().Send(
                         new RecalculateBadgesCommand { UserId = userId },
                         context.CancellationToken).ConfigureAwait(false);
 

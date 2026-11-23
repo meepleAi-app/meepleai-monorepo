@@ -80,7 +80,7 @@ export const SearchBar = React.memo(function SearchBar({
         role="searchbox"
         aria-label="Search"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         className={cn(
           'w-full h-10 pl-10 pr-10 rounded-lg',

@@ -269,13 +269,40 @@ A: No, if there is at least one adjacent settlement/city with a player who has c
  * Strategy configuration for UI display.
  * Uses STRATEGIES from rag-data.ts as Single Source of Truth for descriptions.
  */
-const STRATEGY_UI_CONFIG: Record<RagStrategy, { label: string; icon: React.ReactNode; description: string }> = {
-  FAST: { label: 'FAST', icon: <Zap className="h-4 w-4" />, description: STRATEGIES.FAST.descriptionEn },
-  BALANCED: { label: 'BALANCED', icon: <Scale className="h-4 w-4" />, description: STRATEGIES.BALANCED.descriptionEn },
-  PRECISE: { label: 'PRECISE', icon: <Target className="h-4 w-4" />, description: STRATEGIES.PRECISE.descriptionEn },
-  EXPERT: { label: 'EXPERT', icon: <Zap className="h-4 w-4" />, description: STRATEGIES.EXPERT.descriptionEn },
-  CONSENSUS: { label: 'CONSENSUS', icon: <Scale className="h-4 w-4" />, description: STRATEGIES.CONSENSUS.descriptionEn },
-  CUSTOM: { label: 'CUSTOM', icon: <Target className="h-4 w-4" />, description: STRATEGIES.CUSTOM.descriptionEn },
+const STRATEGY_UI_CONFIG: Record<
+  RagStrategy,
+  { label: string; icon: React.ReactNode; description: string }
+> = {
+  FAST: {
+    label: 'FAST',
+    icon: <Zap className="h-4 w-4" />,
+    description: STRATEGIES.FAST.descriptionEn,
+  },
+  BALANCED: {
+    label: 'BALANCED',
+    icon: <Scale className="h-4 w-4" />,
+    description: STRATEGIES.BALANCED.descriptionEn,
+  },
+  PRECISE: {
+    label: 'PRECISE',
+    icon: <Target className="h-4 w-4" />,
+    description: STRATEGIES.PRECISE.descriptionEn,
+  },
+  EXPERT: {
+    label: 'EXPERT',
+    icon: <Zap className="h-4 w-4" />,
+    description: STRATEGIES.EXPERT.descriptionEn,
+  },
+  CONSENSUS: {
+    label: 'CONSENSUS',
+    icon: <Scale className="h-4 w-4" />,
+    description: STRATEGIES.CONSENSUS.descriptionEn,
+  },
+  CUSTOM: {
+    label: 'CUSTOM',
+    icon: <Target className="h-4 w-4" />,
+    description: STRATEGIES.CUSTOM.descriptionEn,
+  },
 };
 
 // =============================================================================
@@ -569,7 +596,11 @@ ${template.outputFormat}
                   ~{estimatedTokens.toLocaleString()} tokens
                 </span>
                 <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7">
-                  {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  {copied ? (
+                    <Check className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={handleExport} className="h-7">
                   <Download className="h-3 w-3" />

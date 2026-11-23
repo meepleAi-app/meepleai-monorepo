@@ -190,7 +190,9 @@ function StrategyConfigPanel({ strategy: _strategy, config, onChange }: Strategy
             <div className="text-muted-foreground">
               {getEffectiveValue(config.tokens).toLocaleString()} tokens
             </div>
-            <div className="text-muted-foreground">${getEffectiveValue(config.cost).toFixed(4)}/query</div>
+            <div className="text-muted-foreground">
+              ${getEffectiveValue(config.cost).toFixed(4)}/query
+            </div>
           </div>
           <span className="text-muted-foreground">{isExpanded ? '▼' : '▶'}</span>
         </div>
@@ -388,7 +390,9 @@ function ModelPricingPanel({ pricing, onChange }: ModelPricingPanelProps) {
       >
         <div className="flex items-center gap-3">
           <span className="font-semibold text-lg">Prezzi Modelli LLM</span>
-          <span className="text-muted-foreground text-sm">{pricing.length} modelli configurati</span>
+          <span className="text-muted-foreground text-sm">
+            {pricing.length} modelli configurati
+          </span>
         </div>
         <span className="text-muted-foreground">{isExpanded ? '▼' : '▶'}</span>
       </button>

@@ -726,9 +726,7 @@ export function WhiteboardTool({
           aria-label="Aggiungi token"
           data-testid="add-token-panel"
         >
-          <span className="text-sm font-medium text-foreground">
-            Nuovo token
-          </span>
+          <span className="text-sm font-medium text-foreground">Nuovo token</span>
 
           {/* Label input */}
           <input
@@ -796,16 +794,10 @@ export function WhiteboardTool({
           data-testid="clear-confirm-dialog"
         >
           <div className="bg-card rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 flex flex-col gap-4">
-            <h3
-              id={`clear-title-${sectionId}`}
-              className="text-base font-semibold text-foreground"
-            >
+            <h3 id={`clear-title-${sectionId}`} className="text-base font-semibold text-foreground">
               Cancella lavagna?
             </h3>
-            <p
-              id={`clear-desc-${sectionId}`}
-              className="text-sm text-muted-foreground"
-            >
+            <p id={`clear-desc-${sectionId}`} className="text-sm text-muted-foreground">
               Questa operazione elimina tutti i disegni e i token. Non è reversibile.
             </p>
             <div className="flex items-center justify-end gap-3">

@@ -189,7 +189,10 @@ export function UserActivityTimeline({
         {/* Empty State */}
         {filteredEvents.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
-            <ActivityIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" aria-hidden="true" />
+            <ActivityIcon
+              className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50"
+              aria-hidden="true"
+            />
             <p className="font-medium">Nessuna attività trovata</p>
             <p className="text-sm mt-1">
               {events.length > 0

@@ -83,7 +83,7 @@ export function JoinHero({
 
       <p
         className={clsx(
-          'mt-2 text-[13px] leading-[1.55] text-[hsl(var(--text-sec))]',
+          'mt-2 text-[13px] leading-[1.55] text-[var(--text-sec)]',
           compact ? 'max-w-[360px]' : 'max-w-[320px]'
         )}
       >

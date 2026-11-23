@@ -46,7 +46,7 @@ export function ErrorState({
       <h3 className="m-0 font-display text-[17px] font-bold leading-tight text-foreground">
         {title}
       </h3>
-      <p className="m-0 max-w-[380px] text-[13px] leading-[1.55] text-[hsl(var(--text-sec))]">
+      <p className="m-0 max-w-[380px] text-[13px] leading-[1.55] text-[var(--text-sec)]">
         {description}
       </p>
       <button

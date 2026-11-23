@@ -60,7 +60,7 @@ export function EmptyState({
         {title}
       </h3>
       {description ? (
-        <p className="m-0 max-w-[380px] text-[13px] leading-[1.55] text-[hsl(var(--text-sec))]">
+        <p className="m-0 max-w-[380px] text-[13px] leading-[1.55] text-[var(--text-sec)]">
           {description}
         </p>
       ) : null}

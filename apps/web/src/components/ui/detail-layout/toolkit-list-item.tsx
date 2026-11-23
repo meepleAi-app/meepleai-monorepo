@@ -89,7 +89,7 @@ export function ToolkitListItem({
           {name}
         </h3>
 
-        <p className="m-0 font-mono text-[10px] uppercase tracking-[0.06em] text-[hsl(var(--text-muted))]">
+        <p className="m-0 font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
           {labels.authorPrefix} {ownerName} · {labels.updatedPrefix}{' '}
           <time dateTime={lastUpdatedAt} data-dynamic="datetime">
             {new Date(lastUpdatedAt).toLocaleDateString()}

@@ -48,7 +48,7 @@ export function EmptyState({ kind, labels, className }: EmptyStateProps): JSX.El
         {KIND_ICON[kind]}
       </span>
       <h3 className="m-0 font-display text-base font-semibold text-foreground">{labels.title}</h3>
-      <p className="m-0 max-w-md text-sm text-[hsl(var(--text-muted))]">{labels.description}</p>
+      <p className="m-0 max-w-md text-sm text-muted-foreground">{labels.description}</p>
     </div>
   );
 }

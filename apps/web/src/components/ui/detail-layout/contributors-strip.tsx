@@ -76,7 +76,7 @@ export function ContributorsStrip({
           {labels.title}
         </h3>
         <span
-          className="font-mono text-[11px] uppercase tracking-[0.06em] text-[hsl(var(--text-muted))]"
+          className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted-foreground"
           data-dynamic="number"
         >
           {labels.playersLabel(totalCount)}
@@ -109,7 +109,7 @@ export function ContributorsStrip({
           {overflow > 0 ? (
             <li
               aria-label={labels.overflowAriaLabel(overflow)}
-              className="relative inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 border-card bg-card text-[10px] font-mono font-semibold text-[hsl(var(--text-muted))]"
+              className="relative inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 border-card bg-card text-[10px] font-mono font-semibold text-muted-foreground"
               style={{ marginLeft: '-8px', zIndex: 0 }}
               data-dynamic="number"
             >

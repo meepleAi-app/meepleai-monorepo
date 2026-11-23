@@ -95,7 +95,7 @@ export function KbDocItem({
         <h3 className="m-0 truncate font-mono text-[13px] font-semibold text-foreground">
           {title}
         </h3>
-        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.06em] text-[hsl(var(--text-muted))]">
+        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
           <span className="rounded-sm bg-muted px-1.5 py-0.5">{kind.toUpperCase()}</span>
           <span className="rounded-sm bg-muted px-1.5 py-0.5">{language.toUpperCase()}</span>
           <span className="rounded-sm bg-muted px-1.5 py-0.5" data-dynamic="number">

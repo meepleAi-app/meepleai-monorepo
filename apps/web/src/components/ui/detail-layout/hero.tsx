@@ -286,7 +286,7 @@ export function Hero({
 
         {/* Meta line */}
         {metaParts.length > 0 ? (
-          <p className="m-0 font-mono text-[11px] uppercase tracking-[0.06em] text-[hsl(var(--text-muted))]">
+          <p className="m-0 font-mono text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
             {metaParts.join(' · ')}
           </p>
         ) : null}

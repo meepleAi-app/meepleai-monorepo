@@ -62,19 +62,19 @@ export function JoinSuccessCard({
         {labels.heading}
       </h2>
 
-      <p className="m-0 mb-4 text-[12px] leading-[1.6] text-[hsl(var(--text-muted))]">
+      <p className="m-0 mb-4 text-[12px] leading-[1.6] text-muted-foreground">
         {labels.subText}
         <br />
         {labels.subTextSecond}
       </p>
 
-      <div className="mb-3.5 w-full rounded-md bg-[hsl(var(--bg-muted))] px-3 py-2.5 text-left">
-        <div className="mb-1 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--text-muted))]">
+      <div className="mb-3.5 w-full rounded-md bg-[var(--bg-muted)] px-3 py-2.5 text-left">
+        <div className="mb-1 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
           {labels.positionLabel}
         </div>
         <div className="font-display text-[22px] font-extrabold leading-[1.1] text-[hsl(var(--c-game))]">
           #{position}{' '}
-          <span className="font-mono text-[11px] font-semibold tracking-[0.04em] text-[hsl(var(--text-muted))]">
+          <span className="font-mono text-[11px] font-semibold tracking-[0.04em] text-muted-foreground">
             · {labels.positionEstimate}
           </span>
         </div>
@@ -87,9 +87,9 @@ export function JoinSuccessCard({
           'inline-flex w-full items-center justify-center',
           'px-3.5 py-2.5 rounded-md',
           'border border-border bg-transparent',
-          'font-display text-[13px] font-bold text-[hsl(var(--text-sec))]',
+          'font-display text-[13px] font-bold text-[var(--text-sec)]',
           'transition-colors duration-150 ease-out',
-          'hover:bg-[hsl(var(--bg-hover))]',
+          'hover:bg-[var(--bg-hover)]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game))] focus-visible:ring-offset-2'
         )}
       >

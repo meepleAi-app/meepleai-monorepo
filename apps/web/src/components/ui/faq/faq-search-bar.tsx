@@ -53,7 +53,7 @@ export function FAQSearchBar({
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute left-[18px] flex h-4 w-4 items-center justify-center text-[hsl(var(--text-muted))]"
+        className="pointer-events-none absolute left-[18px] flex h-4 w-4 items-center justify-center text-muted-foreground"
       >
         <Search size={16} strokeWidth={2} />
       </span>
@@ -70,7 +70,7 @@ export function FAQSearchBar({
           'flex-1 min-w-0 bg-transparent border-none outline-none',
           'py-[14px] pl-[46px] pr-[18px] rounded-full',
           'text-[15px] text-foreground font-body',
-          'placeholder:text-[hsl(var(--text-muted))]',
+          'placeholder:text-muted-foreground',
           'disabled:cursor-not-allowed disabled:opacity-60',
           'focus-visible:shadow-[0_0_0_4px_hsl(var(--c-game)/0.12)]'
         )}
@@ -85,9 +85,9 @@ export function FAQSearchBar({
           aria-label={clearLabel}
           className={clsx(
             'mr-2 inline-flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center',
-            'rounded-full bg-[hsl(var(--bg-muted))] text-[hsl(var(--text-sec))]',
+            'rounded-full bg-[var(--bg-muted)] text-[var(--text-sec)]',
             'border-0 cursor-pointer text-[13px]',
-            'hover:bg-[hsl(var(--bg-hover))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game))]'
+            'hover:bg-[var(--bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--c-game))]'
           )}
         >
           <X size={14} strokeWidth={2.5} aria-hidden="true" />

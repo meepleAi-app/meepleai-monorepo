@@ -138,3 +138,54 @@ describe('border tokens (#4570)', () => {
     expect(contrast(input, hslVar(DARK, '--card'))).toBeGreaterThanOrEqual(3);
   });
 });
+
+// #5135: the same defect on text and backgrounds. `text-[hsl(var(--text-muted))]` resolved to the inherited colour, and
+// `bg-[hsl(var(--bg-muted))]` to transparent: measured in Chrome on /faq before the fix, in both themes. The tokens are
+// taken from the canonical file, not from a list written here: a new hex or rgba() token is covered the day it is added.
+describe('canonical tokens that are not HSL triplets (#5135)', () => {
+  const declared = (pattern: RegExp) =>
+    new Set([...CANONICAL.matchAll(pattern)].map(([, name]) => name as string));
+  const colours = declared(/\n\s*(--[\w-]+):\s*(?:rgba?\(|#[0-9a-f]{3,8}\b)/gi);
+  const triplets = declared(/\n\s*(--[\w-]+):\s*[\d.]+(?:deg)?\s+[\d.]+%\s+[\d.]+%/g);
+  const NOT_HSL = [...colours].filter(name => !triplets.has(name)).sort();
+
+  it('the canonical file has such tokens, so the scan below is not empty', () => {
+    // An extraction that finds nothing would make the next test green for nothing.
+    expect(NOT_HSL).toEqual(
+      expect.arrayContaining(['--border', '--text-muted', '--text-sec', '--bg-muted'])
+    );
+  });
+
+  it('none of them is read as an HSL triplet, in any source', () => {
+    const read = new RegExp(
+      `hsl\\(\\s*var\\(\\s*(${NOT_HSL.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s*\\)`,
+      'g'
+    );
+    const offenders = files(
+      SRC,
+      path =>
+        /\.(css|tsx?|mdx)$/.test(path) &&
+        !path.includes(join('__tests__', 'fixtures')) &&
+        resolve(path) !== resolve(__filename)
+    ).flatMap(path => {
+      const text = readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+      return [...text.matchAll(read)].map(
+        ([, name]) => `${relative(SRC, path).replace(/\\/g, '/')}: hsl(var(${name}))`
+      );
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('--muted-foreground, which replaced the hsl() reads of --text-muted, is AA on the page and on a card', () => {
+    // Decision of 2026-11-23: --text-muted as designed is below 4.5:1 on the light page, so the muted text is the
+    // semantic --muted-foreground.
+    for (const [block, theme] of [
+      [LIGHT, 'light'],
+      [DARK, 'dark'],
+    ] as const) {
+      const fg = hslVar(block, '--muted-foreground');
+      expect(contrast(fg, canonicalBg(theme))).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(fg, hslVar(block, '--card'))).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});

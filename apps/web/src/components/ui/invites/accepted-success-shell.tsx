@@ -75,14 +75,12 @@ export function AcceptedSuccessShell({
         <h2 className="m-0 mb-1.5 font-display text-[19px] font-extrabold leading-tight tracking-[-0.01em] text-foreground">
           {headline}
         </h2>
-        <p className="m-0 mb-4 text-[12px] leading-relaxed text-[hsl(var(--text-muted))]">
-          {subText}
-        </p>
+        <p className="m-0 mb-4 text-[12px] leading-relaxed text-muted-foreground">{subText}</p>
         <div
-          className="mb-3.5 w-full rounded-md border border-[var(--border-light)] bg-[hsl(var(--bg-muted))] px-3.5 py-3 text-left"
+          className="mb-3.5 w-full rounded-md border border-[var(--border-light)] bg-[var(--bg-muted)] px-3.5 py-3 text-left"
           data-slot="invite-accepted-success-summary"
         >
-          <div className="mb-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--text-muted))]">
+          <div className="mb-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
             {summaryLabel}
           </div>
           <div className="mb-1 flex items-center gap-2">
@@ -91,7 +89,7 @@ export function AcceptedSuccessShell({
               {gameName}
             </strong>
           </div>
-          <div className="font-mono text-[11px] tracking-[0.04em] text-[hsl(var(--text-sec))]">
+          <div className="font-mono text-[11px] tracking-[0.04em] text-[var(--text-sec)]">
             {summaryMeta}
           </div>
         </div>
@@ -103,7 +101,7 @@ export function AcceptedSuccessShell({
             if (!icsHref) event.preventDefault();
             onIcsClick?.();
           }}
-          className="mt-2.5 cursor-pointer border-0 bg-transparent p-2 text-[11px] text-[hsl(var(--text-muted))] underline"
+          className="mt-2.5 cursor-pointer border-0 bg-transparent p-2 text-[11px] text-muted-foreground underline"
         >
           {icsLabel}
         </a>

@@ -125,7 +125,7 @@ function FaqPageBody(): JSX.Element {
             {[0, 1, 2, 3].map(i => (
               <div
                 key={i}
-                className="h-[130px] rounded-lg bg-[hsl(var(--bg-muted))] mai-shimmer motion-reduce:animate-none"
+                className="h-[130px] rounded-lg bg-[var(--bg-muted)] mai-shimmer motion-reduce:animate-none"
               />
             ))}
           </div>
@@ -133,14 +133,14 @@ function FaqPageBody(): JSX.Element {
             {[0, 1, 2, 3, 4].map(i => (
               <div
                 key={i}
-                className="h-8 w-[100px] rounded-full bg-[hsl(var(--bg-muted))] mai-shimmer motion-reduce:animate-none"
+                className="h-8 w-[100px] rounded-full bg-[var(--bg-muted)] mai-shimmer motion-reduce:animate-none"
               />
             ))}
           </div>
           {[0, 1, 2, 3, 4].map(i => (
             <div
               key={i}
-              className="mb-px h-[60px] bg-[hsl(var(--bg-muted))] mai-shimmer motion-reduce:animate-none"
+              className="mb-px h-[60px] bg-[var(--bg-muted)] mai-shimmer motion-reduce:animate-none"
             />
           ))}
         </section>
@@ -162,7 +162,7 @@ function FaqPageBody(): JSX.Element {
             <h2 className="m-0 font-display text-lg font-bold text-[hsl(var(--c-danger))]">
               {t('pages.faq.errorState.title')}
             </h2>
-            <p className="m-0 text-sm text-[hsl(var(--text-sec))]">
+            <p className="m-0 text-sm text-[var(--text-sec)]">
               {t('pages.faq.errorState.subtitle')}
             </p>
             <Btn variant="primary" asChild>
@@ -222,7 +222,7 @@ function FaqPageBody(): JSX.Element {
             <h2 className="m-0 font-display text-base font-bold text-foreground">
               {t('pages.faq.emptyState.title')}
             </h2>
-            <p className="m-0 text-sm text-[hsl(var(--text-sec))]">
+            <p className="m-0 text-sm text-[var(--text-sec)]">
               {t('pages.faq.emptyState.subtitle')}
             </p>
             <Btn variant="primary" asChild>
@@ -238,7 +238,7 @@ function FaqPageBody(): JSX.Element {
               <h2 className="m-0 font-display text-sm font-bold uppercase tracking-[0.08em] text-foreground">
                 {t('pages.faq.popularSection.title')}
               </h2>
-              <span className="font-mono text-[11px] font-semibold text-[hsl(var(--text-muted))]">
+              <span className="font-mono text-[11px] font-semibold text-muted-foreground">
                 {t('pages.faq.popularSection.subtitle')}
               </span>
             </header>
@@ -347,7 +347,7 @@ function FaqPageBody(): JSX.Element {
             <h3 className="m-0 font-display text-lg font-bold text-foreground">
               {t('pages.faq.footer.title')}
             </h3>
-            <p className="m-0 mb-1 max-w-[420px] text-[13.5px] leading-[1.6] text-[hsl(var(--text-sec))]">
+            <p className="m-0 mb-1 max-w-[420px] text-[13.5px] leading-[1.6] text-[var(--text-sec)]">
               {t('pages.faq.footer.subtitle')}
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">

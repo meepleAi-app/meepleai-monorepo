@@ -15,7 +15,7 @@ const HIGHLIGHT_CLASS =
   'rounded-[3px] px-[3px] py-[1px] font-bold text-[color:var(--text)] bg-[hsl(var(--c-warning)/0.28)]';
 
 const CODE_CLASS =
-  'rounded px-[5px] py-[1px] font-mono text-[11.5px] bg-[hsl(var(--bg-muted))] text-[hsl(var(--c-info))]';
+  'rounded px-[5px] py-[1px] font-mono text-[11.5px] bg-[var(--bg-muted)] text-[hsl(var(--c-info))]';
 
 function escapeRegex(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -100,7 +100,7 @@ export function renderLong(text: string, query: string): ReactNode {
           createElement(
             'span',
             {
-              className: 'font-mono font-bold text-xs flex-shrink-0 text-[hsl(var(--text-muted))]',
+              className: 'font-mono font-bold text-xs flex-shrink-0 text-muted-foreground',
             },
             `${num}.`
           ),
@@ -111,11 +111,7 @@ export function renderLong(text: string, query: string): ReactNode {
         return createElement(
           'div',
           { key: i, className: 'flex gap-2 mb-[3px] items-start' },
-          createElement(
-            'span',
-            { className: 'flex-shrink-0 text-[hsl(var(--text-muted))]' },
-            '\u2022'
-          ),
+          createElement('span', { className: 'flex-shrink-0 text-muted-foreground' }, '\u2022'),
           createElement('span', null, renderInline(line.slice(2), query))
         );
       }

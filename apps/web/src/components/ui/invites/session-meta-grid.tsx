@@ -47,7 +47,7 @@ export function SessionMetaGrid({
     <ul
       data-slot="invite-session-meta-grid"
       className={clsx(
-        'm-0 flex list-none flex-col overflow-hidden rounded-lg border bg-[hsl(var(--bg-muted))] p-0',
+        'm-0 flex list-none flex-col overflow-hidden rounded-lg border bg-[var(--bg-muted)] p-0',
         className
       )}
     >
@@ -62,11 +62,11 @@ export function SessionMetaGrid({
         >
           <span
             aria-hidden="true"
-            className="inline-flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-md bg-[hsl(var(--bg-card))] text-[12px]"
+            className="inline-flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-md bg-[var(--bg-card)] text-[12px]"
           >
             {item.icon}
           </span>
-          <span className="w-[60px] flex-shrink-0 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--text-muted))]">
+          <span className="w-[60px] flex-shrink-0 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
             {item.label}
           </span>
           <span

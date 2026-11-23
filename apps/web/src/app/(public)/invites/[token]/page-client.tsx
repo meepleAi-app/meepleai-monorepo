@@ -311,13 +311,13 @@ export function InvitesTokenPageClient({
           className="hidden flex-col justify-center gap-3 lg:flex"
           data-slot="invites-token-brand"
         >
-          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[hsl(var(--text-muted))]">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
             MeepleAI
           </span>
           <h2 className="font-display text-[28px] font-extrabold leading-tight tracking-[-0.01em] text-foreground">
             {t('pages.invites.metadata.title')}
           </h2>
-          <p className="text-[13px] leading-relaxed text-[hsl(var(--text-sec))]">
+          <p className="text-[13px] leading-relaxed text-[var(--text-sec)]">
             {t('pages.invites.metadata.description')}
           </p>
         </aside>
@@ -325,7 +325,7 @@ export function InvitesTokenPageClient({
         {/* Auth-card-shell — centered on mobile, anchored right on desktop. */}
         <section
           data-slot="invites-token-card"
-          className="mx-auto w-full max-w-[420px] overflow-hidden rounded-2xl border bg-[hsl(var(--bg-card))] shadow-sm"
+          className="mx-auto w-full max-w-[420px] overflow-hidden rounded-2xl border bg-[var(--bg-card)] shadow-sm"
         >
           {state === 'token-invalid' ? (
             <TokenInvalidShell t={t} />
@@ -384,7 +384,7 @@ export function InvitesTokenPageClient({
               data-slot="invites-token-loading"
               aria-busy="true"
               aria-live="polite"
-              className="px-6 py-12 text-center text-[12px] text-[hsl(var(--text-muted))]"
+              className="px-6 py-12 text-center text-[12px] text-muted-foreground"
             >
               …
             </div>
@@ -455,7 +455,7 @@ function PendingSurface({
         invitation.primaryGameName ? (
           <div
             data-slot="invites-token-game-thumb"
-            className="flex items-center gap-2.5 rounded-md border border-[var(--border-light)] bg-[hsl(var(--bg-muted))] px-3 py-2"
+            className="flex items-center gap-2.5 rounded-md border border-[var(--border-light)] bg-[var(--bg-muted)] px-3 py-2"
           >
             <SafeImg
               src={invitation.primaryGameImageUrl}
@@ -464,7 +464,7 @@ function PendingSurface({
               height={32}
               className="h-8 w-8 flex-shrink-0 rounded object-cover"
             />
-            <span className="font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--text-muted))]">
+            <span className="font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               {t('pages.invites.session.primaryGameLabel')}
             </span>
             <span className="flex-1 text-right font-display text-[13px] font-bold text-foreground">
@@ -522,7 +522,7 @@ function PendingSurface({
             onClick={onDecline}
             disabled={isSubmitting}
             data-slot="invites-token-decline-cta"
-            className="inline-flex w-full items-center justify-center rounded-md border bg-[hsl(var(--bg-muted))] px-4 py-2.5 font-display text-[13px] font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center rounded-md border bg-[var(--bg-muted)] px-4 py-2.5 font-display text-[13px] font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting && submittingAction === 'Declined'
               ? t('pages.invites.form.submittingDecline')
@@ -608,7 +608,7 @@ function TokenExpiredShell({ t, hostName, nightCancelled }: TokenExpiredShellPro
     <div data-slot="invite-expired" className="flex flex-col items-center px-5 py-8 text-center">
       <div
         aria-hidden="true"
-        className="mb-3.5 flex h-[60px] w-[60px] items-center justify-center rounded-full border bg-[hsl(var(--bg-muted))] text-[26px]"
+        className="mb-3.5 flex h-[60px] w-[60px] items-center justify-center rounded-full border bg-[var(--bg-muted)] text-[26px]"
       >
         ⌛
       </div>
@@ -617,7 +617,7 @@ function TokenExpiredShell({ t, hostName, nightCancelled }: TokenExpiredShellPro
           ? t('pages.invites.states.nightCancelled.heading')
           : t('pages.invites.states.tokenExpired.heading')}
       </h2>
-      <p className="m-0 mb-4 text-[12px] leading-relaxed text-[hsl(var(--text-muted))]">
+      <p className="m-0 mb-4 text-[12px] leading-relaxed text-muted-foreground">
         {nightCancelled
           ? hostName.length > 0
             ? t('pages.invites.states.nightCancelled.subText', { hostName })
@@ -628,7 +628,7 @@ function TokenExpiredShell({ t, hostName, nightCancelled }: TokenExpiredShellPro
       </p>
       <Link
         href="/"
-        className="inline-flex items-center justify-center rounded-md border bg-[hsl(var(--bg-muted))] px-3.5 py-2.5 font-display text-[13px] font-bold text-foreground no-underline"
+        className="inline-flex items-center justify-center rounded-md border bg-[var(--bg-muted)] px-3.5 py-2.5 font-display text-[13px] font-bold text-foreground no-underline"
       >
         {t('pages.invites.states.tokenInvalid.ctaHome')}
       </Link>
@@ -641,19 +641,19 @@ function TokenInvalidShell({ t }: { readonly t: T }): JSX.Element {
     <div data-slot="invite-not-found" className="flex flex-col items-center px-5 py-8 text-center">
       <div
         aria-hidden="true"
-        className="mb-3.5 flex h-[60px] w-[60px] items-center justify-center rounded-full border bg-[hsl(var(--bg-muted))] text-[26px]"
+        className="mb-3.5 flex h-[60px] w-[60px] items-center justify-center rounded-full border bg-[var(--bg-muted)] text-[26px]"
       >
         🔍
       </div>
       <h2 className="m-0 mb-1.5 font-display text-[18px] font-bold text-foreground">
         {t('pages.invites.states.tokenInvalid.heading')}
       </h2>
-      <p className="m-0 mb-4 text-[12px] leading-relaxed text-[hsl(var(--text-muted))]">
+      <p className="m-0 mb-4 text-[12px] leading-relaxed text-muted-foreground">
         {t('pages.invites.states.tokenInvalid.subText')}
       </p>
       <Link
         href="/"
-        className="inline-flex items-center justify-center rounded-md border bg-[hsl(var(--bg-muted))] px-3.5 py-2.5 font-display text-[13px] font-bold text-foreground no-underline"
+        className="inline-flex items-center justify-center rounded-md border bg-[var(--bg-muted)] px-3.5 py-2.5 font-display text-[13px] font-bold text-foreground no-underline"
       >
         {t('pages.invites.states.tokenInvalid.ctaHome')}
       </Link>

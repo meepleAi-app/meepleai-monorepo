@@ -413,7 +413,7 @@ export function SharedGameDetailPageClient({
               {game.description}
             </p>
           ) : (
-            <p className="m-0 text-sm italic text-[hsl(var(--text-muted))]">
+            <p className="m-0 text-sm italic text-muted-foreground">
               {t('pages.sharedGameDetail.overview.noDescription')}
             </p>
           )}

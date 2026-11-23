@@ -88,7 +88,7 @@ export function InviteHostCard({
 
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-1.5">
-          <span className="font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--text-muted))]">
+          <span className="font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
             {hostLabel}
           </span>
           <span className="font-display text-[13px] font-bold text-foreground">
@@ -103,7 +103,7 @@ export function InviteHostCard({
         <div
           className={clsx(
             'text-[12px] leading-relaxed',
-            welcomeMessage ? 'italic text-[hsl(var(--text-sec))]' : 'text-[hsl(var(--text-muted))]'
+            welcomeMessage ? 'italic text-[var(--text-sec)]' : 'text-muted-foreground'
           )}
         >
           {welcomeMessage ? `«${welcomeMessage}»` : noMessageLabel}

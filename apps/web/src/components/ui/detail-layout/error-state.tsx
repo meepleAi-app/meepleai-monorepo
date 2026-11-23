@@ -67,7 +67,7 @@ export function ErrorState({
         ⚠️
       </span>
       <h2 className="m-0 font-display text-base font-semibold text-foreground">{labels.title}</h2>
-      <p className="m-0 max-w-md text-sm text-[hsl(var(--text-muted))]">{labels.description}</p>
+      <p className="m-0 max-w-md text-sm text-muted-foreground">{labels.description}</p>
       <button
         type="button"
         onClick={onRetry}

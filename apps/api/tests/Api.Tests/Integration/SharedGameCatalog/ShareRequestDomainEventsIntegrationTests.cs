@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ApproveGameProposal;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -12,6 +13,7 @@ using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Infrastructure.Entities.UserNotifications;
 using Api.Infrastructure.Seeders.Core;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -194,6 +196,62 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
         (await NotificationsAsync(userId, "share_request_approved")).Should().ContainSingle();
         VerifyDocumentCopies(sharedGameId, Times.Once());
         (await BadgeCodesAsync(userId)).Should().Equal("FIRST_CONTRIBUTION");
+    }
+
+    [Fact]
+    [Trait("Issue", "5109")]
+    public async Task ApprovingANewGameWithADocument_CopiesItIntoItsSourceGame_Once_EvenIfTheOutboxDeliversAgain()
+    {
+        // #5109: approve-share-request copies the documents itself, into the game the request contributes to. For a
+        // NewGame that is its source game, already a shared game. No event handler copies them a second time (#5078).
+        var (userId, adminId) = await SeedUserAndAdminAsync();
+        var gameId = await SeedSharedGameAsync();
+        var request = ShareRequest.Create(userId, gameId, ContributionType.NewGame);
+        request.AttachDocument(Guid.NewGuid(), "regolamento-5109.pdf", "application/pdf", 2048);
+        var requestId = await SaveNewAsync(request);
+        await UpdateAsync(requestId, r => r.StartReview(adminId));
+
+        await ApproveShareRequestAsync(requestId, adminId, targetSharedGameId: null);
+
+        VerifyDocumentCopies(gameId, Times.Once());
+        await DeliverOutboxRowAgainAsync<ShareRequestApprovedEvent>(e => e.ShareRequestId == requestId);
+        VerifyDocumentCopies(gameId, Times.Once());
+    }
+
+    [Fact]
+    [Trait("Issue", "5109")]
+    public async Task ApprovingWithATargetNamingAnotherGame_IsRefused_AndCopiesNothing()
+    {
+        var (userId, adminId) = await SeedUserAndAdminAsync();
+        var gameId = await SeedSharedGameAsync();
+        var otherGameId = await SeedSharedGameAsync();
+        var request = ShareRequest.Create(userId, gameId, ContributionType.NewGame);
+        request.AttachDocument(Guid.NewGuid(), "regolamento-5109.pdf", "application/pdf", 2048);
+        var requestId = await SaveNewAsync(request);
+        await UpdateAsync(requestId, r => r.StartReview(adminId));
+
+        var act = () => ApproveShareRequestAsync(requestId, adminId, targetSharedGameId: otherGameId);
+
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*does not match*");
+        VerifyDocumentCopies(gameId, Times.Never());
+        VerifyDocumentCopies(otherGameId, Times.Never());
+        using var scope = _factory.Services.CreateScope();
+        var stored = await scope.ServiceProvider.GetRequiredService<IShareRequestRepository>().GetByIdAsync(requestId, Ct);
+        stored!.Status.Should().Be(ShareRequestStatus.InReview);
+    }
+
+    private async Task<Guid> SeedSharedGameAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        return await TestSessionHelper.SeedSharedGameAsync(
+            scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>(), $"Gioco 5109 {Guid.NewGuid():N}");
+    }
+
+    private async Task ApproveShareRequestAsync(Guid requestId, Guid adminId, Guid? targetSharedGameId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<IMediator>().Send(
+            new ApproveShareRequestCommand(requestId, adminId, targetSharedGameId, "Approvata"), Ct);
     }
 
     private async Task<(Guid UserId, Guid AdminId)> SeedUserAndAdminAsync()

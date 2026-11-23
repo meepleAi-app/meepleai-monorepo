@@ -1,3 +1,5 @@
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
@@ -12,15 +14,18 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 internal sealed class ApproveShareRequestCommandHandler : ICommandHandler<ApproveShareRequestCommand, ApproveShareRequestResponse>
 {
     private readonly IShareRequestRepository _shareRequestRepository;
+    private readonly IShareRequestDocumentService _documentService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ApproveShareRequestCommandHandler> _logger;
 
     public ApproveShareRequestCommandHandler(
         IShareRequestRepository shareRequestRepository,
+        IShareRequestDocumentService documentService,
         IUnitOfWork unitOfWork,
         ILogger<ApproveShareRequestCommandHandler> logger)
     {
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
+        _documentService = documentService ?? throw new ArgumentNullException(nameof(documentService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -54,22 +59,28 @@ internal sealed class ApproveShareRequestCommandHandler : ICommandHandler<Approv
                 $"ShareRequest {shareRequest.Id} is a {shareRequest.ContributionType}: approve it with approve-game-proposal");
         }
 
-        // #5076, decision of 2026-11-19: approval cannot copy attached documents yet. Nothing copies them for this
-        // command: ApproveGameProposal copies a proposal's in its own command, and the event handler meant to copy
-        // these (ShareRequestApprovedDocumentHandler) is gone, because it copied a proposal's a second time (#5078).
-        // Approved here, the request would close with its documents left out, and nothing recovers them later: it
-        // waits instead (#5109).
-        if (shareRequest.AttachedDocuments.Count > 0)
-        {
-            throw new ConflictException(
-                $"ShareRequest {shareRequest.Id} has {shareRequest.AttachedDocuments.Count} attached documents: approval cannot copy them to the catalog yet");
-        }
+        // #5109, decision of 2026-11-23: the attached documents go to the game the request contributes to, and a
+        // TargetSharedGameId naming another game is refused (409). This command copies them itself, as
+        // ApproveGameProposal does for a proposal: no event handler does (#5078 removed the one that copied twice).
+        var destination = ShareRequestApprovalDocuments.DestinationOf(shareRequest, command.TargetSharedGameId);
 
         // 2. Approve the request (domain validates state and raises events)
         shareRequest.Approve(
             command.AdminId,
             command.TargetSharedGameId,
             command.AdminNotes);
+
+        // After Approve, which can still refuse: a refused approval leaves no copied file behind. The copies are
+        // saved together with the approval.
+        var copied = await ShareRequestApprovalDocuments
+            .CopyAttachedAsync(_documentService, shareRequest, destination, cancellationToken)
+            .ConfigureAwait(false);
+        if (copied > 0)
+        {
+            _logger.LogInformation(
+                "Copied {Count} documents from ShareRequest {ShareRequestId} to SharedGame {SharedGameId}",
+                copied, shareRequest.Id, destination);
+        }
 
         // 3. Update repository
         _shareRequestRepository.Update(shareRequest);

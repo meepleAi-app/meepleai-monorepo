@@ -1,4 +1,7 @@
 using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
@@ -21,6 +24,7 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
 {
     private const int MaxBulkSize = 20;
     private readonly IShareRequestRepository _shareRequestRepository;
+    private readonly IShareRequestDocumentService _documentService;
     private readonly IAuditLogRepository _auditLogRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BulkApproveShareRequestsCommandHandler> _logger;
@@ -28,12 +32,14 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
 
     public BulkApproveShareRequestsCommandHandler(
         IShareRequestRepository shareRequestRepository,
+        IShareRequestDocumentService documentService,
         IAuditLogRepository auditLogRepository,
         IUnitOfWork unitOfWork,
         ILogger<BulkApproveShareRequestsCommandHandler> logger,
         TimeProvider timeProvider)
     {
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
+        _documentService = documentService ?? throw new ArgumentNullException(nameof(documentService));
         _auditLogRepository = auditLogRepository ?? throw new ArgumentNullException(nameof(auditLogRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -95,6 +101,7 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
             }
 
             // Process all share requests in a single transaction (all-or-nothing)
+            var destinations = new List<(ShareRequest ShareRequest, Guid Destination)>(distinctIds.Count);
             foreach (var shareRequestId in distinctIds)
             {
                 var shareRequest = shareRequestsDict[shareRequestId];
@@ -108,15 +115,11 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
                         $"ShareRequest {shareRequest.Id} is a {shareRequest.ContributionType}: approve it with approve-game-proposal");
                 }
 
-                // #5076, decision of 2026-11-19: approval cannot copy attached documents yet. Nothing copies them for
-                // this command: the event handler meant to (ShareRequestApprovedDocumentHandler) is gone, because it
-                // copied a proposal's a second time (#5078). Approved here, the request would close with its documents
-                // left out, and nothing recovers them later: it waits instead (#5109).
-                if (shareRequest.AttachedDocuments.Count > 0)
-                {
-                    throw new ConflictException(
-                        $"ShareRequest {shareRequest.Id} has {shareRequest.AttachedDocuments.Count} attached documents: approval cannot copy them to the catalog yet");
-                }
+                // #5109, decision of 2026-11-23: each request's documents go to the game that request contributes to.
+                // The batch has one TargetSharedGameId; one naming another game than a request's fails the batch,
+                // instead of pouring the documents of different games into it.
+                var destination = ShareRequestApprovalDocuments.DestinationOf(shareRequest, command.TargetSharedGameId);
+                destinations.Add((shareRequest, destination));
 
                 // Approve the request (domain validates and raises events)
                 // Will throw if: not in InReview status, lock expired, reviewer mismatch, etc.
@@ -147,6 +150,15 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
 
                 await _auditLogRepository.AddAsync(auditLog, cancellationToken).ConfigureAwait(false);
                 successCount++;
+            }
+
+            // The copies once every request of the batch is approved: a request refused halfway leaves no copied file
+            // behind for the ones before it. They are saved with the approvals.
+            foreach (var (shareRequest, destination) in destinations)
+            {
+                await ShareRequestApprovalDocuments
+                    .CopyAttachedAsync(_documentService, shareRequest, destination, cancellationToken)
+                    .ConfigureAwait(false);
             }
 
             // All-or-nothing: Commit only if all succeeded

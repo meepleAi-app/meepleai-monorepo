@@ -28,6 +28,7 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
     private readonly IContributorRepository _contributorRepository;
     private readonly IAuditLogRepository _auditLogRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<BulkApproveShareRequestsCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -37,6 +38,7 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
         IContributorRepository contributorRepository,
         IAuditLogRepository auditLogRepository,
         IUnitOfWork unitOfWork,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<BulkApproveShareRequestsCommandHandler> logger,
         TimeProvider timeProvider)
     {
@@ -45,6 +47,7 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
         _contributorRepository = contributorRepository ?? throw new ArgumentNullException(nameof(contributorRepository));
         _auditLogRepository = auditLogRepository ?? throw new ArgumentNullException(nameof(auditLogRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -174,10 +177,9 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
                     .ConfigureAwait(false);
             }
 
-            await contributions.AddToUnitOfWorkAsync(cancellationToken).ConfigureAwait(false);
-
-            // All-or-nothing: Commit only if all succeeded
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            // All-or-nothing: Commit only if all succeeded, with the contributions (#5139)
+            await contributions.SaveWithTheApprovalAsync(_unitOfWork, _cacheInvalidator, cancellationToken)
+                .ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Bulk approval completed successfully: {Count} share requests approved by editor {EditorId}",

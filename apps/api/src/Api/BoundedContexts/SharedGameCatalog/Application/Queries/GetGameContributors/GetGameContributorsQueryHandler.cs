@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -61,6 +62,9 @@ internal sealed class GetGameContributorsQueryHandler
                 LocalCacheExpiration = TimeSpan.FromMinutes(30),
                 Expiration = TimeSpan.FromHours(2)
             },
+            // #5139: an approval records a contributor and evicts this tag; without it the page showed the
+            // contributors of up to two hours before.
+            tags: [SharedGameCacheInvalidator.ContributorsTag(request.SharedGameId)],
             cancellationToken: cancellationToken)
             .ConfigureAwait(false);
     }

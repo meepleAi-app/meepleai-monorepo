@@ -1,6 +1,10 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 
@@ -44,6 +48,7 @@ internal sealed class ShareRequestApprovalContributions
     private readonly IContributorRepository _contributors;
     private readonly Dictionary<(Guid UserId, Guid SharedGameId), Pending> _pending = [];
     private readonly HashSet<Guid> _gamesWithANewPrimary = [];
+    private readonly HashSet<Guid> _games = [];
 
     public ShareRequestApprovalContributions(IContributorRepository contributors)
     {
@@ -67,6 +72,7 @@ internal sealed class ShareRequestApprovalContributions
         ArgumentNullException.ThrowIfNull(shareRequest);
         ArgumentNullException.ThrowIfNull(documentIds);
 
+        _games.Add(sharedGameId);
         var key = (shareRequest.UserId, sharedGameId);
         if (!_pending.TryGetValue(key, out var pending))
         {
@@ -122,6 +128,52 @@ internal sealed class ShareRequestApprovalContributions
         }
 
         _pending.Clear();
+    }
+
+    /// <summary>
+    /// The games whose contributors this approval changed: their cached contributors are evicted after the save
+    /// (<see cref="ISharedGameCacheInvalidator.EvictContributorsAsync"/>).
+    /// </summary>
+    public IReadOnlyCollection<Guid> Games => _games;
+
+    /// <summary>
+    /// A concurrent approval of the same author on the same game saved its contributor first, and this save hit
+    /// <c>ix_contributors_user_shared_game_unique</c>. Both looked the contributor up before either committed. The
+    /// approval is rolled back (one save) and a retry finds the contributor: it is a conflict (409), not a 500.
+    /// A double-submitted approval of one request used to get its 409 from xmin, and may now hit this first.
+    /// </summary>
+    public static bool IsAConcurrentApproval(DbUpdateException exception) =>
+        exception?.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "ix_contributors_user_shared_game_unique",
+        };
+
+    /// <summary>
+    /// Saves the approval with what <see cref="RecordAsync"/> recorded, in one <c>SaveChangesAsync</c>, then evicts
+    /// the cached contributors of the games it touched. The approval handlers call it in place of their save.
+    /// </summary>
+    /// <exception cref="ConflictException">A concurrent approval of the same author on the same game (409).</exception>
+    public async Task SaveWithTheApprovalAsync(
+        IUnitOfWork unitOfWork,
+        ISharedGameCacheInvalidator cacheInvalidator,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(unitOfWork);
+        ArgumentNullException.ThrowIfNull(cacheInvalidator);
+
+        await AddToUnitOfWorkAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (IsAConcurrentApproval(ex))
+        {
+            throw new ConflictException(
+                "Another approval for the same author and shared game was saved at the same time: retry");
+        }
+
+        await cacheInvalidator.EvictContributorsAsync(_games, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<bool> CanTakeAPrimaryAsync(Guid sharedGameId, CancellationToken cancellationToken) =>

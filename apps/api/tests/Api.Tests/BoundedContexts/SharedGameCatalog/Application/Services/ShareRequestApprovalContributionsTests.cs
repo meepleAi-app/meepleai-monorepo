@@ -2,9 +2,13 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Moq;
+using Npgsql;
 using Xunit;
 using Kind = Api.BoundedContexts.SharedGameCatalog.Application.Services.ShareRequestApprovalContributions.Kind;
 
@@ -102,6 +106,72 @@ public class ShareRequestApprovalContributionsTests
         ShareRequestApprovalContributions.KindOf(
                 ShareRequest.Create(_userId, _gameId, ContributionType.AdditionalContent, targetSharedGameId: _gameId))
             .Should().Be(Kind.Content);
+
+    // Review of #5142: two approvals of one author on one game at once both look the contributor up before either
+    // commits; the second save hits the unique index. A 500 before, a 409 the admin can retry now.
+    [Fact]
+    public async Task SaveWithTheApproval_AConcurrentApprovalOfTheSameAuthorAndGame_IsAConflict_AndEvictsNothing()
+    {
+        var (unitOfWork, cache) = (new Mock<IUnitOfWork>(), new Mock<ISharedGameCacheInvalidator>());
+        unitOfWork
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(UniqueViolation("ix_contributors_user_shared_game_unique"));
+        var contributions = new ShareRequestApprovalContributions(_repository.Object);
+        await contributions.RecordAsync(Request(), _gameId, Kind.NewGame, [], Ct);
+
+        var act = () => contributions.SaveWithTheApprovalAsync(unitOfWork.Object, cache.Object, Ct);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        cache.Verify(c => c.EvictContributorsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SaveWithTheApproval_AnotherUniqueViolation_IsNotTurnedIntoAConflict()
+    {
+        var unitOfWork = new Mock<IUnitOfWork>();
+        unitOfWork
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(UniqueViolation("ux_share_requests_one_proposal_per_private_game"));
+        var contributions = new ShareRequestApprovalContributions(_repository.Object);
+
+        var act = () => contributions.SaveWithTheApprovalAsync(unitOfWork.Object, Mock.Of<ISharedGameCacheInvalidator>(), Ct);
+
+        await act.Should().ThrowAsync<DbUpdateException>();
+    }
+
+    [Fact]
+    public async Task SaveWithTheApproval_EvictsTheContributorsOfTheGamesItTouched_AfterTheSave()
+    {
+        var order = new List<string>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        unitOfWork
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("save"))
+            .ReturnsAsync(1);
+        var cache = new Mock<ISharedGameCacheInvalidator>();
+        IReadOnlyCollection<Guid>? evicted = null;
+        cache
+            .Setup(c => c.EvictContributorsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyCollection<Guid>, CancellationToken>((games, _) =>
+            {
+                order.Add("evict");
+                evicted = games.ToList();
+            })
+            .Returns(Task.CompletedTask);
+        var otherGame = Guid.NewGuid();
+        var contributions = new ShareRequestApprovalContributions(_repository.Object);
+        await contributions.RecordAsync(Request(), _gameId, Kind.NewGame, [], Ct);
+        await contributions.RecordAsync(Request(), otherGame, Kind.Content, [], Ct);
+
+        await contributions.SaveWithTheApprovalAsync(unitOfWork.Object, cache.Object, Ct);
+
+        order.Should().Equal("save", "evict");
+        evicted.Should().BeEquivalentTo([_gameId, otherGame]);
+    }
+
+    private static DbUpdateException UniqueViolation(string constraint) =>
+        new("duplicate key", new PostgresException(
+            "duplicate key value violates unique constraint", "ERROR", "ERROR", "23505", constraintName: constraint));
 
     // A new contributor, saved with its whole history: the one record this approval gave it.
     private async Task<ContributionRecord> RecordOneAsync(Kind kind, IReadOnlyList<Guid> documentIds)

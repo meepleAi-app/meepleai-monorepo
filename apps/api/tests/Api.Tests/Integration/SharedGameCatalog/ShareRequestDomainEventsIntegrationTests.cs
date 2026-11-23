@@ -255,10 +255,18 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
         var (userId, adminId) = await SeedUserAndAdminAsync();
         var gameId = await SeedSharedGameAsync();
         var original = Guid.NewGuid();
+        var copy = Guid.NewGuid();
+        _documents
+            .Setup(d => d.CopyDocumentsToSharedGame(
+                It.IsAny<List<Guid>>(), gameId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid> { copy });
         var request = ShareRequest.Create(userId, gameId, ContributionType.NewGame);
         request.AttachDocument(original, "regolamento-5139.pdf", "application/pdf", 2048);
         var requestId = await SaveNewAsync(request);
         await UpdateAsync(requestId, r => r.StartReview(adminId));
+        // The game page read before the approval: it caches an empty list for two hours, which the approval must evict
+        // (review of #5142).
+        (await ContributorsOnThePageAsync(gameId)).Should().BeEmpty();
 
         await ApproveShareRequestAsync(requestId, adminId, targetSharedGameId: null);
 
@@ -269,15 +277,15 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
         record.Type.Should().Be((int)ContributionRecordType.InitialSubmission);
         record.Version.Should().Be(1);
         record.ShareRequestId.Should().Be(requestId);
-        var documents = JsonSerializer.Deserialize<List<Guid>>(record.DocumentIdsJson!);
-        documents.Should().ContainSingle().Which.Should().NotBe(original, "the record names the copy in the shared game");
+        JsonSerializer.Deserialize<List<Guid>>(record.DocumentIdsJson!).Should()
+            .Equal([copy], "the record names the copy in the shared game, not the request's original {0}", original);
 
         // What the two readers that were always empty now see.
-        using var scope = _factory.Services.CreateScope();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-        (await mediator.Send(new GetGameContributorsQuery(gameId), Ct)).Should().ContainSingle()
+        (await ContributorsOnThePageAsync(gameId)).Should().ContainSingle()
             .Which.Should().Match<GameContributorDto>(c => c.UserId == userId && c.IsPrimaryContributor && c.ContributionCount == 1);
-        (await mediator.Send(new GetBadgeLeaderboardQuery(LeaderboardPeriod.AllTime, 1, 100), Ct))
+        using var scope = _factory.Services.CreateScope();
+        (await scope.ServiceProvider.GetRequiredService<IMediator>()
+                .Send(new GetBadgeLeaderboardQuery(LeaderboardPeriod.AllTime, 1, 100), Ct))
             .Should().ContainSingle(e => e.UserId == userId).Which.ContributionCount.Should().Be(1);
     }
 
@@ -374,6 +382,13 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
         contributors.Single(c => c.IsPrimaryContributor).UserId.Should().Be(authorId);
         contributors.Single(c => c.UserId == otherId).Contributions.Should().ContainSingle()
             .Which.Type.Should().Be((int)ContributionRecordType.ContentEnhancement);
+    }
+
+    // The query behind the game page, cache included.
+    private async Task<List<GameContributorDto>> ContributorsOnThePageAsync(Guid sharedGameId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<IMediator>().Send(new GetGameContributorsQuery(sharedGameId), Ct);
     }
 
     private async Task<List<ContributorEntity>> ContributorsAsync(Guid sharedGameId)

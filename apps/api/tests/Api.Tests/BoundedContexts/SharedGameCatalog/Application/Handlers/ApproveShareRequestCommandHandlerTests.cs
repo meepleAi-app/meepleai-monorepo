@@ -7,6 +7,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -46,6 +47,7 @@ public class ApproveShareRequestCommandHandlerTests
             _documentsMock.Object,
             Mock.Of<IContributorRepository>(),
             _unitOfWorkMock.Object,
+            Mock.Of<ISharedGameCacheInvalidator>(),
             _loggerMock.Object);
     }
 

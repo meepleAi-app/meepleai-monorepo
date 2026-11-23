@@ -52,6 +52,7 @@ internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
     private const string ListOperation = "shared-games.list";
     private const string RailsOperation = "shared-games.rails";
     private const string DetailOperation = "shared-games.detail";
+    private const string ContributorsOperation = "shared-games.contributors";
 
     private readonly IHybridCacheService _cache;
     private readonly ICacheInvalidationRetryPolicy _retryPolicy;
@@ -99,6 +100,23 @@ internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
             await EvictTagAsync(DetailTag(gameId), DetailOperation).ConfigureAwait(false);
         }
     }
+
+    /// <inheritdoc />
+    public async Task EvictContributorsAsync(IReadOnlyCollection<Guid> gameIds, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(gameIds);
+
+        foreach (var gameId in gameIds)
+        {
+            await EvictTagAsync(ContributorsTag(gameId), ContributorsOperation).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// The tag of a game's contributors, written by <c>GetGameContributorsQueryHandler</c> (#5139). Until then the
+    /// entry had none, and nothing evicted it: harmless while no approval recorded a contributor.
+    /// </summary>
+    internal static string ContributorsTag(Guid gameId) => $"game-contributors:{gameId}";
 
     private static string DetailTag(Guid gameId) => $"shared-game:{gameId}";
 

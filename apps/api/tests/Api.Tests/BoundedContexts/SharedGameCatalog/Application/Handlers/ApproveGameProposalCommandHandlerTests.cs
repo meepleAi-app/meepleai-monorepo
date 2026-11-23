@@ -29,6 +29,8 @@ public class ApproveGameProposalCommandHandlerTests
     private readonly Mock<ISharedGameRepository> _sharedGameRepoMock;
     private readonly Mock<IShareRequestDocumentService> _documentServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IContributorRepository> _contributorRepoMock = new();
+    private readonly List<Contributor> _recordedContributors = [];
     private readonly Mock<ILogger<ApproveGameProposalCommandHandler>> _loggerMock;
     private readonly ApproveGameProposalCommandHandler _handler;
 
@@ -44,13 +46,18 @@ public class ApproveGameProposalCommandHandlerTests
         _documentServiceMock = new Mock<IShareRequestDocumentService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<ApproveGameProposalCommandHandler>>();
+        // #5139: the contributor the approval records, new in these tests (no contributor exists).
+        _contributorRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<Contributor>(), It.IsAny<CancellationToken>()))
+            .Callback<Contributor, CancellationToken>((c, _) => _recordedContributors.Add(c))
+            .Returns(Task.CompletedTask);
 
         _handler = new ApproveGameProposalCommandHandler(
             _shareRequestRepoMock.Object,
             _privateGameRepoMock.Object,
             _sharedGameRepoMock.Object,
             _documentServiceMock.Object,
-            Mock.Of<IContributorRepository>(),
+            _contributorRepoMock.Object,
             _unitOfWorkMock.Object,
             Mock.Of<ISharedGameCacheInvalidator>(),
             _loggerMock.Object);
@@ -266,6 +273,13 @@ public class ApproveGameProposalCommandHandlerTests
         capturedRequest.Should().NotBeNull();
         capturedRequest.Status.Should().Be(ShareRequestStatus.Approved);
         capturedRequest.TargetSharedGameId.Should().Be(existingGame.Id);
+
+        // #5139: merging into an existing game is a contribution to it, not its authorship.
+        var contributor = _recordedContributors.Should().ContainSingle().Subject;
+        contributor.SharedGameId.Should().Be(existingGame.Id);
+        contributor.IsPrimaryContributor.Should().BeFalse();
+        contributor.Contributions.Should().ContainSingle()
+            .Which.Type.Should().NotBe(ContributionRecordType.InitialSubmission);
     }
 
     [Fact]
@@ -340,6 +354,13 @@ public class ApproveGameProposalCommandHandlerTests
         capturedSharedGame.Title.Should().EndWith(" (Variant)");
         capturedSharedGame.Title.Should().Be($"{privateGame.Title} (Variant)");
         capturedSharedGame.BggId.Should().BeNull(); // Variants don't use BGG ID
+
+        // #5139: a variant is a new game, and its proposer its primary contributor.
+        var contributor = _recordedContributors.Should().ContainSingle().Subject;
+        contributor.SharedGameId.Should().Be(capturedSharedGame.Id);
+        contributor.IsPrimaryContributor.Should().BeTrue();
+        contributor.Contributions.Should().ContainSingle()
+            .Which.Type.Should().Be(ContributionRecordType.InitialSubmission);
 
         _sharedGameRepoMock.Verify(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()), Times.Once);
     }

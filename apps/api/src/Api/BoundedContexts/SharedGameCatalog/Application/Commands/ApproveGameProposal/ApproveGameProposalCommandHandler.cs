@@ -175,10 +175,10 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
                 copied,
                 cancellationToken)
             .ConfigureAwait(false);
-        await contributions.AddToUnitOfWorkAsync(cancellationToken).ConfigureAwait(false);
 
-        // Persist all changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Persist all changes, with the contribution
+        await contributions.SaveWithTheApprovalAsync(_unitOfWork, _cacheInvalidator, cancellationToken)
+            .ConfigureAwait(false);
 
         _logger.LogInformation(
             "Game proposal {ShareRequestId} approved successfully. Action: {Action}, Target game: {TargetSharedGameId}",

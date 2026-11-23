@@ -223,7 +223,8 @@ public class UserBadgeTests
         userBadge.IsActive.Should().BeFalse();
         userBadge.RevokedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         userBadge.RevocationReason.Should().Be(reason);
-        userBadge.IsDisplayed.Should().BeFalse();
+        // #5116: the display preference survives a revocation; the reads leave a revoked badge out by RevokedAt.
+        userBadge.IsDisplayed.Should().BeTrue();
     }
 
     [Fact]
@@ -300,7 +301,7 @@ public class UserBadgeTests
     #region Reinstate Tests (#5116)
 
     [Fact]
-    public void Reinstate_ARevokedBadge_IsActiveAndShownAgain_AndKeepsItsFirstEarnedAt()
+    public void Reinstate_ARevokedBadge_IsActiveAgain_AndKeepsItsFirstEarnedAt()
     {
         var userBadge = CreateTestUserBadge();
         var earnedAt = userBadge.EarnedAt;
@@ -313,6 +314,20 @@ public class UserBadgeTests
         userBadge.RevocationReason.Should().BeNull();
         userBadge.IsDisplayed.Should().BeTrue();
         userBadge.EarnedAt.Should().Be(earnedAt);
+    }
+
+    [Fact]
+    public void Reinstate_ABadgeTheUserHid_StaysHidden()
+    {
+        // From the review of #5130: a leaderboard badge comes and goes at every recalculation, and coming back must
+        // not put on the profile a badge the user chose to hide.
+        var userBadge = CreateTestUserBadge();
+        userBadge.Hide();
+        userBadge.Revoke("No longer meets badge requirements");
+
+        userBadge.Reinstate();
+
+        userBadge.IsDisplayed.Should().BeFalse();
     }
 
     [Fact]

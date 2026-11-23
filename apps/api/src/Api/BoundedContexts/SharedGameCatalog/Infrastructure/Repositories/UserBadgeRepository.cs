@@ -39,11 +39,13 @@ internal sealed class UserBadgeRepository : RepositoryBase, IUserBadgeRepository
         // #5116: the reads are AsNoTracking and map to the domain, so a revocation reaches the row only here. The
         // row is loaded tracked and gets the fields a revocation or a reinstatement changes; the others keep theirs.
         // AsTracking, not FindAsync: the context defaults to NoTracking, and FindAsync would hand back a row no
-        // SaveChanges writes (measured: the first draft of this method saved nothing).
-        var entity = await DbContext.Set<UserBadgeEntity>()
-            .AsTracking()
-            .FirstOrDefaultAsync(e => e.Id == userBadge.Id, cancellationToken)
-            .ConfigureAwait(false)
+        // SaveChanges writes (measured: the first draft of this method saved nothing). The local entries come
+        // first: a badge added in this unit of work is not in the database yet.
+        var entity = DbContext.Set<UserBadgeEntity>().Local.FirstOrDefault(e => e.Id == userBadge.Id)
+            ?? await DbContext.Set<UserBadgeEntity>()
+                .AsTracking()
+                .FirstOrDefaultAsync(e => e.Id == userBadge.Id, cancellationToken)
+                .ConfigureAwait(false)
             ?? throw new NotFoundException("UserBadge", userBadge.Id.ToString());
 
         entity.IsDisplayed = userBadge.IsDisplayed;
@@ -147,9 +149,10 @@ internal sealed class UserBadgeRepository : RepositoryBase, IUserBadgeRepository
 
     public async Task<List<Guid>> GetAllDistinctUserIdsAsync(CancellationToken cancellationToken = default)
     {
+        // Revoked rows included (#5116): a user whose only badge was revoked must still be evaluated, or the full
+        // recalculation would never give it back.
         return await DbContext.Set<UserBadgeEntity>()
             .AsNoTracking()
-            .Where(e => e.RevokedAt == null)
             .Select(e => e.UserId)
             .Distinct()
             .ToListAsync(cancellationToken)

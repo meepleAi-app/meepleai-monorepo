@@ -82,7 +82,23 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
         var row = (await RowsAsync(userId, Leaderboard)).Should().ContainSingle().Subject;
         row.RevokedAt.Should().NotBeNull("the count of revocations must count revocations that exist");
         row.RevocationReason.Should().Be("No longer meets badge requirements");
-        row.IsDisplayed.Should().BeFalse();
+        row.IsDisplayed.Should().BeTrue("the display preference is kept for when the badge comes back");
+    }
+
+    [Fact]
+    public async Task AFullRecalculation_GivesBackABadge_ToAUserWhoseOnlyBadgeWasRevoked()
+    {
+        // From the review of #5130: the full run picked its users among the active rows, so a user left with a revoked
+        // badge only was never evaluated again.
+        var userId = await SeedUserAsync();
+        var awarded = await AwardAsync(userId, Leaderboard);
+        await RecalculateAsync(userId, eligible: []);
+
+        await RecalculateEveryoneAsync(eligibleUserId: userId, eligible: [Leaderboard]);
+
+        var row = (await RowsAsync(userId, Leaderboard)).Should().ContainSingle().Subject;
+        row.Id.Should().Be(awarded.Id);
+        row.RevokedAt.Should().BeNull();
     }
 
     [Fact]
@@ -153,18 +169,26 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
         return userBadge;
     }
 
-    private async Task<RecalculateBadgesResponse> RecalculateAsync(Guid userId, string[] eligible)
+    private Task<RecalculateBadgesResponse> RecalculateAsync(Guid userId, string[] eligible) =>
+        RunRecalculationAsync(new RecalculateBadgesCommand { UserId = userId }, userId, eligible);
+
+    // UserId null: every user with a badge row in this class's database. Only eligibleUserId is eligible for anything.
+    private Task<RecalculateBadgesResponse> RecalculateEveryoneAsync(Guid eligibleUserId, string[] eligible) =>
+        RunRecalculationAsync(new RecalculateBadgesCommand(), eligibleUserId, eligible);
+
+    private async Task<RecalculateBadgesResponse> RunRecalculationAsync(
+        RecalculateBadgesCommand command, Guid eligibleUserId, string[] eligible)
     {
         using var scope = _factory.Services.CreateScope();
         var services = scope.ServiceProvider;
         var handler = new RecalculateBadgesCommandHandler(
-            await EligibilityAsync(services, eligible),
+            await EligibilityAsync(services, eligibleUserId, eligible),
             services.GetRequiredService<IUserBadgeRepository>(),
             services.GetRequiredService<IBadgeRepository>(),
             services.GetRequiredService<IUnitOfWork>(),
             NullLogger<RecalculateBadgesCommandHandler>.Instance);
 
-        return await handler.Handle(new RecalculateBadgesCommand { UserId = userId }, Ct);
+        return await handler.Handle(command, Ct);
     }
 
     private async Task ApproveAsync(Guid userId, string[] eligible)
@@ -180,7 +204,7 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
 
         var handler = new BadgeEvaluationOnApprovalHandler(
             services.GetRequiredService<MeepleAiDbContext>(),
-            await EligibilityAsync(services, eligible),
+            await EligibilityAsync(services, userId, eligible),
             services.GetRequiredService<IUserBadgeRepository>(),
             shareRequests.Object,
             services.GetRequiredService<IUnitOfWork>(),
@@ -189,13 +213,14 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
         await handler.Handle(new ShareRequestApprovedEvent(shareRequest.Id, userId, targetSharedGameId: null), Ct);
     }
 
-    private static async Task<IBadgeEvaluator> EligibilityAsync(IServiceProvider services, string[] eligibleCodes)
+    private static async Task<IBadgeEvaluator> EligibilityAsync(
+        IServiceProvider services, Guid eligibleUserId, string[] eligibleCodes)
     {
         var badges = services.GetRequiredService<IBadgeRepository>();
         var eligible = new List<Badge>();
         foreach (var code in eligibleCodes)
             eligible.Add((await badges.GetByCodeAsync(code, Ct))!);
-        return new FixedEligibility(eligible);
+        return new FixedEligibility(eligibleUserId, eligible);
     }
 
     private async Task<List<UserBadgeEntity>> RowsAsync(Guid userId, string badgeCode)
@@ -214,11 +239,13 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
             .ToListAsync(Ct);
     }
 
-    /// <summary>The user is eligible for these badges and no others, whatever their statistics say.</summary>
-    private sealed class FixedEligibility(List<Badge> eligible) : IBadgeEvaluator
+    /// <summary>
+    /// One user is eligible for these badges and no others, whatever their statistics say; every other user for none.
+    /// </summary>
+    private sealed class FixedEligibility(Guid eligibleUserId, List<Badge> eligible) : IBadgeEvaluator
     {
         public Task<List<Badge>> EvaluateEligibleBadgesAsync(Guid userId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(eligible);
+            Task.FromResult(userId == eligibleUserId ? eligible : []);
 
         public Task<bool> CheckBadgeRequirementAsync(
             Guid userId, BadgeRequirement requirement, CancellationToken cancellationToken = default) =>

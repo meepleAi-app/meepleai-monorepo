@@ -268,6 +268,68 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
 
     #endregion
 
+    #region UpdateAsync and the recalculation's users (#5116)
+
+    [Fact]
+    public async Task UpdateAsync_ARevocation_IsWrittenToTheRow_AndAReinstatementClearsIt()
+    {
+        var userBadge = UserBadge.Award(TestUserId1, _testBadge.Id, _testBadge.Code);
+        await SeedUserBadgeAsync(userBadge);
+
+        // As the recalculation does: a domain object read AsNoTracking, changed, then UpdateAsync and SaveChanges.
+        var read = (await _repository.GetByUserAndBadgeAsync(TestUserId1, _testBadge.Id))!;
+        read.Revoke("No longer meets badge requirements");
+        await _repository.UpdateAsync(read);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var revoked = await _dbContext.UserBadges.AsNoTracking().SingleAsync(e => e.Id == userBadge.Id);
+        revoked.RevokedAt.Should().NotBeNull();
+        revoked.RevocationReason.Should().Be("No longer meets badge requirements");
+
+        var again = (await _repository.GetByUserAndBadgeAsync(TestUserId1, _testBadge.Id))!;
+        again.Reinstate();
+        await _repository.UpdateAsync(again);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var reinstated = await _dbContext.UserBadges.AsNoTracking().SingleAsync(e => e.Id == userBadge.Id);
+        reinstated.RevokedAt.Should().BeNull();
+        reinstated.RevocationReason.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ABadgeAddedInTheSameUnitOfWork_IsUpdatedBeforeItIsSaved()
+    {
+        // From the review of #5130: the row is not in the database yet, only among the local entries.
+        var userBadge = UserBadge.Award(TestUserId1, _testBadge.Id, _testBadge.Code);
+        await _repository.AddAsync(userBadge);
+        userBadge.Revoke("No longer meets badge requirements");
+
+        await _repository.UpdateAsync(userBadge);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        (await _dbContext.UserBadges.AsNoTracking().SingleAsync(e => e.Id == userBadge.Id))
+            .RevokedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetAllDistinctUserIdsAsync_IncludesAUserWhoseOnlyBadgeIsRevoked()
+    {
+        // From the review of #5130: the full recalculation picks its users here, and must give such a badge back.
+        var revoked = UserBadge.Award(TestUserId1, _testBadge.Id, _testBadge.Code);
+        revoked.Revoke("No longer meets badge requirements");
+        await SeedUserBadgeAsync(revoked);
+        await SeedUserBadgeAsync(UserBadge.Award(TestUserId2, _testBadge.Id, _testBadge.Code));
+
+        var userIds = await _repository.GetAllDistinctUserIdsAsync();
+
+        userIds.Should().BeEquivalentTo([TestUserId1, TestUserId2]);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private async Task<Badge> CreateAndSeedBadgeAsync(string code, string name)

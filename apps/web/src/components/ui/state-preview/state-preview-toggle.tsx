@@ -46,7 +46,7 @@ function StatePreviewToggleImpl({ pageId }: StatePreviewToggleProps) {
         aria-labelledby={labelId}
         value={state}
         onChange={e => setStateFor(pageId, e.target.value as StateKind)}
-        className="w-full bg-background text-foreground border border-border rounded"
+        className="w-full bg-background text-foreground border border-input rounded"
       >
         {STATES.map(s => (
           <option key={s} value={s}>

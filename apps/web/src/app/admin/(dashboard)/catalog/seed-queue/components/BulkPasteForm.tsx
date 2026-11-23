@@ -54,7 +54,7 @@ export function BulkPasteForm() {
           value={text}
           onChange={e => setText(e.target.value)}
           rows={6}
-          className="mt-1 w-full rounded border border-border bg-background p-2 font-mono text-xs"
+          className="mt-1 w-full rounded border border-input bg-background p-2 font-mono text-xs"
           placeholder="13\n30549\n167791"
         />
       </label>

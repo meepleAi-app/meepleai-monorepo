@@ -161,7 +161,7 @@ export function SyncStatusHero({ onOpenCsvModal, onOpenManualModal }: SyncStatus
               aria-label="Provider"
               value={provider}
               onChange={e => setProvider(e.target.value as CatalogSyncProvider)}
-              className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs"
+              className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs"
             >
               <option value="BggApi">BGG API v2</option>
               <option value="CsvImport">CSV import</option>
@@ -176,7 +176,7 @@ export function SyncStatusHero({ onOpenCsvModal, onOpenManualModal }: SyncStatus
                 </span>
                 <input
                   aria-label="Batch size"
-                  className="max-w-[80px] rounded border border-border bg-background px-2 py-1 font-mono text-xs"
+                  className="max-w-[80px] rounded border border-input bg-background px-2 py-1 font-mono text-xs"
                   value={batchSize}
                   onChange={e => setBatchSize(e.target.value)}
                 />
@@ -187,7 +187,7 @@ export function SyncStatusHero({ onOpenCsvModal, onOpenManualModal }: SyncStatus
                 </span>
                 <input
                   aria-label="Rate limit"
-                  className="max-w-[80px] rounded border border-border bg-background px-2 py-1 font-mono text-xs"
+                  className="max-w-[80px] rounded border border-input bg-background px-2 py-1 font-mono text-xs"
                   value={rateLimit}
                   onChange={e => setRateLimit(e.target.value)}
                 />

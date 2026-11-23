@@ -62,7 +62,7 @@ function Pagination({
         <select
           value={pageSize}
           onChange={e => onPageSizeChange(Number(e.target.value))}
-          className="border border-border/50 dark:border-border/70 rounded px-2 py-1 text-sm"
+          className="border border-input rounded px-2 py-1 text-sm"
           aria-label="Items per page"
         >
           {PAGE_SIZES.map(size => (
@@ -189,7 +189,10 @@ export function UserActivityTimeline({
         {/* Empty State */}
         {filteredEvents.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
-            <ActivityIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" aria-hidden="true" />
+            <ActivityIcon
+              className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50"
+              aria-hidden="true"
+            />
             <p className="font-medium">Nessuna attività trovata</p>
             <p className="text-sm mt-1">
               {events.length > 0

@@ -673,7 +673,7 @@ export function WhiteboardTool({
               onChange={e => handleGridSizeChange(e.target.value as GridSize)}
               aria-label="Dimensione griglia"
               disabled={isPending}
-              className="px-2 py-1 rounded-lg border border-border bg-card text-sm text-foreground"
+              className="px-2 py-1 rounded-lg border border-input bg-card text-sm text-foreground"
             >
               <option value="4x4">4×4</option>
               <option value="6x6">6×6</option>
@@ -726,9 +726,7 @@ export function WhiteboardTool({
           aria-label="Aggiungi token"
           data-testid="add-token-panel"
         >
-          <span className="text-sm font-medium text-foreground">
-            Nuovo token
-          </span>
+          <span className="text-sm font-medium text-foreground">Nuovo token</span>
 
           {/* Label input */}
           <input
@@ -738,7 +736,7 @@ export function WhiteboardTool({
             placeholder="Iniziale"
             maxLength={3}
             aria-label="Etichetta token"
-            className="w-20 px-2 py-1 rounded-lg border border-border bg-card text-sm text-foreground"
+            className="w-20 px-2 py-1 rounded-lg border border-input bg-card text-sm text-foreground"
           />
 
           {/* Color picker */}
@@ -796,16 +794,10 @@ export function WhiteboardTool({
           data-testid="clear-confirm-dialog"
         >
           <div className="bg-card rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 flex flex-col gap-4">
-            <h3
-              id={`clear-title-${sectionId}`}
-              className="text-base font-semibold text-foreground"
-            >
+            <h3 id={`clear-title-${sectionId}`} className="text-base font-semibold text-foreground">
               Cancella lavagna?
             </h3>
-            <p
-              id={`clear-desc-${sectionId}`}
-              className="text-sm text-muted-foreground"
-            >
+            <p id={`clear-desc-${sectionId}`} className="text-sm text-muted-foreground">
               Questa operazione elimina tutti i disegni e i token. Non è reversibile.
             </p>
             <div className="flex items-center justify-end gap-3">

@@ -97,7 +97,7 @@ function ConfigurableInput<T extends number | string>({
               max={max}
               step={step}
               className={`w-full px-3 py-2 border rounded-md text-sm ${
-                !hasMeasured ? 'border-blue-300 bg-blue-50' : 'border-border bg-muted'
+                !hasMeasured ? 'border-blue-300 bg-blue-50' : 'border-input bg-muted'
               }`}
             />
             {suffix && (
@@ -127,7 +127,7 @@ function ConfigurableInput<T extends number | string>({
               step={step}
               placeholder="Non misurato"
               className={`w-full px-3 py-2 border rounded-md text-sm ${
-                hasMeasured ? 'border-green-300 bg-green-50' : 'border-border bg-card'
+                hasMeasured ? 'border-green-300 bg-green-50' : 'border-input bg-card'
               }`}
             />
             {suffix && (
@@ -190,7 +190,9 @@ function StrategyConfigPanel({ strategy: _strategy, config, onChange }: Strategy
             <div className="text-muted-foreground">
               {getEffectiveValue(config.tokens).toLocaleString()} tokens
             </div>
-            <div className="text-muted-foreground">${getEffectiveValue(config.cost).toFixed(4)}/query</div>
+            <div className="text-muted-foreground">
+              ${getEffectiveValue(config.cost).toFixed(4)}/query
+            </div>
           </div>
           <span className="text-muted-foreground">{isExpanded ? '▼' : '▶'}</span>
         </div>
@@ -388,7 +390,9 @@ function ModelPricingPanel({ pricing, onChange }: ModelPricingPanelProps) {
       >
         <div className="flex items-center gap-3">
           <span className="font-semibold text-lg">Prezzi Modelli LLM</span>
-          <span className="text-muted-foreground text-sm">{pricing.length} modelli configurati</span>
+          <span className="text-muted-foreground text-sm">
+            {pricing.length} modelli configurati
+          </span>
         </div>
         <span className="text-muted-foreground">{isExpanded ? '▼' : '▶'}</span>
       </button>

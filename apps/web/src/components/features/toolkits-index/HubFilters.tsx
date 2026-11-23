@@ -132,7 +132,7 @@ export function HubFilters({
           aria-label={labels.sortLabel}
           value={sort}
           onChange={e => onSortChange(e.target.value as HubFiltersSort)}
-          className="rounded border border-border bg-card px-2.5 py-1.5 font-[Quicksand] text-xs font-bold text-foreground"
+          className="rounded border border-input bg-card px-2.5 py-1.5 font-[Quicksand] text-xs font-bold text-foreground"
         >
           {SORT_ORDER.map(opt => (
             <option key={opt} value={opt}>

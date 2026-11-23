@@ -218,7 +218,7 @@ export function DashboardHeader({
               placeholder="Cerca utenti, giochi, log..."
               value={searchQuery}
               onChange={handleSearchChange}
-              className="h-10 w-64 rounded-lg border border-border bg-card pl-10 pr-4 text-sm text-white placeholder-stone-500 backdrop-blur-sm transition-all focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+              className="h-10 w-64 rounded-lg border border-input bg-card pl-10 pr-4 text-sm text-white placeholder-stone-500 backdrop-blur-sm transition-all focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
               aria-label="Cerca nel pannello admin"
               data-testid="search-input"
             />

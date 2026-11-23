@@ -161,7 +161,7 @@ export function SearchExpander({
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Cerca un gioco..."
-            className="w-full bg-card/40 border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
+            className="w-full bg-card/40 border border-input rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
           />
           {isSearching && (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />

@@ -269,7 +269,7 @@ export default function GameToolkitLandingPage() {
                         value={name}
                         onChange={e => updateParticipant(index, e.target.value)}
                         placeholder={`Player ${index + 1}`}
-                        className="flex-1 px-3 py-2 border border-border dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-card dark:text-white"
+                        className="flex-1 px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-card dark:text-white"
                         disabled={isLoading}
                       />
                       {participants.length > 1 && (

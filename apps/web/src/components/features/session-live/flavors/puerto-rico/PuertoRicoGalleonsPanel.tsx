@@ -62,7 +62,7 @@ export function PuertoRicoGalleonsPanel({
                 onChange={e =>
                   onSetGood?.(i, e.target.value === '' ? null : (e.target.value as PuertoRicoGood))
                 }
-                className="rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground"
+                className="rounded border border-input bg-background px-1 py-0.5 text-xs text-foreground"
               >
                 <option value="">{labels.emptyGood}</option>
                 {PUERTO_RICO_GOODS.map(good => (

@@ -207,7 +207,7 @@ export function CookieConsentBanner({ className, forceShow, onDismiss }: CookieC
                   type="checkbox"
                   checked={true}
                   disabled
-                  className="rounded border-border"
+                  className="rounded border-input"
                   aria-label={t('legal.cookieBanner.essentialAriaLabel')}
                 />
                 <div>
@@ -225,7 +225,7 @@ export function CookieConsentBanner({ className, forceShow, onDismiss }: CookieC
                   type="checkbox"
                   checked={localAnalytics}
                   onChange={e => setLocalAnalytics(e.target.checked)}
-                  className="rounded border-border"
+                  className="rounded border-input"
                   aria-label={t('legal.cookieBanner.analyticsAriaLabel')}
                 />
                 <div>
@@ -243,7 +243,7 @@ export function CookieConsentBanner({ className, forceShow, onDismiss }: CookieC
                   type="checkbox"
                   checked={localFunctional}
                   onChange={e => setLocalFunctional(e.target.checked)}
-                  className="rounded border-border"
+                  className="rounded border-input"
                   aria-label={t('legal.cookieBanner.functionalAriaLabel')}
                 />
                 <div>

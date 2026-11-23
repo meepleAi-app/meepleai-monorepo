@@ -250,7 +250,7 @@ export function HubCatalogView<TItem>({
               onKeyDown={handleSearchKeyDown}
               placeholder={labels.searchPlaceholder}
               aria-label={labels.searchPlaceholder}
-              className="h-10 w-full rounded-2xl border border-border bg-card pl-10 pr-4 text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-foreground/20 placeholder:text-muted-foreground"
+              className="h-10 w-full rounded-2xl border border-input bg-card pl-10 pr-4 text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-foreground/20 placeholder:text-muted-foreground"
             />
           </div>
 

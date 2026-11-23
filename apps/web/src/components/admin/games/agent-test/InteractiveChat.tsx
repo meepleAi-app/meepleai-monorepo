@@ -183,7 +183,7 @@ export function InteractiveChat({ gameId, gameTitle }: InteractiveChatProps) {
           onChange={e => setInput(e.target.value)}
           placeholder="Ask a question about the game rules..."
           disabled={isPending}
-          className="flex-1 rounded-lg border border-border dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50 disabled:opacity-50"
+          className="flex-1 rounded-lg border border-input dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50 disabled:opacity-50"
         />
         <Button
           type="submit"

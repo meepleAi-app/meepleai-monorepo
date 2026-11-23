@@ -184,17 +184,13 @@
      * Light overrides via .light class on <html>
      * ============================================================================ */
 
-    /* Unified tokens (dark = default, consumed by all components) */
-    --bg: var(--bg);
-    --bg-card: var(--bg-card);
-    --glass-bg: var(--glass-bg);
-    --glass-border: var(--glass-border);
+    /* Unified tokens (dark = default, consumed by all components). --bg, --bg-card, --glass-bg, --glass-border,
+       --text, --text-sec and --text-muted are defined by design-tokens-canonical.css in both themes. They were
+       redeclared here as var() of themselves: a cycle, harmless only because this layer loses to the canonical
+       (unlayered) values; if the canonical one went away, the token would become invalid, as --border did (#4570). */
     --border-glass-hover: var(--glass-border);
     --bg-glass-hover: rgba(255, 255, 255, 0.08);
     --border-glass-strong: rgba(255, 255, 255, 0.18);
-    --text: var(--text);
-    --text-sec: var(--text-sec);
-    --text-muted: var(--text-muted);
     --text-accent: var(--brand-fg);
 
     /* Border-radius hierarchy */
@@ -759,7 +755,7 @@
     .glass-modal {
       background: hsl(var(--background));
       backdrop-filter: none;
-      border: 1px solid hsl(var(--border));
+      border: 1px solid var(--border);
       box-shadow: var(--shadow-md);
     }
   }

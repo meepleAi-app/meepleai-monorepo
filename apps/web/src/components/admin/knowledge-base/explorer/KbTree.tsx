@@ -69,7 +69,7 @@ export function KbTree({
           value={filter}
           onChange={e => onFilterChange(e.target.value)}
           placeholder="Filtra tree…"
-          className="w-full bg-muted/60 dark:bg-zinc-800/60 border border-border/40 rounded-md px-2.5 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500/60"
+          className="w-full bg-muted/60 dark:bg-zinc-800/60 border border-input rounded-md px-2.5 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500/60"
         />
       </div>
       <div className="px-2 py-0.5 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">

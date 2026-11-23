@@ -548,7 +548,7 @@ function NativeSelect({
       id={id}
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="block h-9 w-full max-w-md rounded-md border border-border bg-background px-2 text-sm text-foreground"
+      className="block h-9 w-full max-w-md rounded-md border border-input bg-background px-2 text-sm text-foreground"
     >
       {children}
     </select>

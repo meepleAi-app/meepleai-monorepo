@@ -19,7 +19,8 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       'flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md',
-      'border border-border/50 dark:border-border/70',
+      // #4570: a form control's border is --input, >= 3:1 (WCAG 1.4.11); border-border is the decorative one.
+      'border border-input',
       // Light mode: Glass morphism
       'bg-card/90 backdrop-blur-[8px]',
       // Dark mode: Solid professional
@@ -79,7 +80,7 @@ const SelectContent = React.forwardRef<
       className={cn(
         'relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[8rem]',
         'overflow-y-auto overflow-x-hidden rounded-md',
-        'border border-border/50 dark:border-border/70',
+        'border border-border',
         // Light mode: Glass morphism dropdown
         'bg-popover/95 backdrop-blur-[16px]',
         // Dark mode: Solid popover

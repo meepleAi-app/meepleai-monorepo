@@ -469,7 +469,7 @@ export function ArchitectureExplorer({ className }: ArchitectureExplorerProps) {
                     y1={(node.position.y + 30) * zoom}
                     x2={target.position.x * zoom}
                     y2={(target.position.y + 30) * zoom}
-                    stroke={isActive ? node.color : 'hsl(var(--border))'}
+                    stroke={isActive ? node.color : 'var(--border)'}
                     strokeWidth={isActive ? 2 : 1}
                     strokeOpacity={isActive ? 0.5 : 0.2}
                     strokeDasharray={target.category !== 'layer' ? '4 4' : undefined}

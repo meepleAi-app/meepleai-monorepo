@@ -165,7 +165,7 @@ export function CostBreakdownPanel({
                   contentStyle={{
                     fontSize: 12,
                     borderRadius: 8,
-                    border: '1px solid hsl(var(--border))',
+                    border: '1px solid var(--border)',
                     background: 'hsl(var(--popover))',
                     color: 'hsl(var(--popover-foreground))',
                   }}

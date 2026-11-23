@@ -7,11 +7,12 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'tex
     return (
       <textarea
         className={cn(
-          'flex min-h-[60px] w-full rounded-lg border border-border',
+          // #4570: a form control's border is --input, >= 3:1 (WCAG 1.4.11); border-border is the decorative one.
+          'flex min-h-[60px] w-full rounded-lg border border-input',
           // Light mode: Glass morphism
           'bg-card/90 backdrop-blur-[8px]',
           // Dark mode: Solid professional
-          'dark:bg-card dark:backdrop-blur-none dark:border-border/70',
+          'dark:bg-card dark:backdrop-blur-none',
           'px-3 py-2 text-base shadow-sm md:text-sm',
           'placeholder:text-muted-foreground',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70',

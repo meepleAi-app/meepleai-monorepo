@@ -178,7 +178,7 @@ function SlackPanel({
           value={webhookUrl}
           onChange={e => setWebhookUrl(e.target.value)}
           placeholder="https://hooks.slack.com/services/T0000/B0000/abcdef..."
-          className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           autoComplete="off"
           spellCheck={false}
         />
@@ -195,7 +195,7 @@ function SlackPanel({
           value={slackChannel}
           onChange={e => setSlackChannel(e.target.value)}
           placeholder="#alerts"
-          className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           autoComplete="off"
         />
       </div>
@@ -339,7 +339,7 @@ function EmailPanel({
             value={smtpHost}
             onChange={e => setSmtpHost(e.target.value)}
             placeholder="smtp.example.com"
-            className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             autoComplete="off"
           />
         </div>
@@ -353,7 +353,7 @@ function EmailPanel({
             placeholder="587"
             min={1}
             max={65535}
-            className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
       </div>
@@ -366,7 +366,7 @@ function EmailPanel({
           value={fromAddress}
           onChange={e => setFromAddress(e.target.value)}
           placeholder="alerts@meepleai.app"
-          className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           autoComplete="off"
         />
       </div>
@@ -379,7 +379,7 @@ function EmailPanel({
           onChange={e => setToAddresses(e.target.value)}
           rows={3}
           placeholder="ops@meepleai.app&#10;oncall@meepleai.app"
-          className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="w-full rounded border border-input bg-background px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
         <p className="text-[11px] text-muted-foreground">
           {parsedTo.length} destinatar{parsedTo.length === 1 ? 'io' : 'i'} riconosciut

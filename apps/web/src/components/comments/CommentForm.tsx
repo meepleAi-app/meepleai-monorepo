@@ -55,7 +55,7 @@ export function CommentForm({
         onChange={e => setCommentText(e.target.value)}
         placeholder={effectivePlaceholder}
         disabled={isDisabled}
-        className="w-full min-h-20 p-3 border border-border rounded text-sm font-inherit mb-2 resize-vertical"
+        className="w-full min-h-20 p-3 border border-input rounded text-sm font-inherit mb-2 resize-vertical"
       />
       <button
         type="submit"

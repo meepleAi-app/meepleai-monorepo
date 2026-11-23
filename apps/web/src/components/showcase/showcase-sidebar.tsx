@@ -38,14 +38,14 @@ export function ShowcaseSidebar({ stories }: ShowcaseSidebarProps) {
     if (!query.trim()) return stories;
     const q = query.toLowerCase();
     return stories.filter(
-      (s) => s.title.toLowerCase().includes(q) || s.category.toLowerCase().includes(q)
+      s => s.title.toLowerCase().includes(q) || s.category.toLowerCase().includes(q)
     );
   }, [stories, query]);
 
   const grouped = useMemo(() => {
     const map = new Map<ShowcaseCategory, ShowcaseStory[]>();
     for (const cat of CATEGORY_ORDER) {
-      const items = filtered.filter((s) => s.category === cat);
+      const items = filtered.filter(s => s.category === cat);
       if (items.length > 0) map.set(cat, items);
     }
     return map;
@@ -73,8 +73,8 @@ export function ShowcaseSidebar({ stories }: ShowcaseSidebarProps) {
             type="text"
             placeholder="Search components..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="h-8 w-full rounded-md border border-border/60 bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            onChange={e => setQuery(e.target.value)}
+            className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
       </div>
@@ -92,7 +92,7 @@ export function ShowcaseSidebar({ stories }: ShowcaseSidebarProps) {
                   {category}
                 </span>
               </div>
-              {items.map((story) => {
+              {items.map(story => {
                 const href = `/showcase/${story.id}`;
                 const isActive = pathname === href;
                 return (

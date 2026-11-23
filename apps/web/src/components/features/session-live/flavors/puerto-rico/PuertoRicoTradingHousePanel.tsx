@@ -46,7 +46,7 @@ export function PuertoRicoTradingHousePanel({
                 onChange={e =>
                   onSetSlot?.(i, e.target.value === '' ? null : (e.target.value as PuertoRicoGood))
                 }
-                className="w-full rounded border border-border bg-background px-0.5 py-0.5 text-[10px] text-foreground"
+                className="w-full rounded border border-input bg-background px-0.5 py-0.5 text-[10px] text-foreground"
               >
                 <option value="">{labels.emptyGood}</option>
                 {PUERTO_RICO_GOODS.map(g => (

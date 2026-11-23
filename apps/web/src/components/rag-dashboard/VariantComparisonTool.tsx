@@ -69,50 +69,418 @@ interface RagVariant {
  */
 const RAG_VARIANTS: RagVariant[] = [
   // FAST Strategy Variants (7) - Authenticated users only
-  { id: 'fast-rule-user', strategy: 'FAST', template: 'rule_lookup', tier: 'User', model: 'Gemini 2.0 Flash', avgTokens: 2100, costPer1K: 0, accuracyTarget: 88, latencyMs: 750, features: ['Zero-cost', 'Context window'] },
-  { id: 'fast-resource-user', strategy: 'FAST', template: 'resource_planning', tier: 'User', model: 'Gemini 2.0 Flash', avgTokens: 1900, costPer1K: 0, accuracyTarget: 85, latencyMs: 850, features: ['Zero-cost', 'Tables'] },
-  { id: 'fast-setup-user', strategy: 'FAST', template: 'setup_guide', tier: 'User', model: 'Gemini 2.0 Flash', avgTokens: 2300, costPer1K: 0, accuracyTarget: 92, latencyMs: 800, features: ['Zero-cost', 'Images'] },
-  { id: 'fast-strategy-user', strategy: 'FAST', template: 'strategy_advice', tier: 'User', model: 'Gemini 2.0 Flash', avgTokens: 2000, costPer1K: 0, accuracyTarget: 78, latencyMs: 900, features: ['Zero-cost', 'Scenarios'] },
-  { id: 'fast-edu-user', strategy: 'FAST', template: 'educational', tier: 'User', model: 'Gemini 2.0 Flash', avgTokens: 1800, costPer1K: 0, accuracyTarget: 90, latencyMs: 750, features: ['Zero-cost', 'Examples'] },
-  { id: 'fast-rule-editor', strategy: 'FAST', template: 'rule_lookup', tier: 'Editor', model: 'Gemini 2.0 Flash', avgTokens: 2400, costPer1K: 0, accuracyTarget: 90, latencyMs: 700, features: ['Zero-cost', 'Extended context'] },
-  { id: 'fast-edu-editor', strategy: 'FAST', template: 'educational', tier: 'Editor', model: 'Gemini 2.0 Flash', avgTokens: 2200, costPer1K: 0, accuracyTarget: 92, latencyMs: 700, features: ['Zero-cost', 'Deep dive'] },
+  {
+    id: 'fast-rule-user',
+    strategy: 'FAST',
+    template: 'rule_lookup',
+    tier: 'User',
+    model: 'Gemini 2.0 Flash',
+    avgTokens: 2100,
+    costPer1K: 0,
+    accuracyTarget: 88,
+    latencyMs: 750,
+    features: ['Zero-cost', 'Context window'],
+  },
+  {
+    id: 'fast-resource-user',
+    strategy: 'FAST',
+    template: 'resource_planning',
+    tier: 'User',
+    model: 'Gemini 2.0 Flash',
+    avgTokens: 1900,
+    costPer1K: 0,
+    accuracyTarget: 85,
+    latencyMs: 850,
+    features: ['Zero-cost', 'Tables'],
+  },
+  {
+    id: 'fast-setup-user',
+    strategy: 'FAST',
+    template: 'setup_guide',
+    tier: 'User',
+    model: 'Gemini 2.0 Flash',
+    avgTokens: 2300,
+    costPer1K: 0,
+    accuracyTarget: 92,
+    latencyMs: 800,
+    features: ['Zero-cost', 'Images'],
+  },
+  {
+    id: 'fast-strategy-user',
+    strategy: 'FAST',
+    template: 'strategy_advice',
+    tier: 'User',
+    model: 'Gemini 2.0 Flash',
+    avgTokens: 2000,
+    costPer1K: 0,
+    accuracyTarget: 78,
+    latencyMs: 900,
+    features: ['Zero-cost', 'Scenarios'],
+  },
+  {
+    id: 'fast-edu-user',
+    strategy: 'FAST',
+    template: 'educational',
+    tier: 'User',
+    model: 'Gemini 2.0 Flash',
+    avgTokens: 1800,
+    costPer1K: 0,
+    accuracyTarget: 90,
+    latencyMs: 750,
+    features: ['Zero-cost', 'Examples'],
+  },
+  {
+    id: 'fast-rule-editor',
+    strategy: 'FAST',
+    template: 'rule_lookup',
+    tier: 'Editor',
+    model: 'Gemini 2.0 Flash',
+    avgTokens: 2400,
+    costPer1K: 0,
+    accuracyTarget: 90,
+    latencyMs: 700,
+    features: ['Zero-cost', 'Extended context'],
+  },
+  {
+    id: 'fast-edu-editor',
+    strategy: 'FAST',
+    template: 'educational',
+    tier: 'Editor',
+    model: 'Gemini 2.0 Flash',
+    avgTokens: 2200,
+    costPer1K: 0,
+    accuracyTarget: 92,
+    latencyMs: 700,
+    features: ['Zero-cost', 'Deep dive'],
+  },
 
   // BALANCED Strategy Variants (12)
-  { id: 'bal-rule-user', strategy: 'BALANCED', template: 'rule_lookup', tier: 'User', model: 'Claude 3.5 Sonnet', avgTokens: 3200, costPer1K: 0.15, accuracyTarget: 94, latencyMs: 1200, features: ['CRAG', 'Citations'] },
-  { id: 'bal-rule-editor', strategy: 'BALANCED', template: 'rule_lookup', tier: 'Editor', model: 'Claude 3.5 Sonnet', avgTokens: 3500, costPer1K: 0.18, accuracyTarget: 95, latencyMs: 1100, features: ['CRAG', 'FAQ links'] },
-  { id: 'bal-resource-user', strategy: 'BALANCED', template: 'resource_planning', tier: 'User', model: 'DeepSeek Chat', avgTokens: 2800, costPer1K: 0.02, accuracyTarget: 90, latencyMs: 1300, features: ['CRAG', 'Calculations'] },
-  { id: 'bal-resource-editor', strategy: 'BALANCED', template: 'resource_planning', tier: 'Editor', model: 'Claude 3.5 Sonnet', avgTokens: 3100, costPer1K: 0.15, accuracyTarget: 92, latencyMs: 1200, features: ['CRAG', 'Scaling'] },
-  { id: 'bal-setup-user', strategy: 'BALANCED', template: 'setup_guide', tier: 'User', model: 'Claude 3.5 Sonnet', avgTokens: 3400, costPer1K: 0.17, accuracyTarget: 96, latencyMs: 1150, features: ['CRAG', 'Variants'] },
-  { id: 'bal-setup-editor', strategy: 'BALANCED', template: 'setup_guide', tier: 'Editor', model: 'Claude 3.5 Sonnet', avgTokens: 3700, costPer1K: 0.19, accuracyTarget: 97, latencyMs: 1100, features: ['CRAG', 'Video links'] },
-  { id: 'bal-strategy-user', strategy: 'BALANCED', template: 'strategy_advice', tier: 'User', model: 'DeepSeek Chat', avgTokens: 3000, costPer1K: 0.02, accuracyTarget: 85, latencyMs: 1400, features: ['CRAG', 'Analysis'] },
-  { id: 'bal-strategy-editor', strategy: 'BALANCED', template: 'strategy_advice', tier: 'Editor', model: 'Claude 3.5 Sonnet', avgTokens: 3300, costPer1K: 0.16, accuracyTarget: 88, latencyMs: 1250, features: ['CRAG', 'Positions'] },
-  { id: 'bal-edu-user', strategy: 'BALANCED', template: 'educational', tier: 'User', model: 'DeepSeek Chat', avgTokens: 2600, costPer1K: 0.02, accuracyTarget: 92, latencyMs: 1200, features: ['CRAG', 'Guides'] },
-  { id: 'bal-edu-editor', strategy: 'BALANCED', template: 'educational', tier: 'Editor', model: 'Claude 3.5 Sonnet', avgTokens: 2900, costPer1K: 0.14, accuracyTarget: 94, latencyMs: 1100, features: ['CRAG', 'Tutorials'] },
-  { id: 'bal-rule-admin', strategy: 'BALANCED', template: 'rule_lookup', tier: 'Admin', model: 'Claude 3.5 Sonnet', avgTokens: 3800, costPer1K: 0.20, accuracyTarget: 96, latencyMs: 1000, features: ['CRAG', 'Full audit'] },
-  { id: 'bal-setup-admin', strategy: 'BALANCED', template: 'setup_guide', tier: 'Admin', model: 'Claude 3.5 Sonnet', avgTokens: 4000, costPer1K: 0.21, accuracyTarget: 98, latencyMs: 1000, features: ['CRAG', 'All variants'] },
+  {
+    id: 'bal-rule-user',
+    strategy: 'BALANCED',
+    template: 'rule_lookup',
+    tier: 'User',
+    model: 'Claude 3.5 Sonnet',
+    avgTokens: 3200,
+    costPer1K: 0.15,
+    accuracyTarget: 94,
+    latencyMs: 1200,
+    features: ['CRAG', 'Citations'],
+  },
+  {
+    id: 'bal-rule-editor',
+    strategy: 'BALANCED',
+    template: 'rule_lookup',
+    tier: 'Editor',
+    model: 'Claude 3.5 Sonnet',
+    avgTokens: 3500,
+    costPer1K: 0.18,
+    accuracyTarget: 95,
+    latencyMs: 1100,
+    features: ['CRAG', 'FAQ links'],
+  },
+  {
+    id: 'bal-resource-user',
+    strategy: 'BALANCED',
+    template: 'resource_planning',
+    tier: 'User',
+    model: 'DeepSeek Chat',
+    avgTokens: 2800,
+    costPer1K: 0.02,
+    accuracyTarget: 90,
+    latencyMs: 1300,
+    features: ['CRAG', 'Calculations'],
+  },
+  {
+    id: 'bal-resource-editor',
+    strategy: 'BALANCED',
+    template: 'resource_planning',
+    tier: 'Editor',
+    model: 'Claude 3.5 Sonnet',
+    avgTokens: 3100,
+    costPer1K: 0.15,
+    accuracyTarget: 92,
+    latencyMs: 1200,
+    features: ['CRAG', 'Scaling'],
+  },
+  {
+    id: 'bal-setup-user',
+    strategy: 'BALANCED',
+    template: 'setup_guide',
+    tier: 'User',
+    model: 'Claude 3.5 Sonnet',
+    avgTokens: 3400,
+    costPer1K: 0.17,
+    accuracyTarget: 96,
+    latencyMs: 1150,
+    features: ['CRAG', 'Variants'],
+  },
+  {
+    id: 'bal-setup-editor',
+    strategy: 'BALANCED',
+    template: 'setup_guide',
+    tier: 'Editor',
+    model: 'Claude 3.5 Sonnet',
+    avgTokens: 3700,
+    costPer1K: 0.19,
+    accuracyTarget: 97,
+    latencyMs: 1100,
+    features: ['CRAG', 'Video links'],
+  },
+  {
+    id: 'bal-strategy-user',
+    strategy: 'BALANCED',
+    template: 'strategy_advice',
+    tier: 'User',
+    model: 'DeepSeek Chat',
+    avgTokens: 3000,
+    costPer1K: 0.02,
+    accuracyTarget: 85,
+    latencyMs: 1400,
+    features: ['CRAG', 'Analysis'],
+  },
+  {
+    id: 'bal-strategy-editor',
+    strategy: 'BALANCED',
+    template: 'strategy_advice',
+    tier: 'Editor',
+    model: 'Claude 3.5 Sonnet',
+    avgTokens: 3300,
+    costPer1K: 0.16,
+    accuracyTarget: 88,
+    latencyMs: 1250,
+    features: ['CRAG', 'Positions'],
+  },
+  {
+    id: 'bal-edu-user',
+    strategy: 'BALANCED',
+    template: 'educational',
+    tier: 'User',
+    model: 'DeepSeek Chat',
+    avgTokens: 2600,
+    costPer1K: 0.02,
+    accuracyTarget: 92,
+    latencyMs: 1200,
+    features: ['CRAG', 'Guides'],
+  },
+  {
+    id: 'bal-edu-editor',
+    strategy: 'BALANCED',
+    template: 'educational',
+    tier: 'Editor',
+    model: 'Claude 3.5 Sonnet',
+    avgTokens: 2900,
+    costPer1K: 0.14,
+    accuracyTarget: 94,
+    latencyMs: 1100,
+    features: ['CRAG', 'Tutorials'],
+  },
+  {
+    id: 'bal-rule-admin',
+    strategy: 'BALANCED',
+    template: 'rule_lookup',
+    tier: 'Admin',
+    model: 'Claude 3.5 Sonnet',
+    avgTokens: 3800,
+    costPer1K: 0.2,
+    accuracyTarget: 96,
+    latencyMs: 1000,
+    features: ['CRAG', 'Full audit'],
+  },
+  {
+    id: 'bal-setup-admin',
+    strategy: 'BALANCED',
+    template: 'setup_guide',
+    tier: 'Admin',
+    model: 'Claude 3.5 Sonnet',
+    avgTokens: 4000,
+    costPer1K: 0.21,
+    accuracyTarget: 98,
+    latencyMs: 1000,
+    features: ['CRAG', 'All variants'],
+  },
 
   // PRECISE Strategy Variants (12)
-  { id: 'prec-rule-editor', strategy: 'PRECISE', template: 'rule_lookup', tier: 'Editor', model: 'Claude 3.5 Opus', avgTokens: 8500, costPer1K: 1.50, accuracyTarget: 98, latencyMs: 2500, features: ['Multi-agent', 'Self-RAG', 'Web search'] },
-  { id: 'prec-rule-admin', strategy: 'PRECISE', template: 'rule_lookup', tier: 'Admin', model: 'Claude 3.5 Opus', avgTokens: 9200, costPer1K: 1.65, accuracyTarget: 99, latencyMs: 2400, features: ['Multi-agent', 'Self-RAG', 'Errata check'] },
-  { id: 'prec-resource-editor', strategy: 'PRECISE', template: 'resource_planning', tier: 'Editor', model: 'GPT-4o', avgTokens: 7800, costPer1K: 0.85, accuracyTarget: 95, latencyMs: 2800, features: ['Multi-agent', 'Optimization'] },
-  { id: 'prec-resource-admin', strategy: 'PRECISE', template: 'resource_planning', tier: 'Admin', model: 'Claude 3.5 Opus', avgTokens: 8500, costPer1K: 1.50, accuracyTarget: 97, latencyMs: 2600, features: ['Multi-agent', 'Full planning'] },
-  { id: 'prec-setup-editor', strategy: 'PRECISE', template: 'setup_guide', tier: 'Editor', model: 'GPT-4o', avgTokens: 9000, costPer1K: 0.95, accuracyTarget: 98, latencyMs: 2700, features: ['Multi-agent', 'Visual aids'] },
-  { id: 'prec-setup-admin', strategy: 'PRECISE', template: 'setup_guide', tier: 'Admin', model: 'Claude 3.5 Opus', avgTokens: 9800, costPer1K: 1.75, accuracyTarget: 99, latencyMs: 2500, features: ['Multi-agent', 'All expansions'] },
-  { id: 'prec-strategy-editor', strategy: 'PRECISE', template: 'strategy_advice', tier: 'Editor', model: 'Claude 3.5 Opus', avgTokens: 12000, costPer1K: 2.10, accuracyTarget: 92, latencyMs: 3500, features: ['Multi-agent', 'Deep analysis'] },
-  { id: 'prec-strategy-admin', strategy: 'PRECISE', template: 'strategy_advice', tier: 'Admin', model: 'Claude 3.5 Opus', avgTokens: 13500, costPer1K: 2.40, accuracyTarget: 94, latencyMs: 3200, features: ['Multi-agent', 'Simulations'] },
-  { id: 'prec-strategy-premium', strategy: 'PRECISE', template: 'strategy_advice', tier: 'Premium', model: 'Claude 3.5 Opus', avgTokens: 15000, costPer1K: 2.70, accuracyTarget: 96, latencyMs: 3000, features: ['Multi-agent', 'Expert mode'] },
-  { id: 'prec-edu-editor', strategy: 'PRECISE', template: 'educational', tier: 'Editor', model: 'GPT-4o', avgTokens: 7500, costPer1K: 0.80, accuracyTarget: 96, latencyMs: 2400, features: ['Multi-agent', 'Curriculum'] },
-  { id: 'prec-edu-admin', strategy: 'PRECISE', template: 'educational', tier: 'Admin', model: 'Claude 3.5 Opus', avgTokens: 8200, costPer1K: 1.45, accuracyTarget: 98, latencyMs: 2300, features: ['Multi-agent', 'Full course'] },
-  { id: 'prec-rule-premium', strategy: 'PRECISE', template: 'rule_lookup', tier: 'Premium', model: 'Claude 3.5 Opus', avgTokens: 10000, costPer1K: 1.80, accuracyTarget: 99.5, latencyMs: 2200, features: ['Multi-agent', 'Self-RAG', 'Legal precision'] },
+  {
+    id: 'prec-rule-editor',
+    strategy: 'PRECISE',
+    template: 'rule_lookup',
+    tier: 'Editor',
+    model: 'Claude 3.5 Opus',
+    avgTokens: 8500,
+    costPer1K: 1.5,
+    accuracyTarget: 98,
+    latencyMs: 2500,
+    features: ['Multi-agent', 'Self-RAG', 'Web search'],
+  },
+  {
+    id: 'prec-rule-admin',
+    strategy: 'PRECISE',
+    template: 'rule_lookup',
+    tier: 'Admin',
+    model: 'Claude 3.5 Opus',
+    avgTokens: 9200,
+    costPer1K: 1.65,
+    accuracyTarget: 99,
+    latencyMs: 2400,
+    features: ['Multi-agent', 'Self-RAG', 'Errata check'],
+  },
+  {
+    id: 'prec-resource-editor',
+    strategy: 'PRECISE',
+    template: 'resource_planning',
+    tier: 'Editor',
+    model: 'GPT-4o',
+    avgTokens: 7800,
+    costPer1K: 0.85,
+    accuracyTarget: 95,
+    latencyMs: 2800,
+    features: ['Multi-agent', 'Optimization'],
+  },
+  {
+    id: 'prec-resource-admin',
+    strategy: 'PRECISE',
+    template: 'resource_planning',
+    tier: 'Admin',
+    model: 'Claude 3.5 Opus',
+    avgTokens: 8500,
+    costPer1K: 1.5,
+    accuracyTarget: 97,
+    latencyMs: 2600,
+    features: ['Multi-agent', 'Full planning'],
+  },
+  {
+    id: 'prec-setup-editor',
+    strategy: 'PRECISE',
+    template: 'setup_guide',
+    tier: 'Editor',
+    model: 'GPT-4o',
+    avgTokens: 9000,
+    costPer1K: 0.95,
+    accuracyTarget: 98,
+    latencyMs: 2700,
+    features: ['Multi-agent', 'Visual aids'],
+  },
+  {
+    id: 'prec-setup-admin',
+    strategy: 'PRECISE',
+    template: 'setup_guide',
+    tier: 'Admin',
+    model: 'Claude 3.5 Opus',
+    avgTokens: 9800,
+    costPer1K: 1.75,
+    accuracyTarget: 99,
+    latencyMs: 2500,
+    features: ['Multi-agent', 'All expansions'],
+  },
+  {
+    id: 'prec-strategy-editor',
+    strategy: 'PRECISE',
+    template: 'strategy_advice',
+    tier: 'Editor',
+    model: 'Claude 3.5 Opus',
+    avgTokens: 12000,
+    costPer1K: 2.1,
+    accuracyTarget: 92,
+    latencyMs: 3500,
+    features: ['Multi-agent', 'Deep analysis'],
+  },
+  {
+    id: 'prec-strategy-admin',
+    strategy: 'PRECISE',
+    template: 'strategy_advice',
+    tier: 'Admin',
+    model: 'Claude 3.5 Opus',
+    avgTokens: 13500,
+    costPer1K: 2.4,
+    accuracyTarget: 94,
+    latencyMs: 3200,
+    features: ['Multi-agent', 'Simulations'],
+  },
+  {
+    id: 'prec-strategy-premium',
+    strategy: 'PRECISE',
+    template: 'strategy_advice',
+    tier: 'Premium',
+    model: 'Claude 3.5 Opus',
+    avgTokens: 15000,
+    costPer1K: 2.7,
+    accuracyTarget: 96,
+    latencyMs: 3000,
+    features: ['Multi-agent', 'Expert mode'],
+  },
+  {
+    id: 'prec-edu-editor',
+    strategy: 'PRECISE',
+    template: 'educational',
+    tier: 'Editor',
+    model: 'GPT-4o',
+    avgTokens: 7500,
+    costPer1K: 0.8,
+    accuracyTarget: 96,
+    latencyMs: 2400,
+    features: ['Multi-agent', 'Curriculum'],
+  },
+  {
+    id: 'prec-edu-admin',
+    strategy: 'PRECISE',
+    template: 'educational',
+    tier: 'Admin',
+    model: 'Claude 3.5 Opus',
+    avgTokens: 8200,
+    costPer1K: 1.45,
+    accuracyTarget: 98,
+    latencyMs: 2300,
+    features: ['Multi-agent', 'Full course'],
+  },
+  {
+    id: 'prec-rule-premium',
+    strategy: 'PRECISE',
+    template: 'rule_lookup',
+    tier: 'Premium',
+    model: 'Claude 3.5 Opus',
+    avgTokens: 10000,
+    costPer1K: 1.8,
+    accuracyTarget: 99.5,
+    latencyMs: 2200,
+    features: ['Multi-agent', 'Self-RAG', 'Legal precision'],
+  },
 ];
 
-const STRATEGY_CONFIG: Record<RagStrategy, { color: string; icon: React.ReactNode; description: string }> = {
-  FAST: { color: 'hsl(142 76% 36%)', icon: <Zap className="h-4 w-4" />, description: 'Zero-cost models, minimal processing' },
-  BALANCED: { color: 'hsl(221 83% 53%)', icon: <Scale className="h-4 w-4" />, description: 'CRAG evaluation, hybrid search' },
-  PRECISE: { color: 'hsl(262 83% 62%)', icon: <Target className="h-4 w-4" />, description: 'Multi-agent, Self-RAG, web augmentation' },
-  EXPERT: { color: 'hsl(25 95% 53%)', icon: <Zap className="h-4 w-4" />, description: 'Web search + multi-hop reasoning' },
-  CONSENSUS: { color: 'hsl(330 80% 60%)', icon: <Scale className="h-4 w-4" />, description: 'Multi-LLM voting (3 voters)' },
-  CUSTOM: { color: 'hsl(0 0% 45%)', icon: <Target className="h-4 w-4" />, description: 'Admin-configured phases' },
+const STRATEGY_CONFIG: Record<
+  RagStrategy,
+  { color: string; icon: React.ReactNode; description: string }
+> = {
+  FAST: {
+    color: 'hsl(142 76% 36%)',
+    icon: <Zap className="h-4 w-4" />,
+    description: 'Zero-cost models, minimal processing',
+  },
+  BALANCED: {
+    color: 'hsl(221 83% 53%)',
+    icon: <Scale className="h-4 w-4" />,
+    description: 'CRAG evaluation, hybrid search',
+  },
+  PRECISE: {
+    color: 'hsl(262 83% 62%)',
+    icon: <Target className="h-4 w-4" />,
+    description: 'Multi-agent, Self-RAG, web augmentation',
+  },
+  EXPERT: {
+    color: 'hsl(25 95% 53%)',
+    icon: <Zap className="h-4 w-4" />,
+    description: 'Web search + multi-hop reasoning',
+  },
+  CONSENSUS: {
+    color: 'hsl(330 80% 60%)',
+    icon: <Scale className="h-4 w-4" />,
+    description: 'Multi-LLM voting (3 voters)',
+  },
+  CUSTOM: {
+    color: 'hsl(0 0% 45%)',
+    icon: <Target className="h-4 w-4" />,
+    description: 'Admin-configured phases',
+  },
 };
 
 const TEMPLATE_LABELS: Record<QueryTemplate, string> = {
@@ -149,7 +517,9 @@ function FilterPill({ label, active, onClick, color, icon }: FilterPillProps) {
           : 'border-border bg-muted/30 text-muted-foreground'
       )}
       onClick={onClick}
-      style={active && color ? { borderColor: color, backgroundColor: `${color}20`, color } : undefined}
+      style={
+        active && color ? { borderColor: color, backgroundColor: `${color}20`, color } : undefined
+      }
     >
       {icon}
       {label}
@@ -198,14 +568,10 @@ function VariantCard({ variant, isSelected, onClick }: VariantCardProps) {
       </div>
 
       {/* Template */}
-      <div className="font-semibold text-sm mb-2">
-        {TEMPLATE_LABELS[variant.template]}
-      </div>
+      <div className="font-semibold text-sm mb-2">{TEMPLATE_LABELS[variant.template]}</div>
 
       {/* Model */}
-      <div className="text-xs text-muted-foreground mb-3">
-        {variant.model}
-      </div>
+      <div className="text-xs text-muted-foreground mb-3">{variant.model}</div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -295,9 +661,13 @@ function ComparisonPanel({ selected, onRemove }: ComparisonPanelProps) {
                     {variant.strategy}
                   </span>
                 </td>
-                <td className="py-2 px-2 text-center text-xs">{TEMPLATE_LABELS[variant.template]}</td>
+                <td className="py-2 px-2 text-center text-xs">
+                  {TEMPLATE_LABELS[variant.template]}
+                </td>
                 <td className="py-2 px-2 text-center text-xs">{variant.tier}</td>
-                <td className="py-2 px-2 text-right font-mono">{variant.avgTokens.toLocaleString()}</td>
+                <td className="py-2 px-2 text-right font-mono">
+                  {variant.avgTokens.toLocaleString()}
+                </td>
                 <td className="py-2 px-2 text-right font-mono">
                   {variant.costPer1K === 0 ? (
                     <span className="text-green-500">Free</span>
@@ -327,7 +697,9 @@ function ComparisonPanel({ selected, onRemove }: ComparisonPanelProps) {
           <div className="p-2 rounded-lg bg-muted/50">
             <div className="text-xs text-muted-foreground">Avg Tokens</div>
             <div className="font-mono font-semibold">
-              {Math.round(selected.reduce((sum, v) => sum + v.avgTokens, 0) / selected.length).toLocaleString()}
+              {Math.round(
+                selected.reduce((sum, v) => sum + v.avgTokens, 0) / selected.length
+              ).toLocaleString()}
             </div>
           </div>
           <div className="p-2 rounded-lg bg-muted/50">
@@ -339,7 +711,8 @@ function ComparisonPanel({ selected, onRemove }: ComparisonPanelProps) {
           <div className="p-2 rounded-lg bg-muted/50">
             <div className="text-xs text-muted-foreground">Avg Accuracy</div>
             <div className="font-mono font-semibold">
-              {Math.round(selected.reduce((sum, v) => sum + v.accuracyTarget, 0) / selected.length)}%
+              {Math.round(selected.reduce((sum, v) => sum + v.accuracyTarget, 0) / selected.length)}
+              %
             </div>
           </div>
           <div className="p-2 rounded-lg bg-muted/50">
@@ -364,7 +737,11 @@ interface VariantComparisonToolProps {
 
 export function VariantComparisonTool({ className }: VariantComparisonToolProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStrategies, setSelectedStrategies] = useState<RagStrategy[]>(['FAST', 'BALANCED', 'PRECISE']);
+  const [selectedStrategies, setSelectedStrategies] = useState<RagStrategy[]>([
+    'FAST',
+    'BALANCED',
+    'PRECISE',
+  ]);
   const [selectedTemplates, setSelectedTemplates] = useState<QueryTemplate[]>([
     'rule_lookup',
     'resource_planning',
@@ -425,7 +802,9 @@ export function VariantComparisonTool({ className }: VariantComparisonToolProps)
   };
 
   const toggleTier = (tier: UserTier) => {
-    setSelectedTiers(prev => (prev.includes(tier) ? prev.filter(t => t !== tier) : [...prev, tier]));
+    setSelectedTiers(prev =>
+      prev.includes(tier) ? prev.filter(t => t !== tier) : [...prev, tier]
+    );
   };
 
   const toggleVariantComparison = (id: string) => {
@@ -445,11 +824,14 @@ export function VariantComparisonTool({ className }: VariantComparisonToolProps)
           <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
             <Filter className="h-4 w-4 mr-2" />
             Filters
-            <ChevronDown className={cn('h-4 w-4 ml-2 transition-transform', showFilters && 'rotate-180')} />
+            <ChevronDown
+              className={cn('h-4 w-4 ml-2 transition-transform', showFilters && 'rotate-180')}
+            />
           </Button>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
-          Click variants to compare. Showing {filteredVariants.length} of {RAG_VARIANTS.length} variants.
+          Click variants to compare. Showing {filteredVariants.length} of {RAG_VARIANTS.length}{' '}
+          variants.
         </p>
       </CardHeader>
 
@@ -462,7 +844,7 @@ export function VariantComparisonTool({ className }: VariantComparisonToolProps)
             placeholder="Search by model, strategy, template, or feature..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-muted/50 border border-border focus:border-primary focus:ring-1 focus:ring-primary text-sm"
+            className="w-full pl-10 pr-4 py-2 rounded-lg bg-muted/50 border border-input focus:border-primary focus:ring-1 focus:ring-primary text-sm"
           />
         </div>
 

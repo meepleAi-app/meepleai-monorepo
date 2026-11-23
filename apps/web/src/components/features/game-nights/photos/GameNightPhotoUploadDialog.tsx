@@ -128,7 +128,7 @@ export function GameNightPhotoUploadDialog({
             onChange={e => setCaption(e.target.value)}
             placeholder={t('gameNightDetail.photos.captionPlaceholder')}
             aria-label={t('gameNightDetail.photos.captionLabel')}
-            className="mt-1 block w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
           />
         </label>
 

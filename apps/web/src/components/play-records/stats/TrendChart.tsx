@@ -106,14 +106,14 @@ export function TrendChart({ stats }: TrendChartProps) {
       <div role="img" aria-label={`${t('playRecords.stats.trend.title')}: ${srSummary}`}>
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={trend} margin={{ top: 12, right: 16, left: 0, bottom: 8 }}>
-            <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
+            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
             <XAxis
               dataKey="month"
               tickFormatter={formatMonthShort}
               stroke="hsl(var(--muted-foreground))"
               fontSize={10}
               tickLine={false}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
+              axisLine={{ stroke: 'var(--border)' }}
             />
             <YAxis
               domain={[0, 1]}

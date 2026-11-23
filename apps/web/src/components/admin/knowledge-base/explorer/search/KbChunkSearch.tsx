@@ -129,7 +129,7 @@ export function KbChunkSearch({ docId, chunkCount }: KbChunkSearchProps) {
             disabled={isDisabled || isPending}
             placeholder="Cerca in chunks… (similarity match)"
             aria-label="Cerca nei chunk per similarità"
-            className={`w-full pl-7 pr-3 py-1.5 text-xs border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed ${FOCUS_RING}`}
+            className={`w-full pl-7 pr-3 py-1.5 text-xs border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed ${FOCUS_RING}`}
           />
         </div>
 
@@ -143,7 +143,7 @@ export function KbChunkSearch({ docId, chunkCount }: KbChunkSearchProps) {
           value={threshold}
           onChange={handleThresholdChange}
           disabled={isDisabled}
-          className={`py-1.5 px-2 text-xs border border-border rounded-md bg-background text-foreground disabled:opacity-50 disabled:cursor-not-allowed ${FOCUS_RING}`}
+          className={`py-1.5 px-2 text-xs border border-input rounded-md bg-background text-foreground disabled:opacity-50 disabled:cursor-not-allowed ${FOCUS_RING}`}
         >
           {THRESHOLD_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>

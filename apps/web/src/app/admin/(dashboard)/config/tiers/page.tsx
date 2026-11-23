@@ -185,7 +185,7 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
                   Nome (identificativo)
                 </label>
                 <input
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={form.name}
                   onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="free, premium, contributor…"
@@ -198,7 +198,7 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
                 Display Name
               </label>
               <input
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.displayName}
                 onChange={e => setForm(prev => ({ ...prev, displayName: e.target.value }))}
                 placeholder="Free, Premium, Contributor…"
@@ -210,7 +210,7 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
                 LLM Model Tier
               </label>
               <input
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.llmModelTier}
                 onChange={e => setForm(prev => ({ ...prev, llmModelTier: e.target.value }))}
                 placeholder="standard, premium…"
@@ -231,7 +231,7 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
                   <input
                     type="number"
                     min={minOf(key)}
-                    className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                    className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                     value={form.limits[key] ?? minOf(key)}
                     onChange={e => setLimit(key, Number(e.target.value))}
                     data-testid={`field-limit-${key}`}

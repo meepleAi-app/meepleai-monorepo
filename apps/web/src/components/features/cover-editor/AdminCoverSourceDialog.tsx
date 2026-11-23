@@ -317,7 +317,7 @@ export function AdminCoverSourceDialog({
                   value={manualUrl}
                   onChange={e => setManualUrl(e.target.value)}
                   placeholder="https://…"
-                  className="rounded border border-border bg-background px-2 py-1.5 text-sm text-foreground"
+                  className="rounded border border-input bg-background px-2 py-1.5 text-sm text-foreground"
                 />
               </label>
               <label className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -325,7 +325,7 @@ export function AdminCoverSourceDialog({
                 <select
                   value={manualLicense}
                   onChange={e => setManualLicense(e.target.value)}
-                  className="rounded border border-border bg-background px-2 py-1.5 text-sm text-foreground"
+                  className="rounded border border-input bg-background px-2 py-1.5 text-sm text-foreground"
                 >
                   {MANUAL_LICENSES.map(l => (
                     <option key={l} value={l}>
@@ -340,7 +340,7 @@ export function AdminCoverSourceDialog({
                   type="text"
                   value={manualAttribution}
                   onChange={e => setManualAttribution(e.target.value)}
-                  className="rounded border border-border bg-background px-2 py-1.5 text-sm text-foreground"
+                  className="rounded border border-input bg-background px-2 py-1.5 text-sm text-foreground"
                 />
               </label>
             </div>

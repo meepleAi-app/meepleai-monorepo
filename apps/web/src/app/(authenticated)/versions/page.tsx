@@ -356,7 +356,7 @@ function VersionHistoryContent() {
                     id="from-version"
                     value={selectedFromVersion}
                     onChange={e => setSelectedFromVersion(e.target.value)}
-                    className="w-full p-2 border border-border rounded text-sm"
+                    className="w-full p-2 border border-input rounded text-sm"
                   >
                     <option value="">Seleziona versione</option>
                     {history?.versions.map(version => (
@@ -374,7 +374,7 @@ function VersionHistoryContent() {
                     id="to-version"
                     value={selectedToVersion}
                     onChange={e => setSelectedToVersion(e.target.value)}
-                    className="w-full p-2 border border-border rounded text-sm"
+                    className="w-full p-2 border border-input rounded text-sm"
                   >
                     <option value="">Seleziona versione</option>
                     {history?.versions.map(version => (

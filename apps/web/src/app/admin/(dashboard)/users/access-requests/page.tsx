@@ -348,7 +348,7 @@ export default function AccessRequestsPage() {
                 <th className="p-3 w-10">
                   <input
                     type="checkbox"
-                    className="rounded border-border"
+                    className="rounded border-input"
                     checked={allPageSelected && pageIds.length > 0}
                     ref={el => {
                       if (el) el.indeterminate = somePageSelected && !allPageSelected;
@@ -408,7 +408,7 @@ export default function AccessRequestsPage() {
                     <td className="p-3">
                       <input
                         type="checkbox"
-                        className="rounded border-border"
+                        className="rounded border-input"
                         checked={selectedIds.has(item.id)}
                         onChange={() => toggleSelect(item.id)}
                         aria-label={`Select ${item.email}`}

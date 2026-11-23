@@ -544,7 +544,7 @@ export function NotificationPreferences() {
                   value={prefs.timeZone ?? 'UTC'}
                   onChange={e => setQuietHoursField('timeZone', e.target.value)}
                   data-testid="pref-quietHoursTimeZone"
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
                 >
                   {timezoneOptions.map(tz => (
                     <option key={tz} value={tz}>
@@ -560,7 +560,7 @@ export function NotificationPreferences() {
                   value={prefs.quietHoursStart ?? '22:00'}
                   onChange={e => setQuietHoursField('quietHoursStart', e.target.value)}
                   data-testid="pref-quietHoursStart"
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
                 />
               </label>
               <label className="flex flex-col gap-1">
@@ -570,7 +570,7 @@ export function NotificationPreferences() {
                   value={prefs.quietHoursEnd ?? '08:00'}
                   onChange={e => setQuietHoursField('quietHoursEnd', e.target.value)}
                   data-testid="pref-quietHoursEnd"
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
                 />
               </label>
             </div>

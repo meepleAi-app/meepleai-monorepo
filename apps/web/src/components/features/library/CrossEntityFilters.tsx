@@ -189,7 +189,7 @@ export function CrossEntityFilters({
           placeholder={t('pages.library.filters.search.placeholder')}
           aria-label={t('pages.library.filters.search.ariaLabel')}
           data-slot="library-search-input"
-          className="w-full rounded-md border border-border bg-card py-2.5 pl-8 pr-10 font-body text-[13px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full rounded-md border border-input bg-card py-2.5 pl-8 pr-10 font-body text-[13px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
         <kbd
           aria-label={t('pages.library.filters.search.keyboardHintAriaLabel')}

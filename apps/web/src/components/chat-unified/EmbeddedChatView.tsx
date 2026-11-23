@@ -214,7 +214,7 @@ export function EmbeddedChatView({ threadId, gameId, gameName }: EmbeddedChatVie
             placeholder="Scrivi la tua domanda..."
             disabled={streamState.isStreaming}
             className={cn(
-              'flex-1 rounded-xl border border-border/50 px-3 py-2',
+              'flex-1 rounded-xl border border-input px-3 py-2',
               'bg-card/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito',
               'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40',
               'disabled:opacity-50 disabled:cursor-not-allowed'

@@ -123,7 +123,7 @@ export function DiscoverSearchBox({
         title={disabled ? disabledTooltip : undefined}
         readOnly={disabled}
         className={cn(
-          'h-10 w-full rounded-2xl border border-border bg-card pl-10 pr-4 text-sm',
+          'h-10 w-full rounded-2xl border border-input bg-card pl-10 pr-4 text-sm',
           'outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-foreground/20',
           'placeholder:text-muted-foreground',
           disabled && 'cursor-not-allowed bg-muted text-muted-foreground'

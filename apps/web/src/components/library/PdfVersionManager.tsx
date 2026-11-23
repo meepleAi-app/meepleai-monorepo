@@ -282,7 +282,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
               id="document-category"
               value={category}
               onChange={e => setCategory(e.target.value as DocumentCategory)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/50"
               data-testid="category-select"
             >
               {DOCUMENT_CATEGORIES.map(cat => (

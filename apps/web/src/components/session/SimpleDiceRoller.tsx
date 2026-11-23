@@ -56,7 +56,7 @@ export function SimpleDiceRoller({ playerId, playerName }: SimpleDiceRollerProps
           value={selectedType}
           onChange={e => setSelectedType(Number(e.target.value))}
           aria-label="Tipo dadi"
-          className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          className="flex-1 rounded-lg border border-input bg-background px-3 py-1.5 text-sm"
         >
           {DICE_TYPES.map((dt, i) => (
             <option key={dt.label} value={i}>

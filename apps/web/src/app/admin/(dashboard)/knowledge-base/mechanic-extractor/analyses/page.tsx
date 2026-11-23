@@ -433,7 +433,7 @@ export default function MechanicAnalysesPage() {
               value={loadIdInput}
               onChange={e => setLoadIdInput(e.target.value)}
               placeholder="00000000-0000-0000-0000-000000000000"
-              className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+              className="flex-1 rounded-md border border-input bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
               data-testid="load-analysis-id-input"
             />
             <Button
@@ -536,7 +536,7 @@ export default function MechanicAnalysesPage() {
                   type="checkbox"
                   checked={forceRegen}
                   onChange={e => setForceRegen(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-border"
+                  className="mt-0.5 h-4 w-4 rounded border-input"
                   data-testid="force-regen-checkbox"
                 />
                 Rigenera con un nuovo modello (non riusa l&apos;analisi esistente per questo
@@ -554,7 +554,7 @@ export default function MechanicAnalysesPage() {
                 step="0.01"
                 value={costCapUsd}
                 onChange={e => setCostCapUsd(e.target.value)}
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 Sections skip after total projected cost × 1.0 exceeds this cap.
@@ -567,7 +567,7 @@ export default function MechanicAnalysesPage() {
                   type="checkbox"
                   checked={overrideEnabled}
                   onChange={e => setOverrideEnabled(e.target.checked)}
-                  className="h-4 w-4 rounded border-border"
+                  className="h-4 w-4 rounded border-input"
                 />
                 Apply planning-time override
               </label>
@@ -580,13 +580,13 @@ export default function MechanicAnalysesPage() {
                     value={overrideCapUsd}
                     onChange={e => setOverrideCapUsd(e.target.value)}
                     placeholder="Override cap USD"
-                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
                   />
                   <textarea
                     value={overrideReason}
                     onChange={e => setOverrideReason(e.target.value)}
                     placeholder="Reason for override (min 20 chars)"
-                    className="h-20 w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    className="h-20 w-full resize-y rounded-md border border-input bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
                   />
                   <p className="text-xs text-muted-foreground">
                     {overrideReason.length} / 20+ characters
@@ -932,7 +932,7 @@ export default function MechanicAnalysesPage() {
                 value={suppressReason}
                 onChange={e => setSuppressReason(e.target.value)}
                 placeholder="Legal takedown justification…"
-                className="h-24 w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400"
+                className="h-24 w-full resize-y rounded-md border border-input bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400"
                 data-testid="suppress-reason-input"
               />
               <p className="mt-1 text-xs text-muted-foreground">

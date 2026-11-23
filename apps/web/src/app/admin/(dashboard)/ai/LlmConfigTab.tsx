@@ -519,7 +519,7 @@ function NumberField({
         max={max}
         step={step}
         aria-describedby={`${id}-help`}
-        className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
       />
       <p id={`${id}-help`} className="mt-1 text-xs text-muted-foreground">
         {help}

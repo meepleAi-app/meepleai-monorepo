@@ -74,7 +74,7 @@ export default function CoverGapPage() {
           id="cause-filter"
           value={cause}
           onChange={e => setCause(e.target.value as CoverGapCause | '')}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground"
+          className="rounded-md border border-input bg-card px-3 py-1.5 text-sm text-foreground"
         >
           {CAUSE_FILTERS.map(f => (
             <option key={f.value || 'all'} value={f.value}>

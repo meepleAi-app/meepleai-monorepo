@@ -79,7 +79,7 @@ export function AcceptedSuccessShell({
           {subText}
         </p>
         <div
-          className="mb-3.5 w-full rounded-md border border-[hsl(var(--border-light))] bg-[hsl(var(--bg-muted))] px-3.5 py-3 text-left"
+          className="mb-3.5 w-full rounded-md border border-[var(--border-light)] bg-[hsl(var(--bg-muted))] px-3.5 py-3 text-left"
           data-slot="invite-accepted-success-summary"
         >
           <div className="mb-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--text-muted))]">

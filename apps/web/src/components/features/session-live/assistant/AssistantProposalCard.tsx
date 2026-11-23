@@ -154,7 +154,7 @@ export function AssistantProposalCard({
             max={MAX_POINTS}
             value={draft}
             onChange={event => setDraft(event.target.value)}
-            className="h-8 w-24 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+            className="h-8 w-24 rounded-md border border-input bg-background px-2 text-sm text-foreground"
           />
           <Button type="submit" size="sm" disabled={!draftValid || !canConfirm}>
             {t('pages.sessionLive.assistant.card.applyCorrection')}

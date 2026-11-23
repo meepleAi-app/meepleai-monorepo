@@ -73,7 +73,7 @@ export function WingspanRoundTracker({
               placeholder={placeholder}
               value={label}
               onChange={e => onSetRoundGoal?.(i, e.target.value)}
-              className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+              className="rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground"
             />
           ) : (
             <span key={i} className="rounded bg-muted px-2 py-1 text-xs text-foreground">

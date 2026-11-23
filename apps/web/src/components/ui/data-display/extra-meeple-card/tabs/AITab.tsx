@@ -78,8 +78,12 @@ function SourceCitation({ source }: { source: AISource }) {
     <div className="flex items-start gap-1.5 rounded bg-muted px-2 py-1">
       <Quote className="h-3 w-3 flex-shrink-0 text-amber-500 mt-0.5" />
       <div>
-        <p className="font-nunito text-[10px] font-semibold text-muted-foreground">{source.title}</p>
-        <p className="font-nunito text-[10px] text-muted-foreground line-clamp-1">{source.snippet}</p>
+        <p className="font-nunito text-[10px] font-semibold text-muted-foreground">
+          {source.title}
+        </p>
+        <p className="font-nunito text-[10px] text-muted-foreground line-clamp-1">
+          {source.snippet}
+        </p>
       </div>
     </div>
   );
@@ -207,7 +211,7 @@ export function AITab({ data, onSendMessage }: AITabProps) {
           placeholder="Ask about rules, scores, strategy..."
           rows={1}
           className={cn(
-            'flex-1 resize-none rounded-lg border border-border/60',
+            'flex-1 resize-none rounded-lg border border-input',
             'bg-card/60 px-3 py-2 font-nunito text-xs text-foreground',
             'placeholder:text-muted-foreground',
             'focus:outline-none focus:ring-1 focus:ring-indigo-300'

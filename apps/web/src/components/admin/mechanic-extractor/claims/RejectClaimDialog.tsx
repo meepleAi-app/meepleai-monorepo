@@ -77,7 +77,7 @@ export function RejectClaimDialog({
             value={note}
             onChange={e => setNote(e.target.value)}
             placeholder="e.g. quote is from the optional expansion, not the base game…"
-            className="h-24 w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400"
+            className="h-24 w-full resize-y rounded-md border border-input bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400"
             data-testid="reject-claim-note-input"
             maxLength={REJECT_CLAIM_NOTE_MAX_LENGTH + 50}
           />

@@ -39,7 +39,7 @@ export function AssignBggIdForm({ onSubmit, onCancel }: AssignBggIdFormProps) {
           aria-describedby={sharedGameIdInvalid ? 'shared-game-id-error' : undefined}
           value={sharedGameId}
           onChange={e => setSharedGameId(e.target.value)}
-          className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 text-sm aria-[invalid=true]:border-event"
+          className="mt-1 w-full rounded border border-input bg-background px-2 py-1.5 text-sm aria-[invalid=true]:border-event"
         />
         {sharedGameIdInvalid && (
           <span id="shared-game-id-error" className="mt-1 block text-xs text-event">
@@ -54,7 +54,7 @@ export function AssignBggIdForm({ onSubmit, onCancel }: AssignBggIdFormProps) {
           value={bggIdStr}
           onChange={e => setBggIdStr(e.target.value)}
           inputMode="numeric"
-          className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+          className="mt-1 w-full rounded border border-input bg-background px-2 py-1.5 text-sm"
         />
       </label>
       <div className="flex gap-2">

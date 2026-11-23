@@ -176,7 +176,7 @@ export function CreateAlertRuleDialog({ open, onClose, onCreated }: Props): Reac
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="es. High Error Rate"
-              className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               required
             />
           </div>
@@ -227,7 +227,7 @@ export function CreateAlertRuleDialog({ open, onClose, onCreated }: Props): Reac
                 placeholder="es. 5"
                 min={0}
                 step="any"
-                className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full rounded border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 required
               />
             </div>
@@ -240,7 +240,7 @@ export function CreateAlertRuleDialog({ open, onClose, onCreated }: Props): Reac
                 value={thresholdUnit}
                 onChange={e => setThresholdUnit(e.target.value)}
                 placeholder="es. % o ms"
-                className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full rounded border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
           </div>
@@ -257,7 +257,7 @@ export function CreateAlertRuleDialog({ open, onClose, onCreated }: Props): Reac
                 placeholder="5"
                 min={1}
                 step={1}
-                className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full rounded border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 required
               />
             </div>
@@ -268,7 +268,7 @@ export function CreateAlertRuleDialog({ open, onClose, onCreated }: Props): Reac
                 id="alert-rule-severity"
                 value={severity}
                 onChange={e => setSeverity(e.target.value as CreateAlertRule['severity'])}
-                className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full rounded border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 {SEVERITY_OPTIONS.map(opt => (
                   <option key={opt} value={opt}>
@@ -319,7 +319,7 @@ export function CreateAlertRuleDialog({ open, onClose, onCreated }: Props): Reac
               onChange={e => setDescription(e.target.value)}
               placeholder="Cosa segnala questa regola, cosa fare quando si attiva…"
               rows={2}
-              className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
 

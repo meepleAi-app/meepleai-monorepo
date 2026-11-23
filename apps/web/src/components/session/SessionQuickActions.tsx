@@ -141,7 +141,7 @@ export function SessionQuickActions({
             value={diceParticipant}
             onChange={e => setDiceParticipant(e.target.value)}
             aria-label="Giocatore per lancio dadi"
-            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
           >
             <option value="">Seleziona giocatore</option>
             {participants.map(p => (
@@ -158,7 +158,7 @@ export function SessionQuickActions({
               onChange={e => setDiceFormula(e.target.value)}
               placeholder="2d6"
               aria-label="Formula dadi"
-              className="flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-sm font-mono"
+              className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-sm font-mono"
             />
             <Button
               size="sm"
@@ -195,7 +195,7 @@ export function SessionQuickActions({
             value={scoreParticipant}
             onChange={e => setScoreParticipant(e.target.value)}
             aria-label="Giocatore per punteggio"
-            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
           >
             <option value="">Seleziona giocatore</option>
             {participants.map(p => (
@@ -212,7 +212,7 @@ export function SessionQuickActions({
               onChange={e => setScoreValue(e.target.value)}
               placeholder="Punti"
               aria-label="Valore punteggio"
-              className="flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-sm tabular-nums"
+              className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-sm tabular-nums"
             />
             <Button
               size="sm"

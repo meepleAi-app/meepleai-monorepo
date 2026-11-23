@@ -70,6 +70,20 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     public Guid? TargetSharedGameId => _targetSharedGameId;
 
     /// <summary>
+    /// #5109: the shared game an approval through approve-share-request contributes to, and where it copies the
+    /// attached documents. An <see cref="ContributionType.AdditionalContent"/> names it at creation
+    /// (<see cref="TargetSharedGameId"/>); the source game of a <see cref="ContributionType.NewGame"/> is already a
+    /// shared game (<c>CreateShareRequestCommandHandler</c> reads it as one). A proposal and a cover change have
+    /// none here: approve-game-proposal decides theirs.
+    /// </summary>
+    public Guid? ApprovalDestinationId => _contributionType switch
+    {
+        ContributionType.AdditionalContent => _targetSharedGameId,
+        ContributionType.NewGame => _sourceGameId,
+        _ => null,
+    };
+
+    /// <summary>
     /// Gets the ID of the source private game (for NewGameProposal contributions).
     /// Null for other contribution types.
     /// Issue #3665: Added for Phase 4 - Proposal System.

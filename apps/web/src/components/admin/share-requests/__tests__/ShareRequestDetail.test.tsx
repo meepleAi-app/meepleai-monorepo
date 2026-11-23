@@ -103,7 +103,11 @@ function details(
       badges: [],
     },
     userNotes: 'Please add it',
-    attachedDocuments: documents > 0 ? [DOCUMENT] : [],
+    // A distinct uuid for each, through the real schema: the last group differs by index.
+    attachedDocuments: Array.from({ length: documents }, (_, i) => ({
+      ...DOCUMENT,
+      documentId: `${DOCUMENT.documentId.slice(0, -1)}${i}`,
+    })),
     history: [],
     lockStatus: {
       isLocked: lock !== 'none',
@@ -320,17 +324,27 @@ describe('ShareRequestDetail', () => {
     );
   });
 
-  it('does not offer the generic approve on a request with attached documents', async () => {
-    // Decision of 2026-11-19: approval cannot copy the documents to the catalog yet, and the backend refuses it.
+  it('approves a request with attached documents, and says they are copied', async () => {
+    // #5109, decision of 2026-11-23: the backend copies them into the game the request contributes to. The panel
+    // sends no target: the destination is the request's.
     renderDetail(details('NewGame', 'mine', 'InReview', { documents: 1 }));
 
-    expect(await screen.findByTestId('approve-blocked-by-documents')).toHaveTextContent(
-      'un documento allegato'
+    expect(await screen.findByTestId('approve-copies-documents')).toHaveTextContent(
+      'il documento allegato viene copiato'
     );
-    expect(screen.queryByRole('button', { name: 'Approva' })).not.toBeInTheDocument();
-    // Asking for changes and rejecting stay available.
-    expect(screen.getByRole('button', { name: 'Chiedi modifiche' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Rifiuta' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Approva' }));
+
+    await waitFor(() =>
+      expect(adminShareRequests.approve).toHaveBeenCalledWith(REQUEST_ID, { adminNotes: undefined })
+    );
+  });
+
+  it('counts the documents it copies when there are several', async () => {
+    renderDetail(details('NewGame', 'mine', 'InReview', { documents: 3 }));
+
+    expect(await screen.findByTestId('approve-copies-documents')).toHaveTextContent(
+      'i 3 documenti allegati vengono copiati'
+    );
   });
 
   it('stops offering decisions once the review lock has expired', async () => {

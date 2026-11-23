@@ -1,5 +1,7 @@
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
@@ -17,6 +19,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 public class ApproveShareRequestCommandHandlerTests
 {
     private readonly Mock<IShareRequestRepository> _repositoryMock;
+    private readonly Mock<IShareRequestDocumentService> _documentsMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<ApproveShareRequestCommandHandler>> _loggerMock;
     private readonly ApproveShareRequestCommandHandler _handler;
@@ -28,11 +31,19 @@ public class ApproveShareRequestCommandHandlerTests
     public ApproveShareRequestCommandHandlerTests()
     {
         _repositoryMock = new Mock<IShareRequestRepository>();
+        _documentsMock = new Mock<IShareRequestDocumentService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<ApproveShareRequestCommandHandler>>();
 
+        // As the real service when every copy succeeds: one new document id for each source.
+        _documentsMock
+            .Setup(d => d.CopyDocumentsToSharedGame(
+                It.IsAny<List<Guid>>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<Guid> ids, Guid _, Guid _, CancellationToken _) => ids.Select(_ => Guid.NewGuid()).ToList());
+
         _handler = new ApproveShareRequestCommandHandler(
             _repositoryMock.Object,
+            _documentsMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object);
     }
@@ -73,10 +84,10 @@ public class ApproveShareRequestCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithTargetSharedGameId_SetsTargetGame()
+    public async Task Handle_WithTheRequestsOwnDestinationAsTarget_SetsTargetGame()
     {
-        // Arrange
-        var targetGameId = Guid.NewGuid();
+        // Arrange: a NewGame contributes to its source game (#5109), so that is the one target it accepts.
+        var targetGameId = TestGameId;
         var shareRequest = CreateShareRequestInReview(TestAdminId);
         var command = new ApproveShareRequestCommand(
             ShareRequestId: shareRequest.Id,
@@ -196,31 +207,120 @@ public class ApproveShareRequestCommandHandlerTests
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    // #5076, decision of 2026-11-19: approval cannot copy attached documents yet (#5078); approved here, the
-    // request would close with its documents left out. It waits instead.
+    // #5109, decision of 2026-11-23: approval copies the attached documents into the game the request contributes
+    // to, once, in the same save as the approval. A NewGame's is its source game, which is already a shared game.
     [Fact]
-    public async Task Handle_WithAttachedDocuments_ThrowsConflict_AndChangesNothing()
+    public async Task Handle_NewGameWithAttachedDocuments_CopiesThemIntoItsSourceGame_Once()
     {
-        // Arrange
+        var documentId = Guid.NewGuid();
+        var request = ShareRequest.Create(TestUserId, TestGameId, ContributionType.NewGame, "With the rulebook");
+        request.AttachDocument(documentId, "rules.pdf", "application/pdf", 1024);
+        request.StartReview(TestAdminId);
+        GivenTheRepositoryReturns(request);
+
+        await _handler.Handle(
+            new ApproveShareRequestCommand(ShareRequestId: request.Id, AdminId: TestAdminId),
+            TestContext.Current.CancellationToken);
+
+        request.Status.Should().Be(ShareRequestStatus.Approved);
+        _documentsMock.Verify(d => d.CopyDocumentsToSharedGame(
+            It.Is<List<Guid>>(ids => ids.SequenceEqual(new[] { documentId })),
+            TestGameId,
+            TestUserId,
+            It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_AdditionalContentWithAttachedDocuments_CopiesThemIntoTheGameItNamed_Once()
+    {
+        var existingGameId = Guid.NewGuid();
         var request = ShareRequest.Create(
-            TestUserId, TestGameId, ContributionType.NewGame, "With the rulebook");
+            TestUserId, TestGameId, ContributionType.AdditionalContent, "An expansion", existingGameId);
+        request.AttachDocument(Guid.NewGuid(), "expansion.pdf", "application/pdf", 1024);
+        request.StartReview(TestAdminId);
+        GivenTheRepositoryReturns(request);
+
+        await _handler.Handle(
+            new ApproveShareRequestCommand(ShareRequestId: request.Id, AdminId: TestAdminId),
+            TestContext.Current.CancellationToken);
+
+        VerifyCopiesInto(existingGameId, Times.Once());
+        VerifyCopiesInto(TestGameId, Times.Never());
+    }
+
+    [Fact]
+    public async Task Handle_WithATargetNamingAnotherGame_ThrowsConflict_AndCopiesNothing()
+    {
+        // The destination is the request's, not the HTTP call's: approve-game-proposal refuses a mismatch the same way.
+        var request = ShareRequest.Create(TestUserId, TestGameId, ContributionType.NewGame, "With the rulebook");
         request.AttachDocument(Guid.NewGuid(), "rules.pdf", "application/pdf", 1024);
         request.StartReview(TestAdminId);
-        var command = new ApproveShareRequestCommand(ShareRequestId: request.Id, AdminId: TestAdminId);
+        GivenTheRepositoryReturns(request);
 
+        var act = () => _handler.Handle(
+            new ApproveShareRequestCommand(
+                ShareRequestId: request.Id, AdminId: TestAdminId, TargetSharedGameId: Guid.NewGuid()),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*does not match*");
+        request.Status.Should().Be(ShareRequestStatus.InReview);
+        VerifyNoCopy();
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheDomainRefusesTheApproval_CopiesNothing()
+    {
+        // Another admin holds the review: Approve throws, and no copied file must be left behind for a refused approval.
+        var request = ShareRequest.Create(TestUserId, TestGameId, ContributionType.NewGame, "With the rulebook");
+        request.AttachDocument(Guid.NewGuid(), "rules.pdf", "application/pdf", 1024);
+        request.StartReview(Guid.NewGuid());
+        GivenTheRepositoryReturns(request);
+
+        var act = () => _handler.Handle(
+            new ApproveShareRequestCommand(ShareRequestId: request.Id, AdminId: TestAdminId),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ShareRequestReviewerMismatchException>();
+        VerifyNoCopy();
+    }
+
+    [Fact]
+    public async Task Handle_WhenADocumentCannotBeCopied_ThrowsConflict_AndSavesNothing()
+    {
+        // From the review of #5131: the copy service logs and skips a document it cannot copy. Approved anyway, the
+        // request would close with that document left out, which is what the old 409 existed to prevent.
+        var request = ShareRequest.Create(TestUserId, TestGameId, ContributionType.NewGame, "With the rulebook");
+        request.AttachDocument(Guid.NewGuid(), "rules.pdf", "application/pdf", 1024);
+        request.AttachDocument(Guid.NewGuid(), "faq.pdf", "application/pdf", 1024);
+        request.StartReview(TestAdminId);
+        GivenTheRepositoryReturns(request);
+        _documentsMock
+            .Setup(d => d.CopyDocumentsToSharedGame(
+                It.IsAny<List<Guid>>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid> { Guid.NewGuid() });
+
+        var act = () => _handler.Handle(
+            new ApproveShareRequestCommand(ShareRequestId: request.Id, AdminId: TestAdminId),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*1 of 2 attached documents*");
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private void GivenTheRepositoryReturns(ShareRequest request) =>
         _repositoryMock
             .Setup(r => r.GetByIdForUpdateAsync(request.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(request);
 
-        // Act
-        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+    private void VerifyCopiesInto(Guid sharedGameId, Times times) =>
+        _documentsMock.Verify(d => d.CopyDocumentsToSharedGame(
+            It.IsAny<List<Guid>>(), sharedGameId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), times);
 
-        // Assert
-        await act.Should().ThrowAsync<ConflictException>().WithMessage("*1 attached documents*");
-        request.Status.Should().Be(ShareRequestStatus.InReview);
-        _repositoryMock.Verify(r => r.Update(It.IsAny<ShareRequest>()), Times.Never);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
+    private void VerifyNoCopy() =>
+        _documentsMock.Verify(d => d.CopyDocumentsToSharedGame(
+            It.IsAny<List<Guid>>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
 
     private static ShareRequest CreateShareRequestInReview(Guid reviewingAdminId)
     {

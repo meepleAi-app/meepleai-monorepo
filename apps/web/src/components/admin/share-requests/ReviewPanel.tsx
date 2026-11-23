@@ -55,20 +55,19 @@ function GenericApproval({
   const [notes, setNotes] = useState('');
   const { mutate, isPending } = useApproveRequest();
 
-  // Decision of 2026-11-19: approval cannot copy attached documents to the catalog yet, and the backend refuses it
-  // (409). Approved, the request would close with its documents left out.
-  if (documentCount > 0) {
-    return (
-      <p className="text-sm text-muted-foreground" data-testid="approve-blocked-by-documents">
-        Ha {documentCount === 1 ? 'un documento allegato' : `${documentCount} documenti allegati`}:
-        l&apos;approvazione non sa ancora copiarli nel catalogo, quindi per ora non si può
-        approvare. Puoi chiedere modifiche o rifiutare.
-      </p>
-    );
-  }
-
+  // #5109, decision of 2026-11-23: approval copies the attached documents into the game the request contributes to
+  // (its own game for a new game, the catalog game it named for added content).
   return (
     <div className="space-y-2">
+      {documentCount > 0 ? (
+        <p className="text-sm text-muted-foreground" data-testid="approve-copies-documents">
+          Approvando,{' '}
+          {documentCount === 1
+            ? 'il documento allegato viene copiato'
+            : `i ${documentCount} documenti allegati vengono copiati`}{' '}
+          nel gioco del catalogo a cui la richiesta contribuisce.
+        </p>
+      ) : null}
       <Label htmlFor="generic-admin-notes">Note dell&apos;admin (facoltative)</Label>
       <Textarea
         id="generic-admin-notes"

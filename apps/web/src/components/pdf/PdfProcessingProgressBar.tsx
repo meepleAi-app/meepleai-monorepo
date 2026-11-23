@@ -57,13 +57,7 @@ export interface PdfProcessingProgressBarProps {
 }
 
 type ProcessingStepValue =
-  | 'Uploading'
-  | 'Extracting'
-  | 'Chunking'
-  | 'Embedding'
-  | 'Indexing'
-  | 'Completed'
-  | 'Failed';
+  'Uploading' | 'Extracting' | 'Chunking' | 'Embedding' | 'Indexing' | 'Completed' | 'Failed';
 
 interface StepConfig {
   icon: typeof Upload;

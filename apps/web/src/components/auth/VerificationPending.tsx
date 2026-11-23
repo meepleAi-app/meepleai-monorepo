@@ -84,10 +84,7 @@ export function VerificationPending({
     >
       {/* Icon */}
       <div className="w-16 h-16 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center">
-        <Mail
-          className="w-8 h-8 text-primary"
-          aria-hidden="true"
-        />
+        <Mail className="w-8 h-8 text-primary" aria-hidden="true" />
       </div>
 
       {/* Title */}
@@ -95,9 +92,7 @@ export function VerificationPending({
         <h2 className="text-2xl font-bold text-foreground">
           {t('auth.emailVerification.pending.title')}
         </h2>
-        <p className="text-muted-foreground">
-          {t('auth.emailVerification.pending.description')}
-        </p>
+        <p className="text-muted-foreground">{t('auth.emailVerification.pending.description')}</p>
       </div>
 
       {/* Email Display */}
@@ -113,9 +108,7 @@ export function VerificationPending({
       {/* Instructions */}
       <div className="text-sm text-muted-foreground space-y-2">
         <p>{t('auth.emailVerification.pending.instructions')}</p>
-        <p className="text-xs">
-          {t('auth.emailVerification.pending.spamHint')}
-        </p>
+        <p className="text-xs">{t('auth.emailVerification.pending.spamHint')}</p>
       </div>
 
       {/* Error Message */}

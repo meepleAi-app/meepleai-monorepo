@@ -81,12 +81,7 @@ export interface TranslateViewerProps {
 }
 
 export type Phase =
-  | 'idle'
-  | 'uploading'
-  | 'segmenting'
-  | 'segments_ready'
-  | 'translating'
-  | 'translated';
+  'idle' | 'uploading' | 'segmenting' | 'segments_ready' | 'translating' | 'translated';
 
 type ModalMode = 'auto-low' | 'auto-medium-tap' | 'manual';
 type ModalState = { open: boolean; mode: ModalMode; preselect?: SourceLangCode };

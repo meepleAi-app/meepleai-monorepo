@@ -47,7 +47,11 @@ function ProgressRing({
   const radius = 36;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference * (1 - pct);
-  const colorClass = isThrottled ? 'stroke-destructive' : pct >= 0.9 ? 'stroke-amber-500' : 'stroke-emerald-500';
+  const colorClass = isThrottled
+    ? 'stroke-destructive'
+    : pct >= 0.9
+      ? 'stroke-amber-500'
+      : 'stroke-emerald-500';
 
   return (
     <div className="flex flex-col items-center gap-2">

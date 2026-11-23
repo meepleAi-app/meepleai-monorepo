@@ -5,7 +5,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, ChevronDown, Info, ShieldAlert } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import {
   Tooltip,
   TooltipContent,
@@ -79,7 +85,14 @@ export interface StrategySelectorProps {
 /**
  * All available strategies in order.
  */
-const ALL_STRATEGIES: RagStrategy[] = ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'];
+const ALL_STRATEGIES: RagStrategy[] = [
+  'FAST',
+  'BALANCED',
+  'PRECISE',
+  'EXPERT',
+  'CONSENSUS',
+  'CUSTOM',
+];
 
 /**
  * StrategySelector Component
@@ -119,7 +132,7 @@ export function StrategySelector({
   );
 
   const availableStrategies = useMemo(
-    () => strategiesWithAccess.filter((s) => s.isAvailable).map((s) => s.strategy),
+    () => strategiesWithAccess.filter(s => s.isAvailable).map(s => s.strategy),
     [strategiesWithAccess]
   );
 
@@ -192,9 +205,7 @@ export function StrategySelector({
           <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10">
             <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
-              <p className="text-sm font-medium">
-                Anonymous users cannot access the RAG system.
-              </p>
+              <p className="text-sm font-medium">Anonymous users cannot access the RAG system.</p>
               <p className="text-xs text-muted-foreground">
                 Please sign in to select a strategy and use the RAG capabilities.
               </p>
@@ -228,10 +239,7 @@ export function StrategySelector({
               'Select a strategy...'
             )}
             <ChevronDown
-              className={cn(
-                'h-4 w-4 transition-transform',
-                isDropdownOpen && 'rotate-180'
-              )}
+              className={cn('h-4 w-4 transition-transform', isDropdownOpen && 'rotate-180')}
             />
           </Button>
 
@@ -241,10 +249,8 @@ export function StrategySelector({
               role="listbox"
               aria-label="RAG Strategies"
             >
-              {ALL_STRATEGIES.map((strategyId) => {
-                const accessInfo = strategiesWithAccess.find(
-                  (s) => s.strategy === strategyId
-                );
+              {ALL_STRATEGIES.map(strategyId => {
+                const accessInfo = strategiesWithAccess.find(s => s.strategy === strategyId);
                 const strategyData = STRATEGIES[strategyId];
                 const isAvailable = accessInfo?.isAvailable ?? false;
 
@@ -333,8 +339,8 @@ export function StrategySelector({
           role="listbox"
           aria-label="RAG Strategies"
         >
-          {ALL_STRATEGIES.map((strategyId) => {
-            const accessInfo = strategiesWithAccess.find((s) => s.strategy === strategyId);
+          {ALL_STRATEGIES.map(strategyId => {
+            const accessInfo = strategiesWithAccess.find(s => s.strategy === strategyId);
             const strategyData = getStrategyData(strategyId);
 
             if (!strategyData) return null;

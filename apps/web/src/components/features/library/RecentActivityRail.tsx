@@ -42,13 +42,7 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export type ActivityKind =
-  | 'play'
-  | 'add'
-  | 'kb-indexed'
-  | 'rating-changed'
-  | 'removed'
-  | 'agent'
-  | 'chat';
+  'play' | 'add' | 'kb-indexed' | 'rating-changed' | 'removed' | 'agent' | 'chat';
 
 export interface ActivityItem {
   readonly id: string;

@@ -1,4 +1,3 @@
- 
 /**
  * SelectedDocumentsList Component - Issue #2399
  *
@@ -13,7 +12,13 @@ import * as React from 'react';
 import { FileText, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import type { SelectedDocumentDto } from '@/lib/api/schemas';

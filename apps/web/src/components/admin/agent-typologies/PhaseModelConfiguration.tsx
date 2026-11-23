@@ -12,7 +12,13 @@ import { useState, useEffect } from 'react';
 import { AlertCircle, Info, Trash2, Plus } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
   Select,
@@ -91,25 +97,90 @@ const AVAILABLE_MODELS = [
 const STRATEGY_PHASES: Record<string, { required: string[]; optional: string[] }> = {
   FAST: { required: ['synthesis'], optional: [] },
   BALANCED: { required: ['synthesis', 'cragEvaluation'], optional: [] },
-  PRECISE: { required: ['retrieval', 'analysis', 'synthesis', 'validation'], optional: ['selfReflection'] },
+  PRECISE: {
+    required: ['retrieval', 'analysis', 'synthesis', 'validation'],
+    optional: ['selfReflection'],
+  },
   EXPERT: { required: ['webSearch', 'multiHop', 'synthesis'], optional: [] },
-  CONSENSUS: { required: ['consensusVoter1', 'consensusVoter2', 'consensusVoter3', 'consensusAggregator'], optional: [] },
-  CUSTOM: { required: ['synthesis'], optional: ['retrieval', 'analysis', 'validation', 'cragEvaluation', 'selfReflection', 'webSearch', 'multiHop'] },
+  CONSENSUS: {
+    required: ['consensusVoter1', 'consensusVoter2', 'consensusVoter3', 'consensusAggregator'],
+    optional: [],
+  },
+  CUSTOM: {
+    required: ['synthesis'],
+    optional: [
+      'retrieval',
+      'analysis',
+      'validation',
+      'cragEvaluation',
+      'selfReflection',
+      'webSearch',
+      'multiHop',
+    ],
+  },
 };
 
 const PHASE_LABELS: Record<string, { label: string; description: string; defaultModel: string }> = {
-  retrieval: { label: 'Retrieval', description: 'Analizza query, pianifica retrieval', defaultModel: 'claude-3-5-haiku-20241022' },
-  analysis: { label: 'Analysis', description: 'Estrae regole, identifica pattern', defaultModel: 'claude-3-5-haiku-20241022' },
-  synthesis: { label: 'Synthesis', description: 'Sintetizza risposta finale', defaultModel: 'claude-3-5-sonnet-20241022' },
-  validation: { label: 'Validation', description: 'Verifica correttezza e citazioni', defaultModel: 'claude-3-5-haiku-20241022' },
-  cragEvaluation: { label: 'CRAG Evaluation', description: 'Valuta rilevanza documenti', defaultModel: 'claude-3-5-haiku-20241022' },
-  selfReflection: { label: 'Self-Reflection', description: 'Auto-valutazione risposta', defaultModel: 'claude-3-5-sonnet-20241022' },
-  webSearch: { label: 'Web Search', description: 'Genera query per ricerca web', defaultModel: 'claude-3-5-haiku-20241022' },
-  multiHop: { label: 'Multi-Hop', description: 'Ragionamento multi-step', defaultModel: 'claude-3-5-sonnet-20241022' },
-  consensusVoter1: { label: 'Voter 1', description: 'Primo votante (Claude)', defaultModel: 'claude-3-5-sonnet-20241022' },
-  consensusVoter2: { label: 'Voter 2', description: 'Secondo votante (GPT)', defaultModel: 'openai/gpt-4o' },
-  consensusVoter3: { label: 'Voter 3', description: 'Terzo votante (DeepSeek)', defaultModel: 'deepseek/deepseek-chat' },
-  consensusAggregator: { label: 'Aggregator', description: 'Combina voti, decide finale', defaultModel: 'claude-3-5-sonnet-20241022' },
+  retrieval: {
+    label: 'Retrieval',
+    description: 'Analizza query, pianifica retrieval',
+    defaultModel: 'claude-3-5-haiku-20241022',
+  },
+  analysis: {
+    label: 'Analysis',
+    description: 'Estrae regole, identifica pattern',
+    defaultModel: 'claude-3-5-haiku-20241022',
+  },
+  synthesis: {
+    label: 'Synthesis',
+    description: 'Sintetizza risposta finale',
+    defaultModel: 'claude-3-5-sonnet-20241022',
+  },
+  validation: {
+    label: 'Validation',
+    description: 'Verifica correttezza e citazioni',
+    defaultModel: 'claude-3-5-haiku-20241022',
+  },
+  cragEvaluation: {
+    label: 'CRAG Evaluation',
+    description: 'Valuta rilevanza documenti',
+    defaultModel: 'claude-3-5-haiku-20241022',
+  },
+  selfReflection: {
+    label: 'Self-Reflection',
+    description: 'Auto-valutazione risposta',
+    defaultModel: 'claude-3-5-sonnet-20241022',
+  },
+  webSearch: {
+    label: 'Web Search',
+    description: 'Genera query per ricerca web',
+    defaultModel: 'claude-3-5-haiku-20241022',
+  },
+  multiHop: {
+    label: 'Multi-Hop',
+    description: 'Ragionamento multi-step',
+    defaultModel: 'claude-3-5-sonnet-20241022',
+  },
+  consensusVoter1: {
+    label: 'Voter 1',
+    description: 'Primo votante (Claude)',
+    defaultModel: 'claude-3-5-sonnet-20241022',
+  },
+  consensusVoter2: {
+    label: 'Voter 2',
+    description: 'Secondo votante (GPT)',
+    defaultModel: 'openai/gpt-4o',
+  },
+  consensusVoter3: {
+    label: 'Voter 3',
+    description: 'Terzo votante (DeepSeek)',
+    defaultModel: 'deepseek/deepseek-chat',
+  },
+  consensusAggregator: {
+    label: 'Aggregator',
+    description: 'Combina voti, decide finale',
+    defaultModel: 'claude-3-5-sonnet-20241022',
+  },
 };
 
 // ========== Helper Components ==========
@@ -123,9 +194,19 @@ interface PhaseConfigRowProps {
   disabled?: boolean;
 }
 
-function PhaseConfigRow({ phaseName, config, isRequired, onChange, onRemove, disabled }: PhaseConfigRowProps) {
-   
-  const phaseInfo = PHASE_LABELS[phaseName] || { label: phaseName, description: '', defaultModel: 'claude-3-5-haiku-20241022' };
+function PhaseConfigRow({
+  phaseName,
+  config,
+  isRequired,
+  onChange,
+  onRemove,
+  disabled,
+}: PhaseConfigRowProps) {
+  const phaseInfo = PHASE_LABELS[phaseName] || {
+    label: phaseName,
+    description: '',
+    defaultModel: 'claude-3-5-haiku-20241022',
+  };
 
   return (
     <div className="grid grid-cols-12 gap-3 items-center p-3 border rounded-lg bg-card">
@@ -134,7 +215,11 @@ function PhaseConfigRow({ phaseName, config, isRequired, onChange, onRemove, dis
         <div>
           <div className="flex items-center gap-1.5">
             <span className="font-medium text-sm">{phaseInfo.label}</span>
-            {isRequired && <Badge variant="secondary" className="text-xs">Required</Badge>}
+            {isRequired && (
+              <Badge variant="secondary" className="text-xs">
+                Required
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">{phaseInfo.description}</p>
         </div>
@@ -144,18 +229,20 @@ function PhaseConfigRow({ phaseName, config, isRequired, onChange, onRemove, dis
       <div className="col-span-4">
         <Select
           value={config.model}
-          onValueChange={(value) => onChange({ ...config, model: value })}
+          onValueChange={value => onChange({ ...config, model: value })}
           disabled={disabled}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Seleziona modello" />
           </SelectTrigger>
           <SelectContent>
-            {AVAILABLE_MODELS.map((model) => (
+            {AVAILABLE_MODELS.map(model => (
               <SelectItem key={model.value} value={model.value}>
                 <div className="flex items-center justify-between w-full">
                   <span>{model.label}</span>
-                  <Badge variant="outline" className="ml-2 text-xs">{model.cost}</Badge>
+                  <Badge variant="outline" className="ml-2 text-xs">
+                    {model.cost}
+                  </Badge>
                 </div>
               </SelectItem>
             ))}
@@ -168,7 +255,7 @@ function PhaseConfigRow({ phaseName, config, isRequired, onChange, onRemove, dis
         <Input
           type="number"
           value={config.maxTokens}
-          onChange={(e) => onChange({ ...config, maxTokens: parseInt(e.target.value) || 500 })}
+          onChange={e => onChange({ ...config, maxTokens: parseInt(e.target.value) || 500 })}
           min={50}
           max={32000}
           disabled={disabled}
@@ -224,21 +311,21 @@ export function PhaseModelConfiguration({
   const [localPhaseModels, setLocalPhaseModels] = useState<StrategyPhaseModels>(phaseModels);
   const [localOptions, setLocalOptions] = useState<StrategyOptions>(strategyOptions || {});
 
-   
   const phases = STRATEGY_PHASES[strategy] || STRATEGY_PHASES.CUSTOM;
-  const isRagStrategy = ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'].includes(strategy);
+  const isRagStrategy = ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'].includes(
+    strategy
+  );
 
   // Initialize required phases with defaults when strategy changes
   useEffect(() => {
     if (!isRagStrategy) return;
 
-    setLocalPhaseModels((prevPhaseModels) => {
+    setLocalPhaseModels(prevPhaseModels => {
       const newPhaseModels = { ...prevPhaseModels };
       let hasChanges = false;
 
-      phases.required.forEach((phase) => {
+      phases.required.forEach(phase => {
         if (!newPhaseModels[phase as keyof StrategyPhaseModels]) {
-           
           const phaseInfo = PHASE_LABELS[phase];
           newPhaseModels[phase as keyof StrategyPhaseModels] = {
             model: phaseInfo?.defaultModel || 'claude-3-5-haiku-20241022',
@@ -252,7 +339,7 @@ export function PhaseModelConfiguration({
       if (hasChanges) {
         // Schedule onChange to run after state update
         setTimeout(() => {
-          setLocalOptions((prevOptions) => {
+          setLocalOptions(prevOptions => {
             onChange(newPhaseModels, prevOptions);
             return prevOptions;
           });
@@ -283,7 +370,6 @@ export function PhaseModelConfiguration({
 
   // Add optional phase
   const addPhase = (phaseName: string) => {
-     
     const phaseInfo = PHASE_LABELS[phaseName];
     const newPhaseModels = {
       ...localPhaseModels,
@@ -309,17 +395,18 @@ export function PhaseModelConfiguration({
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          La configurazione phase-model è disponibile solo per strategie RAG (FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, CUSTOM).
+          La configurazione phase-model è disponibile solo per strategie RAG (FAST, BALANCED,
+          PRECISE, EXPERT, CONSENSUS, CUSTOM).
         </AlertDescription>
       </Alert>
     );
   }
 
   const configuredPhases = Object.keys(localPhaseModels).filter(
-    (phase) => localPhaseModels[phase as keyof StrategyPhaseModels]
+    phase => localPhaseModels[phase as keyof StrategyPhaseModels]
   );
   const availableOptionalPhases = phases.optional.filter(
-    (phase) => !configuredPhases.includes(phase)
+    phase => !configuredPhases.includes(phase)
   );
 
   return (
@@ -334,16 +421,17 @@ export function PhaseModelConfiguration({
               </TooltipTrigger>
               <TooltipContent className="max-w-sm">
                 <p>
-                  Configura quale modello LLM utilizzare per ogni fase della strategia {strategy}.
-                  I modelli economici (Haiku, DeepSeek) sono consigliati per fasi di supporto,
-                  mentre i modelli premium (Sonnet, Opus) per Synthesis.
+                  Configura quale modello LLM utilizzare per ogni fase della strategia {strategy}. I
+                  modelli economici (Haiku, DeepSeek) sono consigliati per fasi di supporto, mentre
+                  i modelli premium (Sonnet, Opus) per Synthesis.
                 </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </CardTitle>
         <CardDescription>
-          Strategia: <Badge variant="outline">{strategy}</Badge> - {phases.required.length} fasi richieste
+          Strategia: <Badge variant="outline">{strategy}</Badge> - {phases.required.length} fasi
+          richieste
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -357,36 +445,39 @@ export function PhaseModelConfiguration({
         </div>
 
         {/* Required Phases */}
-        {phases.required.map((phaseName) => (
+        {phases.required.map(phaseName => (
           <PhaseConfigRow
             key={phaseName}
             phaseName={phaseName}
-            config={localPhaseModels[phaseName as keyof StrategyPhaseModels] || {
-               
-              model: PHASE_LABELS[phaseName]?.defaultModel || 'claude-3-5-haiku-20241022',
-              maxTokens: 500,
-              temperature: 0.7,
-            }}
+            config={
+              localPhaseModels[phaseName as keyof StrategyPhaseModels] || {
+                model: PHASE_LABELS[phaseName]?.defaultModel || 'claude-3-5-haiku-20241022',
+                maxTokens: 500,
+                temperature: 0.7,
+              }
+            }
             isRequired={true}
-            onChange={(config) => updatePhase(phaseName, config)}
+            onChange={config => updatePhase(phaseName, config)}
             disabled={disabled}
           />
         ))}
 
         {/* Configured Optional Phases */}
         {configuredPhases
-          .filter((phase) => phases.optional.includes(phase))
-          .map((phaseName) => (
+          .filter(phase => phases.optional.includes(phase))
+          .map(phaseName => (
             <PhaseConfigRow
               key={phaseName}
               phaseName={phaseName}
-              config={localPhaseModels[phaseName as keyof StrategyPhaseModels] || {
-                model: 'claude-3-5-haiku-20241022',
-                maxTokens: 500,
-                temperature: 0.7,
-              }}
+              config={
+                localPhaseModels[phaseName as keyof StrategyPhaseModels] || {
+                  model: 'claude-3-5-haiku-20241022',
+                  maxTokens: 500,
+                  temperature: 0.7,
+                }
+              }
               isRequired={false}
-              onChange={(config) => updatePhase(phaseName, config)}
+              onChange={config => updatePhase(phaseName, config)}
               onRemove={() => removePhase(phaseName)}
               disabled={disabled}
             />
@@ -395,17 +486,13 @@ export function PhaseModelConfiguration({
         {/* Add Optional Phase */}
         {availableOptionalPhases.length > 0 && (
           <div className="flex items-center gap-2 pt-2">
-            <Select
-              onValueChange={addPhase}
-              disabled={disabled}
-            >
+            <Select onValueChange={addPhase} disabled={disabled}>
               <SelectTrigger className="w-[250px]">
                 <Plus className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Aggiungi fase opzionale" />
               </SelectTrigger>
               <SelectContent>
-                {availableOptionalPhases.map((phase) => {
-                   
+                {availableOptionalPhases.map(phase => {
                   const phaseLabel = PHASE_LABELS[phase]?.label || phase;
                   return (
                     <SelectItem key={phase} value={phase}>
@@ -425,12 +512,14 @@ export function PhaseModelConfiguration({
             <div className="grid grid-cols-2 gap-4 mt-3">
               {(strategy === 'EXPERT' || strategy === 'CUSTOM') && (
                 <div>
-                  <Label htmlFor="maxHops" className="text-xs">Max Hops (Multi-Hop)</Label>
+                  <Label htmlFor="maxHops" className="text-xs">
+                    Max Hops (Multi-Hop)
+                  </Label>
                   <Input
                     id="maxHops"
                     type="number"
                     value={localOptions.maxHops || 2}
-                    onChange={(e) => updateOptions('maxHops', parseInt(e.target.value) || 2)}
+                    onChange={e => updateOptions('maxHops', parseInt(e.target.value) || 2)}
                     min={1}
                     max={5}
                     disabled={disabled}
@@ -441,7 +530,8 @@ export function PhaseModelConfiguration({
               {(strategy === 'CONSENSUS' || strategy === 'CUSTOM') && (
                 <div>
                   <Label htmlFor="consensusThreshold" className="text-xs">
-                    Consensus Threshold ({((localOptions.consensusThreshold || 0.8) * 100).toFixed(0)}%)
+                    Consensus Threshold (
+                    {((localOptions.consensusThreshold || 0.8) * 100).toFixed(0)}%)
                   </Label>
                   <Slider
                     value={[localOptions.consensusThreshold || 0.8]}
@@ -459,14 +549,15 @@ export function PhaseModelConfiguration({
         )}
 
         {/* Validation Warning */}
-        {phases.required.some((phase) => !localPhaseModels[phase as keyof StrategyPhaseModels]) && (
+        {phases.required.some(phase => !localPhaseModels[phase as keyof StrategyPhaseModels]) && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Configura tutte le fasi richieste: {phases.required.filter(
-                (phase) => !localPhaseModels[phase as keyof StrategyPhaseModels]
-               
-              ).map((p) => PHASE_LABELS[p]?.label || p).join(', ')}
+              Configura tutte le fasi richieste:{' '}
+              {phases.required
+                .filter(phase => !localPhaseModels[phase as keyof StrategyPhaseModels])
+                .map(p => PHASE_LABELS[p]?.label || p)
+                .join(', ')}
             </AlertDescription>
           </Alert>
         )}

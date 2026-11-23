@@ -37,7 +37,7 @@ export function Step3NotesAndConfirm({
           id="notes"
           data-testid="wizard-notes-textarea"
           value={notes}
-          onChange={(e) => onNotesChange(e.target.value)}
+          onChange={e => onNotesChange(e.target.value)}
           placeholder="Any additional context about your contribution...&#10;&#10;Examples:&#10;- This is the second edition with updated rules&#10;- Includes custom player aids I created&#10;- PDF is in English, original game is Italian"
           className="min-h-[120px] resize-none"
           maxLength={MAX_LENGTH}

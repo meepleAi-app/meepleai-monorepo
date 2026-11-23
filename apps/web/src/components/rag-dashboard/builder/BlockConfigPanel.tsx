@@ -11,16 +11,7 @@
 
 import { useCallback, useMemo } from 'react';
 
-import {
-  X,
-  Settings,
-  Info,
-  Code,
-  ExternalLink,
-  Zap,
-  Clock,
-  Coins,
-} from 'lucide-react';
+import { X, Settings, Info, Code, ExternalLink, Zap, Clock, Coins } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Switch } from '@/components/ui/forms/switch';
@@ -86,11 +77,7 @@ interface ParamRendererProps<T extends BlockParameter> {
   onChange: (value: unknown) => void;
 }
 
-function NumberParamRenderer({
-  param,
-  value,
-  onChange,
-}: ParamRendererProps<NumberParameter>) {
+function NumberParamRenderer({ param, value, onChange }: ParamRendererProps<NumberParameter>) {
   const numValue = (value as number) ?? param.default;
 
   return (
@@ -116,11 +103,7 @@ function NumberParamRenderer({
   );
 }
 
-function StringParamRenderer({
-  param,
-  value,
-  onChange,
-}: ParamRendererProps<StringParameter>) {
+function StringParamRenderer({ param, value, onChange }: ParamRendererProps<StringParameter>) {
   const strValue = (value as string) ?? param.default;
 
   return (
@@ -132,7 +115,7 @@ function StringParamRenderer({
       <Input
         id={param.id}
         value={strValue}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={e => onChange(e.target.value)}
         maxLength={param.maxLength}
         placeholder={param.default}
         className="h-8"
@@ -142,11 +125,7 @@ function StringParamRenderer({
   );
 }
 
-function BooleanParamRenderer({
-  param,
-  value,
-  onChange,
-}: ParamRendererProps<BooleanParameter>) {
+function BooleanParamRenderer({ param, value, onChange }: ParamRendererProps<BooleanParameter>) {
   const boolValue = (value as boolean) ?? param.default;
 
   return (
@@ -166,11 +145,7 @@ function BooleanParamRenderer({
   );
 }
 
-function SelectParamRenderer({
-  param,
-  value,
-  onChange,
-}: ParamRendererProps<SelectParameter>) {
+function SelectParamRenderer({ param, value, onChange }: ParamRendererProps<SelectParameter>) {
   const selectValue = (value as string) ?? param.default;
 
   return (
@@ -184,7 +159,7 @@ function SelectParamRenderer({
           <SelectValue placeholder="Select..." />
         </SelectTrigger>
         <SelectContent>
-          {param.options.map((opt) => (
+          {param.options.map(opt => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
             </SelectItem>
@@ -196,11 +171,7 @@ function SelectParamRenderer({
   );
 }
 
-function RangeParamRenderer({
-  param,
-  value,
-  onChange,
-}: ParamRendererProps<RangeParameter>) {
+function RangeParamRenderer({ param, value, onChange }: ParamRendererProps<RangeParameter>) {
   const rangeValue = (value as [number, number]) ?? param.default;
 
   return (
@@ -217,7 +188,7 @@ function RangeParamRenderer({
       <Slider
         id={param.id}
         value={rangeValue}
-        onValueChange={(v) => onChange(v as [number, number])}
+        onValueChange={v => onChange(v as [number, number])}
         min={param.min}
         max={param.max}
         step={param.step ?? 0.01}
@@ -228,11 +199,7 @@ function RangeParamRenderer({
   );
 }
 
-function ModelParamRenderer({
-  param,
-  value,
-  onChange,
-}: ParamRendererProps<ModelParameter>) {
+function ModelParamRenderer({ param, value, onChange }: ParamRendererProps<ModelParameter>) {
   const modelValue = (value as string) ?? param.default;
 
   return (
@@ -246,7 +213,7 @@ function ModelParamRenderer({
           <SelectValue placeholder="Select model..." />
         </SelectTrigger>
         <SelectContent>
-          {param.allowedModels.map((model) => (
+          {param.allowedModels.map(model => (
             <SelectItem key={model} value={model}>
               {model}
             </SelectItem>
@@ -378,7 +345,10 @@ export function BlockConfigPanel({
   }
 
   return (
-    <div className={cn('w-80 bg-card border-l flex flex-col', className)} data-testid="block-config-panel">
+    <div
+      className={cn('w-80 bg-card border-l flex flex-col', className)}
+      data-testid="block-config-panel"
+    >
       {/* Header */}
       <div className="p-3 border-b flex items-center gap-2">
         <div
@@ -388,10 +358,18 @@ export function BlockConfigPanel({
           {block.icon}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-sm truncate" data-testid="config-block-name">{block.name}</h3>
+          <h3 className="font-medium text-sm truncate" data-testid="config-block-name">
+            {block.name}
+          </h3>
           <p className="text-xs text-muted-foreground">{block.category}</p>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} data-testid="config-close-button">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={onClose}
+          data-testid="config-close-button"
+        >
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -419,16 +397,14 @@ export function BlockConfigPanel({
 
             {block.parameters.length > 0 ? (
               <div className="space-y-4">
-                {block.parameters.map((param) =>
-                  renderParameter(param, params[param.id], (value) =>
+                {block.parameters.map(param =>
+                  renderParameter(param, params[param.id], value =>
                     handleParamChange(param.id, value)
                   )
                 )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground italic">
-                No configurable parameters
-              </p>
+              <p className="text-sm text-muted-foreground italic">No configurable parameters</p>
             )}
           </div>
 
@@ -448,9 +424,7 @@ export function BlockConfigPanel({
                     <Clock className="h-3 w-3" />
                     <span>Latency</span>
                   </div>
-                  <p className="text-sm font-medium mt-0.5">
-                    ~{estimates.latency}ms
-                  </p>
+                  <p className="text-sm font-medium mt-0.5">~{estimates.latency}ms</p>
                 </div>
 
                 <div className="p-2 bg-muted/50 rounded-md">
@@ -458,9 +432,7 @@ export function BlockConfigPanel({
                     <Coins className="h-3 w-3" />
                     <span>Cost</span>
                   </div>
-                  <p className="text-sm font-medium mt-0.5">
-                    ${estimates.cost.toFixed(4)}
-                  </p>
+                  <p className="text-sm font-medium mt-0.5">${estimates.cost.toFixed(4)}</p>
                 </div>
 
                 <div className="p-2 bg-muted/50 rounded-md col-span-2">
@@ -530,9 +502,7 @@ export function BlockConfigPanel({
                       </TooltipTrigger>
                       <TooltipContent side="left" className="max-w-xs">
                         <p className="font-medium">{ref.description}</p>
-                        <p className="text-xs text-muted-foreground mt-1 font-mono">
-                          {ref.path}
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 font-mono">{ref.path}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

@@ -48,9 +48,7 @@ export function BulkRemoveDialog({
     setIsRemoving(true);
     try {
       // Execute all removals in parallel
-      const results = await Promise.allSettled(
-        gameIds.map(id => removeGame.mutateAsync(id))
-      );
+      const results = await Promise.allSettled(gameIds.map(id => removeGame.mutateAsync(id)));
 
       const successCount = results.filter(r => r.status === 'fulfilled').length;
       const failCount = results.filter(r => r.status === 'rejected').length;
@@ -86,14 +84,16 @@ export function BulkRemoveDialog({
           <AlertDialogDescription asChild>
             <div className="space-y-3">
               <p>
-                Stai per rimuovere {gameIds.length} giochi dalla tua libreria.
-                Questa azione non può essere annullata.
+                Stai per rimuovere {gameIds.length} giochi dalla tua libreria. Questa azione non può
+                essere annullata.
               </p>
               <div className="bg-muted rounded-md p-3 text-sm">
                 <p className="font-medium mb-2">Giochi selezionati:</p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                   {displayTitles.map((title, i) => (
-                    <li key={i} className="truncate">{title}</li>
+                    <li key={i} className="truncate">
+                      {title}
+                    </li>
                   ))}
                 </ul>
                 {remaining > 0 && (

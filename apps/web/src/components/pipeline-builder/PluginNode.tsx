@@ -147,7 +147,9 @@ export const PluginNodeComponent = memo(function PluginNodeComponent({
             <div className="text-xs space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Duration:</span>
-                <span className="font-mono">{nodeData.executionResult.durationMs.toFixed(0)}ms</span>
+                <span className="font-mono">
+                  {nodeData.executionResult.durationMs.toFixed(0)}ms
+                </span>
               </div>
               {nodeData.executionResult.tokensUsed && (
                 <div className="flex items-center justify-between">

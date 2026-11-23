@@ -364,9 +364,7 @@ describe('EditNotesModal - Props Sync', () => {
   beforeEach(resetMocks);
 
   it('syncs notes when currentNotes prop changes', () => {
-    const { rerender } = render(
-      <EditNotesModal {...defaultProps} currentNotes="First" />
-    );
+    const { rerender } = render(<EditNotesModal {...defaultProps} currentNotes="First" />);
 
     const textarea = screen.getByRole('textbox');
     expect(textarea).toHaveValue('First');

@@ -171,7 +171,9 @@ public sealed class UserBadge : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Revokes this badge from the user.
+    /// Revokes this badge from the user. The display preference is kept (#5116): every read of the badges
+    /// leaves out a revoked one already, and the preference is what a reinstatement must give back, so a
+    /// badge the user hid does not come back on their profile when a leaderboard badge returns.
     /// </summary>
     /// <param name="reason">The reason for revocation.</param>
     /// <exception cref="ArgumentException">Thrown when reason is empty.</exception>
@@ -186,12 +188,27 @@ public sealed class UserBadge : AggregateRoot<Guid>
 
         _revokedAt = DateTime.UtcNow;
         _revocationReason = reason.Trim();
-        _isDisplayed = false;
 
         AddDomainEvent(new BadgeRevokedEvent(
             _id,
             _userId,
             _badgeId,
             reason));
+    }
+
+    /// <summary>
+    /// Gives a revoked badge back to its user (#5116): the same row, active again, so the unique
+    /// (UserId, BadgeId) index never sees a second one. <see cref="EarnedAt"/> stays the first conquest, and
+    /// <see cref="IsDisplayed"/> stays the user's choice. No <see cref="BadgeEarnedEvent"/>: the user was told
+    /// when they first earned it, and a leaderboard badge can come and go at every recalculation.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the badge is not revoked.</exception>
+    public void Reinstate()
+    {
+        if (IsActive)
+            throw new InvalidOperationException("Badge is not revoked");
+
+        _revokedAt = null;
+        _revocationReason = null;
     }
 }

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
@@ -124,13 +125,13 @@ internal sealed class RecalculateBadgesCommandHandler : IRequestHandler<Recalcul
                 includeHidden: true,
                 cancellationToken).ConfigureAwait(false);
 
-            // Award missing badges
+            // Award missing badges. currentBadges holds only the active ones: a badge the user lost is given
+            // back by reinstating its row, not by a second one (#5116).
             foreach (var badge in eligibleBadges)
             {
-                if (!currentBadges.Any(ub => ub.BadgeId == badge.Id && ub.IsActive))
+                if (!currentBadges.Any(ub => ub.BadgeId == badge.Id && ub.IsActive)
+                    && await UserBadgeGrant.GrantAsync(_userBadgeRepository, userId, badge, triggeringShareRequestId: null, cancellationToken).ConfigureAwait(false))
                 {
-                    var userBadge = UserBadge.Award(userId, badge.Id, badge.Code, triggeringShareRequestId: null);
-                    await _userBadgeRepository.AddAsync(userBadge, cancellationToken).ConfigureAwait(false);
                     badgesAwarded++;
 
                     _logger.LogDebug(
@@ -146,10 +147,8 @@ internal sealed class RecalculateBadgesCommandHandler : IRequestHandler<Recalcul
                 // Only revoke if badge is still active AND user no longer qualifies
                 if (allActiveBadges.TryGetValue(userBadge.BadgeId, out var badge) && !eligibleBadgeIds.Contains(userBadge.BadgeId))
                 {
-                    // PERMANENT BADGE PROTECTION: Never revoke milestone achievements
-                    // Contribution milestones (FIRST_CONTRIBUTION, CONTRIBUTOR_X) and document milestones
-                    // are permanent once earned. Only revoke time-limited badges (quality streaks, leaderboard).
-                    if (IsPermanentBadge(badge))
+                    // Only a leaderboard badge can be lost; every other one is permanent once earned.
+                    if (!IsRevocableBadge(badge))
                     {
                         _logger.LogDebug(
                             "Skipping revocation of permanent badge {BadgeCode} for user {UserId}",
@@ -159,6 +158,8 @@ internal sealed class RecalculateBadgesCommandHandler : IRequestHandler<Recalcul
                     }
 
                     userBadge.Revoke("No longer meets badge requirements");
+                    // #5116: GetByUserIdAsync reads AsNoTracking; without this the revocation stayed in memory.
+                    await _userBadgeRepository.UpdateAsync(userBadge, cancellationToken).ConfigureAwait(false);
                     badgesRevoked++;
 
                     _logger.LogDebug(
@@ -179,22 +180,15 @@ internal sealed class RecalculateBadgesCommandHandler : IRequestHandler<Recalcul
         return (badgesAwarded, badgesRevoked);
     }
 
-    private static bool IsPermanentBadge(Badge badge)
-    {
-        // Permanent badges are milestone achievements that shouldn't be revoked
-        // even if the user's count temporarily drops (e.g., contribution count decrease).
-        // These include:
-        // - Contribution milestones (FirstContribution, ContributionCount)
-        // - Document milestones (DocumentCount)
-        //
-        // Revocable badges are time-limited or conditional:
-        // - Quality streaks (QualityStreak) - can lose streak
-        // - Leaderboard rankings (TopContributor) - can drop out of top N
-        return badge.Requirement.Type is
-            BadgeRequirementType.FirstContribution or
-            BadgeRequirementType.ContributionCount or
-            BadgeRequirementType.DocumentCount;
-    }
+    /// <summary>
+    /// #5116, decision of 2026-11-23: only a leaderboard badge (TopContributor: TOP_CONTRIBUTOR, TOP_THREE,
+    /// NUMBER_ONE) is revocable, because «ranked in the top N» is a state. Every other badge is permanent:
+    /// the milestones, the quality streaks («5 contributions approved without changes requested» tells a
+    /// conquest, not a state), and Custom, which the evaluator never finds eligible, so with a blacklist it
+    /// would be revoked at every recalculation. A new requirement type is permanent until it is added here.
+    /// </summary>
+    private static bool IsRevocableBadge(Badge badge) =>
+        badge.Requirement.Type is BadgeRequirementType.TopContributor;
 
     private async Task<List<Guid>> GetAllDistinctUserIdsAsync(CancellationToken cancellationToken)
     {

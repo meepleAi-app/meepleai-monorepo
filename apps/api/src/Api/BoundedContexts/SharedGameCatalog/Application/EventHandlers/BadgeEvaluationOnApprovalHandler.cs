@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -75,15 +76,17 @@ internal sealed class BadgeEvaluationOnApprovalHandler : DomainEventHandlerBase<
             var badgesAwarded = 0;
             foreach (var badge in eligibleBadges)
             {
-                if (!existingBadgeIds.Contains(badge.Id))
-                {
-                    var userBadge = UserBadge.Award(
+                // existingBadgeIds holds only the active badges: one the user lost is given back by reinstating its
+                // row (#5116). A second row would fail with 23505, and the catch below would drop every badge of
+                // this approval with it.
+                if (!existingBadgeIds.Contains(badge.Id)
+                    && await UserBadgeGrant.GrantAsync(
+                        _userBadgeRepository,
                         shareRequest.UserId,
-                        badge.Id,
-                        badge.Code,
-                        domainEvent.ShareRequestId);
-
-                    await _userBadgeRepository.AddAsync(userBadge, cancellationToken).ConfigureAwait(false);
+                        badge,
+                        domainEvent.ShareRequestId,
+                        cancellationToken).ConfigureAwait(false))
+                {
                     badgesAwarded++;
 
                     Logger.LogInformation(

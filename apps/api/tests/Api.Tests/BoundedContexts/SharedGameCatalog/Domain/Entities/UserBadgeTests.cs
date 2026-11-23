@@ -223,7 +223,8 @@ public class UserBadgeTests
         userBadge.IsActive.Should().BeFalse();
         userBadge.RevokedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         userBadge.RevocationReason.Should().Be(reason);
-        userBadge.IsDisplayed.Should().BeFalse();
+        // #5116: the display preference survives a revocation; the reads leave a revoked badge out by RevokedAt.
+        userBadge.IsDisplayed.Should().BeTrue();
     }
 
     [Fact]
@@ -293,6 +294,63 @@ public class UserBadgeTests
         // Assert
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*Badge is already revoked*");
+    }
+
+    #endregion
+
+    #region Reinstate Tests (#5116)
+
+    [Fact]
+    public void Reinstate_ARevokedBadge_IsActiveAgain_AndKeepsItsFirstEarnedAt()
+    {
+        var userBadge = CreateTestUserBadge();
+        var earnedAt = userBadge.EarnedAt;
+        userBadge.Revoke("No longer meets badge requirements");
+
+        userBadge.Reinstate();
+
+        userBadge.IsActive.Should().BeTrue();
+        userBadge.RevokedAt.Should().BeNull();
+        userBadge.RevocationReason.Should().BeNull();
+        userBadge.IsDisplayed.Should().BeTrue();
+        userBadge.EarnedAt.Should().Be(earnedAt);
+    }
+
+    [Fact]
+    public void Reinstate_ABadgeTheUserHid_StaysHidden()
+    {
+        // From the review of #5130: a leaderboard badge comes and goes at every recalculation, and coming back must
+        // not put on the profile a badge the user chose to hide.
+        var userBadge = CreateTestUserBadge();
+        userBadge.Hide();
+        userBadge.Revoke("No longer meets badge requirements");
+
+        userBadge.Reinstate();
+
+        userBadge.IsDisplayed.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Reinstate_RaisesNoBadgeEarnedEvent_SoTheUserIsNotNotifiedAgain()
+    {
+        var userBadge = CreateTestUserBadge();
+        userBadge.Revoke("No longer meets badge requirements");
+        var eventsBefore = userBadge.DomainEvents.Count;
+
+        userBadge.Reinstate();
+
+        userBadge.DomainEvents.Should().HaveCount(eventsBefore);
+        userBadge.DomainEvents.OfType<BadgeEarnedEvent>().Should().ContainSingle("only the Award raised one");
+    }
+
+    [Fact]
+    public void Reinstate_WhenNotRevoked_ThrowsInvalidOperationException()
+    {
+        var userBadge = CreateTestUserBadge();
+
+        var act = () => userBadge.Reinstate();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("Badge is not revoked");
     }
 
     #endregion

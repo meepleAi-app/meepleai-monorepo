@@ -617,7 +617,7 @@
   --muted-foreground: 30 12% 35%;   /* WCAG AA: Darkened to 35% for guaranteed 4.5:1 contrast (Issue #2234) */
   --accent: 271 91% 55%;            /* WCAG AA: Darkened to 55% for 4.5:1 contrast with white (Issue #2234) */
   --accent-foreground: 0 0% 100%;
-  --destructive: 0 72% 47%;         /* WCAG AA (#4538): 5.19:1 under its foreground, 4.91:1 as text on the cream background, 5.42:1 on white */
+  --destructive: 0 72% 47%;         /* WCAG AA (#4538): 5.19:1 under its foreground, 4.90:1 as text on the cream page, 5.42:1 on white (measured in Chrome) */
   --destructive-foreground: 0 0% 98%;
   --border: 30 15% 85%;             /* Bordi beige */
   --input: 30 15% 90%;

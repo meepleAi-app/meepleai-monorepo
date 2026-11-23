@@ -11711,7 +11711,8 @@ namespace Api.Infrastructure.Migrations
                         .HasFilter("share_request_id IS NOT NULL");
 
                     b.HasIndex("ContributorId", "Version")
-                        .HasDatabaseName("ix_contribution_records_contributor_version");
+                        .IsUnique()
+                        .HasDatabaseName("ix_contribution_records_contributor_version_unique");
 
                     b.ToTable("contribution_records", (string)null);
                 });
@@ -11754,6 +11755,10 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("UserId", "SharedGameId")
                         .IsUnique()
                         .HasDatabaseName("ix_contributors_user_shared_game_unique");
+
+                    b.HasIndex(new[] { "SharedGameId" }, "ix_contributors_one_primary_per_shared_game_unique")
+                        .IsUnique()
+                        .HasFilter("is_primary_contributor");
 
                     b.ToTable("contributors", (string)null);
                 });

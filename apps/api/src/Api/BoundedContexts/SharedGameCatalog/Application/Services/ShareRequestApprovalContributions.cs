@@ -137,17 +137,30 @@ internal sealed class ShareRequestApprovalContributions
     public IReadOnlyCollection<Guid> Games => _games;
 
     /// <summary>
-    /// A concurrent approval of the same author on the same game saved its contributor first, and this save hit
-    /// <c>ix_contributors_user_shared_game_unique</c>. Both looked the contributor up before either committed. The
-    /// approval is rolled back (one save) and a retry finds the contributor: it is a conflict (409), not a 500.
-    /// A double-submitted approval of one request used to get its 409 from xmin, and may now hit this first.
+    /// A concurrent approval on the same game saved first, and this save hit one of the unique indexes that a
+    /// read-then-write cannot see. Both approvals looked before either committed:
+    /// <list type="bullet">
+    /// <item><c>ix_contributors_user_shared_game_unique</c>: the same author, two contributors (#5142);</item>
+    /// <item><c>ix_contributors_one_primary_per_shared_game_unique</c>: two authors, two primaries (#5143);</item>
+    /// <item><c>ix_contribution_records_contributor_version_unique</c>: one contributor, the same next version (#5143).</item>
+    /// </list>
+    /// The approval is rolled back (one save) and a retry reads what the other saved: it is a conflict (409), not a
+    /// 500. A double-submitted approval of one request used to get its 409 from xmin, and may now hit one of these first.
     /// </summary>
     public static bool IsAConcurrentApproval(DbUpdateException exception) =>
         exception?.InnerException is PostgresException
         {
             SqlState: PostgresErrorCodes.UniqueViolation,
-            ConstraintName: "ix_contributors_user_shared_game_unique",
-        };
+            ConstraintName: { } constraint,
+        }
+        && ConcurrentApprovalConstraints.Contains(constraint);
+
+    private static readonly HashSet<string> ConcurrentApprovalConstraints = new(StringComparer.Ordinal)
+    {
+        "ix_contributors_user_shared_game_unique",
+        "ix_contributors_one_primary_per_shared_game_unique",
+        "ix_contribution_records_contributor_version_unique",
+    };
 
     /// <summary>
     /// Saves the approval with what <see cref="RecordAsync"/> recorded, in one <c>SaveChangesAsync</c>, then evicts
@@ -170,7 +183,7 @@ internal sealed class ShareRequestApprovalContributions
         catch (DbUpdateException ex) when (IsAConcurrentApproval(ex))
         {
             throw new ConflictException(
-                "Another approval for the same author and shared game was saved at the same time: retry");
+                "Another approval for the same shared game was saved at the same time: retry");
         }
 
         await cacheInvalidator.EvictContributorsAsync(_games, cancellationToken).ConfigureAwait(false);

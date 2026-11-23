@@ -64,7 +64,9 @@ internal sealed class ContributionRecordEntityConfiguration : IEntityTypeConfigu
             .HasDatabaseName("ix_contribution_records_share_request_id")
             .HasFilter("share_request_id IS NOT NULL");
 
+        // #5143: unique. Two approvals adding to one contributor at the same time both computed LatestVersion + 1.
         builder.HasIndex(e => new { e.ContributorId, e.Version })
-            .HasDatabaseName("ix_contribution_records_contributor_version");
+            .IsUnique()
+            .HasDatabaseName("ix_contribution_records_contributor_version_unique");
     }
 }

@@ -6,306 +6,163 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Tests.Constants;
+using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Quartz;
 using Xunit;
 
-using UserBadgeDto = Api.BoundedContexts.SharedGameCatalog.Application.DTOs.UserBadgeDto;
-
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Jobs;
 
+/// <summary>
+/// #5136 — the job judges the month just closed: it recalculates everyone ranked within the widest TopContributorRank of
+/// the leaderboard badges, and every holder of one of them. RecalculateBadges (with BadgeEvaluator) decides; here it is a
+/// double, and these tests are about who the job hands to it, and what it reports.
+/// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class TopContributorBadgeJobTests
 {
-    private readonly Mock<IMediator> _mediatorMock;
-    private readonly Mock<IBadgeRepository> _badgeRepositoryMock;
-    private readonly Mock<IUserBadgeRepository> _userBadgeRepositoryMock;
-    private readonly Mock<ILogger<TopContributorBadgeJob>> _loggerMock;
-    private readonly Mock<IJobExecutionContext> _jobContextMock;
+    private readonly Mock<IMediator> _mediatorMock = new();
+    private readonly Mock<IBadgeRepository> _badgeRepositoryMock = new();
+    private readonly Mock<IUserBadgeRepository> _userBadgeRepositoryMock = new();
+    private readonly Mock<IJobExecutionContext> _jobContextMock = new();
     private readonly TopContributorBadgeJob _job;
+    private readonly List<Guid> _recalculated = [];
 
     public TopContributorBadgeJobTests()
     {
-        _mediatorMock = new Mock<IMediator>();
-        _badgeRepositoryMock = new Mock<IBadgeRepository>();
-        _userBadgeRepositoryMock = new Mock<IUserBadgeRepository>();
-        _loggerMock = new Mock<ILogger<TopContributorBadgeJob>>();
-        _jobContextMock = new Mock<IJobExecutionContext>();
         _jobContextMock.Setup(c => c.CancellationToken).Returns(TestContext.Current.CancellationToken);
-        // #5136: the job reads the holders of the three leaderboard badges; a test sets the ones it cares about.
-        foreach (var code in new[] { "TOP_CONTRIBUTOR", "TOP_THREE", "NUMBER_ONE" })
-        {
-            _userBadgeRepositoryMock
-                .Setup(r => r.GetUsersByBadgeCodeAsync(code, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<UserBadge>());
-        }
+        _userBadgeRepositoryMock
+            .Setup(r => r.GetUsersByBadgeCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserBadge>());
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<RecalculateBadgesCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<RecalculateBadgesResponse>, CancellationToken>((c, _) => _recalculated.Add(((RecalculateBadgesCommand)c).UserId!.Value))
+            .ReturnsAsync(new RecalculateBadgesResponse { UsersProcessed = 1, BadgesAwarded = 1, BadgesRevoked = 0 });
+        GivenTheLeaderboardBadges(("TOP_CONTRIBUTOR", 10), ("TOP_THREE", 3), ("NUMBER_ONE", 1));
 
         _job = new TopContributorBadgeJob(
             _mediatorMock.Object,
             _badgeRepositoryMock.Object,
             _userBadgeRepositoryMock.Object,
-            _loggerMock.Object);
+            Mock.Of<ILogger<TopContributorBadgeJob>>());
+    }
+
+    [Fact]
+    public async Task Execute_RecalculatesTheRankedWithinTheWidestRank_AndNobodyBeyond()
+    {
+        var first = Guid.NewGuid();
+        var tenth = Guid.NewGuid();
+        var eleventh = Guid.NewGuid();
+        GivenTheRanks((first, 1), (tenth, 10), (eleventh, 11));
+
+        await _job.Execute(_jobContextMock.Object);
+
+        _recalculated.Should().BeEquivalentTo([first, tenth]);
     }
 
     [Fact]
     public async Task Execute_RecalculatesTheHolderOfAnyLeaderboardBadge_OutOfTheRanking()
     {
-        // #5136: last month's NUMBER_ONE may not hold TOP_CONTRIBUTOR; out of the ranking, it is recalculated (and loses it).
+        // Last month's NUMBER_ONE may not hold TOP_CONTRIBUTOR; out of the ranking, it is recalculated (and loses it).
         var formerNumberOne = Guid.NewGuid();
-        _mediatorMock
-            .Setup(m => m.Send(It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.PreviousMonth), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<LeaderboardEntryDto>
-            {
-                new() { Rank = 1, UserId = Guid.NewGuid(), UserName = "u", ContributionCount = 3, BadgeCount = 0, HighestBadgeTier = BadgeTier.Bronze, TopBadges = new List<UserBadgeDto>() },
-            });
-        var topContributor = CreateBadge("TOP_CONTRIBUTOR");
-        _badgeRepositoryMock.Setup(r => r.GetByCodeAsync("TOP_CONTRIBUTOR", It.IsAny<CancellationToken>())).ReturnsAsync(topContributor);
-        _userBadgeRepositoryMock
-            .Setup(r => r.GetUsersByBadgeCodeAsync("NUMBER_ONE", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<UserBadge> { UserBadge.Award(formerNumberOne, Guid.NewGuid(), "NUMBER_ONE", null) });
+        GivenTheRanks((Guid.NewGuid(), 1));
+        GivenTheHolders("NUMBER_ONE", formerNumberOne);
+
+        await _job.Execute(_jobContextMock.Object);
+
+        _recalculated.Should().Contain(formerNumberOne);
+    }
+
+    [Fact]
+    public async Task Execute_WithNoContributorLastMonth_StillRecalculatesTheHolders()
+    {
+        // Review of #5137: the job returned early on an empty ranking, and last month's holders kept the badges.
+        var holder = Guid.NewGuid();
+        GivenTheRanks();
+        GivenTheHolders("TOP_CONTRIBUTOR", holder);
+
+        await _job.Execute(_jobContextMock.Object);
+
+        _recalculated.Should().Equal(holder);
+    }
+
+    [Fact]
+    public async Task Execute_TakesTheWidestRankFromTheBadgeDefinitions()
+    {
+        // A badge with a wider rank is picked up without touching the job.
+        GivenTheLeaderboardBadges(("TOP_CONTRIBUTOR", 10), ("TOP_TWENTY", 20));
+        var fifteenth = Guid.NewGuid();
+        GivenTheRanks((fifteenth, 15));
+
+        await _job.Execute(_jobContextMock.Object);
+
+        _recalculated.Should().Equal(fifteenth);
+    }
+
+    [Fact]
+    public async Task Execute_ReportsTheAwardsAndTheRevocationsOfEveryCandidate()
+    {
+        // Review of #5137: the revocations of the users still ranked were dropped from the count.
+        GivenTheRanks((Guid.NewGuid(), 1), (Guid.NewGuid(), 5));
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<RecalculateBadgesCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RecalculateBadgesResponse { UsersProcessed = 1, BadgesAwarded = 0, BadgesRevoked = 1 });
+            .ReturnsAsync(new RecalculateBadgesResponse { UsersProcessed = 1, BadgesAwarded = 1, BadgesRevoked = 2 });
 
         await _job.Execute(_jobContextMock.Object);
 
-        _mediatorMock.Verify(
-            m => m.Send(It.Is<RecalculateBadgesCommand>(cmd => cmd.UserId == formerNumberOne), It.IsAny<CancellationToken>()),
-            Times.Once);
+        _jobContextMock.VerifySet(c => c.Result = It.Is<object>(r => Reported(r, "Awarded", 2) && Reported(r, "Revoked", 4)));
     }
 
     [Fact]
-    public async Task Execute_AwardsTopTen_RevokesOthers()
+    public async Task Execute_AFailureForOneCandidate_DoesNotStopTheOthers()
     {
-        // Arrange
-        var topUserIds = Enumerable.Range(1, 10).Select(_ => Guid.NewGuid()).ToList();
-        var removedUserId = Guid.NewGuid();
-
-        var leaderboard = topUserIds.Select((id, index) => new LeaderboardEntryDto
-        {
-            Rank = index + 1,
-            UserId = id,
-            UserName = $"User-{id}",
-            ContributionCount = 10,
-            BadgeCount = 2,
-            HighestBadgeTier = BadgeTier.Bronze,
-            TopBadges = new List<UserBadgeDto>()
-        }).ToList();
-
+        var failing = Guid.NewGuid();
+        var other = Guid.NewGuid();
+        GivenTheRanks((failing, 1), (other, 2));
         _mediatorMock
-            .Setup(m => m.Send(
-                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.PreviousMonth && q.PageSize == 10),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leaderboard);
+            .Setup(m => m.Send(It.Is<RecalculateBadgesCommand>(c => c.UserId == failing), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("boom"));
 
-        var topContributorBadge = CreateBadge("TOP_CONTRIBUTOR");
+        await _job.Execute(_jobContextMock.Object);
+
+        _recalculated.Should().Contain(other);
+        _jobContextMock.VerifySet(c => c.Result = It.Is<object>(r => Reported(r, "Success", true)));
+    }
+
+    [Fact]
+    public async Task Execute_WithNoLeaderboardBadge_RecalculatesNobody()
+    {
+        GivenTheLeaderboardBadges();
+
+        await _job.Execute(_jobContextMock.Object);
+
+        _recalculated.Should().BeEmpty();
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<GetPreviousMonthContributionRanksQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private void GivenTheLeaderboardBadges(params (string Code, int Rank)[] badges) =>
         _badgeRepositoryMock
-            .Setup(r => r.GetByCodeAsync("TOP_CONTRIBUTOR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(topContributorBadge);
+            .Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(badges
+                .Select(b => Badge.Create(b.Code, b.Code, "Test badge", BadgeTier.Gold, BadgeCategory.Engagement,
+                    BadgeRequirement.ForTopContributor(b.Rank)))
+                .Append(Badge.Create("FIRST_CONTRIBUTION", "First", "Not a leaderboard badge", BadgeTier.Bronze,
+                    BadgeCategory.Contribution, BadgeRequirement.ForFirstContribution()))
+                .ToList());
 
-        // User no longer in top 10
-        var removedUserBadge = UserBadge.Award(removedUserId, topContributorBadge.Id, "TOP_CONTRIBUTOR", null);
+    private void GivenTheRanks(params (Guid UserId, int Rank)[] ranks) =>
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetPreviousMonthContributionRanksQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyDictionary<Guid, int>)ranks.ToDictionary(r => r.UserId, r => r.Rank));
+
+    private void GivenTheHolders(string code, params Guid[] userIds) =>
         _userBadgeRepositoryMock
-            .Setup(r => r.GetUsersByBadgeCodeAsync("TOP_CONTRIBUTOR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<UserBadge> { removedUserBadge });
+            .Setup(r => r.GetUsersByBadgeCodeAsync(code, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userIds.Select(u => UserBadge.Award(u, Guid.NewGuid(), code, null)).ToList());
 
-        _mediatorMock
-            .Setup(m => m.Send(It.IsAny<RecalculateBadgesCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RecalculateBadgesResponse
-            {
-                UsersProcessed = 1,
-                BadgesAwarded = 1,
-                BadgesRevoked = 0
-            });
-
-        // Act
-        await _job.Execute(_jobContextMock.Object);
-
-        // Assert
-        // Verify RecalculateBadgesCommand called for top 10 (award)
-        _mediatorMock.Verify(
-            m => m.Send(
-                It.Is<RecalculateBadgesCommand>(cmd => topUserIds.Contains(cmd.UserId!.Value)),
-                It.IsAny<CancellationToken>()),
-            Times.Exactly(10));
-
-        // Verify RecalculateBadgesCommand called for removed user (revoke)
-        _mediatorMock.Verify(
-            m => m.Send(
-                It.Is<RecalculateBadgesCommand>(cmd => cmd.UserId == removedUserId),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        // Verify job result
-        _jobContextMock.VerifySet(c => c.Result = It.Is<object>(r =>
-            r.GetType().GetProperty("Success")!.GetValue(r)!.Equals(true)));
-    }
-
-    [Fact]
-    public async Task Execute_NoContributors_HandlesGracefully()
-    {
-        // Arrange
-        _mediatorMock
-            .Setup(m => m.Send(
-                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.PreviousMonth),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<LeaderboardEntryDto>());
-
-        // Act
-        await _job.Execute(_jobContextMock.Object);
-
-        // Assert
-        _mediatorMock.Verify(
-            m => m.Send(It.IsAny<RecalculateBadgesCommand>(), It.IsAny<CancellationToken>()),
-            Times.Never); // No badge operations
-
-        _jobContextMock.VerifySet(c => c.Result = It.Is<object>(r =>
-            r.GetType().GetProperty("Success")!.GetValue(r)!.Equals(true) &&
-            r.GetType().GetProperty("Awarded")!.GetValue(r)!.Equals(0)));
-    }
-
-    [Fact]
-    public async Task Execute_MissingBadgeDefinition_LogsErrorAndReturns()
-    {
-        // Arrange
-        var leaderboard = new List<LeaderboardEntryDto>
-        {
-            new()
-            {
-                Rank = 1,
-                UserId = Guid.NewGuid(),
-                UserName = "User1",
-                ContributionCount = 10,
-                BadgeCount = 1,
-                HighestBadgeTier = BadgeTier.Bronze,
-                TopBadges = new List<UserBadgeDto>()
-            }
-        };
-
-        _mediatorMock
-            .Setup(m => m.Send(
-                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.PreviousMonth),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leaderboard);
-
-        _badgeRepositoryMock
-            .Setup(r => r.GetByCodeAsync("TOP_CONTRIBUTOR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Badge?)null); // Badge not found
-
-        // Act
-        await _job.Execute(_jobContextMock.Object);
-
-        // Assert
-        _mediatorMock.Verify(
-            m => m.Send(It.IsAny<RecalculateBadgesCommand>(), It.IsAny<CancellationToken>()),
-            Times.Never); // No operations if badge missing
-
-        _jobContextMock.VerifySet(c => c.Result = It.Is<object>(r =>
-            r.GetType().GetProperty("Success")!.GetValue(r)!.Equals(false)));
-    }
-
-    [Fact]
-    public async Task Execute_IndividualFailure_ContinuesProcessing()
-    {
-        // Arrange
-        var user1 = Guid.NewGuid();
-        var user2 = Guid.NewGuid();
-        var user3 = Guid.NewGuid();
-
-        var leaderboard = new List<LeaderboardEntryDto>
-        {
-            new()
-            {
-                Rank = 1,
-                UserId = user1,
-                UserName = "User1",
-                ContributionCount = 10,
-                BadgeCount = 1,
-                HighestBadgeTier = BadgeTier.Bronze,
-                TopBadges = new List<UserBadgeDto>()
-            },
-            new()
-            {
-                Rank = 2,
-                UserId = user2,
-                UserName = "User2",
-                ContributionCount = 9,
-                BadgeCount = 1,
-                HighestBadgeTier = BadgeTier.Bronze,
-                TopBadges = new List<UserBadgeDto>()
-            },
-            new()
-            {
-                Rank = 3,
-                UserId = user3,
-                UserName = "User3",
-                ContributionCount = 8,
-                BadgeCount = 1,
-                HighestBadgeTier = BadgeTier.Bronze,
-                TopBadges = new List<UserBadgeDto>()
-            }
-        };
-
-        _mediatorMock
-            .Setup(m => m.Send(
-                It.Is<GetBadgeLeaderboardQuery>(q => q.Period == LeaderboardPeriod.PreviousMonth),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(leaderboard);
-
-        var topContributorBadge = CreateBadge("TOP_CONTRIBUTOR");
-        _badgeRepositoryMock
-            .Setup(r => r.GetByCodeAsync("TOP_CONTRIBUTOR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(topContributorBadge);
-
-        _userBadgeRepositoryMock
-            .Setup(r => r.GetUsersByBadgeCodeAsync("TOP_CONTRIBUTOR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<UserBadge>());
-
-        // User2 fails
-        _mediatorMock
-            .Setup(m => m.Send(
-                It.Is<RecalculateBadgesCommand>(cmd => cmd.UserId == user2),
-                It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("User2 processing failed"));
-
-        // User1 and User3 succeed
-        _mediatorMock
-            .Setup(m => m.Send(
-                It.Is<RecalculateBadgesCommand>(cmd => cmd.UserId == user1 || cmd.UserId == user3),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RecalculateBadgesResponse
-            {
-                UsersProcessed = 1,
-                BadgesAwarded = 1,
-                BadgesRevoked = 0
-            });
-
-        // Act
-        await _job.Execute(_jobContextMock.Object);
-
-        // Assert
-        _mediatorMock.Verify(
-            m => m.Send(It.IsAny<RecalculateBadgesCommand>(), It.IsAny<CancellationToken>()),
-            Times.Exactly(3)); // All 3 users processed despite user2 failure
-
-        _jobContextMock.VerifySet(c => c.Result = It.Is<object>(r =>
-            r.GetType().GetProperty("Success")!.GetValue(r)!.Equals(true)));
-    }
-
-    #region Helper Methods
-
-    private static Badge CreateBadge(string code)
-    {
-        return Badge.Create(
-            code: code,
-            name: $"{code} Badge",
-            description: "Test badge",
-            tier: BadgeTier.Gold,
-            category: BadgeCategory.Engagement,
-            requirement: BadgeRequirement.ForTopContributor(10));
-    }
-
-    #endregion
+    private static bool Reported(object result, string property, object expected) =>
+        Equals(result.GetType().GetProperty(property)?.GetValue(result), expected);
 }

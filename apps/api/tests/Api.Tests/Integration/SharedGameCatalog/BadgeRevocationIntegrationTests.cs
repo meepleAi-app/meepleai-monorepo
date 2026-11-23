@@ -157,10 +157,12 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
     [Trait("Issue", "5136")]
     public async Task TheLeaderboardBadges_GoToTheFirstOfThePreviousMonth_NotToThisMonths()
     {
+        // 5, 5, 3, 2 contributions: ranks 1, 1, 3, 4. A tie shares the rank, whoever is recalculated first (review of #5137).
         var gameId = await SeedSharedGameAsync();
-        var lastMonth = StartOfThisMonth().AddDays(-3);
+        var thisMonth = StartOfThisMonth();
+        var lastMonth = thisMonth.AddDays(-3);
         var ranked = new List<Guid>();
-        foreach (var contributions in new[] { 5, 4, 3, 2 })
+        foreach (var contributions in new[] { 5, 5, 3, 2 })
         {
             var userId = await SeedUserAsync();
             await SeedContributionsAsync(userId, gameId, contributions, lastMonth);
@@ -168,13 +170,13 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
         }
 
         var onlyThisMonth = await SeedUserAsync();
-        await SeedContributionsAsync(onlyThisMonth, gameId, 9, DateTime.UtcNow);
+        await SeedContributionsAsync(onlyThisMonth, gameId, 9, thisMonth);
 
         foreach (var userId in ranked.Append(onlyThisMonth))
             await RecalculateWithTheRealEvaluatorAsync(userId);
 
         (await LeaderboardCodesAsync(ranked[0])).Should().BeEquivalentTo([Leaderboard, "TOP_THREE", "NUMBER_ONE"]);
-        (await LeaderboardCodesAsync(ranked[1])).Should().BeEquivalentTo([Leaderboard, "TOP_THREE"]);
+        (await LeaderboardCodesAsync(ranked[1])).Should().BeEquivalentTo([Leaderboard, "TOP_THREE", "NUMBER_ONE"], "tied first");
         (await LeaderboardCodesAsync(ranked[2])).Should().BeEquivalentTo([Leaderboard, "TOP_THREE"]);
         (await LeaderboardCodesAsync(ranked[3])).Should().BeEquivalentTo([Leaderboard]);
         (await LeaderboardCodesAsync(onlyThisMonth)).Should().BeEmpty("this month is judged once it is over");
@@ -192,9 +194,10 @@ public sealed class BadgeRevocationIntegrationTests : IClassFixture<BadgeRevocat
         (await RowsAsync(userId, Leaderboard)).Should().ContainSingle().Which.RevokedAt.Should().NotBeNull();
     }
 
-    private static DateTime StartOfThisMonth()
+    // The month of the host's TimeProvider, the clock the ranks query reads.
+    private DateTime StartOfThisMonth()
     {
-        var now = DateTime.UtcNow;
+        var now = _factory.Services.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime;
         return new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
     }
 

@@ -18,15 +18,12 @@ internal sealed class GetBadgeLeaderboardQueryHandler : IRequestHandler<GetBadge
     private readonly MeepleAiDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly ILogger<GetBadgeLeaderboardQueryHandler> _logger;
-    private readonly TimeProvider _timeProvider;
 
     public GetBadgeLeaderboardQueryHandler(
         MeepleAiDbContext context,
         IUserRepository userRepository,
-        ILogger<GetBadgeLeaderboardQueryHandler> logger,
-        TimeProvider timeProvider)
+        ILogger<GetBadgeLeaderboardQueryHandler> logger)
     {
-        _timeProvider = timeProvider ?? TimeProvider.System;
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -44,10 +41,10 @@ internal sealed class GetBadgeLeaderboardQueryHandler : IRequestHandler<GetBadge
             query.PageNumber,
             query.PageSize);
 
-        var (periodStart, periodEnd) = GetPeriodWindow(query.Period, _timeProvider.GetUtcNow().UtcDateTime);
+        var periodStart = GetPeriodStart(query.Period);
 
         // Step 1: Get contribution counts per user
-        var contributionCounts = await GetContributionCountsAsync(periodStart, periodEnd, cancellationToken)
+        var contributionCounts = await GetContributionCountsAsync(periodStart, cancellationToken)
             .ConfigureAwait(false);
 
         if (contributionCounts.Count == 0)
@@ -113,7 +110,6 @@ internal sealed class GetBadgeLeaderboardQueryHandler : IRequestHandler<GetBadge
 
     private async Task<Dictionary<Guid, int>> GetContributionCountsAsync(
         DateTime? periodStart,
-        DateTime? periodEnd,
         CancellationToken cancellationToken)
     {
         var query = _context.Set<ContributorEntity>()
@@ -122,17 +118,10 @@ internal sealed class GetBadgeLeaderboardQueryHandler : IRequestHandler<GetBadge
             .AsQueryable();
 
         // Apply period filter to contributions
-        // The window is [start, end): an open end means up to now. Only the bounds that exist reach the SQL: the
-        // open ones below are DateTime.MinValue/MaxValue, with no Kind, which Npgsql refuses for a timestamptz.
-        if (periodStart is { } from)
+        if (periodStart.HasValue)
         {
-            query = periodEnd is { } to
-                ? query.Where(c => c.Contributions.Any(cr => cr.ContributedAt >= from && cr.ContributedAt < to))
-                : query.Where(c => c.Contributions.Any(cr => cr.ContributedAt >= from));
+            query = query.Where(c => c.Contributions.Any(cr => cr.ContributedAt >= periodStart.Value));
         }
-
-        var start = periodStart ?? DateTime.MinValue;
-        var end = periodEnd ?? DateTime.MaxValue;
 
         var contributors = await query.ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -141,7 +130,9 @@ internal sealed class GetBadgeLeaderboardQueryHandler : IRequestHandler<GetBadge
             .GroupBy(c => c.UserId)
             .ToDictionary(
                 g => g.Key,
-                g => g.Sum(c => c.Contributions.Count(cr => cr.ContributedAt >= start && cr.ContributedAt < end)));
+                g => g.Sum(c => periodStart.HasValue
+                    ? c.Contributions.Count(cr => cr.ContributedAt >= periodStart.Value)
+                    : c.Contributions.Count));
     }
 
     private async Task<Dictionary<Guid, (int BadgeCount, Domain.ValueObjects.BadgeTier HighestTier, List<UserBadgeDto> TopBadges)>> GetBadgeStatsAsync(
@@ -184,17 +175,14 @@ internal sealed class GetBadgeLeaderboardQueryHandler : IRequestHandler<GetBadge
                 });
     }
 
-    /// <summary>The [start, end) window of a period at <paramref name="utcNow"/>; null means open.</summary>
-    private static (DateTime? Start, DateTime? End) GetPeriodWindow(LeaderboardPeriod period, DateTime utcNow)
+    private static DateTime? GetPeriodStart(LeaderboardPeriod period)
     {
-        var monthStart = new DateTime(utcNow.Year, utcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         return period switch
         {
-            LeaderboardPeriod.Week => (utcNow.AddDays(-7), null),
-            LeaderboardPeriod.Month => (utcNow.AddDays(-30), null),
-            LeaderboardPeriod.PreviousMonth => (monthStart.AddMonths(-1), monthStart),
-            LeaderboardPeriod.AllTime => (null, null),
-            _ => (null, null)
+            LeaderboardPeriod.Week => DateTime.UtcNow.AddDays(-7),
+            LeaderboardPeriod.Month => DateTime.UtcNow.AddDays(-30),
+            LeaderboardPeriod.AllTime => null,
+            _ => null
         };
     }
 }

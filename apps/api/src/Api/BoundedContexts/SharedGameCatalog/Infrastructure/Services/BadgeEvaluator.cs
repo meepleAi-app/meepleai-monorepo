@@ -16,6 +16,7 @@ internal sealed class BadgeEvaluator : IBadgeEvaluator
     private readonly IShareRequestRepository _shareRequestRepository;
     private readonly ISharedGameDocumentRepository _sharedGameDocumentRepository;
     private readonly IMediator _mediator;
+    private IReadOnlyDictionary<Guid, int>? _previousMonthRanks;
 
     public BadgeEvaluator(
         IBadgeRepository badgeRepository,
@@ -76,15 +77,16 @@ internal sealed class BadgeEvaluator : IBadgeEvaluator
     }
 
     /// <summary>
-    /// Whether <paramref name="userId"/> is among the first <paramref name="topRank"/> of the previous calendar month's
-    /// leaderboard (#5136): 10 for TOP_CONTRIBUTOR, 3 for TOP_THREE, 1 for NUMBER_ONE.
+    /// Whether <paramref name="userId"/> ranks within <paramref name="topRank"/> among the contributors of the previous
+    /// calendar month (#5136): 10 for TOP_CONTRIBUTOR, 3 for TOP_THREE, 1 for NUMBER_ONE. Ties share a rank. The ranks of a
+    /// closed month do not change, so they are read once per evaluator, not once per badge.
     /// </summary>
     private async Task<bool> IsRankedInPreviousMonthAsync(Guid userId, int topRank, CancellationToken cancellationToken)
     {
-        var leaderboard = await _mediator.Send(
-            new GetBadgeLeaderboardQuery { Period = LeaderboardPeriod.PreviousMonth, PageNumber = 1, PageSize = topRank },
-            cancellationToken).ConfigureAwait(false);
-        return leaderboard.Exists(entry => entry.UserId == userId);
+        _previousMonthRanks ??= await _mediator
+            .Send(new GetPreviousMonthContributionRanksQuery(), cancellationToken)
+            .ConfigureAwait(false);
+        return _previousMonthRanks.TryGetValue(userId, out var rank) && rank <= topRank;
     }
 
     private async Task<bool> CheckFirstContributionAsync(Guid userId, CancellationToken cancellationToken)

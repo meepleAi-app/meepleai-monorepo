@@ -31,11 +31,5 @@ public enum LeaderboardPeriod
     /// <summary>
     /// All time contributions.
     /// </summary>
-    AllTime,
-
-    /// <summary>
-    /// The previous calendar month (UTC), closed: from its first day included to the first day of the current month
-    /// excluded. The leaderboard badges are awarded on it (#5136), so a month is judged once it is over.
-    /// </summary>
-    PreviousMonth
+    AllTime
 }

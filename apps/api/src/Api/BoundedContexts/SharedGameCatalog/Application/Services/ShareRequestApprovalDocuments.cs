@@ -35,11 +35,17 @@ internal static class ShareRequestApprovalDocuments
     }
 
     /// <summary>
-    /// Copies the attached documents into <paramref name="destinationId"/>, once. The copies join the caller's unit of
-    /// work: they are saved with the approval or not at all. Call it after <see cref="ShareRequest.Approve"/>, which
-    /// can still refuse, so that a refused approval leaves no copied file in storage.
+    /// Copies the attached documents into <paramref name="destinationId"/>, once. The <c>PdfDocument</c> rows of the
+    /// copies join the caller's unit of work and are saved with the approval; the files are written to storage now,
+    /// so a save that fails afterwards leaves them there. Call it after <see cref="ShareRequest.Approve"/>, which can
+    /// still refuse, so that at least a refused approval leaves no copied file behind.
     /// </summary>
-    /// <returns>The number of attached documents handed to the copy.</returns>
+    /// <returns>The number of documents copied: all the attached ones.</returns>
+    /// <exception cref="ConflictException">
+    /// A document could not be copied. <c>CopyDocumentsToSharedGame</c> logs and skips one that is missing from storage,
+    /// fails to store, or no longer exists; approved anyway, the request would close with that document left out, and
+    /// nothing recovers it later (from the review of #5131).
+    /// </exception>
     public static async Task<int> CopyAttachedAsync(
         IShareRequestDocumentService documentService,
         ShareRequest shareRequest,
@@ -53,9 +59,16 @@ internal static class ShareRequestApprovalDocuments
         if (documentIds.Count == 0)
             return 0;
 
-        await documentService
+        var copies = await documentService
             .CopyDocumentsToSharedGame(documentIds, destinationId, shareRequest.UserId, cancellationToken)
             .ConfigureAwait(false);
-        return documentIds.Count;
+
+        if (copies.Count != documentIds.Count)
+        {
+            throw new ConflictException(
+                $"ShareRequest {shareRequest.Id}: {copies.Count} of {documentIds.Count} attached documents could be copied to SharedGame {destinationId}, so it is not approved");
+        }
+
+        return copies.Count;
     }
 }

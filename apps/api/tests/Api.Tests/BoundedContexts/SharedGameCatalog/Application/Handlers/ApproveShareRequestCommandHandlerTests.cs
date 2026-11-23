@@ -35,10 +35,11 @@ public class ApproveShareRequestCommandHandlerTests
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<ApproveShareRequestCommandHandler>>();
 
+        // As the real service when every copy succeeds: one new document id for each source.
         _documentsMock
             .Setup(d => d.CopyDocumentsToSharedGame(
                 It.IsAny<List<Guid>>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Guid>());
+            .ReturnsAsync((List<Guid> ids, Guid _, Guid _, CancellationToken _) => ids.Select(_ => Guid.NewGuid()).ToList());
 
         _handler = new ApproveShareRequestCommandHandler(
             _repositoryMock.Object,
@@ -283,6 +284,29 @@ public class ApproveShareRequestCommandHandlerTests
 
         await act.Should().ThrowAsync<ShareRequestReviewerMismatchException>();
         VerifyNoCopy();
+    }
+
+    [Fact]
+    public async Task Handle_WhenADocumentCannotBeCopied_ThrowsConflict_AndSavesNothing()
+    {
+        // From the review of #5131: the copy service logs and skips a document it cannot copy. Approved anyway, the
+        // request would close with that document left out, which is what the old 409 existed to prevent.
+        var request = ShareRequest.Create(TestUserId, TestGameId, ContributionType.NewGame, "With the rulebook");
+        request.AttachDocument(Guid.NewGuid(), "rules.pdf", "application/pdf", 1024);
+        request.AttachDocument(Guid.NewGuid(), "faq.pdf", "application/pdf", 1024);
+        request.StartReview(TestAdminId);
+        GivenTheRepositoryReturns(request);
+        _documentsMock
+            .Setup(d => d.CopyDocumentsToSharedGame(
+                It.IsAny<List<Guid>>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid> { Guid.NewGuid() });
+
+        var act = () => _handler.Handle(
+            new ApproveShareRequestCommand(ShareRequestId: request.Id, AdminId: TestAdminId),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*1 of 2 attached documents*");
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private void GivenTheRepositoryReturns(ShareRequest request) =>

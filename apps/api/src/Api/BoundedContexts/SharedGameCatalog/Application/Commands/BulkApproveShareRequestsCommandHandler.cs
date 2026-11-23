@@ -153,7 +153,7 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
             }
 
             // The copies once every request of the batch is approved: a request refused halfway leaves no copied file
-            // behind for the ones before it. They are saved with the approvals.
+            // behind for the ones before it. Their rows are saved with the approvals; a copy that fails fails the batch.
             foreach (var (shareRequest, destination) in destinations)
             {
                 await ShareRequestApprovalDocuments

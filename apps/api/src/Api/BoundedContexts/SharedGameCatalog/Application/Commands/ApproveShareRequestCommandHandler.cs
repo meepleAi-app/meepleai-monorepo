@@ -70,8 +70,8 @@ internal sealed class ApproveShareRequestCommandHandler : ICommandHandler<Approv
             command.TargetSharedGameId,
             command.AdminNotes);
 
-        // After Approve, which can still refuse: a refused approval leaves no copied file behind. The copies are
-        // saved together with the approval.
+        // After Approve, which can still refuse: a refused approval leaves no copied file behind. The rows of the
+        // copies are saved together with the approval; a copy that fails refuses it (409).
         var copied = await ShareRequestApprovalDocuments
             .CopyAttachedAsync(_documentService, shareRequest, destination, cancellationToken)
             .ConfigureAwait(false);

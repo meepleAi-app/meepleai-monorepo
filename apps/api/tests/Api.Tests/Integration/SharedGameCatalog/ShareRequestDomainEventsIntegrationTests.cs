@@ -57,10 +57,12 @@ public sealed class ShareRequestEventsHostFixture(SharedTestcontainersFixture sh
     private static Mock<IShareRequestDocumentService> CreateDocuments()
     {
         var documents = new Mock<IShareRequestDocumentService>();
+        // As the real service when every copy succeeds: one new document id for each source. Since #5109 an approval
+        // that gets fewer copies than documents is refused.
         documents
             .Setup(d => d.CopyDocumentsToSharedGame(
                 It.IsAny<List<Guid>>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Guid>());
+            .ReturnsAsync((List<Guid> ids, Guid _, Guid _, CancellationToken _) => ids.Select(_ => Guid.NewGuid()).ToList());
         return documents;
     }
 }

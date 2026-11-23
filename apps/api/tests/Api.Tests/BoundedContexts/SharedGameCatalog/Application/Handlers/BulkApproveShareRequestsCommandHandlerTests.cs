@@ -34,10 +34,11 @@ public class BulkApproveShareRequestsCommandHandlerTests
     {
         _mockShareRequestRepository = new Mock<IShareRequestRepository>();
         _mockDocuments = new Mock<IShareRequestDocumentService>();
+        // As the real service when every copy succeeds: one new document id for each source.
         _mockDocuments
             .Setup(d => d.CopyDocumentsToSharedGame(
                 It.IsAny<List<Guid>>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Guid>());
+            .ReturnsAsync((List<Guid> ids, Guid _, Guid _, CancellationToken _) => ids.Select(_ => Guid.NewGuid()).ToList());
         _mockAuditLogRepository = new Mock<IAuditLogRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _handler = new BulkApproveShareRequestsCommandHandler(
@@ -289,6 +290,27 @@ public class BulkApproveShareRequestsCommandHandlerTests
 
         result.SuccessCount.Should().Be(0);
         VerifyNoCopy();
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenADocumentCannotBeCopied_FailsTheBatch_AndSavesNothing()
+    {
+        var editorId = Guid.NewGuid();
+        var first = WithDocument(ShareRequest.Create(Guid.NewGuid(), Guid.NewGuid(), ContributionType.NewGame, "Rules"), editorId);
+        var second = WithDocument(ShareRequest.Create(Guid.NewGuid(), Guid.NewGuid(), ContributionType.NewGame, "Rules"), editorId);
+        GivenTheBatch(first, second);
+        _mockDocuments
+            .Setup(d => d.CopyDocumentsToSharedGame(
+                It.IsAny<List<Guid>>(), second.SourceGameId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid>());
+
+        var result = await _handler.Handle(
+            new BulkApproveShareRequestsCommand([first.Id, second.Id], editorId),
+            TestContext.Current.CancellationToken);
+
+        result.SuccessCount.Should().Be(0);
+        result.Errors.Should().ContainSingle().Which.Should().Contain("0 of 1 attached documents");
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 

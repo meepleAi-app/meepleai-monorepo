@@ -44,6 +44,7 @@ public class BulkApproveShareRequestsCommandHandlerTests
         _handler = new BulkApproveShareRequestsCommandHandler(
             _mockShareRequestRepository.Object,
             _mockDocuments.Object,
+            Mock.Of<IContributorRepository>(),
             _mockAuditLogRepository.Object,
             _mockUnitOfWork.Object,
             Mock.Of<ILogger<BulkApproveShareRequestsCommandHandler>>(),

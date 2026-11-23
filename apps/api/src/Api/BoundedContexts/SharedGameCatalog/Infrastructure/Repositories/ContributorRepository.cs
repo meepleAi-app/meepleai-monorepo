@@ -83,6 +83,44 @@ internal sealed class ContributorRepository : RepositoryBase, IContributorReposi
         return entity is null ? null : MapToDomain(entity);
     }
 
+    public async Task<Contributor?> GetByUserAndSharedGameAsync(
+        Guid userId,
+        Guid sharedGameId,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.Set<ContributorEntity>()
+            .AsNoTracking()
+            .Include(c => c.Contributions)
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.SharedGameId == sharedGameId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity is null ? null : MapToDomain(entity);
+    }
+
+    public Task<bool> HasPrimaryContributorAsync(Guid sharedGameId, CancellationToken cancellationToken = default) =>
+        DbContext.Set<ContributorEntity>()
+            .AnyAsync(c => c.SharedGameId == sharedGameId && c.IsPrimaryContributor, cancellationToken);
+
+    public async Task AddContributionsAsync(
+        Contributor contributor,
+        IReadOnlyCollection<ContributionRecord> records,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(contributor);
+        ArgumentNullException.ThrowIfNull(records);
+
+        await DbContext.Set<ContributionRecordEntity>()
+            .AddRangeAsync(records.Select(MapContributionRecordToEntity), cancellationToken)
+            .ConfigureAwait(false);
+
+        // Only modified_at changes on the contributor's row, which was read without tracking: a stub with its key,
+        // and that one column marked, is an UPDATE of that column alone. The table has no concurrency token.
+        var entity = DbContext.Set<ContributorEntity>().Local.FirstOrDefault(c => c.Id == contributor.Id)
+            ?? DbContext.Set<ContributorEntity>().Attach(new ContributorEntity { Id = contributor.Id }).Entity;
+        entity.ModifiedAt = contributor.ModifiedAt;
+        DbContext.Entry(entity).Property(c => c.ModifiedAt).IsModified = true;
+    }
+
     public void Update(Contributor contributor)
     {
         ArgumentNullException.ThrowIfNull(contributor);

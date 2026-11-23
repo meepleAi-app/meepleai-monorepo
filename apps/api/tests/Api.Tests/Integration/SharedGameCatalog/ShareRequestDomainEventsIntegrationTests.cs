@@ -2,6 +2,10 @@ using System.Text.Json;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ApproveGameProposal;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameContributors;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
@@ -240,6 +244,146 @@ public sealed class ShareRequestDomainEventsIntegrationTests : IClassFixture<Sha
         using var scope = _factory.Services.CreateScope();
         var stored = await scope.ServiceProvider.GetRequiredService<IShareRequestRepository>().GetByIdAsync(requestId, Ct);
         stored!.Status.Should().Be(ShareRequestStatus.InReview);
+    }
+
+    // #5139, decision of 2026-11-23: no production path wrote contributors and contribution_records, so the badge
+    // leaderboard and the contributors of a game were always empty. The approval records them now, in its own save.
+    [Fact]
+    [Trait("Issue", "5139")]
+    public async Task ApprovingANewGame_MakesItsAuthorThePrimaryContributor_WithTheInitialSubmissionOfTheCopies()
+    {
+        var (userId, adminId) = await SeedUserAndAdminAsync();
+        var gameId = await SeedSharedGameAsync();
+        var original = Guid.NewGuid();
+        var request = ShareRequest.Create(userId, gameId, ContributionType.NewGame);
+        request.AttachDocument(original, "regolamento-5139.pdf", "application/pdf", 2048);
+        var requestId = await SaveNewAsync(request);
+        await UpdateAsync(requestId, r => r.StartReview(adminId));
+
+        await ApproveShareRequestAsync(requestId, adminId, targetSharedGameId: null);
+
+        var contributor = (await ContributorsAsync(gameId)).Should().ContainSingle().Subject;
+        contributor.UserId.Should().Be(userId);
+        contributor.IsPrimaryContributor.Should().BeTrue();
+        var record = contributor.Contributions.Should().ContainSingle().Subject;
+        record.Type.Should().Be((int)ContributionRecordType.InitialSubmission);
+        record.Version.Should().Be(1);
+        record.ShareRequestId.Should().Be(requestId);
+        var documents = JsonSerializer.Deserialize<List<Guid>>(record.DocumentIdsJson!);
+        documents.Should().ContainSingle().Which.Should().NotBe(original, "the record names the copy in the shared game");
+
+        // What the two readers that were always empty now see.
+        using var scope = _factory.Services.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        (await mediator.Send(new GetGameContributorsQuery(gameId), Ct)).Should().ContainSingle()
+            .Which.Should().Match<GameContributorDto>(c => c.UserId == userId && c.IsPrimaryContributor && c.ContributionCount == 1);
+        (await mediator.Send(new GetBadgeLeaderboardQuery(LeaderboardPeriod.AllTime, 1, 100), Ct))
+            .Should().ContainSingle(e => e.UserId == userId).Which.ContributionCount.Should().Be(1);
+    }
+
+    [Fact]
+    [Trait("Issue", "5139")]
+    public async Task AnotherApprovalOfTheAuthorOnTheGame_AddsTheNextVersion_ToTheSameContributor()
+    {
+        var (userId, adminId) = await SeedUserAndAdminAsync();
+        var gameId = await SeedSharedGameAsync();
+        var first = await SaveNewAsync(ShareRequest.Create(userId, gameId, ContributionType.NewGame));
+        await UpdateAsync(first, r => r.StartReview(adminId));
+        await ApproveShareRequestAsync(first, adminId, targetSharedGameId: null);
+        var more = ShareRequest.Create(userId, gameId, ContributionType.AdditionalContent, targetSharedGameId: gameId);
+        more.AttachDocument(Guid.NewGuid(), "espansione-5139.pdf", "application/pdf", 2048);
+        var second = await SaveNewAsync(more);
+        await UpdateAsync(second, r => r.StartReview(adminId));
+
+        await ApproveShareRequestAsync(second, adminId, targetSharedGameId: null);
+
+        var contributor = (await ContributorsAsync(gameId)).Should().ContainSingle().Subject;
+        contributor.ModifiedAt.Should().NotBeNull();
+        contributor.Contributions.OrderBy(c => c.Version)
+            .Select(c => (c.Version, c.Type, c.ShareRequestId))
+            .Should().Equal(
+                (1, (int)ContributionRecordType.InitialSubmission, (Guid?)first),
+                (2, (int)ContributionRecordType.DocumentAddition, (Guid?)second));
+    }
+
+    [Fact]
+    [Trait("Issue", "5139")]
+    public async Task ABulkApprovalOfTwoRequestsOfOneAuthorOnOneGame_GivesOneContributorAndTwoVersions()
+    {
+        // One contributor per user and game (ix_contributors_user_shared_game_unique): two in one save would be a 23505,
+        // and the batch is all-or-nothing.
+        var (userId, adminId) = await SeedUserAndAdminAsync();
+        var gameId = await SeedSharedGameAsync();
+        var ids = new List<Guid>();
+        foreach (var file in new[] { "a-5139.pdf", "b-5139.pdf" })
+        {
+            var request = ShareRequest.Create(userId, gameId, ContributionType.AdditionalContent, targetSharedGameId: gameId);
+            request.AttachDocument(Guid.NewGuid(), file, "application/pdf", 2048);
+            var id = await SaveNewAsync(request);
+            await UpdateAsync(id, r => r.StartReview(adminId));
+            ids.Add(id);
+        }
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var result = await scope.ServiceProvider.GetRequiredService<IMediator>()
+                .Send(new BulkApproveShareRequestsCommand(ids, adminId), Ct);
+            result.SuccessCount.Should().Be(2, string.Join("; ", result.Errors));
+        }
+
+        var contributor = (await ContributorsAsync(gameId)).Should().ContainSingle().Subject;
+        contributor.IsPrimaryContributor.Should().BeFalse("additional content does not make anyone the game's author");
+        contributor.Contributions.Select(c => c.Version).Should().BeEquivalentTo([1, 2]);
+        contributor.Contributions.Select(c => c.ShareRequestId).Should().BeEquivalentTo(ids.Select(id => (Guid?)id));
+    }
+
+    [Fact]
+    [Trait("Issue", "5139")]
+    public async Task ApprovingAProposalAsNew_MakesItsAuthorThePrimaryContributorOfTheNewGame()
+    {
+        var (userId, adminId) = await SeedUserAndAdminAsync();
+        var (privateGameId, _) = await SeedPrivateGameAsync(userId);
+        var requestId = await SaveNewAsync(ShareRequest.CreateGameProposal(userId, privateGameId));
+        await UpdateAsync(requestId, r => r.StartReview(adminId));
+
+        var sharedGameId = await ApproveAsNewAsync(requestId, adminId);
+
+        var contributor = (await ContributorsAsync(sharedGameId)).Should().ContainSingle().Subject;
+        contributor.UserId.Should().Be(userId);
+        contributor.IsPrimaryContributor.Should().BeTrue();
+        contributor.Contributions.Should().ContainSingle()
+            .Which.Type.Should().Be((int)ContributionRecordType.InitialSubmission);
+    }
+
+    [Fact]
+    [Trait("Issue", "5139")]
+    public async Task ANewGameOnAGameThatHasItsAuthorAlready_DoesNotMakeASecondPrimary()
+    {
+        var (authorId, adminId) = await SeedUserAndAdminAsync();
+        var (otherId, _) = await SeedUserAndAdminAsync();
+        var gameId = await SeedSharedGameAsync();
+        foreach (var userId in new[] { authorId, otherId })
+        {
+            var id = await SaveNewAsync(ShareRequest.Create(userId, gameId, ContributionType.NewGame));
+            await UpdateAsync(id, r => r.StartReview(adminId));
+            await ApproveShareRequestAsync(id, adminId, targetSharedGameId: null);
+        }
+
+        var contributors = await ContributorsAsync(gameId);
+        contributors.Should().HaveCount(2);
+        contributors.Single(c => c.IsPrimaryContributor).UserId.Should().Be(authorId);
+        contributors.Single(c => c.UserId == otherId).Contributions.Should().ContainSingle()
+            .Which.Type.Should().Be((int)ContributionRecordType.ContentEnhancement);
+    }
+
+    private async Task<List<ContributorEntity>> ContributorsAsync(Guid sharedGameId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>().Set<ContributorEntity>()
+            .AsNoTracking()
+            .Include(c => c.Contributions)
+            .Where(c => c.SharedGameId == sharedGameId)
+            .ToListAsync(Ct);
     }
 
     private async Task<Guid> SeedSharedGameAsync()

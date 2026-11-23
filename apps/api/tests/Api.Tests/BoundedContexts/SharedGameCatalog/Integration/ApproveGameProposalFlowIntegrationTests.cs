@@ -67,6 +67,7 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
             _privateGameRepo,
             _sharedGameRepo,
             _documentServiceMock.Object,
+            new ContributorRepository(_dbContext, eventCollector.Object),
             _unitOfWork,
             Mock.Of<ISharedGameCacheInvalidator>(),
             commandLogger.Object);

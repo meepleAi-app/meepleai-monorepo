@@ -25,6 +25,7 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
     private const int MaxBulkSize = 20;
     private readonly IShareRequestRepository _shareRequestRepository;
     private readonly IShareRequestDocumentService _documentService;
+    private readonly IContributorRepository _contributorRepository;
     private readonly IAuditLogRepository _auditLogRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BulkApproveShareRequestsCommandHandler> _logger;
@@ -33,6 +34,7 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
     public BulkApproveShareRequestsCommandHandler(
         IShareRequestRepository shareRequestRepository,
         IShareRequestDocumentService documentService,
+        IContributorRepository contributorRepository,
         IAuditLogRepository auditLogRepository,
         IUnitOfWork unitOfWork,
         ILogger<BulkApproveShareRequestsCommandHandler> logger,
@@ -40,6 +42,7 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
     {
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
         _documentService = documentService ?? throw new ArgumentNullException(nameof(documentService));
+        _contributorRepository = contributorRepository ?? throw new ArgumentNullException(nameof(contributorRepository));
         _auditLogRepository = auditLogRepository ?? throw new ArgumentNullException(nameof(auditLogRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -154,12 +157,24 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
 
             // The copies once every request of the batch is approved: a request refused halfway leaves no copied file
             // behind for the ones before it. Their rows are saved with the approvals; a copy that fails fails the batch.
+            // #5139: each author becomes a contributor of the game; two requests of one author on one game in the batch
+            // give one contributor and two records.
+            var contributions = new ShareRequestApprovalContributions(_contributorRepository);
             foreach (var (shareRequest, destination) in destinations)
             {
-                await ShareRequestApprovalDocuments
+                var copied = await ShareRequestApprovalDocuments
                     .CopyAttachedAsync(_documentService, shareRequest, destination, cancellationToken)
                     .ConfigureAwait(false);
+                await contributions.RecordAsync(
+                        shareRequest,
+                        destination,
+                        ShareRequestApprovalContributions.KindOf(shareRequest),
+                        copied,
+                        cancellationToken)
+                    .ConfigureAwait(false);
             }
+
+            await contributions.AddToUnitOfWorkAsync(cancellationToken).ConfigureAwait(false);
 
             // All-or-nothing: Commit only if all succeeded
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

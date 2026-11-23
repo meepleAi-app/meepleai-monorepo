@@ -50,6 +50,7 @@ public class ApproveGameProposalCommandHandlerTests
             _privateGameRepoMock.Object,
             _sharedGameRepoMock.Object,
             _documentServiceMock.Object,
+            Mock.Of<IContributorRepository>(),
             _unitOfWorkMock.Object,
             Mock.Of<ISharedGameCacheInvalidator>(),
             _loggerMock.Object);

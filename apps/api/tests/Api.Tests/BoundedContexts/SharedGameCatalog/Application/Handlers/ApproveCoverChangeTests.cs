@@ -208,6 +208,7 @@ internal static class ApproveHandlerBuilder
             privateGameRepoMock.Object,
             sharedGameRepoMock.Object,
             documentServiceMock.Object,
+            Mock.Of<IContributorRepository>(),
             unitOfWorkMock.Object,
             cacheInvalidatorMock.Object,
             loggerMock.Object);

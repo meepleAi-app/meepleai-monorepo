@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 
@@ -46,6 +47,30 @@ public interface IContributorRepository
     /// <returns>The contributor if found, otherwise null.</returns>
     Task<Contributor?> GetByIdAsync(
         Guid contributorId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The contributor of <paramref name="userId"/> to <paramref name="sharedGameId"/>, with its contributions: there is
+    /// at most one (<c>ix_contributors_user_shared_game_unique</c>).
+    /// </summary>
+    Task<Contributor?> GetByUserAndSharedGameAsync(
+        Guid userId,
+        Guid sharedGameId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Whether <paramref name="sharedGameId"/> already has a primary contributor.</summary>
+    Task<bool> HasPrimaryContributorAsync(
+        Guid sharedGameId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Adds <paramref name="records"/>, new contributions of an existing <paramref name="contributor"/>, and saves its
+    /// <see cref="Contributor.ModifiedAt"/>. <see cref="Update"/> cannot do it: it marks every record of the graph as
+    /// modified, and a new one becomes an UPDATE of a row that does not exist (#5139).
+    /// </summary>
+    Task AddContributionsAsync(
+        Contributor contributor,
+        IReadOnlyCollection<ContributionRecord> records,
         CancellationToken cancellationToken = default);
 
     /// <summary>

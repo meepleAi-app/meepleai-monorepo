@@ -24,6 +24,7 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
     private readonly IPrivateGameRepository _privateGameRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IShareRequestDocumentService _documentService;
+    private readonly IContributorRepository _contributorRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<ApproveGameProposalCommandHandler> _logger;
@@ -33,6 +34,7 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
         IPrivateGameRepository privateGameRepository,
         ISharedGameRepository sharedGameRepository,
         IShareRequestDocumentService documentService,
+        IContributorRepository contributorRepository,
         IUnitOfWork unitOfWork,
         ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<ApproveGameProposalCommandHandler> logger)
@@ -41,6 +43,7 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
         _privateGameRepository = privateGameRepository ?? throw new ArgumentNullException(nameof(privateGameRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _documentService = documentService ?? throw new ArgumentNullException(nameof(documentService));
+        _contributorRepository = contributorRepository ?? throw new ArgumentNullException(nameof(contributorRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -133,9 +136,10 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
     {
         // Copy documents to shared game (if any attached)
         var documentIds = shareRequest.AttachedDocuments.Select(d => d.DocumentId).ToList();
+        IReadOnlyList<Guid> copied = [];
         if (documentIds.Count > 0)
         {
-            await _documentService.CopyDocumentsToSharedGame(
+            copied = await _documentService.CopyDocumentsToSharedGame(
                 documentIds,
                 targetSharedGameId,
                 shareRequest.UserId,
@@ -154,6 +158,24 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
 
         // Update repository
         _shareRequestRepository.Update(shareRequest);
+
+        // #5139: the author becomes a contributor of the game, saved with the approval. A new game (ApproveAsNew,
+        // ApproveAsVariant) makes them its primary contributor.
+        var contributions = new ShareRequestApprovalContributions(_contributorRepository);
+        await contributions.RecordAsync(
+                shareRequest,
+                targetSharedGameId,
+                command.ApprovalAction switch
+                {
+                    ProposalApprovalAction.ApproveAsNew or ProposalApprovalAction.ApproveAsVariant
+                        => ShareRequestApprovalContributions.Kind.NewGame,
+                    ProposalApprovalAction.UpdateCover => ShareRequestApprovalContributions.Kind.Cover,
+                    _ => ShareRequestApprovalContributions.Kind.Content,
+                },
+                copied,
+                cancellationToken)
+            .ConfigureAwait(false);
+        await contributions.AddToUnitOfWorkAsync(cancellationToken).ConfigureAwait(false);
 
         // Persist all changes
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

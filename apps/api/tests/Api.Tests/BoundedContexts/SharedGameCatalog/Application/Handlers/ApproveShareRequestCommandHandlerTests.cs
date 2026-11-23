@@ -44,6 +44,7 @@ public class ApproveShareRequestCommandHandlerTests
         _handler = new ApproveShareRequestCommandHandler(
             _repositoryMock.Object,
             _documentsMock.Object,
+            Mock.Of<IContributorRepository>(),
             _unitOfWorkMock.Object,
             _loggerMock.Object);
     }

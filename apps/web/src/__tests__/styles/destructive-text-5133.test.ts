@@ -100,17 +100,23 @@ describe('text-destructive is not used for text any more (#5133)', () => {
     return readdirSync(dir).flatMap(name => {
       const path = join(dir, name);
       if (statSync(path).isDirectory()) return name === 'node_modules' ? [] : files(path);
-      return /\.(tsx?|mdx)$/.test(name) ? [path] : [];
+      return /\.(tsx?|mdx|css)$/.test(name) ? [path] : [];
     });
   }
 
-  it('no source names the bare text-destructive', () => {
+  // Also the arbitrary form, text-[hsl(var(--destructive))]: the settings row's label used it, and the first pass,
+  // which converted only the named utility, missed it (self-review of #5138).
+  it('no source names the bare text-destructive, or reads the fill token as text', () => {
     const offenders = files(SRC)
       .filter(
         path =>
           !path.includes(join('__tests__', 'fixtures')) && resolve(path) !== resolve(__filename)
       )
-      .filter(path => /(?<![\w-])text-destructive(?![\w-])/.test(readFileSync(path, 'utf8')))
+      .filter(path =>
+        /(?<![\w-])text-destructive(?![\w-])|(?<![\w-])text-\[(?:color:)?hsl\(var\(--destructive\)\)\]/.test(
+          readFileSync(path, 'utf8')
+        )
+      )
       .map(path => relative(SRC, path).replace(/\\/g, '/'));
     expect(offenders).toEqual([]);
   });

@@ -444,6 +444,27 @@ public class StartGameNightSessionCommandHandlerTests
             Times.Never);
     }
 
+    // #4780: two starts can also meet at the per-night play-order index: both add a link with the same
+    // PlayOrder, and that INSERT can fail before the xmin check or the live slot. Measured: with only the
+    // live-slot catch the integration test of two concurrent starts got this raw DbUpdateException.
+    [Fact]
+    public async Task Handle_ConcurrentStartMeetsThePlayOrderIndex_ThrowsARetryableConflict()
+    {
+        var gameNight = SetupStartableNight();
+        _mockUnitOfWork.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<StartGameNightSessionResult>>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(UniqueViolation(GameNightSessionEntityConfiguration.PlayOrderIndexName));
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId);
+
+        var thrown = await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, CancellationToken.None));
+        Assert.Contains("Please retry", thrown.Message, StringComparison.Ordinal);
+        _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     [Fact]
     public async Task Handle_AnotherUniqueViolation_IsNotReadAsAGameAlreadyLive()
     {

@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.Infrastructure.Configurations.GameManagement;
 using Api.Infrastructure.EntityConfigurations.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -62,7 +63,12 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 ///     <see cref="MaxLiveSessionsExceededException"/> → 409.</item>
 ///   <item>Concurrent promotion trips the partial-unique live-slot index (Postgres 23505, Pending
 ///     path only) → re-mapped to <see cref="MaxLiveSessionsExceededException"/> → 409.</item>
+///   <item>A sibling go-live already created the live game of this tracking Session (Postgres 23505 on
+///     the unique tracking-id index, #4780; either path, and the only check on the self-heal one) →
+///     re-mapped to <see cref="MaxLiveSessionsExceededException"/> → 409.</item>
 /// </list></para>
+/// <para>The one known exception to «never 500»: two go-lives that both reach phase 3
+/// (<c>OpenSessionLiveModeCommand</c>) can still meet at the tracking Session's xmin, and that is not mapped.</para>
 ///
 /// <para>The self-heal path does NO aggregate write, so it needs no concurrency catch.</para>
 /// </summary>
@@ -141,8 +147,9 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
         //
         // That reasoning does NOT hold for a link that became InProgress elsewhere (a gamebook campaign
         // attached to the night, or data from before the bridge): it can be InProgress with no live game,
-        // and two go-lives of it at once are not serialized — nothing writes the night's aggregate in that
-        // branch, and the index on the tracking id is not unique. Tracked in #4780.
+        // and two go-lives of it at once are not serialized by xmin — nothing writes the night's aggregate in
+        // that branch. Since #4780 the index on the tracking id is unique: the loser's live game is refused
+        // and it answers 409 (the catch in PromoteAndOpenLiveGameAsync).
         var liveSessionId = await PromoteAndOpenLiveGameAsync(
             gameNight, command, targetLink, promote, cancellationToken).ConfigureAwait(false);
 
@@ -227,6 +234,13 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
             // create-path catch in CreateSessionCommandHandler.
             throw new MaxLiveSessionsExceededException(gameNight.Id);
         }
+        catch (DbUpdateException ex) when (IsSecondLiveGameForTheTrackingSession(ex))
+        {
+            // #4780: a sibling go-live of the same link already created its live game — the self-heal branch
+            // is not serialized by xmin, so the unique index on the tracking id is what tells them apart. The
+            // loser's whole transaction has rolled back: the same blocked-modal 409, never a second live game.
+            throw new MaxLiveSessionsExceededException(gameNight.Id);
+        }
         catch (QuotaExceededException ex)
         {
             // #4752: the live game is started by StartLiveSessionCommand, which enforces the session quota
@@ -288,6 +302,13 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
 
         return liveSessionId == Guid.Empty ? null : liveSessionId;
     }
+
+    // True iff the DbUpdateException is the unique index on live_game_sessions.tracking_session_id (#4780):
+    // a second live game for a tracking Session that already has one.
+    private static bool IsSecondLiveGameForTheTrackingSession(DbUpdateException ex) =>
+        ex.InnerException is Npgsql.PostgresException pg
+        && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
+        && string.Equals(pg.ConstraintName, LiveGameSessionEntityConfiguration.TrackingSessionIdIndexName, StringComparison.Ordinal);
 
     // True iff the DbUpdateException is the partial-unique-index violation on the GameNight live slot
     // (game_night_sessions InProgress per event), not some other constraint. Uses the shared index-name

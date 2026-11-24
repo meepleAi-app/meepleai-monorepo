@@ -6471,6 +6471,7 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_live_game_sessions_status");
 
                     b.HasIndex("TrackingSessionId")
+                        .IsUnique()
                         .HasDatabaseName("ix_live_game_sessions_tracking_session_id")
                         .HasFilter("tracking_session_id IS NOT NULL");
 

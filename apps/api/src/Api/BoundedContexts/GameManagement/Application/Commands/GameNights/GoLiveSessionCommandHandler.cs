@@ -63,7 +63,12 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 ///     <see cref="MaxLiveSessionsExceededException"/> → 409.</item>
 ///   <item>Concurrent promotion trips the partial-unique live-slot index (Postgres 23505, Pending
 ///     path only) → re-mapped to <see cref="MaxLiveSessionsExceededException"/> → 409.</item>
+///   <item>A sibling go-live already created the live game of this tracking Session (Postgres 23505 on
+///     the unique tracking-id index, #4780; either path, and the only check on the self-heal one) →
+///     re-mapped to <see cref="MaxLiveSessionsExceededException"/> → 409.</item>
 /// </list></para>
+/// <para>The one known exception to «never 500»: two go-lives that both reach phase 3
+/// (<c>OpenSessionLiveModeCommand</c>) can still meet at the tracking Session's xmin, and that is not mapped.</para>
 ///
 /// <para>The self-heal path does NO aggregate write, so it needs no concurrency catch.</para>
 /// </summary>

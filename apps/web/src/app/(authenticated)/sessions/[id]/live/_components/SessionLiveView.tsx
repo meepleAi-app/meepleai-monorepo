@@ -123,7 +123,6 @@ import { useLiveSessionPhases } from '@/hooks/queries/useLiveSessionPhases';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { ConflictError } from '@/lib/api/core/errors';
-import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
 import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
@@ -135,6 +134,7 @@ import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn
 import { mergeHydratedDiary } from '@/lib/session-live/merge-hydrated-diary';
 import { hasRequiredRole, type ParticipantRole } from '@/lib/session-live/participant-role';
 import { finalScores } from '@/lib/session-live/round-scores';
+import { isSessionCreator } from '@/lib/session-live/session-creator';
 import {
   deriveSessionLiveUiState,
   deriveSessionLiveDialogState,
@@ -347,15 +347,6 @@ function deriveViewerRole(playerRole: string | undefined, isCreator: boolean): P
 }
 
 /**
- * #4763: the one rule for «who controls this game». The server lets only the session's creator
- * (`CreatedByUserId`) start, pause, resume, end, save and add or remove players; the Host seat is not
- * enough. The viewer role and the controls both read it from here.
- */
-function isCreatorOf(dto: LiveSessionDto | null | undefined, userId: string | undefined): boolean {
-  return dto != null && userId != null && userId !== '' && dto.createdByUserId === userId;
-}
-
-/**
  * The header shows the server's `Completed` as such. `composeSessionLiveState` folds anything
  * that is not InProgress/Paused into 'Setup', so reading its status alone made a concluded
  * session look «In corso» with a timer still running (#4750).
@@ -511,7 +502,7 @@ export function SessionLiveView(): ReactElement {
     const derivedRole = viewerPlayer?.role;
     // #4750: the creator of the session is its host — the server checks `CreatedByUserId` — even
     // when the wizard wrote every player by name and none is linked to the account.
-    const isCreator = isCreatorOf(dto, currentUserId);
+    const isCreator = isSessionCreator(dto, currentUserId);
     const viewerRole = deriveViewerRole(derivedRole, isCreator);
 
     return {
@@ -531,7 +522,7 @@ export function SessionLiveView(): ReactElement {
   // #4238 A4: the assistant answers the owner of the session (`CreatedByUserId`), as the server
   // checks. Not `viewerRole`: that comes from the player linked to the user, and an owner who is
   // not at the table as a player would lose the panel the server still lets them use.
-  const isSessionOwner = isCreatorOf(sessionQuery.data, currentUser?.id);
+  const isSessionOwner = isSessionCreator(sessionQuery.data, currentUser?.id);
 
   // #4763: pause, resume, end and adding players are the creator's (the server answers 403 to anyone
   // else), and a concluded game has nothing left to control. The visual-test fixture has no account:

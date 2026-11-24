@@ -225,6 +225,26 @@ describe('StartSessionSheet — #4770: il creatore gioca, collegato al suo accou
     ]);
   });
 
+  it('se dopo la semina l’account cambia, il posto non parte con l’account di prima', async () => {
+    // ownUserId: il collegamento va mandato solo se è dell'utente corrente. Senza il controllo, il posto
+    // seminato per Marta partirebbe con il suo account anche dopo un cambio di sessione.
+    const { rerender } = render(
+      <StartSessionSheet open onOpenChange={vi.fn()} gameId="game-1" gameName="Catan" />
+    );
+    currentUser.current = { id: 'user-bruno', displayName: 'Bruno' };
+    rerender(<StartSessionSheet open onOpenChange={() => {}} gameId="game-1" gameName="Catan" />);
+    fireEvent.change(screen.getByTestId('new-player-input'), { target: { value: 'Bob' } });
+    fireEvent.click(screen.getByTestId('add-player-btn'));
+    fireEvent.click(screen.getByTestId('next-step-btn'));
+    fireEvent.click(screen.getByTestId('start-session-btn'));
+    await waitFor(() => expect(routerPush).toHaveBeenCalled());
+
+    expect(mockApi.liveSessions.addPlayer.mock.calls.map(c => c[1])).toEqual([
+      expect.not.objectContaining({ userId: expect.anything() }),
+      expect.not.objectContaining({ userId: expect.anything() }),
+    ]);
+  });
+
   it('se l’utente è noto solo dopo, il posto neutro «Giocatore 1» diventa il suo', async () => {
     currentUser.current = null;
     const { rerender } = render(
@@ -237,5 +257,13 @@ describe('StartSessionSheet — #4770: il creatore gioca, collegato al suo accou
 
     expect(await screen.findByText('Marta')).toBeInTheDocument();
     expect(screen.queryByText('Giocatore 1')).toBeNull();
+
+    // E il posto seminato tardi è collegato, non solo rinominato.
+    fireEvent.click(screen.getByTestId('next-step-btn'));
+    fireEvent.click(screen.getByTestId('start-session-btn'));
+    await waitFor(() => expect(routerPush).toHaveBeenCalled());
+    expect(mockApi.liveSessions.addPlayer.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ displayName: 'Marta', userId: 'user-marta' })
+    );
   });
 });

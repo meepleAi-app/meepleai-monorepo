@@ -43,8 +43,8 @@ interface SheetPlayer {
  */
 function firstSeat(self: SelfPlayer | null): SheetPlayer {
   return self
-    ? { id: `p-${Date.now()}`, name: self.displayName, color: 'Red', userId: self.userId }
-    : { id: `p-${Date.now()}`, name: 'Giocatore 1', color: 'Red' };
+    ? { id: `p-${crypto.randomUUID()}`, name: self.displayName, color: 'Red', userId: self.userId }
+    : { id: `p-${crypto.randomUUID()}`, name: 'Giocatore 1', color: 'Red' };
 }
 
 type SheetStep = 'players' | 'order';
@@ -144,7 +144,7 @@ export function StartSessionSheet({
       const usedInPrev = prev.map(p => p.color);
       const color =
         COLOR_OPTIONS.find(c => !usedInPrev.includes(c.value))?.value ?? COLOR_OPTIONS[0].value;
-      return [...prev, { id: `p-${Date.now()}`, name: trimmed, color }];
+      return [...prev, { id: `p-${crypto.randomUUID()}`, name: trimmed, color }];
     });
     setNewName('');
   }, [newName]);

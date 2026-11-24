@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -67,5 +68,44 @@ public class GetLiveSessionParticipantContextQueryHandlerTests
 
         result.Found.Should().BeTrue();
         result.Authorized.Should().BeFalse();
+        result.IsCreator.Should().BeFalse();
+    }
+
+    // #4763: IsCreator is what RequireLiveSessionCreator lets through. A linked player is authorized, whatever
+    // the role, but is not the creator.
+    [Theory]
+    [InlineData(PlayerRole.Host)]
+    [InlineData(PlayerRole.Player)]
+    [InlineData(PlayerRole.Spectator)]
+    public async Task Handle_LinkedPlayerWhoIsNotTheCreator_IsAuthorizedButNotTheCreator(PlayerRole role)
+    {
+        var id = Guid.NewGuid();
+        var player = Guid.NewGuid();
+        var session = CreateSession(id, Guid.NewGuid());
+        session.AddPlayer(player, "B", PlayerColor.Blue, role: role);
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var result = await Sut().Handle(
+            new GetLiveSessionParticipantContextQuery(id, player), CancellationToken.None);
+
+        result.Authorized.Should().BeTrue();
+        result.IsCreator.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_Creator_IsTheCreator()
+    {
+        var id = Guid.NewGuid();
+        var creator = Guid.NewGuid();
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSession(id, creator));
+
+        var result = await Sut().Handle(
+            new GetLiveSessionParticipantContextQuery(id, creator), CancellationToken.None);
+
+        result.IsCreator.Should().BeTrue();
     }
 }

@@ -13,30 +13,43 @@ const useSessionSyncMock = vi.hoisted(() => vi.fn());
 const storeState = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
 
 const routerPush = vi.hoisted(() => vi.fn());
+const currentUser = vi.hoisted(() => ({ current: null as { id: string } | null }));
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ gameId: 'game-1', sessionId: 'live-1' }),
   useRouter: () => ({ push: routerPush }),
 }));
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), info: vi.fn(), success: vi.fn() } }));
-vi.mock('@/hooks/queries/useCurrentUser', () => ({ useCurrentUser: () => ({ data: null }) }));
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => ({ data: currentUser.current }),
+}));
 vi.mock('@/lib/domain-hooks/useSessionSync', () => ({
   useSessionSync: () => useSessionSyncMock(),
 }));
 vi.mock('@/lib/stores/session-store', () => ({ useSessionStore: () => storeState.current }));
 vi.mock('@/components/session', () => ({
+  // Like the real SessionHeader, a command shows only with its handler.
   SessionHeader: ({
     session,
+    onPause,
     onFinalize,
   }: {
     session: { sessionCode: string };
+    onPause?: () => void;
     onFinalize?: () => void;
   }) => (
     <div data-testid="session-header">
       {session.sessionCode}
-      <button type="button" onClick={onFinalize}>
-        Finalize
-      </button>
+      {onPause && (
+        <button type="button" onClick={onPause}>
+          Pause
+        </button>
+      )}
+      {onFinalize && (
+        <button type="button" onClick={onFinalize}>
+          Finalize
+        </button>
+      )}
     </div>
   ),
   MeepleParticipantCard: () => null,
@@ -50,6 +63,7 @@ const ACTIVE_SESSION = {
   gameId: 'game-1',
   gameName: 'Azul',
   status: 'InProgress',
+  createdByUserId: 'user-creator',
   createdAt: '2026-10-14T10:00:00Z',
   startedAt: '2026-10-14T10:00:00Z',
   players: [],
@@ -74,6 +88,7 @@ function store(overrides: Record<string, unknown> = {}) {
 describe('Library toolkit session page — #4114', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentUser.current = { id: 'user-creator' };
     storeState.current = store();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
   });
@@ -125,5 +140,27 @@ describe('Library toolkit session page — #4114', () => {
 
     await waitFor(() => expect(routerPush).toHaveBeenCalledWith('/library/game-1'));
     expect(completeSession).toHaveBeenCalledTimes(1);
+  });
+
+  // #4763: the server lets only the creator pause or end the game. Offering them to anyone else
+  // would earn a 403, whose store error replaces this whole page.
+  it('offers pause and finalize to the creator', () => {
+    useSessionSyncMock.mockReturnValue({ isConnected: true, error: null, scores: [] });
+
+    render(<SessionPage />);
+
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finalize' })).toBeInTheDocument();
+  });
+
+  it('offers neither pause nor finalize to a participant who did not create the session', () => {
+    useSessionSyncMock.mockReturnValue({ isConnected: true, error: null, scores: [] });
+    currentUser.current = { id: 'user-other-player' };
+
+    render(<SessionPage />);
+
+    expect(screen.getByTestId('session-header')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pause' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Finalize' })).toBeNull();
   });
 });

@@ -3676,6 +3676,8 @@
         "startCta": "Avvia partita",
         "startErrorToast": "Impossibile avviare la partita. Riprova.",
         "startNeedsPlayerToast": "Aggiungi almeno un giocatore per avviare la partita.",
+        "pauseErrorToast": "Impossibile mettere in pausa la partita. Riprova.",
+        "resumeErrorToast": "Impossibile riprendere la partita. Riprova.",
         "pauseCta": "Pausa",
         "resumeCta": "Riprendi",
         "endgameCta": "Termina sessione",

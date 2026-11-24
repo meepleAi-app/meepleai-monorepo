@@ -12,7 +12,9 @@
  * "Session not found" on a 404, which we map to `null` here.
  */
 
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useCallback } from 'react';
+
+import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
 import { ApiError } from '@/lib/api/core/errors';
@@ -56,4 +58,23 @@ export function useLiveSession(
     enabled: enabled && !!sessionId,
     staleTime: 30 * 1000,
   });
+}
+
+/**
+ * #4763 — a callback that refetches the live session now. The live header and its timer read the
+ * session's status and `completedAt` from this query, and an SSE event alone does not change them:
+ * `session:endgame` seen from another device kept «In pausa» with the timer running until the
+ * 30 s `staleTime` and a refocus.
+ *
+ * @param sessionId - LiveGameSession ID; the callback does nothing without one
+ */
+export function useRefetchLiveSession(sessionId: string | null | undefined): () => void {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    if (sessionId == null || sessionId === '') return;
+    void queryClient.invalidateQueries({
+      queryKey: liveSessionKeys.detail(sessionId),
+      exact: true,
+    });
+  }, [queryClient, sessionId]);
 }

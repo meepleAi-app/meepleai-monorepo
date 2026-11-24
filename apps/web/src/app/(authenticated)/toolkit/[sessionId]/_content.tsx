@@ -47,6 +47,7 @@ import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionToolLog } from '@/lib/domain-hooks/useSessionToolLog';
 import { useTurnOrder } from '@/lib/domain-hooks/useTurnOrder';
 import { useWhiteboardTool } from '@/lib/domain-hooks/useWhiteboardTool';
+import { isSessionCreator } from '@/lib/session-live/session-creator';
 import { liveSessionToUiSession } from '@/lib/sessions/live-session-to-ui';
 import { useSessionStore } from '@/lib/stores/session-store';
 import type { ToolId } from '@/lib/stores/session-store';
@@ -339,8 +340,14 @@ export function ActiveSessionPageContent() {
         // #4114: the same adapter #4113 introduced on the library toolkit page. The double cast
         // that was here hid four missing fields, and SessionHeader threw for any session.
         session={liveSessionToUiSession(activeSession)}
-        onPause={activeSession.status === 'InProgress' ? handlePause : undefined}
-        onFinalize={handleFinalize}
+        // #4763: pause and end are the creator's — the server answers 403 to any other participant,
+        // and the store's error would replace this whole page.
+        onPause={
+          isSessionCreator(activeSession, currentUser?.id) && activeSession.status === 'InProgress'
+            ? handlePause
+            : undefined
+        }
+        onFinalize={isSessionCreator(activeSession, currentUser?.id) ? handleFinalize : undefined}
       />
       <TurnIndicatorBar
         activePlayerName={turnOrder?.currentPlayer ?? null}

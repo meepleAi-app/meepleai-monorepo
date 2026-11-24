@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { getGameTemplateByName } from '@/lib/config/game-templates';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
+import { isSessionCreator } from '@/lib/session-live/session-creator';
 import { liveSessionToUiSession } from '@/lib/sessions/live-session-to-ui';
 import { useSessionStore } from '@/lib/stores/session-store';
 
@@ -231,8 +232,14 @@ export default function GameSpecificSessionPage() {
         // `sessionDate` era `undefined`: `SessionHeader` lanciava e la pagina mostrava
         // l'error boundary per QUALUNQUE sessione.
         session={liveSessionToUiSession(activeSession)}
-        onPause={activeSession.status === 'InProgress' ? handlePause : undefined}
-        onFinalize={handleFinalize}
+        // #4763: pause and end are the creator's — the server answers 403 to any other participant,
+        // and the store's error would replace this whole page.
+        onPause={
+          isSessionCreator(activeSession, currentUser?.id) && activeSession.status === 'InProgress'
+            ? handlePause
+            : undefined
+        }
+        onFinalize={isSessionCreator(activeSession, currentUser?.id) ? handleFinalize : undefined}
       />
 
       {/* Main Content */}

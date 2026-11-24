@@ -10,7 +10,11 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 /// </summary>
 /// <param name="Found">True if a <c>LiveGameSession</c> with <c>SessionId</c> exists.</param>
 /// <param name="Authorized">True if <c>UserId</c> is the session creator or an active linked player.</param>
-internal record LiveSessionParticipantContextResult(bool Found, bool Authorized);
+/// <param name="IsCreator">
+/// True if <c>UserId</c> is the session creator (<c>CreatedByUserId</c>), whom the RequireLiveSessionCreator
+/// filter lets through (#4763). Defaults to false, so a result built without it refuses.
+/// </param>
+internal record LiveSessionParticipantContextResult(bool Found, bool Authorized, bool IsCreator = false);
 
 /// <summary>
 /// Query to resolve per-session participant authorization for live-session write/read endpoints.

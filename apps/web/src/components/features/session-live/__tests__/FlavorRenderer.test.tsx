@@ -93,3 +93,35 @@ describe('FlavorRenderer', () => {
     expect(screen.getByText(WAITING_KEY)).toBeInTheDocument();
   });
 });
+
+// #4763: a concluded game has nothing left to edit (the server answers 409 to the game-state update).
+describe('FlavorRenderer — #4763: a concluded game is read-only for the host too', () => {
+  const INIT_KEY = 'pages.sessionLive.flavor.catan.initBoardCta';
+
+  it('the host gets the Catan editor while the session runs', async () => {
+    renderWithIntl(
+      <FlavorRenderer
+        gameSlug="catan"
+        view="live"
+        session={{ ...SESSION, status: 'InProgress' } as LiveSessionDto}
+        viewerRole="Host"
+        sessionId="s1"
+      />
+    );
+    expect(await screen.findByRole('button', { name: INIT_KEY })).toBeInTheDocument();
+  });
+
+  it('the host gets no editor once the session is Completed', async () => {
+    renderWithIntl(
+      <FlavorRenderer
+        gameSlug="catan"
+        view="live"
+        session={{ ...SESSION, status: 'Completed' } as LiveSessionDto}
+        viewerRole="Host"
+        sessionId="s1"
+      />
+    );
+    expect(await screen.findByText(WAITING_KEY)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: INIT_KEY })).toBeNull();
+  });
+});

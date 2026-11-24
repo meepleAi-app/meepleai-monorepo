@@ -97,8 +97,12 @@ type MockSessionReturn = {
 
 const useLiveSessionMock = vi.fn<[], MockSessionReturn>();
 
+// #4763: the refetch the view asks for after pause/resume and on `session:endgame`.
+const refetchLiveSessionMock = vi.fn();
+
 vi.mock('@/hooks/queries/useLiveSession', () => ({
   useLiveSession: () => useLiveSessionMock(),
+  useRefetchLiveSession: () => refetchLiveSessionMock,
 }));
 
 // ─── useSessionLiveStream mock ────────────────────────────────────────────
@@ -245,6 +249,7 @@ vi.mock('@/lib/session-live/use-resolve-play-record', () => ({
 
 const getHistoryMock = vi.hoisted(() => vi.fn());
 const resumeSessionMock = vi.hoisted(() => vi.fn());
+const pauseSessionMock = vi.hoisted(() => vi.fn());
 const startSessionMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
@@ -253,6 +258,7 @@ vi.mock('@/lib/api', () => ({
       getHistory: getHistoryMock,
     },
     liveSessions: {
+      pauseSession: pauseSessionMock,
       resumeSession: resumeSessionMock,
       startSession: startSessionMock,
     },
@@ -1502,6 +1508,8 @@ describe('SessionLiveView — #2505: viewerRole derivation + AddPlayerDialog', (
 
   const MOCK_DTO_WITH_HOST_PLAYER = {
     ...MOCK_SESSION_DTO,
+    // #4763: the controls are the creator's, not the Host seat's — the host here created the session.
+    createdByUserId: MOCK_USER_ID,
     players: [
       {
         id: 'player-001',
@@ -1619,6 +1627,8 @@ describe('SessionLiveView — #2503: endgame complete + save-game nav', () => {
   const HOST_DTO = {
     ...MOCK_SESSION_DTO,
     gameId: 'game-00000001',
+    // #4763: the controls are the creator's, not the Host seat's — the host here created the session.
+    createdByUserId: HOST_USER_ID,
     players: [
       {
         id: 'player-001',
@@ -1818,6 +1828,8 @@ describe('SessionLiveView — #2501 SP4 Task 3: recordId wire + 409 handler', ()
   const HOST_DTO = {
     ...MOCK_SESSION_DTO,
     gameId: 'game-00000001',
+    // #4763: the controls are the creator's, not the Host seat's — the host here created the session.
+    createdByUserId: HOST_USER_ID,
     players: [
       {
         id: 'player-001',
@@ -2301,6 +2313,8 @@ describe('SessionLiveView — #4156: resume goes through the live session', () =
   const PAUSED_DTO_WITH_HOST = {
     ...MOCK_SESSION_DTO,
     status: 'Paused',
+    // #4763: the controls are the creator's, not the Host seat's — the host here created the session.
+    createdByUserId: HOST_ID,
     players: [
       {
         id: 'player-001',
@@ -2507,9 +2521,9 @@ describe('SessionLiveView — #4750: creator as host, concluded session', () => 
     expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Host');
     expect(slotIn(container, 'endgame')).toBeInTheDocument();
     expect(slotIn(container, 'endgame')).not.toHaveAttribute('aria-disabled');
-    // The bar never gets `onPause`/`onResume` from this view (follow-up): the button shows, dimmed
-    // and inert. Pinned as such, so it is not read as a working control.
-    expect(slotIn(container, 'pause')).toHaveAttribute('aria-disabled', 'true');
+    // #4763: Pause used to show here dimmed and inert (the bar got no `onPause`). It works now.
+    expect(slotIn(container, 'pause')).toBeInTheDocument();
+    expect(slotIn(container, 'pause')).not.toHaveAttribute('aria-disabled');
   });
 
   it('a user who did not create the session and is linked to no player stays a player', () => {
@@ -2770,5 +2784,164 @@ describe('SessionLiveView — #4750: creator as host, concluded session', () => 
       // The server's own text never reaches the user.
       expect(document.body.textContent).not.toContain('Internal Server Error');
     });
+  });
+});
+
+// ─── #4763 — chi comanda la partita: il creatore, non il posto Host ───────────
+
+describe('SessionLiveView — #4763: the creator controls the live game', () => {
+  const CREATOR_ID = 'user-4763-creator';
+  const SEAT_HOST_ID = 'user-4763-seat-host';
+
+  const player = (id: string, userId: string | null, role: string) => ({
+    id,
+    displayName: id,
+    userId,
+    color: 'Blue',
+    role,
+    totalScore: 0,
+    isActive: true,
+  });
+
+  // In corso, creata da CREATOR_ID; il primo posto (ruolo Host) è di un altro account.
+  const RUNNING_DTO = {
+    ...MOCK_SESSION_DTO,
+    status: 'InProgress',
+    createdByUserId: CREATOR_ID,
+    players: [player('p-seat-host', SEAT_HOST_ID, 'Host'), player('p-guest', null, 'Player')],
+  } as unknown as LiveSessionDto;
+
+  const slotIn = (container: HTMLElement, slot: string) =>
+    container.querySelector(`[data-slot="session-live-top-bar-${slot}"]`);
+
+  function mountWith(dto: LiveSessionDto, userId: string, events: unknown[] = []) {
+    useCurrentUserMock.mockReturnValue({ data: { id: userId } });
+    useLiveSessionMock.mockReturnValue({
+      data: dto,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+    useSessionLiveStreamMock.mockReturnValue({
+      ...mockLiveStreamResult,
+      events: events as UseSessionLiveStreamResult['events'],
+    });
+    return renderWithIntl(<SessionLiveView />);
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+  });
+
+  it('Pause in the top bar pauses the live session of the route id, then refetches it', async () => {
+    pauseSessionMock.mockResolvedValue(undefined);
+    const { container } = mountWith(RUNNING_DTO, CREATOR_ID);
+
+    await act(async () => {
+      fireEvent.click(slotIn(container, 'pause')!);
+    });
+
+    expect(pauseSessionMock).toHaveBeenCalledWith('session-abc-123');
+    expect(refetchLiveSessionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('a pause the server refuses is said, not swallowed', async () => {
+    pauseSessionMock.mockRejectedValue(new Error('409'));
+    const { container } = mountWith(RUNNING_DTO, CREATOR_ID);
+
+    await act(async () => {
+      fireEvent.click(slotIn(container, 'pause')!);
+    });
+
+    const { toast } = await import('sonner');
+    expect(toast.error).toHaveBeenCalledWith(expect.any(String), { id: 'session-pause-error' });
+    expect(refetchLiveSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('Resume in the top bar resumes a paused session, then refetches it', async () => {
+    resumeSessionMock.mockResolvedValue(undefined);
+    const { container } = mountWith(
+      { ...RUNNING_DTO, status: 'Paused' } as LiveSessionDto,
+      CREATOR_ID
+    );
+
+    await act(async () => {
+      fireEvent.click(slotIn(container, 'resume')!);
+    });
+
+    expect(resumeSessionMock).toHaveBeenCalledWith('session-abc-123');
+    expect(refetchLiveSessionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('the Host seat that did not create the session gets no control: the server would answer 403', () => {
+    searchParamsMap['tab'] = 'turn'; // PlayerRosterLive, with «+ Aggiungi»
+    const { container } = mountWith(RUNNING_DTO, SEAT_HOST_ID);
+
+    // The seat still reads as Host (the score editor is the participants'), but nothing controls.
+    expect(container.querySelector('[data-slot="session-live-top-bar"]')).toHaveAttribute(
+      'data-viewer-role',
+      'Host'
+    );
+    expect(slotIn(container, 'pause')).not.toBeInTheDocument();
+    expect(slotIn(container, 'endgame')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-slot="player-roster-add"]')).not.toBeInTheDocument();
+  });
+
+  it('the creator linked as a Spectator still controls the game', () => {
+    searchParamsMap['tab'] = 'turn';
+    const dto = {
+      ...RUNNING_DTO,
+      players: [...RUNNING_DTO.players, player('p-creator', CREATOR_ID, 'Spectator')],
+    } as unknown as LiveSessionDto;
+    const { container } = mountWith(dto, CREATOR_ID);
+
+    expect(slotIn(container, 'pause')).toBeInTheDocument();
+    expect(slotIn(container, 'endgame')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="player-roster-add"]')).toBeInTheDocument();
+  });
+
+  it('a concluded session offers its creator no «+ Aggiungi»', () => {
+    searchParamsMap['tab'] = 'turn';
+    const { container } = mountWith(
+      { ...RUNNING_DTO, status: 'Completed' } as LiveSessionDto,
+      CREATOR_ID
+    );
+
+    expect(container.querySelector('[data-slot="player-roster-add"]')).not.toBeInTheDocument();
+  });
+
+  it('no kick X is shown: nothing removes a player from this view', () => {
+    searchParamsMap['tab'] = 'turn';
+    const { container } = mountWith(RUNNING_DTO, CREATOR_ID);
+
+    expect(container.querySelector('[data-slot="player-roster-entry"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="player-roster-kick"]')).not.toBeInTheDocument();
+  });
+
+  it('the end of the game seen from another device refetches the session', () => {
+    const endgame = {
+      type: 'session:endgame',
+      sessionId: 'session-abc-123',
+      finalScores: [],
+      timestamp: new Date().toISOString(),
+    };
+    const { rerender } = mountWith(RUNNING_DTO, SEAT_HOST_ID);
+    expect(refetchLiveSessionMock).not.toHaveBeenCalled();
+
+    useSessionLiveStreamMock.mockReturnValue({
+      ...mockLiveStreamResult,
+      events: [endgame] as unknown as UseSessionLiveStreamResult['events'],
+    });
+    rerender(
+      <IntlProvider locale="it" messages={MESSAGES}>
+        <SessionLiveView />
+      </IntlProvider>
+    );
+
+    expect(refetchLiveSessionMock).toHaveBeenCalledTimes(1);
   });
 });

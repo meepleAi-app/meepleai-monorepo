@@ -8,6 +8,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.Exceptions;
+using Api.Infrastructure.EntityConfigurations.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -422,6 +423,63 @@ public class StartGameNightSessionCommandHandlerTests
             Times.Never);
     }
 
+    // #4780: two starts that both pass the in-memory guard can also be told apart by the partial-unique
+    // live-slot index (one InProgress link per night) instead of the xmin check. The loser then saw a raw
+    // DbUpdateException (500) where go-live already answered the blocked-modal 409.
+    [Fact]
+    public async Task Handle_ConcurrentStartMeetsTheLiveSlotIndex_Throws409()
+    {
+        var gameNight = SetupStartableNight();
+        _mockUnitOfWork.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<StartGameNightSessionResult>>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(UniqueViolation(GameNightSessionEntityConfiguration.UniqueActiveIndexName));
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId);
+
+        await Assert.ThrowsAsync<MaxLiveSessionsExceededException>(
+            () => _handler.Handle(command, CancellationToken.None));
+        _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_AnotherUniqueViolation_IsNotReadAsAGameAlreadyLive()
+    {
+        // Only the live-slot index means «a game is already live»: any other unique violation is a defect,
+        // and must not reach the player as that message.
+        var gameNight = SetupStartableNight();
+        _mockUnitOfWork.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<StartGameNightSessionResult>>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(UniqueViolation("ix_some_other_index"));
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId);
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => _handler.Handle(command, CancellationToken.None));
+    }
+
+    private GameNightEvent SetupStartableNight()
+    {
+        var gameNight = CreatePublishedEvent();
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
+        return gameNight;
+    }
+
+    private static DbUpdateException UniqueViolation(string constraintName) =>
+        new("An error occurred while saving the entity changes.",
+            new Npgsql.PostgresException(
+                messageText: "duplicate key value violates unique constraint",
+                severity: "ERROR",
+                invariantSeverity: "ERROR",
+                sqlState: Npgsql.PostgresErrorCodes.UniqueViolation,
+                constraintName: constraintName));
+
     [Fact]
     public async Task Handle_SessionStartedAfterAdding()
     {
@@ -454,6 +512,34 @@ public class StartGameNightSessionCommandHandlerTests
         // Assert — session should be in InProgress status after Start
         var gns = gameNight.Sessions[0];
         Assert.Equal(GameNightSessionStatus.InProgress, gns.Status);
+    }
+
+    [Fact]
+    public async Task Handle_NightWithAPendingDraft_StartsTheNewGame_AndLeavesTheDraftPending()
+    {
+        // #4780: StartCurrentSession took the FIRST pending link by play order — the planned draft, not the
+        // game just added — while the live game was created for the new tracking Session.
+        var gameNight = CreatePublishedEvent();
+        var draftSessionId = Guid.NewGuid();
+        gameNight.AddSession(draftSessionId, gameNight.GameIds[0], "Bozza pianificata");
+        var sessionId = Guid.NewGuid();
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(
+                sessionId, "GHI789", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        var result = await _handler.Handle(
+            new StartGameNightSessionCommand(gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId),
+            CancellationToken.None);
+
+        Assert.Equal(GameNightSessionStatus.InProgress, gameNight.Sessions.Single(s => s.SessionId == sessionId).Status);
+        Assert.Equal(GameNightSessionStatus.Pending, gameNight.Sessions.Single(s => s.SessionId == draftSessionId).Status);
+        Assert.Equal(2, result.PlayOrder);
     }
 
     [Fact]

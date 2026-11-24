@@ -14,7 +14,8 @@ internal class GameNightSessionEntityConfiguration : IEntityTypeConfiguration<Ga
     /// Name of the partial-unique index enforcing "max 1 live (InProgress) session per GameNight"
     /// (invariante #10, Issue #3157 C1). Single source of truth: referenced by the index declaration
     /// below AND by every Postgres 23505 unique-violation catch that maps this constraint to HTTP 409
-    /// (create-path <c>CreateSessionCommandHandler</c> + go-live-path <c>GoLiveSessionCommandHandler</c>).
+    /// (create-path <c>CreateSessionCommandHandler</c>, go-live-path <c>GoLiveSessionCommandHandler</c>
+    /// and start-path <c>StartGameNightSessionCommandHandler</c>, #4780).
     /// Keeping the literal in one place prevents the catch from silently drifting away from the index
     /// name and turning a real 409 into an uncaught 500.
     /// </summary>

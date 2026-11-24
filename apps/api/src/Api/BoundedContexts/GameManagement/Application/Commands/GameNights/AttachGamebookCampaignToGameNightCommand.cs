@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 /// live sitting. Creates a SessionTracking <c>Session</c> linked to the campaign
 /// (<c>GamebookCampaignId</c>), adds a <c>GameNightSession</c>, and starts it — so the #15
 /// promotion + #10 max-1-live guard fire through the existing GameNight machinery
-/// (the guard lives in <c>StartCurrentSession()</c>, hence the <c>AddSession → StartCurrentSession</c>
+/// (the guard runs in <c>StartSession(sessionId)</c>, hence the <c>AddSession → StartSession</c>
 /// sequence must both run). Limited to shared-game campaigns (D-SHARED): a private-game
 /// campaign cannot become a Session because <c>Session.GameId</c> FK-restricts to shared_games.
 /// </summary>

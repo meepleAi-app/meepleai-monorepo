@@ -221,4 +221,43 @@ public class CompleteGameNightSessionCommandHandlerTests
         await act.Should().ThrowAsync<ConflictException>();
         // Il rollback è responsabilità della UoW: qui conta la mappatura dell'eccezione.
     }
+
+    // #4780: the aggregate's guard still answers 409 with its message once the catch is narrowed. A night whose
+    // only link is a pending draft passes the early CurrentSession check (it falls back to the first pending link)
+    // and reaches CompleteCurrentSession inside the transaction, which refuses it.
+    [Fact]
+    public async Task Handle_OnlyAPendingDraft_TheAggregateGuardIsStillAConflict()
+    {
+        var organizerId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var session = Session.Create(organizerId, gameId, SessionType.GameSpecific);
+        var night = GameNightEvent.Create(organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [gameId]);
+        night.Publish([]);
+        night.AddSession(session.Id, gameId, "Catan"); // Pending, never started
+        _gameNightRepo.Setup(r => r.GetByIdAsync(night.Id, It.IsAny<CancellationToken>())).ReturnsAsync(night);
+        _sessionRepo.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+
+        var act = () => _handler.Handle(
+            new CompleteGameNightSessionCommand(night.Id, null, organizerId), CancellationToken.None);
+
+        (await act.Should().ThrowAsync<ConflictException>()).WithMessage("No in-progress session to complete.");
+        _mediator.Verify(m => m.Send(It.IsAny<FinalizeSessionCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // #4780: only the aggregate's own guard is a conflict. The catch used to wrap the whole transaction, so an
+    // InvalidOperationException from EF, Npgsql or the cross-BC finalize became a 409 carrying its message.
+    [Fact]
+    public async Task Handle_InvalidOperationOutsideTheAggregate_IsNotTurnedIntoAConflict()
+    {
+        var organizerId = Guid.NewGuid();
+        var (night, _) = StartedNightWithTwoPlayers(organizerId);
+        _mediator.Setup(m => m.Send(It.IsAny<FinalizeSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The instance of entity type cannot be tracked"));
+
+        var act = () => _handler.Handle(
+            new CompleteGameNightSessionCommand(night.Id, null, organizerId), CancellationToken.None);
+
+        var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
+        thrown.Which.Should().NotBeOfType<ConflictException>();
+    }
 }

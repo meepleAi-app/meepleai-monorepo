@@ -71,7 +71,19 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
         {
             await _unitOfWork.ExecuteInTransactionAsync(async ct =>
             {
-                gameNight.CompleteCurrentSession(command.WinnerId);
+                try
+                {
+                    gameNight.CompleteCurrentSession(command.WinnerId);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    // The aggregate's own guard (no in-progress session to complete) speaks to the user: a
+                    // 409 with its message. Only this call is in the catch (#4780, as the start and go-live
+                    // did in #4752): an InvalidOperationException from EF, Npgsql or the finalize below is
+                    // not a conflict, and must neither become a 409 nor leak its message.
+                    throw new ConflictException(ex.Message);
+                }
+
                 await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
                 await _unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
 
@@ -97,10 +109,6 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
         catch (DbUpdateConcurrencyException)
         {
             throw new ConflictException("The session was modified concurrently. Please retry.");
-        }
-        catch (InvalidOperationException ex)
-        {
-            throw new ConflictException(ex.Message);
         }
 
         await _autoSaveScheduler.RemoveAsync(trackingSessionId, cancellationToken).ConfigureAwait(false);

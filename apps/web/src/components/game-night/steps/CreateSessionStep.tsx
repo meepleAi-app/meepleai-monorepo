@@ -168,9 +168,21 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       // #4770: «Riprova» used to create a second session whatever had failed. A previous attempt with
       // the same game and the same seats is resumed instead: its session, minus the players it already
       // got in. Different seats are a different session.
-      const attemptKey = JSON.stringify([gameId ?? null, gameTitle, entries]);
+      // The account is in the key too: a session made by another account is not this user's to resume.
+      const attemptKey = JSON.stringify([gameId ?? null, gameTitle, entries, self?.userId ?? null]);
       let pending = pendingRef.current?.key === attemptKey ? pendingRef.current : null;
-      if (pending === null) {
+      if (pending !== null) {
+        // An add whose answer was lost (the client retries POSTs on 502/503, and the retry meets «name
+        // already exists») is in the session but not in `addedSeatIds`. Read the session's players, so
+        // resuming does not send that seat again and fail the same way on every «Riprova».
+        const session = await api.liveSessions.getSession(pending.sessionId);
+        const present = new Set(
+          session.players.filter(p => p.isActive).map(p => playerNameKey(p.displayName))
+        );
+        for (const entry of entries) {
+          if (present.has(playerNameKey(entry.name))) pending.addedSeatIds.add(entry.seatId);
+        }
+      } else {
         // Create session — gameId is optional, gameName is always set
         const sessionId = await api.liveSessions.createSession({
           ...(gameId ? { gameId } : {}),

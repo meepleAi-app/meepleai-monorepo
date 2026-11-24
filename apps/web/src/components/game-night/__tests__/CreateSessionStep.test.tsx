@@ -11,13 +11,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CreateSessionStep } from '../steps/CreateSessionStep';
 
-const { createSession, addPlayer, startSession } = vi.hoisted(() => ({
+const { createSession, addPlayer, startSession, getSession } = vi.hoisted(() => ({
   createSession: vi.fn(),
   addPlayer: vi.fn(),
   startSession: vi.fn(),
+  getSession: vi.fn(),
 }));
 
-vi.mock('@/lib/api', () => ({ api: { liveSessions: { createSession, addPlayer, startSession } } }));
+vi.mock('@/lib/api', () => ({
+  api: { liveSessions: { createSession, addPlayer, startSession, getSession } },
+}));
 
 type TestUser = { id: string; email: string; displayName?: string | null; role: string };
 const currentUser = vi.hoisted(() => ({ value: undefined as TestUser | undefined }));
@@ -420,12 +423,44 @@ describe('CreateSessionStep — #4750: seme, nomi e posti', () => {
 // ─── #4770: «Riprova» riprende la sessione, i nomi vanno senza spazi ──────────
 
 describe('CreateSessionStep — #4770: «Riprova» e nomi', () => {
+  // The session as the server sees it: the players whose add resolved.
+  let serverPlayers: string[] = [];
   beforeEach(() => {
     vi.clearAllMocks();
     currentUser.value = undefined;
+    serverPlayers = [];
     createSession.mockResolvedValue('sess-1');
-    addPlayer.mockResolvedValue('player-1');
+    addPlayer.mockImplementation(async (_id: string, p: { displayName: string }) => {
+      serverPlayers.push(p.displayName);
+      return `player-${p.displayName}`;
+    });
     startSession.mockResolvedValue(undefined);
+    getSession.mockImplementation(async () => ({
+      players: serverPlayers.map(displayName => ({ displayName, isActive: true })),
+    }));
+  });
+
+  it('«Riprova» dopo un’aggiunta riuscita ma con la risposta persa non rimanda quel giocatore', async () => {
+    // Il server aggiunge Luca, ma la risposta si perde: il client vede un errore.
+    addPlayer.mockImplementationOnce(async (_id: string, p: { displayName: string }) => {
+      serverPlayers.push(p.displayName);
+      return `player-${p.displayName}`;
+    });
+    addPlayer.mockImplementationOnce(async (_id: string, p: { displayName: string }) => {
+      serverPlayers.push(p.displayName);
+      throw new Error('Player with display name already exists');
+    });
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, 'Anna');
+    setSeatName(1, 'Luca');
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    expect(await screen.findByText(/Riprova/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-1'));
+
+    expect(addPlayerPayloads().map(p => p.displayName)).toEqual(['Anna', 'Luca']);
+    expect(startSession).toHaveBeenCalledTimes(1);
   });
 
   it('i nomi partono senza spazi ai bordi, come il server li confronta', async () => {
@@ -439,7 +474,11 @@ describe('CreateSessionStep — #4770: «Riprova» e nomi', () => {
   });
 
   it('«Riprova» dopo un giocatore non aggiunto riprende la stessa sessione e aggiunge solo chi manca', async () => {
-    addPlayer.mockResolvedValueOnce('player-anna').mockRejectedValueOnce(new Error('Rete'));
+    addPlayer.mockImplementationOnce(async (_id: string, p: { displayName: string }) => {
+      serverPlayers.push(p.displayName);
+      return 'player-anna';
+    });
+    addPlayer.mockRejectedValueOnce(new Error('Rete'));
     const { onSessionCreated } = renderStep();
     setSeatName(0, 'Anna');
     setSeatName(1, 'Luca');

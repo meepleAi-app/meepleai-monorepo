@@ -18,6 +18,14 @@ vi.mock('@/components/ui/overlays/BottomSheet', () => ({
     open ? <div>{children}</div> : null,
 }));
 
+// #4770: the creator is the first seat, linked to their account. `null` = not signed in (or not known yet).
+const currentUser = vi.hoisted(() => ({
+  current: null as { id: string; displayName?: string } | null,
+}));
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => ({ data: currentUser.current }),
+}));
+
 const mockApi = vi.hoisted(() => ({
   liveSessions: {
     createSession: vi.fn(),
@@ -31,6 +39,7 @@ vi.mock('@/lib/api', () => ({ api: mockApi }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentUser.current = null;
   mockApi.liveSessions.createSession.mockResolvedValue('session-9');
   mockApi.liveSessions.addPlayer.mockReset();
   mockApi.liveSessions.addPlayer
@@ -149,5 +158,112 @@ describe('StartSessionSheet — #4781: «Avvia Partita» avvia la partita', () =
       timeout: 4000,
     });
     expect(mockApi.liveSessions.createSession).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ─── #4770 — il creatore è collegato al suo account ────────────────────────────
+
+describe('StartSessionSheet — #4770: il creatore gioca, collegato al suo account', () => {
+  beforeEach(() => {
+    currentUser.current = { id: 'user-marta', displayName: 'Marta' };
+    mockApi.liveSessions.addPlayer.mockReset();
+    mockApi.liveSessions.addPlayer.mockImplementation(
+      async (_sessionId: string, p: { displayName: string }) => `id-${p.displayName}`
+    );
+  });
+
+  it('il primo posto è il creatore, con il suo nome, e viene aggiunto con il suo account', async () => {
+    render(<StartSessionSheet open onOpenChange={vi.fn()} gameId="game-1" gameName="Catan" />);
+    expect(screen.getByText('Marta')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('new-player-input'), { target: { value: 'Bob' } });
+    fireEvent.click(screen.getByTestId('add-player-btn'));
+    fireEvent.click(screen.getByTestId('next-step-btn'));
+    fireEvent.click(screen.getByTestId('start-session-btn'));
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith('/sessions/session-9/live'));
+
+    const calls = mockApi.liveSessions.addPlayer.mock.calls.map(c => c[1]);
+    expect(calls).toEqual([
+      expect.objectContaining({ displayName: 'Marta', userId: 'user-marta' }),
+      expect.not.objectContaining({ userId: expect.anything() }),
+    ]);
+  });
+
+  it('il creatore entra per primo (il server ne fa l’Host) ma l’ordine dei turni resta quello mostrato', async () => {
+    render(<StartSessionSheet open onOpenChange={vi.fn()} gameId="game-1" gameName="Catan" />);
+    fireEvent.change(screen.getByTestId('new-player-input'), { target: { value: 'Bob' } });
+    fireEvent.click(screen.getByTestId('add-player-btn'));
+    fireEvent.click(screen.getByTestId('next-step-btn'));
+    // Bob passa davanti: trascina il primo posto (Marta) sul secondo.
+    const rows = document.querySelectorAll('[data-testid^="order-row-"]');
+    fireEvent.dragStart(rows[0]);
+    fireEvent.drop(rows[1]);
+    fireEvent.click(screen.getByTestId('start-session-btn'));
+    await waitFor(() => expect(routerPush).toHaveBeenCalled());
+
+    expect(mockApi.liveSessions.addPlayer.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ displayName: 'Marta', userId: 'user-marta' })
+    );
+    expect(mockApi.liveSessions.updateTurnOrder).toHaveBeenCalledWith('session-9', {
+      playerIds: ['id-Bob', 'id-Marta'],
+    });
+  });
+
+  it('togliendo il proprio posto («Io non gioco») nessun giocatore è collegato', async () => {
+    render(<StartSessionSheet open onOpenChange={vi.fn()} gameId="game-1" gameName="Catan" />);
+    fireEvent.change(screen.getByTestId('new-player-input'), { target: { value: 'Bob' } });
+    fireEvent.click(screen.getByTestId('add-player-btn'));
+    fireEvent.change(screen.getByTestId('new-player-input'), { target: { value: 'Carla' } });
+    fireEvent.click(screen.getByTestId('add-player-btn'));
+    fireEvent.click(document.querySelectorAll('[data-testid^="remove-player-"]')[0]);
+    fireEvent.click(screen.getByTestId('next-step-btn'));
+    fireEvent.click(screen.getByTestId('start-session-btn'));
+    await waitFor(() => expect(routerPush).toHaveBeenCalled());
+
+    expect(mockApi.liveSessions.addPlayer.mock.calls.map(c => c[1])).toEqual([
+      expect.not.objectContaining({ userId: expect.anything() }),
+      expect.not.objectContaining({ userId: expect.anything() }),
+    ]);
+  });
+
+  it('se dopo la semina l’account cambia, il posto non parte con l’account di prima', async () => {
+    // ownUserId: il collegamento va mandato solo se è dell'utente corrente. Senza il controllo, il posto
+    // seminato per Marta partirebbe con il suo account anche dopo un cambio di sessione.
+    const { rerender } = render(
+      <StartSessionSheet open onOpenChange={vi.fn()} gameId="game-1" gameName="Catan" />
+    );
+    currentUser.current = { id: 'user-bruno', displayName: 'Bruno' };
+    rerender(<StartSessionSheet open onOpenChange={() => {}} gameId="game-1" gameName="Catan" />);
+    fireEvent.change(screen.getByTestId('new-player-input'), { target: { value: 'Bob' } });
+    fireEvent.click(screen.getByTestId('add-player-btn'));
+    fireEvent.click(screen.getByTestId('next-step-btn'));
+    fireEvent.click(screen.getByTestId('start-session-btn'));
+    await waitFor(() => expect(routerPush).toHaveBeenCalled());
+
+    expect(mockApi.liveSessions.addPlayer.mock.calls.map(c => c[1])).toEqual([
+      expect.not.objectContaining({ userId: expect.anything() }),
+      expect.not.objectContaining({ userId: expect.anything() }),
+    ]);
+  });
+
+  it('se l’utente è noto solo dopo, il posto neutro «Giocatore 1» diventa il suo', async () => {
+    currentUser.current = null;
+    const { rerender } = render(
+      <StartSessionSheet open onOpenChange={vi.fn()} gameId="game-1" gameName="Catan" />
+    );
+    expect(screen.getByText('Giocatore 1')).toBeInTheDocument();
+
+    currentUser.current = { id: 'user-marta', displayName: 'Marta' };
+    rerender(<StartSessionSheet open onOpenChange={() => {}} gameId="game-1" gameName="Catan" />);
+
+    expect(await screen.findByText('Marta')).toBeInTheDocument();
+    expect(screen.queryByText('Giocatore 1')).toBeNull();
+
+    // E il posto seminato tardi è collegato, non solo rinominato.
+    fireEvent.click(screen.getByTestId('next-step-btn'));
+    fireEvent.click(screen.getByTestId('start-session-btn'));
+    await waitFor(() => expect(routerPush).toHaveBeenCalled());
+    expect(mockApi.liveSessions.addPlayer.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ displayName: 'Marta', userId: 'user-marta' })
+    );
   });
 });

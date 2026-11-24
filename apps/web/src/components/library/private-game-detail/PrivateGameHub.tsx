@@ -13,6 +13,7 @@ import { ProgressCard } from '@/components/pdf/progress-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { usePrivateGame } from '@/hooks/queries/useLibrary';
 import { useChatPanel } from '@/hooks/useChatPanel';
+import { linkedFirst } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 
 import { ActivationChecklist, type PdfStatus } from './ActivationChecklist';
@@ -179,11 +180,13 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
           gameName: game?.title,
         });
 
-        // Add players to session
-        for (const player of players) {
+        // Add players to session. #4770: the linked creator goes first, because the server makes the
+        // first player the Host.
+        for (const player of linkedFirst(players)) {
           await api.liveSessions.addPlayer(sessionId, {
             displayName: player.displayName,
             color: player.color,
+            ...(player.userId ? { userId: player.userId } : {}),
           });
         }
 
@@ -249,6 +252,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         {game.thumbnailUrl && (
           <Image
             src={game.thumbnailUrl}
+            // eslint-disable-next-line local/prefer-use-game-title -- a private game has no translations: its own title is the only one (#4770)
             alt={game.title}
             width={96}
             height={96}
@@ -256,6 +260,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
           />
         )}
         <div>
+          {/* eslint-disable-next-line local/prefer-use-game-title -- a private game has no translations: its own title is the only one (#4770) */}
           <h1 className="text-2xl font-bold">{game.title}</h1>
           {game.yearPublished && <p className="text-muted-foreground">{game.yearPublished}</p>}
           <p className="text-sm text-muted-foreground">
@@ -339,6 +344,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         <PlayerSetupDialog
           open={showPlayerSetup}
           onOpenChange={setShowPlayerSetup}
+          // eslint-disable-next-line local/prefer-use-game-title -- a private game has no translations: its own title is the only one (#4770)
           gameName={game?.title ?? 'Gioco'}
           minPlayers={game?.minPlayers ?? 1}
           maxPlayers={game?.maxPlayers ?? 10}

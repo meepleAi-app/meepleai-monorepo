@@ -515,6 +515,34 @@ public class StartGameNightSessionCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_NightWithAPendingDraft_StartsTheNewGame_AndLeavesTheDraftPending()
+    {
+        // #4780: StartCurrentSession took the FIRST pending link by play order — the planned draft, not the
+        // game just added — while the live game was created for the new tracking Session.
+        var gameNight = CreatePublishedEvent();
+        var draftSessionId = Guid.NewGuid();
+        gameNight.AddSession(draftSessionId, gameNight.GameIds[0], "Bozza pianificata");
+        var sessionId = Guid.NewGuid();
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(
+                sessionId, "GHI789", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        var result = await _handler.Handle(
+            new StartGameNightSessionCommand(gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId),
+            CancellationToken.None);
+
+        Assert.Equal(GameNightSessionStatus.InProgress, gameNight.Sessions.Single(s => s.SessionId == sessionId).Status);
+        Assert.Equal(GameNightSessionStatus.Pending, gameNight.Sessions.Single(s => s.SessionId == draftSessionId).Status);
+        Assert.Equal(2, result.PlayOrder);
+    }
+
+    [Fact]
     public async Task Handle_SecondSittingOnInProgressNight_Succeeds()
     {
         // SI-4 (#2635): a night already InProgress (first game played & completed) resuming for a 2nd

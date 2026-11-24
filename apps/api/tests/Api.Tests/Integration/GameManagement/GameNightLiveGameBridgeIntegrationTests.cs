@@ -663,12 +663,11 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
             AttemptAsync(() => SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer))));
 
         attempts.Count(a => a.Error is null).Should().Be(1, "only one of two concurrent starts may win");
-        // The loser is told «a game is already live» — or, in the narrow window where both pass the guard
-        // and the second's INSERT meets the unique index before the xmin check (a known gap: the start has
-        // no 23505 catch, tracked in #4780), a DbUpdateException. Never a second game.
+        // The loser is told «a game is already live», whether the xmin check or the live-slot index told the
+        // two apart (#4780: the start now maps the 23505 too). Never a raw DbUpdateException, never a second game.
         attempts.Where(a => a.Error is not null).Select(a => a.Error)
             .Should().AllSatisfy(e => e.Should().Match<Exception>(x =>
-                x is MaxLiveSessionsExceededException || x is DbUpdateException || x is ConflictException));
+                x is MaxLiveSessionsExceededException || x is ConflictException));
         (await NightStateAsync(organizer, nightId)).Should().Be((Tracking: 1, Links: 1, Lives: 1));
     }
 

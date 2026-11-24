@@ -10,6 +10,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.Infrastructure.EntityConfigurations.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
@@ -150,6 +151,13 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             // back — no orphan — and maps to the same blocked-modal 409 instead of an uncaught 500.
             throw new MaxLiveSessionsExceededException(command.GameNightId);
         }
+        catch (DbUpdateException ex) when (IsGameNightLiveSlotViolation(ex))
+        {
+            // #4780: two starts that both passed the in-memory guard can also meet at the partial-unique
+            // live-slot index before the xmin check tells them apart. The loser's whole tx has rolled back
+            // as well: same blocked-modal 409, as go-live answers, instead of an uncaught 500.
+            throw new MaxLiveSessionsExceededException(command.GameNightId);
+        }
         catch (SessionQuotaExceededException ex)
         {
             // The quota message is written for the player (limit and tier): it stays a 409 with it.
@@ -188,6 +196,14 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             .ThenBy(p => p.JoinOrder)
             .Select(p => new LiveSessionInitialPlayer(p.UserId, p.DisplayName))
             .ToList();
+
+    // True iff the DbUpdateException is the partial-unique-index violation on the GameNight live slot
+    // (game_night_sessions InProgress per event), not some other constraint. Uses the shared index-name
+    // constant so this catch can never drift from the index declaration.
+    private static bool IsGameNightLiveSlotViolation(DbUpdateException ex) =>
+        ex.InnerException is Npgsql.PostgresException pg
+        && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
+        && string.Equals(pg.ConstraintName, GameNightSessionEntityConfiguration.UniqueActiveIndexName, StringComparison.Ordinal);
 
     private async Task TryApplyToolboxTemplateAsync(Guid gameId, CancellationToken cancellationToken)
     {

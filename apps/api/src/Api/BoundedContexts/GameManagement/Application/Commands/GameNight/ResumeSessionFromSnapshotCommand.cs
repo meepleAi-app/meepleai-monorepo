@@ -92,19 +92,28 @@ internal sealed class ResumeSessionFromSnapshotCommandHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // 1. Load latest PauseSnapshot — throws NotFoundException if none exists
-        var snapshot = await _snapshotRepository
-            .GetLatestBySessionIdAsync(request.SessionId, cancellationToken)
-            .ConfigureAwait(false)
-            ?? throw new NotFoundException("PauseSnapshot", request.SessionId.ToString());
-
-        // 2. Load LiveGameSession
+        // 1. Load LiveGameSession — a missing session is 404 before any 403
         var session = await _sessionRepository
             .GetByIdAsync(request.SessionId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", request.SessionId.ToString());
 
-        // 3. Verify session is Paused
+        // 2. Authorization (#4763): only the session creator resumes it, as only the creator saves it
+        // (CreatePauseSnapshotCommand) and as the live-session routes require. This route resumed a paused
+        // game for any authenticated caller and handed them a fresh invite to join it.
+        if (session.CreatedByUserId != request.ResumedByUserId)
+        {
+            throw new ForbiddenException(
+                "Only the session host can resume the session.");
+        }
+
+        // 3. Load latest PauseSnapshot — throws NotFoundException if none exists
+        var snapshot = await _snapshotRepository
+            .GetLatestBySessionIdAsync(request.SessionId, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new NotFoundException("PauseSnapshot", request.SessionId.ToString());
+
+        // 4. Verify session is Paused
         if (session.Status != LiveSessionStatus.Paused)
         {
             throw new ConflictException(
@@ -116,28 +125,28 @@ internal sealed class ResumeSessionFromSnapshotCommandHandler
             "ResumeSessionFromSnapshotCommand: SessionId={SessionId}, SnapshotId={SnapshotId}",
             request.SessionId, snapshot.Id);
 
-        // 4. Resume the session via domain method
+        // 5. Resume the session via domain method
         session.Resume();
 
-        // 5. Create a new SessionInvite (old one may have expired)
+        // 6. Create a new SessionInvite (old one may have expired)
         var invite = SessionInvite.Create(
             sessionId: session.Id,
             createdByUserId: request.ResumedByUserId,
             maxUses: InviteMaxUses,
             expiryMinutes: InviteExpiryMinutes);
 
-        // 6. Delete auto-save PauseSnapshots to keep history clean
+        // 7. Delete auto-save PauseSnapshots to keep history clean
         await _snapshotRepository
             .DeleteAutoSavesBySessionIdAsync(request.SessionId, cancellationToken)
             .ConfigureAwait(false);
 
-        // 7. Get agent recap from the snapshot's conversation summary (may be null — that's OK)
+        // 8. Get agent recap from the snapshot's conversation summary (may be null — that's OK)
         var recap = BuildRecap(snapshot.AgentConversationSummary, snapshot.CurrentTurn);
 
-        // 8. Persist session status change to DB
+        // 9. Persist session status change to DB
         await PersistSessionStatusAsync(session, cancellationToken).ConfigureAwait(false);
 
-        // 9. Persist new SessionInvite to DB
+        // 10. Persist new SessionInvite to DB
         _dbContext.SessionInvites.Add(new SessionInviteEntity
         {
             Id = invite.Id,
@@ -152,13 +161,13 @@ internal sealed class ResumeSessionFromSnapshotCommandHandler
             IsRevoked = invite.IsRevoked
         });
 
-        // 10. Update in-memory repository
+        // 11. Update in-memory repository
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
 
-        // 11. Save everything atomically
+        // 12. Save everything atomically
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // 12. Publish SessionResumedEvent for SignalR broadcast
+        // 13. Publish SessionResumedEvent for SignalR broadcast
         await _publisher
             .Publish(new SessionResumedEvent(session.Id, recap), cancellationToken)
             .ConfigureAwait(false);

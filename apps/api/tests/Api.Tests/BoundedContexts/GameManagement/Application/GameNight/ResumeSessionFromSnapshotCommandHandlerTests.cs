@@ -357,6 +357,42 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         await act.Should().ThrowAsync<ConflictException>();
     }
 
+    // #4763: resuming is the creator's, as saving (CreatePauseSnapshotCommand) and the live-session routes are.
+    // This route resumed a paused game for any authenticated caller and handed them a fresh invite.
+    [Fact]
+    public async Task Handle_WhenCallerIsNotTheCreator_ThrowsForbidden_AndLeavesTheSessionPausedWithNoInvite()
+    {
+        // Arrange — a linked player who did not create the session
+        var session = CreatePausedSession(withDbEntity: true);
+        var otherUserId = Guid.NewGuid();
+        session.AddPlayer(otherUserId, "Bruno", PlayerColor.Blue, TimeProvider.System, PlayerRole.Player);
+        CreateSnapshot();
+
+        // Act
+        var act = () => _sut.Handle(BuildCommand(userId: otherUserId), CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<ForbiddenException>();
+        session.Status.Should().Be(LiveSessionStatus.Paused);
+        _dbContext.SessionInvites.Where(i => i.SessionId == TestSessionId).Should().BeEmpty();
+        _sessionRepoMock.Verify(
+            r => r.UpdateAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenSessionNotFound_ThrowsNotFound_BeforeTheCreatorCheck()
+    {
+        // A missing session answers 404, never 403, whoever asks.
+        CreateSnapshot();
+        _sessionRepoMock
+            .Setup(r => r.GetByIdAsync(TestSessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((LiveGameSession?)null);
+
+        var act = () => _sut.Handle(BuildCommand(userId: Guid.NewGuid()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
     [Fact]
     public async Task Handle_WithAgentSummary_ReturnsRecapFromSnapshot()
     {

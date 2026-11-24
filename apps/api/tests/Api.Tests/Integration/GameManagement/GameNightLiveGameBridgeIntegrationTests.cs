@@ -18,6 +18,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Configurations.GameManagement;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
@@ -697,6 +698,51 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         (await db.LiveGameSessions.AsNoTracking().CountAsync(l => l.TrackingSessionId == trackingSessionId)).Should().Be(1);
     }
 
+    // ── One live game per tracking Session (#4780) ───────────────────────────
+
+    [Fact(DisplayName = "The database refuses a second live game for the same tracking Session")]
+    public async Task Database_RefusesASecondLiveGameForTheSameTrackingSession()
+    {
+        var (organizer, friend, gameId) = await SeedUsersAndGameAsync();
+        var trackingSessionId = await CreateDraftTrackingSessionAsync(organizer, friend, gameId);
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        db.LiveGameSessions.Add(LiveGameEntity(organizer, trackingSessionId));
+        await db.SaveChangesAsync();
+
+        db.LiveGameSessions.Add(LiveGameEntity(organizer, trackingSessionId));
+        var act = () => db.SaveChangesAsync();
+
+        var thrown = await act.Should().ThrowAsync<DbUpdateException>();
+        thrown.Which.InnerException.Should().BeOfType<Npgsql.PostgresException>()
+            .Which.ConstraintName.Should().Be(LiveGameSessionEntityConfiguration.TrackingSessionIdIndexName);
+    }
+
+    // The self-heal branch of go-live (a link already InProgress) writes nothing on the night, so xmin does not
+    // serialize two go-lives of a link that went InProgress with no live game behind it (a gamebook campaign
+    // attached to the night, or data from before the bridge): both used to create a live game. The race is not
+    // forced here, so without the unique index this failed only when the two met — not every run.
+    [Fact(DisplayName = "Go-lives of a link already InProgress with no live game, at once: one live game")]
+    public async Task ConcurrentGoLives_OfAnInProgressLinkWithNoLiveGame_LeaveOneLiveGame()
+    {
+        var (organizer, friend, gameId) = await SeedUsersAndGameAsync();
+        var trackingSessionId = await CreateDraftTrackingSessionAsync(organizer, friend, gameId);
+        await SeedNightWithPendingDraftAsync(organizer, gameId, trackingSessionId, GameNightSessionStatus.InProgress);
+
+        var attempts = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ =>
+            AttemptAsync(() => SendAsync(new GoLiveSessionCommand(trackingSessionId, organizer)))));
+
+        var successes = attempts.Where(a => a.Error is null).Select(a => a.Result!.LiveSessionId).ToList();
+        successes.Should().NotBeEmpty("at least one go-live must win");
+        successes.Distinct().Should().ContainSingle("every successful go-live must hand back the same live game");
+        attempts.Where(a => a.Error is not null).Select(a => a.Error)
+            .Should().AllSatisfy(e => e.Should().Match<Exception>(x =>
+                x is MaxLiveSessionsExceededException || x is ConflictException));
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        (await db.LiveGameSessions.AsNoTracking().CountAsync(l => l.TrackingSessionId == trackingSessionId)).Should().Be(1);
+    }
+
     // ── Who may adopt a tracking Session ─────────────────────────────────────
 
     [Fact(DisplayName = "Somebody who neither owns the tracking Session nor organizes its night cannot adopt it into a live game")]
@@ -912,7 +958,9 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
 
     private Guid _secondFriend;
 
-    private async Task<Guid> SeedNightWithPendingDraftAsync(Guid organizer, Guid gameId, Guid trackingSessionId)
+    private async Task<Guid> SeedNightWithPendingDraftAsync(
+        Guid organizer, Guid gameId, Guid trackingSessionId,
+        GameNightSessionStatus linkStatus = GameNightSessionStatus.Pending)
     {
         var nightId = Guid.NewGuid();
         await using var scope = _factory.Services.CreateAsyncScope();
@@ -926,11 +974,24 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
             GameId = gameId,
             GameTitle = "Catan",
             PlayOrder = 1,
-            Status = nameof(GameNightSessionStatus.Pending),
+            Status = linkStatus.ToString(),
         });
         await db.SaveChangesAsync();
         return nightId;
     }
+
+    private static LiveGameSessionEntity LiveGameEntity(Guid createdBy, Guid trackingSessionId) => new()
+    {
+        Id = Guid.NewGuid(),
+        SessionCode = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant(),
+        GameName = "Catan",
+        CreatedByUserId = createdBy,
+        Status = (int)LiveSessionStatus.Created,
+        TrackingSessionId = trackingSessionId,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow,
+        ScoringConfigJson = "{}",
+    };
 
     private static GameNightEventEntity NightEntity(Guid nightId, Guid organizer, Guid gameId, DateTimeOffset now) => new()
     {

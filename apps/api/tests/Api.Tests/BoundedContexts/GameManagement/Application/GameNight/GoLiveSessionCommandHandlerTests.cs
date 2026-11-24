@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.Infrastructure.Configurations.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -265,6 +266,37 @@ public class GoLiveSessionCommandHandlerTests
             .ThrowsAsync(new DbUpdateConcurrencyException());
 
         // Act & Assert
+        await Assert.ThrowsAsync<MaxLiveSessionsExceededException>(
+            () => _handler.Handle(new GoLiveSessionCommand(sessionId, gameNight.OrganizerId), CancellationToken.None));
+
+        _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // #4780: a link InProgress with no live game (made InProgress elsewhere, or data from before the bridge)
+    // takes the self-heal branch, which writes nothing on the night: two go-lives of it are not serialized by
+    // xmin. The unique index on the tracking id now refuses the second live game; the loser is the same
+    // blocked-modal 409 and must not open live mode.
+    [Fact]
+    public async Task Handle_SecondLiveGameForTheSameTrackingSession_Maps409MaxLive_DoesNotOpenLiveMode()
+    {
+        var sessionId = Guid.NewGuid();
+        var gameNight = CreatePublishedEventWithDraft(sessionId, out _);
+        gameNight.StartSession(sessionId); // InProgress: the self-heal branch
+
+        _mockRepository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockUnitOfWork.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException(
+                "An error occurred while saving the entity changes.",
+                new Npgsql.PostgresException(
+                    messageText: "duplicate key value violates unique constraint",
+                    severity: "ERROR",
+                    invariantSeverity: "ERROR",
+                    sqlState: Npgsql.PostgresErrorCodes.UniqueViolation,
+                    constraintName: LiveGameSessionEntityConfiguration.TrackingSessionIdIndexName)));
+
         await Assert.ThrowsAsync<MaxLiveSessionsExceededException>(
             () => _handler.Handle(new GoLiveSessionCommand(sessionId, gameNight.OrganizerId), CancellationToken.None));
 

@@ -10,6 +10,13 @@ namespace Api.Infrastructure.Configurations.GameManagement;
 /// </summary>
 internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfiguration<LiveGameSessionEntity>
 {
+    /// <summary>
+    /// Name of the partial index on <c>tracking_session_id</c> (non-null only). #4780: unique, so a tracking
+    /// Session has at most one live game. Single source of truth for the index declaration below and for the
+    /// Postgres 23505 catch in <c>GoLiveSessionCommandHandler</c>, which maps a second live game to 409.
+    /// </summary>
+    public const string TrackingSessionIdIndexName = "ix_live_game_sessions_tracking_session_id";
+
     public void Configure(EntityTypeBuilder<LiveGameSessionEntity> builder)
     {
         builder.ToTable("live_game_sessions");
@@ -176,8 +183,11 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
 
         // #2552: cross-BC lookups since SP2 filter on tracking_session_id (the companion id).
         // Partial index (non-null only) keeps it small — legacy pre-SP0 rows have null here.
+        // #4780: unique — one live game per tracking Session. The go-live self-heal branch writes nothing
+        // on the night, so only this index serializes two go-lives of a link InProgress with no live game.
         builder.HasIndex(e => e.TrackingSessionId)
-            .HasDatabaseName("ix_live_game_sessions_tracking_session_id")
+            .IsUnique()
+            .HasDatabaseName(TrackingSessionIdIndexName)
             .HasFilter("tracking_session_id IS NOT NULL");
 
         // --- Relationships ---

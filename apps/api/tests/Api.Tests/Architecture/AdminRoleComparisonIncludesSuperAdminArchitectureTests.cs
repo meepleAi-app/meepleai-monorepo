@@ -36,20 +36,30 @@ public sealed class AdminRoleComparisonIncludesSuperAdminArchitectureTests
 
     private const string AdminRole = @"(?:""[Aa][Dd][Mm][Ii][Nn]""|UserRole\.Admin\.ToString\(\)|nameof\(UserRole\.Admin\))";
 
+    // The enum and value-object constants, compared directly: UserRole.Admin, Role.Admin, Role.Admin.Value.
+    private const string AdminConstant = @"\b(?:UserRole\.Admin\b(?!\.ToString)|Role\.Admin(?:\.Value)?\b)";
+
+    // Call arguments, with up to two levels of nested parentheses.
+    private const string Arguments = @"(?:[^;{}()]|\((?:[^()]|\([^()]*\))*\))*?";
+
     private static readonly Regex[] AdminComparisons =
     [
-        // string.Equals(x, "admin", …) — the literal must be an argument of the call, not a value next to it.
-        new(@"string\.Equals\((?:[^;{}()]|\([^()]*\))*?" + AdminRole + @"\s*[,)]", RegexOptions.None, Timeout),
-        new(@"\.Equals\(\s*" + AdminRole, RegexOptions.None, Timeout),
-        new(@"[=!]=\s*" + AdminRole, RegexOptions.None, Timeout),
-        new(AdminRole + @"\s*[=!]=", RegexOptions.None, Timeout),
-        new(@"[=!]=\s*Role\.Admin\b(?!\.)", RegexOptions.None, Timeout),
-        new(@"\bRole\.Admin\s*[=!]=", RegexOptions.None, Timeout),
+        // Equals(x, "admin", …) on any receiver — string., String., StringComparer.X., bare — and x.Equals("admin").
+        // The literal must be an argument of the call, not a value next to it.
+        new(@"\bEquals\(" + Arguments + "(?:" + AdminRole + "|" + AdminConstant + @")\s*[,)]", RegexOptions.None, Timeout),
+        new(AdminRole + @"\s*\.Equals\(", RegexOptions.None, Timeout),
+        new(@"[=!]=\s*(?:" + AdminRole + "|" + AdminConstant + ")", RegexOptions.None, Timeout),
+        new("(?:" + AdminRole + "|" + AdminConstant + @")\s*[=!]=", RegexOptions.None, Timeout),
+        // pattern matching: x is "admin", x is not UserRole.Admin
+        new(@"\bis\s+(?:not\s+)?(?:" + AdminRole + "|" + AdminConstant + ")", RegexOptions.None, Timeout),
         // switch arms: "admin" => …, "admin" or …, case "admin":, UserRole.Admin => …
         new(AdminRole + @"\s*(?:=>|or\b)", RegexOptions.None, Timeout),
-        new(@"\bcase\s+" + AdminRole, RegexOptions.None, Timeout),
-        new(@"\bor\s+" + AdminRole, RegexOptions.None, Timeout),
+        new(@"\bcase\s+(?:" + AdminRole + "|" + AdminConstant + ")", RegexOptions.None, Timeout),
+        new(@"\bor\s+(?:" + AdminRole + "|" + AdminConstant + ")", RegexOptions.None, Timeout),
         new(@"\bUserRole\.Admin\s*=>", RegexOptions.None, Timeout),
+        // ASP.NET role checks: IsInRole("Admin"), RequireRole("Admin"), [Authorize(Roles = "Admin")]
+        new(@"\b(?:IsInRole|RequireRole)\(\s*" + AdminRole, RegexOptions.None, Timeout),
+        new(@"\bRoles\s*=\s*" + AdminRole, RegexOptions.None, Timeout),
     ];
 
     private static readonly Regex MentionsSuperAdmin = new("[Ss]uper[Aa]dmin", RegexOptions.None, Timeout);
@@ -84,6 +94,17 @@ public sealed class AdminRoleComparisonIncludesSuperAdminArchitectureTests
     [InlineData("var isAdmin = role.Equals(\"admin\", StringComparison.OrdinalIgnoreCase);")]
     [InlineData("if (_options.AdminBypass && userRole == Role.Admin) { }")]
     [InlineData("var c = role switch { \"admin\" => 1, \"editor\" => 2, _ => 0 };")]
+    [InlineData("if (role == UserRole.Admin) { }")]
+    [InlineData("if (userRole.Equals(Role.Admin)) { }")]
+    [InlineData("var isAdmin = user.Role.Value == Role.Admin.Value;")]
+    [InlineData("var isAdmin = role is \"admin\";")]
+    [InlineData("var notAdmin = role is not UserRole.Admin;")]
+    [InlineData("var isAdmin = \"admin\".Equals(role, StringComparison.OrdinalIgnoreCase);")]
+    [InlineData("var isAdmin = StringComparer.OrdinalIgnoreCase.Equals(role, \"Admin\");")]
+    [InlineData("var isAdmin = String.Equals(role, \"admin\");")]
+    [InlineData("var isAdmin = string.Equals(Normalize(user.Role.Trim()), \"admin\", StringComparison.Ordinal);")]
+    [InlineData("var isAdmin = context.User.IsInRole(\"Admin\");")]
+    [InlineData("[Authorize(Roles = \"Admin\")] public sealed class Sample { }")]
     public void Scan_FlagsAComparisonThatLeavesTheSuperAdminOut(string source)
     {
         Scan("Sample.cs", source).Should().ContainSingle();
@@ -95,6 +116,9 @@ public sealed class AdminRoleComparisonIncludesSuperAdminArchitectureTests
     [InlineData("var isAdmin = Role.TryParse(value, out var role) && role.HasPermission(Role.Admin);")]
     [InlineData("var name = string.Equals(a.DisplayName, a.Email, StringComparison.Ordinal) ? \"Admin\" : a.DisplayName;")]
     [InlineData("// if (string.Equals(role, \"admin\")) — the old form")]
+    [InlineData("if (role == UserRole.Admin || role == UserRole.SuperAdmin) { }")]
+    [InlineData("var isAdmin = session.RequireRole(UserRole.Admin).IsAuthorized;")]
+    [InlineData("var isAdmin = context.User.IsInRole(\"Admin\") || context.User.IsInRole(\"SuperAdmin\");")]
     public void Scan_LeavesAloneWhatIsNotTheDefect(string source)
     {
         Scan("Sample.cs", source).Should().BeEmpty();

@@ -375,9 +375,9 @@ internal static class PdfProcessingEndpoints
     /// #4084: `Admin`/`Editor` literal-compared against the session role, excluding
     /// `SuperAdmin` — measured as a real 403 on a superadmin account calling this exact
     /// endpoint. Same anti-pattern as #3994 (<c>AgentTierLimits</c>). Scoped to the three
-    /// handlers in THIS file that reject outright (generate/index/extract); the five
-    /// `isAdmin`-bypass-bool sites elsewhere in this file are a different ownership-bypass
-    /// feature, not measured here, and are left for a separate issue.
+    /// handlers in THIS file that reject outright (generate/index/extract). The `isAdmin`
+    /// ownership bypasses elsewhere in this file are a different feature: #3994 moved them to
+    /// <c>session.RequireRole(UserRole.Admin)</c>, which counts a superadmin as an admin.
     /// </summary>
     internal static bool IsAdminEditorOrSuperAdmin(string? role) =>
         string.Equals(role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) ||

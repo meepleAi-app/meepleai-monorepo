@@ -221,4 +221,21 @@ public class CompleteGameNightSessionCommandHandlerTests
         await act.Should().ThrowAsync<ConflictException>();
         // Il rollback è responsabilità della UoW: qui conta la mappatura dell'eccezione.
     }
+
+    // #4780: only the aggregate's own guard is a conflict. The catch used to wrap the whole transaction, so an
+    // InvalidOperationException from EF, Npgsql or the cross-BC finalize became a 409 carrying its message.
+    [Fact]
+    public async Task Handle_InvalidOperationOutsideTheAggregate_IsNotTurnedIntoAConflict()
+    {
+        var organizerId = Guid.NewGuid();
+        var (night, _) = StartedNightWithTwoPlayers(organizerId);
+        _mediator.Setup(m => m.Send(It.IsAny<FinalizeSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The instance of entity type cannot be tracked"));
+
+        var act = () => _handler.Handle(
+            new CompleteGameNightSessionCommand(night.Id, null, organizerId), CancellationToken.None);
+
+        var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
+        thrown.Which.Should().NotBeOfType<ConflictException>();
+    }
 }

@@ -47,6 +47,7 @@ import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import { ConflictError } from '@/lib/api/core/errors';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
+import { playerColorsFullMessage } from '@/lib/sessions/player-colors';
 import {
   duplicatePlayerNameMessage,
   findDuplicatePlayerName,
@@ -182,11 +183,12 @@ export function SessionWizardMobile({
 
   // Color helpers
   const usedColors = players.map(p => p.color);
-  const nextAvailableColor =
-    COLOR_PALETTE.find(c => !usedColors.includes(c.value))?.value ?? COLOR_PALETTE[0].value;
+  // #4770: `undefined` when every color is taken — no fallback to the first one, which the server refuses.
+  const nextAvailableColor = COLOR_PALETTE.find(c => !usedColors.includes(c.value))?.value;
 
   // Player management
   const addPlayer = useCallback(() => {
+    if (!nextAvailableColor) return;
     const name = newPlayerName.trim() || nextDefaultPlayerName(players.map(p => p.displayName));
     setPlayers(prev => [
       ...prev,
@@ -198,7 +200,7 @@ export function SessionWizardMobile({
   const selfInList = !!self && players.some(p => p.userId === self.userId);
 
   const addSelf = useCallback(() => {
-    if (!self) return;
+    if (!self || !nextAvailableColor) return;
     setPlayers(prev =>
       prev.some(p => p.userId === self.userId)
         ? prev
@@ -244,7 +246,7 @@ export function SessionWizardMobile({
 
   // Phase management
   const addPhase = useCallback(() => {
-    setPhases(prev => [...prev, { localId: `new-${Date.now()}`, phaseName: '' }]);
+    setPhases(prev => [...prev, { localId: `new-${crypto.randomUUID()}`, phaseName: '' }]);
   }, []);
 
   const removePhase = useCallback((localId: string) => {
@@ -577,11 +579,17 @@ export function SessionWizardMobile({
                 onKeyDown={e => e.key === 'Enter' && addPlayer()}
                 aria-label="Nome nuovo giocatore"
               />
-              <Button variant="outline" onClick={addPlayer}>
+              <Button variant="outline" onClick={addPlayer} disabled={!nextAvailableColor}>
                 <Plus className="h-4 w-4 mr-1" />
                 Aggiungi
               </Button>
             </div>
+
+            {!nextAvailableColor && (
+              <p className="text-sm text-muted-foreground" role="status">
+                {playerColorsFullMessage(COLOR_PALETTE.length)}
+              </p>
+            )}
 
             {duplicateName && (
               <p className="text-sm text-destructive-text" role="status">
@@ -590,7 +598,9 @@ export function SessionWizardMobile({
             )}
 
             {/* The creator opted out and wants back in (#4750) */}
-            {self && !selfInList && <AddSelfButton onClick={addSelf} className="w-full" />}
+            {self && !selfInList && nextAvailableColor && (
+              <AddSelfButton onClick={addSelf} className="w-full" />
+            )}
 
             {/* Navigation */}
             <div className="flex gap-3">

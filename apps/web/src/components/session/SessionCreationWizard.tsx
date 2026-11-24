@@ -32,6 +32,7 @@ import type {
   PlayerColor,
   CreateLiveSessionRequest,
 } from '@/lib/api/schemas/live-sessions.schemas';
+import { playerColorsFullMessage } from '@/lib/sessions/player-colors';
 import { duplicatePlayerNameMessage, findDuplicatePlayerName } from '@/lib/sessions/player-names';
 
 // ========== Types ==========
@@ -236,13 +237,14 @@ function AddPlayersStep({
   const [newName, setNewName] = useState('');
 
   const usedColors = players.map(p => p.color);
-  const nextAvailableColor = PLAYER_COLORS.find(c => !usedColors.includes(c.value))?.value ?? 'Red';
+  // #4770: `undefined` when every color is taken — no fallback to the first one, which the server refuses.
+  const nextAvailableColor = PLAYER_COLORS.find(c => !usedColors.includes(c.value))?.value;
   const isSelf = (player: PlayerEntry) => !!self && player.userId === self.userId;
   const selfInList = players.some(isSelf);
 
   // The creator goes first: this wizard has no turn-order step, so the list is the order.
   const addSelf = () => {
-    if (!self || selfInList) return;
+    if (!self || selfInList || !nextAvailableColor) return;
     onPlayersChange([
       {
         id: SELF_PLAYER_ID,
@@ -255,11 +257,11 @@ function AddPlayersStep({
   };
 
   const addPlayer = () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || !nextAvailableColor) return;
     onPlayersChange([
       ...players,
       {
-        id: `temp-${Date.now()}`,
+        id: `temp-${crypto.randomUUID()}`,
         displayName: newName.trim(),
         color: nextAvailableColor,
       },
@@ -346,11 +348,17 @@ function AddPlayersStep({
           className="flex-1"
           onKeyDown={e => e.key === 'Enter' && addPlayer()}
         />
-        <Button variant="outline" onClick={addPlayer}>
+        <Button variant="outline" onClick={addPlayer} disabled={!nextAvailableColor}>
           <Plus className="h-4 w-4 mr-1" />
           Aggiungi
         </Button>
       </div>
+
+      {!nextAvailableColor && (
+        <p className="text-sm text-muted-foreground" role="status">
+          {playerColorsFullMessage(PLAYER_COLORS.length)}
+        </p>
+      )}
 
       {duplicateName && (
         <p className="text-sm text-destructive-text" role="status">
@@ -359,7 +367,7 @@ function AddPlayersStep({
       )}
 
       {/* The creator opted out and wants back in (#4750) */}
-      {self && !selfInList && <AddSelfButton onClick={addSelf} />}
+      {self && !selfInList && nextAvailableColor && <AddSelfButton onClick={addSelf} />}
     </div>
   );
 }

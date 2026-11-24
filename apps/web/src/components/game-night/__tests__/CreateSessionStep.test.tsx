@@ -416,3 +416,86 @@ describe('CreateSessionStep — #4750: seme, nomi e posti', () => {
     });
   });
 });
+
+// ─── #4770: «Riprova» riprende la sessione, i nomi vanno senza spazi ──────────
+
+describe('CreateSessionStep — #4770: «Riprova» e nomi', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentUser.value = undefined;
+    createSession.mockResolvedValue('sess-1');
+    addPlayer.mockResolvedValue('player-1');
+    startSession.mockResolvedValue(undefined);
+  });
+
+  it('i nomi partono senza spazi ai bordi, come il server li confronta', async () => {
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, '  Anna ');
+    setSeatName(1, 'Luca  ');
+    fireEvent.click(screen.getByTestId('create-session-button'));
+
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-1'));
+    expect(addPlayerPayloads().map(p => p.displayName)).toEqual(['Anna', 'Luca']);
+  });
+
+  it('«Riprova» dopo un giocatore non aggiunto riprende la stessa sessione e aggiunge solo chi manca', async () => {
+    addPlayer.mockResolvedValueOnce('player-anna').mockRejectedValueOnce(new Error('Rete'));
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, 'Anna');
+    setSeatName(1, 'Luca');
+
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    expect(await screen.findByText(/Riprova/)).toBeInTheDocument();
+    expect(onSessionCreated).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-1'));
+
+    expect(createSession).toHaveBeenCalledTimes(1);
+    expect(addPlayerPayloads().map(p => p.displayName)).toEqual(['Anna', 'Luca', 'Luca']);
+    expect(startSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('«Riprova» dopo un avvio fallito avvia la stessa sessione, senza aggiungere di nuovo nessuno', async () => {
+    startSession.mockRejectedValueOnce(new Error('Rete'));
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, 'Anna');
+    setSeatName(1, 'Luca');
+
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    expect(await screen.findByText(/Riprova/)).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-1'));
+
+    expect(createSession).toHaveBeenCalledTimes(1);
+    expect(addPlayer).toHaveBeenCalledTimes(2);
+    expect(startSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('se dopo l’errore i giocatori cambiano, «Riprova» crea una sessione nuova', async () => {
+    startSession.mockRejectedValueOnce(new Error('Rete'));
+    createSession.mockResolvedValueOnce('sess-1').mockResolvedValueOnce('sess-2');
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, 'Anna');
+    setSeatName(1, 'Luca');
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    expect(await screen.findByText(/Riprova/)).toBeInTheDocument();
+
+    setSeatName(1, 'Carla');
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-2'));
+    expect(createSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('un 409 all’avvio (avvio riuscito, risposta persa) apre la partita', async () => {
+    startSession.mockRejectedValueOnce(
+      Object.assign(new Error('already started'), { statusCode: 409 })
+    );
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, 'Anna');
+    setSeatName(1, 'Luca');
+    fireEvent.click(screen.getByTestId('create-session-button'));
+
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-1'));
+  });
+});

@@ -18,9 +18,15 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Deterministic owner display name so the Host roster entry is stable (#2917).
+const ownerDisplayName = vi.hoisted(() => ({ current: 'Owner' as string | null }));
 vi.mock('@/hooks/queries/useCurrentUser', () => ({
   useCurrentUser: () => ({
-    data: { id: 'owner-1', email: 'owner@example.com', displayName: 'Owner', role: 'user' },
+    data: {
+      id: 'owner-1',
+      email: 'owner@example.com',
+      displayName: ownerDisplayName.current,
+      role: 'user',
+    },
   }),
 }));
 
@@ -51,6 +57,7 @@ function wrap(ui: ReactNode) {
 }
 
 beforeEach(() => {
+  ownerDisplayName.current = 'Owner';
   installDesktopMatchMedia();
   pushSpy.mockReset();
   vi.clearAllMocks();
@@ -142,6 +149,22 @@ describe('CampaignSetupDrawer — Step 1 (Name + Preset)', () => {
 // ─── Step 2: Players ─────────────────────────────────────────────────────────
 
 describe('CampaignSetupDrawer — Step 2 (Players)', () => {
+  // #4770: the Host's name is shown to every player at the table; an email address is not a name.
+  it('without a profile name the owner is «Tu», never the email address', async () => {
+    ownerDisplayName.current = null;
+    const user = userEvent.setup();
+    wrap(
+      <CampaignSetupDrawer gameId="g1" gameTitle="Nanolith" open={true} onOpenChange={() => {}} />
+    );
+    const titleInput = screen.getByTestId('campaign-setup-title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Test campaign');
+    await user.click(screen.getByTestId('campaign-setup-next'));
+
+    expect(screen.getByText('Tu')).toBeInTheDocument();
+    expect(screen.queryByText(/owner@example\.com/)).toBeNull();
+  });
+
   it('renders the editable roster (owner host + preset guests) for group-a', async () => {
     const user = userEvent.setup();
     wrap(

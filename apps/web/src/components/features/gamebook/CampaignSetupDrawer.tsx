@@ -157,7 +157,9 @@ export function CampaignSetupDrawer({
 }: CampaignSetupDrawerProps): ReactElement {
   const router = useRouter();
   const { data: currentUser } = useCurrentUser();
-  const ownerName = currentUser?.displayName || currentUser?.email || 'Tu';
+  // #4770: never the email. The Host's name is shown to every player at the table, and an address is not
+  // a name: without a profile name the owner is «Tu», as the placeholder already was.
+  const ownerName = currentUser?.displayName?.trim() || 'Tu';
 
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = openProp !== undefined;

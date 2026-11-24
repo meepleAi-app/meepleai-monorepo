@@ -87,3 +87,13 @@ export function playerColorFromHex(hex: string): PlayerColor | undefined {
 export function hexFromPlayerColor(color: PlayerColor): string | undefined {
   return PLAYER_COLOR_PALETTE.find(e => e.color === color)?.hex;
 }
+
+/**
+ * #4770: what a setup says when its colors are all taken. Each player needs a color of their own (the
+ * domain refuses a duplicate), and the wizards used to fall back to the first color: from the seventh
+ * player on the server refused it, and the session started without them. The live page adds more
+ * players from the full palette.
+ */
+export function playerColorsFullMessage(colorCount: number): string {
+  return `Ogni giocatore ha un colore diverso e i ${colorCount} colori sono tutti presi: gli altri giocatori si aggiungono dalla partita.`;
+}

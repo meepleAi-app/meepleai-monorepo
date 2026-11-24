@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { linkedFirst, ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
+import { ConflictError } from '@/lib/api/core/errors';
 import { API_PLAYER_COLORS } from '@/lib/sessions/player-colors';
 import {
   duplicatePlayerNameMessage,
@@ -67,6 +68,11 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
   const [players, setPlayers] = useState<PlayerSlot[]>(() => [createSlot(), createSlot()]);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // #4770: the session an earlier attempt created, the seats it already got in, and the input it was
+  // made from — the next «Riprova» resumes it instead of creating another.
+  const pendingRef = useRef<{ sessionId: string; key: string; addedSeatIds: Set<string> } | null>(
+    null
+  );
 
   const canAddPlayer = players.length < 8;
   const canRemovePlayer = players.length > 2;
@@ -149,31 +155,66 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
     setError(null);
 
     try {
-      // Create session — gameId is optional, gameName is always set
-      const sessionId = await api.liveSessions.createSession({
-        ...(gameId ? { gameId } : {}),
-        gameName: gameTitle,
-      });
-
       // Add players. Colors follow the seats; the linked creator goes first whichever seat they
-      // are in, because the server makes the first player the Host (#4750).
+      // are in, because the server makes the first player the Host (#4750). #4770: the name is
+      // trimmed, as the server compares it.
       const entries = validPlayers.map((p, i) => ({
-        name: p.name,
+        seatId: p.id,
+        name: p.name.trim(),
         color: PLAYER_COLORS[i % PLAYER_COLORS.length],
         userId: ownUserId(p.userId, self),
       }));
+
+      // #4770: «Riprova» used to create a second session whatever had failed. A previous attempt with
+      // the same game and the same seats is resumed instead: its session, minus the players it already
+      // got in. Different seats are a different session.
+      // The account is in the key too: a session made by another account is not this user's to resume.
+      const attemptKey = JSON.stringify([gameId ?? null, gameTitle, entries, self?.userId ?? null]);
+      let pending = pendingRef.current?.key === attemptKey ? pendingRef.current : null;
+      if (pending !== null) {
+        // An add whose answer was lost (the client retries POSTs on 502/503, and the retry meets «name
+        // already exists») is in the session but not in `addedSeatIds`. Read the session's players, so
+        // resuming does not send that seat again and fail the same way on every «Riprova».
+        const session = await api.liveSessions.getSession(pending.sessionId);
+        const present = new Set(
+          session.players.filter(p => p.isActive).map(p => playerNameKey(p.displayName))
+        );
+        for (const entry of entries) {
+          if (present.has(playerNameKey(entry.name))) pending.addedSeatIds.add(entry.seatId);
+        }
+      } else {
+        // Create session — gameId is optional, gameName is always set
+        const sessionId = await api.liveSessions.createSession({
+          ...(gameId ? { gameId } : {}),
+          gameName: gameTitle,
+        });
+        pending = { sessionId, key: attemptKey, addedSeatIds: new Set<string>() };
+        pendingRef.current = pending;
+      }
+
       for (const entry of linkedFirst(entries)) {
-        await api.liveSessions.addPlayer(sessionId, {
+        if (pending.addedSeatIds.has(entry.seatId)) continue;
+        await api.liveSessions.addPlayer(pending.sessionId, {
           displayName: entry.name,
           color: entry.color,
           ...(entry.userId ? { userId: entry.userId } : {}),
         });
+        pending.addedSeatIds.add(entry.seatId);
       }
 
-      // Start the session
-      await api.liveSessions.startSession(sessionId);
+      // Start the session. A 409 means it no longer can be: typically a start that did go through and
+      // whose answer was lost (the client retries POSTs on 502/503) — the session is live (#4781).
+      try {
+        await api.liveSessions.startSession(pending.sessionId);
+      } catch (startErr) {
+        const isConflict =
+          startErr instanceof ConflictError ||
+          (startErr as { statusCode?: number })?.statusCode === 409;
+        if (!isConflict) throw startErr;
+      }
 
-      onSessionCreated(sessionId);
+      pendingRef.current = null;
+      onSessionCreated(pending.sessionId);
     } catch {
       setError('Errore nella creazione della sessione. Riprova.');
       setIsCreating(false);

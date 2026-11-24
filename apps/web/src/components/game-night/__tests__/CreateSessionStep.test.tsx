@@ -11,13 +11,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CreateSessionStep } from '../steps/CreateSessionStep';
 
-const { createSession, addPlayer, startSession } = vi.hoisted(() => ({
+const { createSession, addPlayer, startSession, getSession } = vi.hoisted(() => ({
   createSession: vi.fn(),
   addPlayer: vi.fn(),
   startSession: vi.fn(),
+  getSession: vi.fn(),
 }));
 
-vi.mock('@/lib/api', () => ({ api: { liveSessions: { createSession, addPlayer, startSession } } }));
+vi.mock('@/lib/api', () => ({
+  api: { liveSessions: { createSession, addPlayer, startSession, getSession } },
+}));
 
 type TestUser = { id: string; email: string; displayName?: string | null; role: string };
 const currentUser = vi.hoisted(() => ({ value: undefined as TestUser | undefined }));
@@ -414,5 +417,124 @@ describe('CreateSessionStep — #4750: seme, nomi e posti', () => {
       expect(screen.getByRole('button', { name: 'Aggiungi me' })).toBeEnabled();
       expect(screen.queryByText(/posti sono pieni/i)).not.toBeInTheDocument();
     });
+  });
+});
+
+// ─── #4770: «Riprova» riprende la sessione, i nomi vanno senza spazi ──────────
+
+describe('CreateSessionStep — #4770: «Riprova» e nomi', () => {
+  // The session as the server sees it: the players whose add resolved.
+  let serverPlayers: string[] = [];
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentUser.value = undefined;
+    serverPlayers = [];
+    createSession.mockResolvedValue('sess-1');
+    addPlayer.mockImplementation(async (_id: string, p: { displayName: string }) => {
+      serverPlayers.push(p.displayName);
+      return `player-${p.displayName}`;
+    });
+    startSession.mockResolvedValue(undefined);
+    getSession.mockImplementation(async () => ({
+      players: serverPlayers.map(displayName => ({ displayName, isActive: true })),
+    }));
+  });
+
+  it('«Riprova» dopo un’aggiunta riuscita ma con la risposta persa non rimanda quel giocatore', async () => {
+    // Il server aggiunge Luca, ma la risposta si perde: il client vede un errore.
+    addPlayer.mockImplementationOnce(async (_id: string, p: { displayName: string }) => {
+      serverPlayers.push(p.displayName);
+      return `player-${p.displayName}`;
+    });
+    addPlayer.mockImplementationOnce(async (_id: string, p: { displayName: string }) => {
+      serverPlayers.push(p.displayName);
+      throw new Error('Player with display name already exists');
+    });
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, 'Anna');
+    setSeatName(1, 'Luca');
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    expect(await screen.findByText(/Riprova/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-1'));
+
+    expect(addPlayerPayloads().map(p => p.displayName)).toEqual(['Anna', 'Luca']);
+    expect(startSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('i nomi partono senza spazi ai bordi, come il server li confronta', async () => {
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, '  Anna ');
+    setSeatName(1, 'Luca  ');
+    fireEvent.click(screen.getByTestId('create-session-button'));
+
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-1'));
+    expect(addPlayerPayloads().map(p => p.displayName)).toEqual(['Anna', 'Luca']);
+  });
+
+  it('«Riprova» dopo un giocatore non aggiunto riprende la stessa sessione e aggiunge solo chi manca', async () => {
+    addPlayer.mockImplementationOnce(async (_id: string, p: { displayName: string }) => {
+      serverPlayers.push(p.displayName);
+      return 'player-anna';
+    });
+    addPlayer.mockRejectedValueOnce(new Error('Rete'));
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, 'Anna');
+    setSeatName(1, 'Luca');
+
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    expect(await screen.findByText(/Riprova/)).toBeInTheDocument();
+    expect(onSessionCreated).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-1'));
+
+    expect(createSession).toHaveBeenCalledTimes(1);
+    expect(addPlayerPayloads().map(p => p.displayName)).toEqual(['Anna', 'Luca', 'Luca']);
+    expect(startSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('«Riprova» dopo un avvio fallito avvia la stessa sessione, senza aggiungere di nuovo nessuno', async () => {
+    startSession.mockRejectedValueOnce(new Error('Rete'));
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, 'Anna');
+    setSeatName(1, 'Luca');
+
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    expect(await screen.findByText(/Riprova/)).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-1'));
+
+    expect(createSession).toHaveBeenCalledTimes(1);
+    expect(addPlayer).toHaveBeenCalledTimes(2);
+    expect(startSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('se dopo l’errore i giocatori cambiano, «Riprova» crea una sessione nuova', async () => {
+    startSession.mockRejectedValueOnce(new Error('Rete'));
+    createSession.mockResolvedValueOnce('sess-1').mockResolvedValueOnce('sess-2');
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, 'Anna');
+    setSeatName(1, 'Luca');
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    expect(await screen.findByText(/Riprova/)).toBeInTheDocument();
+
+    setSeatName(1, 'Carla');
+    fireEvent.click(screen.getByTestId('create-session-button'));
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-2'));
+    expect(createSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('un 409 all’avvio (avvio riuscito, risposta persa) apre la partita', async () => {
+    startSession.mockRejectedValueOnce(
+      Object.assign(new Error('already started'), { statusCode: 409 })
+    );
+    const { onSessionCreated } = renderStep();
+    setSeatName(0, 'Anna');
+    setSeatName(1, 'Luca');
+    fireEvent.click(screen.getByTestId('create-session-button'));
+
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith('sess-1'));
   });
 });

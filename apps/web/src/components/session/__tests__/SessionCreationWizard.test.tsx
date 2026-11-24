@@ -167,6 +167,24 @@ describe('SessionCreationWizard — #4750: «Aggiungi me»', () => {
     startSession.mockResolvedValue(undefined);
   });
 
+  // #4770: each player needs a color of their own, and the wizard fell back to the first one when
+  // they ran out: from the seventh player on the server refused it, and the session started without them.
+  it('finiti i colori, «Aggiungi» si spegne e dice perché, invece di riusare un colore', () => {
+    goToPlayersStep();
+    for (let i = 0; i < 12 && !screen.queryByText(/colori sono tutti presi/); i++) {
+      fireEvent.change(screen.getByPlaceholderText('Nome giocatore'), {
+        target: { value: `Giocatrice ${i}` },
+      });
+      fireEvent.click(screen.getByText('Aggiungi'));
+    }
+
+    expect(screen.getByText(/colori sono tutti presi/)).toBeInTheDocument();
+    expect(screen.getByText('Aggiungi').closest('button')).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText('Nome giocatore'), { target: { value: 'Gino' } });
+    fireEvent.keyDown(screen.getByPlaceholderText('Nome giocatore'), { key: 'Enter' });
+    expect(screen.queryByText('Gino')).not.toBeInTheDocument();
+  });
+
   it('con l’utente noto la lista parte da lui, con la targhetta «Tu»', () => {
     currentUser.value = MARCO;
     goToPlayersStep();

@@ -220,6 +220,23 @@ describe('SessionWizardMobile — S1: pre-fill da game card', () => {
     expect(screen.getByText('Aggiungi giocatori')).toBeInTheDocument();
   });
 
+  // #4770: each player needs a color of their own, and the wizard fell back to the first one when
+  // they ran out: from the seventh player on the server refused it, and the session started without them.
+  it('finiti i colori, «Aggiungi» si spegne e dice perché, invece di riusare un colore', () => {
+    render(<SessionWizardMobile prefilledGameId="game-abc" prefilledGameName="Catan" />);
+    const input = () => screen.getByLabelText('Nome nuovo giocatore');
+    for (let i = 0; i < 8 && !screen.queryByText(/colori sono tutti presi/); i++) {
+      fireEvent.change(input(), { target: { value: `Giocatrice ${i}` } });
+      fireEvent.click(screen.getByText('Aggiungi'));
+    }
+
+    expect(screen.getByText(/colori sono tutti presi/)).toBeInTheDocument();
+    expect(screen.getByText('Aggiungi').closest('button')).toBeDisabled();
+    fireEvent.change(input(), { target: { value: 'Ultima' } });
+    fireEvent.keyDown(input(), { key: 'Enter' });
+    expect(screen.queryByText('Ultima')).not.toBeInTheDocument();
+  });
+
   it('mostra context pill del gioco pre-selezionato nello step 2', () => {
     render(<SessionWizardMobile prefilledGameId="game-abc" prefilledGameName="Catan" />);
     expect(screen.getByText('Catan')).toBeInTheDocument();

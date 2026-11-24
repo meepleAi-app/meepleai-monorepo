@@ -6,12 +6,12 @@
 
 **What goes there:** events that change who can get in, or with which privileges:
 
-- login, both successful and failed (a wrong password and a wrong second factor alike);
+- login, both successful and failed (a wrong password and a wrong second factor alike), with a password or through an OAuth provider;
 - account lockout;
 - logout;
 - password change and reset, by the user or by an admin;
 - 2FA turned on or off, and the admin override that removes it;
-- OAuth links and unlinks;
+- OAuth links and unlinks. A link is written at the first sign-in with a provider, which is also when an existing account matched by email gets linked and signed in at once;
 - role changes;
 - revocation of several sessions at once;
 - creation of the bootstrap admin.
@@ -22,9 +22,15 @@ It also holds a few admin actions on the catalog that need evidence (categories,
 
 **The source of truth for the vocabulary** is `AuditEventType.cs`. `SecurityAuditEventTypesAreEmittedArchitectureTests` fails when a declared constant has no caller. That is the defect #3838 found: for a long time this table recorded only logins, while the vocabulary already declared password changes, resets, OAuth links, role changes, the 2FA override and bulk revocation.
 
-**What a failure to write means:** `LogAsync` never throws. A failed audit write must not roll back the action or reach the user, so it is logged at `Error`.
+The test reads the source as text, outside comments. It proves that a call site exists, not that anything sends its command. `LinkOAuthAccountCommandHandler` emits `auth.oauth.linked` and nothing sends `LinkOAuthAccountCommand`: the link that really happens is in `HandleOAuthCallbackCommandHandler`. A new emitter needs its own test, at the handler or above.
 
-**What it does not carry:** an entry has no IP or user agent when the command does not carry them. Login carries them; the other handlers, for now, do not.
+**What a failure to write means:** `LogAsync` never throws. A failed audit write must not roll back the action or reach the user, so it is logged at `Error`. The insert does not use the request's cancellation token: callers log after their action has committed, and a request aborted in between would otherwise lose the row of an action that happened.
+
+**When to log:** after the action has committed, never inside its transaction. `AuditLogger` writes on its own connection, so a row written inside the transaction survives the rollback and records something that did not happen.
+
+**Impersonation:** during an active impersonation `AuditLogger` writes the real admin as the actor and adds `impersonatedUserId` to the metadata, whatever the handler passed. A handler acts for the session's subject (the owner of the password or the devices) and cannot tell that someone else is acting. This follows the rule in `Principal`: audit attribution reads `EffectiveActor`.
+
+**What it does not carry:** an entry has no IP or user agent when the command does not carry them. Password login and OAuth sign-in carry them; the second-factor verification and the other handlers, for now, do not.
 
 ## `audit_logs`: the register of administrative actions
 

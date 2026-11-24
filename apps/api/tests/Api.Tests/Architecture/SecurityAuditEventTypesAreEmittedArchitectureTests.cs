@@ -14,14 +14,18 @@ namespace Api.Tests.Architecture;
 /// </summary>
 /// <remarks>
 /// <b>Text scan.</b> A constant is emitted when some file under <c>apps/api/src/Api</c> other than
-/// <c>AuditEventType.cs</c> mentions <c>AuditEventType.&lt;Name&gt;</c>, qualified or not. It proves a call site exists,
-/// not that it runs: the per-handler tests and the logout integration test cover that.
+/// <c>AuditEventType.cs</c> mentions <c>AuditEventType.&lt;Name&gt;</c> outside a comment, qualified or not. It proves a
+/// call site exists, not that it runs or that anything sends its command: <c>LinkOAuthAccountCommandHandler</c> emits
+/// <c>OAuthLinked</c> and has no sender, and the scan cannot tell. The OAuth callback handler is the real emitter.
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Architecture")]
 [Trait("Issue", "3838")]
 public sealed class SecurityAuditEventTypesAreEmittedArchitectureTests
 {
+    private static readonly System.Text.RegularExpressions.Regex LineComment = new(
+        @"//[^\n]*", System.Text.RegularExpressions.RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+
     [Fact]
     public void EveryDeclaredSecurityAuditEventType_HasAnEmitter()
     {
@@ -34,7 +38,8 @@ public sealed class SecurityAuditEventTypesAreEmittedArchitectureTests
         var sources = Directory.EnumerateFiles(LocateApiSrc(), "*.cs", SearchOption.AllDirectories)
             .Where(path => !path.EndsWith($"{Path.DirectorySeparatorChar}AuditEventType.cs", StringComparison.Ordinal))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            .Select(File.ReadAllText)
+            // A mention in a comment or an XML doc (`<see cref="AuditEventType.X"/>`) emits nothing.
+            .Select(path => LineComment.Replace(File.ReadAllText(path), string.Empty))
             .ToList();
 
         var neverEmitted = constants

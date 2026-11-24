@@ -38,7 +38,8 @@ public sealed class OAuthSecurityTests : IDisposable
             _helper.EncryptionServiceMock.Object,
             _helper.TimeProviderMock.Object,
             _helper.DbContext,
-            userRepository);
+            userRepository,
+            Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
 
         _initiateHandler = new InitiateOAuthLoginCommandHandler(
             _helper.OAuthServiceMock.Object,

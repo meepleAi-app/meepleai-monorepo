@@ -48,7 +48,8 @@ public sealed class OAuthStateValidationTests : IDisposable
             _helper.EncryptionServiceMock.Object,
             _helper.TimeProviderMock.Object,
             _helper.DbContext,
-            userRepository);
+            userRepository,
+            Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
     }
 
     #region Invalid State Tests
@@ -331,7 +332,8 @@ public sealed class OAuthStateValidationTests : IDisposable
             _helper.EncryptionServiceMock.Object,
             _helper.TimeProviderMock.Object,
             _helper.DbContext,
-            userRepository2);
+            userRepository2,
+            Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
 
         var command2 = _helper.CreateTestCallbackCommand(
             provider: "google",

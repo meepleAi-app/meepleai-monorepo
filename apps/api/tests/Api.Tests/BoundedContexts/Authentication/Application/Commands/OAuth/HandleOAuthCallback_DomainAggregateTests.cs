@@ -80,7 +80,8 @@ public sealed class HandleOAuthCallback_DomainAggregateTests : IDisposable
             _encryptionServiceMock.Object,
             _timeProviderMock.Object,
             _dbContext,
-            userRepository);
+            userRepository,
+            Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
     }
 
     public void Dispose() => _dbContext.Dispose();

@@ -7,6 +7,7 @@ using Api.BoundedContexts.Authentication.Domain.Exceptions;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -43,6 +44,7 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
     private readonly Mock<IEncryptionService> _encryptionServiceMock;
     private readonly Mock<TimeProvider> _timeProviderMock;
     private readonly MeepleAiDbContext _dbContext;
+    private readonly Mock<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger> _auditLoggerMock = new();
     private readonly HandleOAuthCallbackCommandHandler _handler;
 
     public HandleOAuthCallbackCommandHandlerTests()
@@ -70,7 +72,8 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
             _encryptionServiceMock.Object,
             _timeProviderMock.Object,
             _dbContext,
-            userRepository);
+            userRepository,
+            _auditLoggerMock.Object);
     }
 
     public void Dispose()
@@ -552,6 +555,142 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
+    // #3838: an OAuth sign-in is a login, and a first link — above all an existing account matched by email, linked
+    // and signed in at once — is an auth.oauth.linked. Neither reached security_audit_logs.
+
+    [Fact]
+    [Trait("Issue", "3838")]
+    public async Task Handle_ExistingUserByEmail_AuditsTheLinkAndTheLogin()
+    {
+        var existingUser = new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            DisplayName = "Existing User",
+            PasswordHash = "existing_hash",
+            Role = UserRole.User.ToString(),
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Users.Add(existingUser);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var command = CreateTestCommand("Discord", ipAddress: "203.0.113.7", userAgent: "Browser/2.0");
+        var tokenResponse = CreateTokenResponse();
+        SetupSuccessfulOAuthFlow(command, tokenResponse, new OAuthUserInfo("provider_123", existingUser.Email, "Provider Name"));
+        _encryptionServiceMock.Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("encrypted_token");
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSessionResponse(existingUser.Id));
+
+        var result = await _handler.Handle(command, TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        result.OAuthAccountLinked.Should().BeTrue();
+        VerifyAudited(AuditEventType.OAuthLinked, existingUser.Id, "\"provider\":\"discord\"", "\"newUser\":false");
+        VerifyAudited(AuditEventType.LoginSuccess, existingUser.Id, "\"method\":\"oauth\"", "\"provider\":\"discord\"");
+        _auditLoggerMock.Verify(
+            a => a.LogAsync(AuditEventType.LoginSuccess, existingUser.Id, existingUser.Id, "203.0.113.7", "Browser/2.0",
+                It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    [Trait("Issue", "3838")]
+    public async Task Handle_NewUser_AuditsTheLinkAsANewUser()
+    {
+        var command = CreateTestCommand("google");
+        var tokenResponse = CreateTokenResponse();
+        SetupSuccessfulOAuthFlow(command, tokenResponse, CreateUserInfo());
+        _encryptionServiceMock.Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("encrypted_token");
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CreateSessionCommand c, CancellationToken _) => CreateSessionResponse(c.UserId));
+
+        var result = await _handler.Handle(command, TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        result.IsNewUser.Should().BeTrue();
+        VerifyAudited(AuditEventType.OAuthLinked, result.UserId!.Value, "\"newUser\":true");
+        VerifyAudited(AuditEventType.LoginSuccess, result.UserId!.Value, "\"method\":\"oauth\"");
+    }
+
+    [Fact]
+    [Trait("Issue", "3838")]
+    public async Task Handle_ReturningLogin_AuditsOnlyTheLogin()
+    {
+        var existingUser = new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            DisplayName = "Test User",
+            PasswordHash = "hash",
+            Role = UserRole.User.ToString(),
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Users.Add(existingUser);
+        _dbContext.OAuthAccounts.Add(new OAuthAccountEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = existingUser.Id,
+            Provider = "github",
+            ProviderUserId = "github_user_123",
+            AccessTokenEncrypted = "old_encrypted_token",
+            CreatedAt = DateTime.UtcNow.AddDays(-30),
+            UpdatedAt = DateTime.UtcNow.AddDays(-30),
+            User = existingUser
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var command = CreateTestCommand("github");
+        var tokenResponse = CreateTokenResponse();
+        SetupSuccessfulOAuthFlow(command, tokenResponse, new OAuthUserInfo("github_user_123", existingUser.Email, "GitHub User"));
+        _encryptionServiceMock.Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("new_encrypted_token");
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSessionResponse(existingUser.Id));
+
+        var result = await _handler.Handle(command, TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        result.OAuthAccountLinked.Should().BeFalse();
+        VerifyAudited(AuditEventType.LoginSuccess, existingUser.Id, "\"method\":\"oauth\"");
+        _auditLoggerMock.Verify(
+            a => a.LogAsync(AuditEventType.OAuthLinked, It.IsAny<Guid?>(), It.IsAny<Guid?>(), It.IsAny<string?>(),
+                It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    [Trait("Issue", "3838")]
+    public async Task Handle_SessionCreationFails_AuditsNothing()
+    {
+        var command = CreateTestCommand("google");
+        var tokenResponse = CreateTokenResponse();
+        SetupSuccessfulOAuthFlow(command, tokenResponse, CreateUserInfo());
+        _encryptionServiceMock.Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("encrypted_token");
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DomainException("Session creation failed"));
+
+        var result = await _handler.Handle(command, TestCancellationToken);
+
+        result.Success.Should().BeFalse();
+        _auditLoggerMock.VerifyNoOtherCalls();
+    }
+
+    private void VerifyAudited(string eventType, Guid userId, params string[] metadataFragments) =>
+        _auditLoggerMock.Verify(
+            a => a.LogAsync(
+                eventType,
+                userId,
+                userId,
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.Is<string?>(m => m != null && metadataFragments.All(f => m.Contains(f))),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
     private static HandleOAuthCallbackCommand CreateTestCommand(
         string provider,
         string? ipAddress = null,

@@ -15,6 +15,8 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 
@@ -34,6 +36,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
     private readonly TimeProvider _timeProvider;
     private readonly MeepleAiDbContext _db;
     private readonly IUserRepository _userRepository;
+    private readonly IAuditLogger _auditLogger;
 
     public HandleOAuthCallbackCommandHandler(
         IOAuthService oauthService,
@@ -42,7 +45,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         IEncryptionService encryptionService,
         TimeProvider timeProvider,
         MeepleAiDbContext db,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IAuditLogger auditLogger)
     {
         _oauthService = oauthService ?? throw new ArgumentNullException(nameof(oauthService));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
@@ -51,6 +55,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<HandleOAuthCallbackResult> Handle(HandleOAuthCallbackCommand command, CancellationToken cancellationToken)
@@ -117,11 +122,24 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         }
 
         // For InMemory database (tests), execute directly without transaction
-        if (isInMemory)
+        var result = isInMemory
+            ? await ExecuteOAuthCallbackAsync(command, transaction: null, cancellationToken).ConfigureAwait(false)
+            : await ExecuteInTransactionAsync(command, cancellationToken).ConfigureAwait(false);
+
+        // #3838: audited only once the transaction has committed. The audit logger writes on its own connection, so
+        // logging inside the transaction would record a link or a login that the rollback then undoes.
+        if (result is { Success: true, UserId: { } userId })
         {
-            return await ExecuteOAuthCallbackAsync(command, transaction: null, cancellationToken).ConfigureAwait(false);
+            await AuditSignInAsync(command, result, userId, cancellationToken).ConfigureAwait(false);
         }
 
+        return result;
+    }
+
+    private async Task<HandleOAuthCallbackResult> ExecuteInTransactionAsync(
+        HandleOAuthCallbackCommand command,
+        CancellationToken cancellationToken)
+    {
         // For real database, wrap in execution strategy to support retrying execution strategy
         var strategy = _db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async ct =>
@@ -143,6 +161,41 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 await transaction.DisposeAsync().ConfigureAwait(false);
             }
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// #3838: an OAuth sign-in is a login, and a first link is an <c>auth.oauth.linked</c> — the highest-risk OAuth
+    /// event, since an account matched by email is linked and signed in at once. Neither reached
+    /// <c>security_audit_logs</c>: <c>LinkOAuthAccountCommandHandler</c> has no sender, and this handler is where
+    /// linking really happens.
+    /// </summary>
+    private async Task AuditSignInAsync(
+        HandleOAuthCallbackCommand command,
+        HandleOAuthCallbackResult result,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var provider = command.Provider.ToLowerInvariant();
+        if (result.OAuthAccountLinked)
+        {
+            await _auditLogger.LogAsync(
+                AuditEventType.OAuthLinked,
+                actorUserId: userId,
+                targetUserId: userId,
+                ipAddress: command.IpAddress,
+                userAgent: command.UserAgent,
+                metadata: JsonSerializer.Serialize(new { provider, newUser = result.IsNewUser }),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        await _auditLogger.LogAsync(
+            AuditEventType.LoginSuccess,
+            actorUserId: userId,
+            targetUserId: userId,
+            ipAddress: command.IpAddress,
+            userAgent: command.UserAgent,
+            metadata: JsonSerializer.Serialize(new { method = "oauth", provider }),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -181,7 +234,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             }
 
             // Step 3: Find or create user and link OAuth account
-            var (user, isNewUser) = await FindOrCreateUserAsync(
+            var (user, isNewUser, linkedNow) = await FindOrCreateUserAsync(
                 command.Provider, oauthUserInfo, tokenResponse!, command.AcceptLanguage, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -224,7 +277,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 UserId = user.Id,
                 IsNewUser = isNewUser,
                 Success = true,
-                SessionToken = sessionToken
+                SessionToken = sessionToken,
+                OAuthAccountLinked = linkedNow,
             };
         }
         catch (OAuthTokenExchangeException ex)
@@ -472,7 +526,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
     /// Finds existing user or creates new user, and links OAuth account.
     /// Returns (user, isNewUser).
     /// </summary>
-    private async Task<(UserEntity user, bool isNewUser)> FindOrCreateUserAsync(
+    private async Task<(UserEntity user, bool isNewUser, bool linkedNow)> FindOrCreateUserAsync(
         string provider,
         OAuthUserInfo? userInfo,
         OAuthTokenResponse tokenResponse,
@@ -580,9 +634,10 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
 
             // Create OAuth account link
             await CreateOAuthAccountAsync(user.Id, provider, userInfo!, tokenResponse, cancellationToken).ConfigureAwait(false);
+            return (user, isNewUser, true);
         }
 
-        return (user, isNewUser);
+        return (user, isNewUser, false);
     }
 
     /// <summary>

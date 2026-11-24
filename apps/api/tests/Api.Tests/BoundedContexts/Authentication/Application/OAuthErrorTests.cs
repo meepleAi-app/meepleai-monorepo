@@ -34,7 +34,8 @@ public sealed class OAuthErrorTests : IDisposable
             _helper.EncryptionServiceMock.Object,
             _helper.TimeProviderMock.Object,
             _helper.DbContext,
-            userRepository);
+            userRepository,
+            Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
     }
 
     [Fact]

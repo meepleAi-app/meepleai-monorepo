@@ -25,7 +25,8 @@ public class ChangeUserRoleCommandHandlerTests
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _handler = new ChangeUserRoleCommandHandler(
             _mockUserRepository.Object,
-            _mockUnitOfWork.Object);
+            _mockUnitOfWork.Object,
+            Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
     }
 
     [Fact]

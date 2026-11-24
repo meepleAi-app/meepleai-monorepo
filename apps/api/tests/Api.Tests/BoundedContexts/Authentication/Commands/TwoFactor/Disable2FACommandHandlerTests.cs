@@ -29,7 +29,7 @@ public class Disable2FACommandHandlerTests
     {
         _mockTotpService = new Mock<ITotpService>();
         _mockLogger = new Mock<ILogger<Disable2FACommandHandler>>();
-        _handler = new Disable2FACommandHandler(_mockTotpService.Object, _mockLogger.Object);
+        _handler = new Disable2FACommandHandler(_mockTotpService.Object, _mockLogger.Object, Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
     }
 
     [Fact]

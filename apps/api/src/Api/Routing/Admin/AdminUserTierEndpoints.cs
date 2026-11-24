@@ -295,7 +295,9 @@ internal static class AdminUserTierEndpoints
 
         try
         {
-            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole, request.Reason, session!.Principal!.EffectiveActor.Role);
+            var command = new ChangeUserRoleCommand(
+                userId.ToString(), request.NewRole, request.Reason, session!.Principal!.EffectiveActor.Role,
+                AdminId: session.Principal!.EffectiveActor.Id);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Role changed for user {UserId} to {NewRole} by admin {AdminId}",

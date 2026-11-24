@@ -35,7 +35,8 @@ public class ResetUserPasswordCommandHandlerTests
         _handler = new ResetUserPasswordCommandHandler(
             _userRepositoryMock.Object,
             _sessionRepositoryMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
     }
     [Fact]
     public async Task Handle_ValidPassword_ResetsSuccessfully()

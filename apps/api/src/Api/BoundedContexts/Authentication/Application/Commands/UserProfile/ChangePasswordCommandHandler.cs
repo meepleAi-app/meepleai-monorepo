@@ -5,6 +5,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
@@ -17,15 +18,18 @@ internal class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComm
     private readonly IUserRepository _userRepository;
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditLogger _auditLogger;
 
     public ChangePasswordCommandHandler(
         IUserRepository userRepository,
         ISessionRepository sessionRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IAuditLogger auditLogger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task Handle(ChangePasswordCommand command, CancellationToken cancellationToken)
@@ -75,5 +79,12 @@ internal class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComm
         // Persist updates (user + session revocations in the same UoW commit)
         await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #3838
+        await _auditLogger.LogAsync(
+            AuditEventType.PasswordChanged,
+            actorUserId: command.UserId,
+            targetUserId: command.UserId,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

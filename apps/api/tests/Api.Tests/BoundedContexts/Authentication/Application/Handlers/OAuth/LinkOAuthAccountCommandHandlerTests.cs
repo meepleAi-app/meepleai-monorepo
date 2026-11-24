@@ -37,7 +37,8 @@ public class LinkOAuthAccountCommandHandlerTests
             _userRepositoryMock.Object,
             _oauthAccountRepositoryMock.Object,
             _unitOfWorkMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
     }
     [Fact]
     public async Task Handle_ValidCommand_LinksOAuthAccountSuccessfully()

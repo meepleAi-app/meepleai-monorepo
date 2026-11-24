@@ -1,5 +1,6 @@
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
@@ -12,13 +13,16 @@ internal class Enable2FACommandHandler : ICommandHandler<Enable2FACommand, Enabl
 {
     private readonly ITotpService _totpService;
     private readonly ILogger<Enable2FACommandHandler> _logger;
+    private readonly IAuditLogger _auditLogger;
 
     public Enable2FACommandHandler(
         ITotpService totpService,
-        ILogger<Enable2FACommandHandler> logger)
+        ILogger<Enable2FACommandHandler> logger,
+        IAuditLogger auditLogger)
     {
         _totpService = totpService ?? throw new ArgumentNullException(nameof(totpService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<Enable2FAResult> Handle(Enable2FACommand command, CancellationToken cancellationToken)
@@ -32,6 +36,13 @@ internal class Enable2FACommandHandler : ICommandHandler<Enable2FACommand, Enabl
             if (result)
             {
                 _logger.LogInformation("2FA enabled successfully for user {UserId} via CQRS", command.UserId);
+
+                // #3838
+                await _auditLogger.LogAsync(
+                    AuditEventType.TwoFactorEnabled,
+                    actorUserId: command.UserId,
+                    targetUserId: command.UserId,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 // Note: Backup codes were already generated during GenerateSetupAsync
                 // Return success without codes (user should have saved them during setup)

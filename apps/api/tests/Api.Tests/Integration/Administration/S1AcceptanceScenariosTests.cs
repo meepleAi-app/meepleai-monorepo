@@ -380,6 +380,8 @@ public sealed class S1AcceptanceScenariosTests
         // Pipeline behavior + handler dependencies the acceptance scenarios touch.
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditLoggingBehavior<,>));
         services.AddScoped<IUserRepository, UserRepository>();
+        // #3838: the identity handlers write to security_audit_logs; this reduced container does not test that.
+        services.AddSingleton(Moq.Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
 
         // The behavior reads from IHttpContextAccessor; a null HttpContext is handled gracefully
         // (admin user id / ip / user-agent become null in the audit payload — acceptable for

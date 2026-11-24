@@ -84,6 +84,8 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
             Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
 
         services.AddScoped<IUserRepository, UserRepository>();
+        // #3838: the identity handlers write to security_audit_logs; this reduced container does not test that.
+        services.AddSingleton(Moq.Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
         services.AddSingleton<TimeProvider>(TimeProvider.System);
 
         // Mock Email Service (with .Setup for verification in tests)

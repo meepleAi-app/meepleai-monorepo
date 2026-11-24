@@ -58,6 +58,8 @@ public sealed class AuditOutboxWriteIntegrationTests : IAsyncLifetime
 
         // Register IUserRepository — required by ChangeUserRoleCommandHandler
         services.AddScoped<IUserRepository, UserRepository>();
+        // #3838: the identity handlers write to security_audit_logs; this reduced container does not test that.
+        services.AddSingleton(Moq.Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
 
         // Register IHttpContextAccessor — required by AuditLoggingBehavior to extract request context.
         // We register a mock that returns no HttpContext (simulating a non-HTTP caller).

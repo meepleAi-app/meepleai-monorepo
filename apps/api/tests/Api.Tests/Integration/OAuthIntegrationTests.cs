@@ -93,6 +93,8 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
+        // #3838: the identity handlers write to security_audit_logs; this reduced container does not test that.
+        services.AddSingleton(Moq.Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
         _serviceProvider = services.BuildServiceProvider();

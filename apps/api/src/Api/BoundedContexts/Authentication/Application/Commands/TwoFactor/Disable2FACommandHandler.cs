@@ -1,6 +1,7 @@
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
@@ -12,13 +13,16 @@ internal class Disable2FACommandHandler : ICommandHandler<Disable2FACommand, Dis
 {
     private readonly ITotpService _totpService;
     private readonly ILogger<Disable2FACommandHandler> _logger;
+    private readonly IAuditLogger _auditLogger;
 
     public Disable2FACommandHandler(
         ITotpService totpService,
-        ILogger<Disable2FACommandHandler> logger)
+        ILogger<Disable2FACommandHandler> logger,
+        IAuditLogger auditLogger)
     {
         _totpService = totpService ?? throw new ArgumentNullException(nameof(totpService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<Disable2FAResult> Handle(Disable2FACommand command, CancellationToken cancellationToken)
@@ -30,6 +34,13 @@ internal class Disable2FACommandHandler : ICommandHandler<Disable2FACommand, Dis
             await _totpService.DisableTwoFactorAsync(command.UserId, command.CurrentPassword, command.TotpOrBackupCode, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("2FA disabled successfully for user {UserId} via CQRS", command.UserId);
+
+            // #3838
+            await _auditLogger.LogAsync(
+                AuditEventType.TwoFactorDisabled,
+                actorUserId: command.UserId,
+                targetUserId: command.UserId,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
             return new Disable2FAResult(Success: true);
         }
         catch (AccessDeniedException ex)

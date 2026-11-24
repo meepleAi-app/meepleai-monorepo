@@ -4,6 +4,8 @@ using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
+using System.Text.Json;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
@@ -19,12 +21,14 @@ internal class LogoutAllDevicesCommandHandler : ICommandHandler<LogoutAllDevices
     private readonly ISessionCacheService? _sessionCache;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<LogoutAllDevicesCommandHandler> _logger;
+    private readonly IAuditLogger _auditLogger;
 
     public LogoutAllDevicesCommandHandler(
         ISessionRepository sessionRepository,
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
         ILogger<LogoutAllDevicesCommandHandler> logger,
+        IAuditLogger auditLogger,
         ISessionCacheService? sessionCache = null,
         TimeProvider? timeProvider = null)
     {
@@ -34,6 +38,7 @@ internal class LogoutAllDevicesCommandHandler : ICommandHandler<LogoutAllDevices
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _sessionCache = sessionCache;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<LogoutAllDevicesResult> Handle(LogoutAllDevicesCommand request, CancellationToken cancellationToken)
@@ -64,6 +69,18 @@ internal class LogoutAllDevicesCommandHandler : ICommandHandler<LogoutAllDevices
 
         var currentSessionRevoked = DetermineIfCurrentSessionRevoked(request, tokenHashesToInvalidate);
         LogResult(request.UserId, tokenHashesToInvalidate.Count, currentSessionExcluded, currentSessionRevoked);
+
+        // #3838: the user revoked their own sessions in one action.
+        await _auditLogger.LogAsync(
+            AuditEventType.BulkSessionRevoke,
+            actorUserId: request.UserId,
+            targetUserId: request.UserId,
+            metadata: JsonSerializer.Serialize(new
+            {
+                revokedCount = tokenHashesToInvalidate.Count,
+                currentSessionPreserved = !currentSessionRevoked,
+            }),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return new LogoutAllDevicesResult(true, tokenHashesToInvalidate.Count, currentSessionRevoked);
     }

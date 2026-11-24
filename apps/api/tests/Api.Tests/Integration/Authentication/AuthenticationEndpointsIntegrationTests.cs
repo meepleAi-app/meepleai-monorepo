@@ -292,6 +292,18 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<OkResponseDto>();
         result?.Ok.Should().BeTrue();
+
+        // #3838: the security audit log has the login AND the logout. It used to record only logins, so an
+        // explicit logout could not be told from an expiry (`revoked_at` is the same for both).
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var userId = await db.Users.Where(u => u.Email == email).Select(u => u.Id).SingleAsync();
+        var events = await db.SecurityAuditLogs.AsNoTracking()
+            .Where(e => e.TargetUserId == userId)
+            .Select(e => new { e.EventType, e.ActorUserId })
+            .ToListAsync();
+        events.Should().ContainEquivalentOf(new { EventType = "auth.login.success", ActorUserId = (Guid?)userId });
+        events.Should().ContainEquivalentOf(new { EventType = "auth.logout", ActorUserId = (Guid?)userId });
     }
 
     [Fact]

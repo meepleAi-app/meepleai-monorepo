@@ -28,7 +28,7 @@ public class Enable2FACommandHandlerTests
     {
         _mockTotpService = new Mock<ITotpService>();
         _mockLogger = new Mock<ILogger<Enable2FACommandHandler>>();
-        _handler = new Enable2FACommandHandler(_mockTotpService.Object, _mockLogger.Object);
+        _handler = new Enable2FACommandHandler(_mockTotpService.Object, _mockLogger.Object, Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
     }
 
     [Fact]

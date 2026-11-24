@@ -70,7 +70,8 @@ internal static class SessionEndpoints
 
             logger.LogInformation("Admin {AdminId} revoking all sessions for user {UserId}", session!.Principal!.Subject.Id, userId);
 
-            var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeAllUserSessionsCommand(userId);
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeAllUserSessionsCommand(
+                userId, RevokedByUserId: session.Principal!.Subject.Id);
             var count = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Revoked {Count} sessions for user {UserId}", count, userId);

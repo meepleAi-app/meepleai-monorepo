@@ -158,6 +158,15 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             // as well: same blocked-modal 409, as go-live answers, instead of an uncaught 500.
             throw new MaxLiveSessionsExceededException(command.GameNightId);
         }
+        catch (DbUpdateException ex) when (IsGameNightPlayOrderViolation(ex))
+        {
+            // #4780: or at the per-night play-order index — both added a link with the same PlayOrder
+            // (Sessions.Count + 1 on the same snapshot), and that INSERT can fail before either other check.
+            // The same retryable 409 as the create path: a retry reads the committed link and either takes
+            // the next PlayOrder or meets the game already live.
+            throw new ConflictException(
+                "Another session was added to this game night at the same time. Please retry.");
+        }
         catch (SessionQuotaExceededException ex)
         {
             // The quota message is written for the player (limit and tier): it stays a 409 with it.
@@ -204,6 +213,13 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
         ex.InnerException is Npgsql.PostgresException pg
         && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
         && string.Equals(pg.ConstraintName, GameNightSessionEntityConfiguration.UniqueActiveIndexName, StringComparison.Ordinal);
+
+    // True iff the DbUpdateException is the unique-index violation on the per-night play-order index
+    // (game_night_sessions (event_id, play_order)), not the live slot or some other constraint.
+    private static bool IsGameNightPlayOrderViolation(DbUpdateException ex) =>
+        ex.InnerException is Npgsql.PostgresException pg
+        && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
+        && string.Equals(pg.ConstraintName, GameNightSessionEntityConfiguration.PlayOrderIndexName, StringComparison.Ordinal);
 
     private async Task TryApplyToolboxTemplateAsync(Guid gameId, CancellationToken cancellationToken)
     {

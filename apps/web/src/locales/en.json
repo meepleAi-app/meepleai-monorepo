@@ -3599,6 +3599,8 @@
         "startCta": "Start game",
         "startErrorToast": "Could not start the game. Try again.",
         "startNeedsPlayerToast": "Add at least one player to start the game.",
+        "pauseErrorToast": "Could not pause the game. Try again.",
+        "resumeErrorToast": "Could not resume the game. Try again.",
         "pauseCta": "Pause",
         "resumeCta": "Resume",
         "endgameCta": "End session",

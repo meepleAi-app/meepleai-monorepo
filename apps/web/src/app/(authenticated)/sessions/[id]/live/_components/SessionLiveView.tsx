@@ -117,12 +117,13 @@ import { PhotosTabContent } from '@/components/features/session-live/PhotosTabCo
 import { useAddDiaryEntry } from '@/hooks/mutations/useAddDiaryEntry';
 import { useCompleteLiveSession } from '@/hooks/mutations/useCompleteLiveSession';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
-import { useLiveSession } from '@/hooks/queries/useLiveSession';
+import { useLiveSession, useRefetchLiveSession } from '@/hooks/queries/useLiveSession';
 import { useLiveSessionDiary } from '@/hooks/queries/useLiveSessionDiary';
 import { useLiveSessionPhases } from '@/hooks/queries/useLiveSessionPhases';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { ConflictError } from '@/lib/api/core/errors';
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
 import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
@@ -346,6 +347,15 @@ function deriveViewerRole(playerRole: string | undefined, isCreator: boolean): P
 }
 
 /**
+ * #4763: the one rule for «who controls this game». The server lets only the session's creator
+ * (`CreatedByUserId`) start, pause, resume, end, save and add or remove players; the Host seat is not
+ * enough. The viewer role and the controls both read it from here.
+ */
+function isCreatorOf(dto: LiveSessionDto | null | undefined, userId: string | undefined): boolean {
+  return dto != null && userId != null && userId !== '' && dto.createdByUserId === userId;
+}
+
+/**
  * The header shows the server's `Completed` as such. `composeSessionLiveState` folds anything
  * that is not InProgress/Paused into 'Setup', so reading its status alone made a concluded
  * session look «In corso» with a timer still running (#4750).
@@ -501,7 +511,7 @@ export function SessionLiveView(): ReactElement {
     const derivedRole = viewerPlayer?.role;
     // #4750: the creator of the session is its host — the server checks `CreatedByUserId` — even
     // when the wizard wrote every player by name and none is linked to the account.
-    const isCreator = currentUserId !== '' && dto.createdByUserId === currentUserId;
+    const isCreator = isCreatorOf(dto, currentUserId);
     const viewerRole = deriveViewerRole(derivedRole, isCreator);
 
     return {
@@ -517,6 +527,30 @@ export function SessionLiveView(): ReactElement {
       actionLog: liveState.actionLog,
     };
   }, [fixture, sessionQuery.data, liveStream.events, diaryQuery.data, currentUser?.id]);
+
+  // #4238 A4: the assistant answers the owner of the session (`CreatedByUserId`), as the server
+  // checks. Not `viewerRole`: that comes from the player linked to the user, and an owner who is
+  // not at the table as a player would lose the panel the server still lets them use.
+  const isSessionOwner = isCreatorOf(sessionQuery.data, currentUser?.id);
+
+  // #4763: pause, resume, end and adding players are the creator's (the server answers 403 to anyone
+  // else), and a concluded game has nothing left to control. The visual-test fixture has no account:
+  // there the Host fixture plays the creator.
+  const controlsTheGame = fixture != null ? fixture.viewerRole === 'Host' : isSessionOwner;
+  const canControl = controlsTheGame && activeSession?.status !== 'Completed';
+
+  // #4763: the end of the game seen from another device. The header reads `Completed` from the DTO
+  // (`toHeaderStatus`) and `session:endgame` does not change it, so without a refetch a second device
+  // kept «In pausa» with the timer running. The refetched DTO also carries `completedAt`, which stops it.
+  const refetchLiveSession = useRefetchLiveSession(sessionId);
+  const endgameEventCount = useMemo(
+    () => liveStream.events.filter(e => e.type === 'session:endgame').length,
+    [liveStream.events]
+  );
+  useEffect(() => {
+    if (endgameEventCount === 0) return;
+    refetchLiveSession();
+  }, [endgameEventCount, refetchLiveSession]);
 
   // #3025 L1: mirror the opaque live game-state into the store — hydrate from the DTO,
   // then let the latest `session:game-state` SSE event win. L3 flavors read `s.gameState`.
@@ -708,20 +742,34 @@ export function SessionLiveView(): ReactElement {
     [sessionId, addDiary, t]
   );
 
+  // #4763: Pause and Resume in the top bar did nothing — the bar was mounted without either handler.
+  // Both are the creator's (`canControl`), and the session is refetched once the server has answered,
+  // so the header does not depend on the SSE event arriving.
+  const handlePause = useCallback(async (): Promise<void> => {
+    if (sessionId == null || !canControl) return;
+
+    try {
+      await api.liveSessions.pauseSession(sessionId);
+      refetchLiveSession();
+    } catch {
+      toast.error(t('pages.sessionLive.topBar.pauseErrorToast'), { id: 'session-pause-error' });
+    }
+  }, [sessionId, canControl, refetchLiveSession, t]);
+
   const handleResume = useCallback(async (): Promise<void> => {
-    if (sessionId == null) return;
-    if (activeSession == null) return;
-    if (!hasRequiredRole(activeSession.viewerRole, 'Host')) return;
+    if (sessionId == null || !canControl) return;
 
     try {
       // #4156: the route id is a LiveGameSession id. This called /game-sessions/{id}/resume
       // (SessionTracking), got 404, and — fetch does not throw on 4xx — closed the panel anyway.
       await api.liveSessions.resumeSession(sessionId);
+      refetchLiveSession();
       handleDialogChange('none');
     } catch {
       // The panel stays open: the session is still paused.
+      toast.error(t('pages.sessionLive.topBar.resumeErrorToast'), { id: 'session-resume-error' });
     }
-  }, [sessionId, activeSession, handleDialogChange]);
+  }, [sessionId, canControl, refetchLiveSession, handleDialogChange, t]);
 
   // ── i18n labels ───────────────────────────────────────────────────────────
   // Gate A: ICU plural keys resolved here — never in child components.
@@ -1012,14 +1060,6 @@ export function SessionLiveView(): ReactElement {
   // Its place in the main column is the in-game assistant (A4 of #4238).
   const liveSessionDto = sessionQuery.data;
 
-  // #4238 A4: the assistant answers the owner of the session (`CreatedByUserId`), as the server
-  // checks. Not `viewerRole`: that comes from the player linked to the user, and an owner who is
-  // not at the table as a player would lose the panel the server still lets them use.
-  const isSessionOwner =
-    liveSessionDto != null &&
-    currentUser?.id != null &&
-    liveSessionDto.createdByUserId === currentUser.id;
-
   // #4787: a session left `Created` (the start failed after its retry, a player did not get in, or it
   // predates #4781) had no way to start from here. Only its creator may: `StartLiveSessionCommandHandler`
   // answers 403 to anyone else, and `viewerRole` `Host` also covers whoever merely holds the first seat.
@@ -1167,9 +1207,7 @@ export function SessionLiveView(): ReactElement {
               players={activeSession.players}
               viewerId={activeSession.viewerId}
               viewerRole={activeSession.viewerRole}
-              onAddPlayer={
-                hasRequiredRole(activeSession.viewerRole, 'Host') ? handleAddPlayer : undefined
-              }
+              onAddPlayer={canControl ? handleAddPlayer : undefined}
               labels={rosterLabels}
             />
           </div>
@@ -1237,6 +1275,7 @@ export function SessionLiveView(): ReactElement {
     turnRendererLabels,
     rosterLabels,
     handleAddPlayer,
+    canControl,
     toolkitWidgets,
     toolkitOpenId,
     setToolkitOpen,
@@ -1383,9 +1422,7 @@ export function SessionLiveView(): ReactElement {
             players={activeSession.players}
             viewerId={activeSession.viewerId}
             viewerRole={activeSession.viewerRole}
-            onAddPlayer={
-              hasRequiredRole(activeSession.viewerRole, 'Host') ? handleAddPlayer : undefined
-            }
+            onAddPlayer={canControl ? handleAddPlayer : undefined}
             labels={rosterLabels}
           />
         </div>
@@ -1445,9 +1482,9 @@ export function SessionLiveView(): ReactElement {
         onExit={handleExit}
         onStart={isSessionOwner ? () => void handleStart() : undefined}
         startPending={startPending}
-        onEndgame={
-          hasRequiredRole(activeSession.viewerRole, 'Host') ? handleRequestEndgame : undefined
-        }
+        onPause={canControl ? () => void handlePause() : undefined}
+        onResume={canControl ? () => void handleResume() : undefined}
+        onEndgame={canControl ? handleRequestEndgame : undefined}
         labels={topBarLabels}
         elapsedMs={elapsedMs}
         startedAtLabel={startedAtLabel}
@@ -1510,11 +1547,7 @@ export function SessionLiveView(): ReactElement {
             pausedBy={pauseEvent?.pausedBy ?? '—'}
             pausedAt={pauseEvent?.pausedAt ?? '—'}
             viewerRole={activeSession.viewerRole}
-            onResume={
-              hasRequiredRole(activeSession.viewerRole, 'Host')
-                ? () => void handleResume()
-                : undefined
-            }
+            onResume={canControl ? () => void handleResume() : undefined}
             onClose={() => handleDialogChange('none')}
             labels={{
               title: t('pages.sessionLive.pauseOverlay.title'),

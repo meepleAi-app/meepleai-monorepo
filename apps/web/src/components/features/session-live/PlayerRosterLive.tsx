@@ -135,17 +135,16 @@ export function PlayerRosterLive({
                 <span className="tabular-nums text-xs font-semibold text-foreground">
                   {player.score}
                 </span>
-                {/* Host-only: kick button (own player excluded) */}
-                {isHost && !isViewer && (
+                {/* Host-only: kick button (own player excluded). #4763: only with a handler — the X
+                    used to show, inert, because nothing removes a player from the live view yet. */}
+                {isHost && !isViewer && onKickParticipant != null && (
                   <button
                     type="button"
                     data-slot="player-roster-kick"
                     aria-label={kickAriaLabel}
-                    aria-disabled={onKickParticipant == null ? 'true' : undefined}
-                    onClick={() => onKickParticipant?.(player.id)}
+                    onClick={() => onKickParticipant(player.id)}
                     className="rounded p-0.5 text-rose-500 hover:bg-rose-500/10
-                      focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500
-                      aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
+                      focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"

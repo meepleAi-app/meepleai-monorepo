@@ -86,7 +86,13 @@ describe('LiveTopBar — #4750: a concluded session', () => {
   });
 
   it('offers the host neither pause, resume nor end — only the way out', () => {
-    renderTopBar({ status: 'Completed', viewerRole: 'Host' });
+    renderTopBar({
+      status: 'Completed',
+      viewerRole: 'Host',
+      onPause: vi.fn(),
+      onResume: vi.fn(),
+      onEndgame: vi.fn(),
+    });
     expect(document.querySelector('[data-slot="session-live-top-bar-pause"]')).toBeNull();
     expect(document.querySelector('[data-slot="session-live-top-bar-resume"]')).toBeNull();
     expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).toBeNull();
@@ -94,7 +100,13 @@ describe('LiveTopBar — #4750: a concluded session', () => {
   });
 
   it('still offers the host pause and end while the session runs', () => {
-    renderTopBar({ status: 'InProgress', viewerRole: 'Host' });
+    renderTopBar({
+      status: 'InProgress',
+      viewerRole: 'Host',
+      onPause: vi.fn(),
+      onResume: vi.fn(),
+      onEndgame: vi.fn(),
+    });
     expect(document.querySelector('[data-slot="session-live-top-bar-pause"]')).not.toBeNull();
     expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).not.toBeNull();
   });
@@ -112,7 +124,13 @@ describe('LiveTopBar — #4781: a session not started yet', () => {
   });
 
   it('offers the host neither pause, resume nor end — they would all answer 409', () => {
-    renderTopBar({ status: 'NotStarted', viewerRole: 'Host' });
+    renderTopBar({
+      status: 'NotStarted',
+      viewerRole: 'Host',
+      onPause: vi.fn(),
+      onResume: vi.fn(),
+      onEndgame: vi.fn(),
+    });
     expect(document.querySelector('[data-slot="session-live-top-bar-pause"]')).toBeNull();
     expect(document.querySelector('[data-slot="session-live-top-bar-resume"]')).toBeNull();
     expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).toBeNull();
@@ -158,6 +176,47 @@ describe('LiveTopBar — #4787: starting a session that has not started', () => 
     expect(startSlot()).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(startSlot() as HTMLElement);
     expect(onStart).not.toHaveBeenCalled();
+  });
+});
+
+// ─── #4763 — pause, resume and end are the caller's to offer ──────────────────
+
+describe('LiveTopBar — #4763: a command shows only with its handler', () => {
+  const slot = (name: string) =>
+    document.querySelector(`[data-slot="session-live-top-bar-${name}"]`);
+
+  it('shows no pause, resume nor end without handlers, whatever the role: never an inert button', () => {
+    // Before #4763 the Host saw Pause dimmed and doing nothing: the view never passed `onPause`.
+    renderTopBar({ status: 'InProgress', viewerRole: 'Host' });
+    expect(slot('pause')).toBeNull();
+    expect(slot('resume')).toBeNull();
+    expect(slot('endgame')).toBeNull();
+  });
+
+  it('follows the handlers, not the role: the Host seat is not the creator', () => {
+    renderTopBar({
+      status: 'InProgress',
+      viewerRole: 'Player',
+      onPause: vi.fn(),
+      onEndgame: vi.fn(),
+    });
+    expect(slot('pause')).not.toBeNull();
+    expect(slot('endgame')).not.toBeNull();
+  });
+
+  it('Pause calls onPause while running; Resume calls onResume while paused', () => {
+    const onPause = vi.fn();
+    const onResume = vi.fn();
+    const { unmount } = renderTopBar({ status: 'InProgress', onPause, onResume });
+    expect(slot('resume')).toBeNull();
+    fireEvent.click(slot('pause') as HTMLElement);
+    expect(onPause).toHaveBeenCalledTimes(1);
+    unmount();
+
+    renderTopBar({ status: 'Paused', onPause, onResume });
+    expect(slot('pause')).toBeNull();
+    fireEvent.click(slot('resume') as HTMLElement);
+    expect(onResume).toHaveBeenCalledTimes(1);
   });
 });
 

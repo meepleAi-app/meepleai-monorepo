@@ -6,8 +6,8 @@
  *
  * Gate C: DIVERGES from MeepleCard — live/real-time UI, not a card pattern.
  *
- * Foundation mode: onPause/onResume/onEndgame absent (aria-disabled).
- * Interactions sub-PR wires actual handlers.
+ * Pause, Resume and End game show only when their handler is passed (#4763): the caller decides who
+ * may, and a command without a handler is not rendered at all, never left inert.
  *
  * data-slot="session-live-top-bar" — required by unit tests.
  * data-viewer-role={viewerRole} — role variant assertion in unit tests.
@@ -131,8 +131,10 @@ export function LiveTopBar({
 }: LiveTopBarProps): ReactElement {
   const isPaused = status === 'Paused';
   // #4750: a concluded session has nothing left to pause, resume or end. #4781: neither does one
-  // that has not started — the server answers 409 to all three until it runs.
-  const canControl = viewerRole === 'Host' && status !== 'Completed' && status !== 'NotStarted';
+  // that has not started — the server answers 409 to all three until it runs. #4763: who may is the
+  // caller's to say, as for `onStart`: a command shows only with its handler, so no button is inert,
+  // and the bar does not decide it from `viewerRole` (the Host seat is not the session's creator).
+  const isRunning = status !== 'Completed' && status !== 'NotStarted';
   // #4787: a session left unstarted can be started from here, by whoever the caller says may.
   const canStart = status === 'NotStarted' && onStart != null;
 
@@ -236,51 +238,45 @@ export function LiveTopBar({
           </button>
         )}
 
-        {/* Host-only: Pause (shown when InProgress) */}
-        {canControl && !isPaused && (
+        {/* Pause (shown when InProgress, to whoever may pause) */}
+        {isRunning && !isPaused && onPause != null && (
           <button
             type="button"
             data-slot="session-live-top-bar-pause"
             onClick={onPause}
-            aria-disabled={onPause == null ? 'true' : undefined}
             className="rounded-lg border border-amber-700/60 bg-transparent px-3 py-1.5
               text-xs font-medium text-amber-300
               hover:bg-amber-500/10 focus-visible:outline-none focus-visible:ring-2
-              focus-visible:ring-amber-500/50
-              aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+              focus-visible:ring-amber-500/50"
           >
             {labels.pauseCta}
           </button>
         )}
 
-        {/* Host-only: Resume (shown when Paused) */}
-        {canControl && isPaused && (
+        {/* Resume (shown when Paused, to whoever may resume) */}
+        {isRunning && isPaused && onResume != null && (
           <button
             type="button"
             data-slot="session-live-top-bar-resume"
             onClick={onResume}
-            aria-disabled={onResume == null ? 'true' : undefined}
             className="rounded-lg border border-emerald-700/60 bg-transparent px-3 py-1.5
               text-xs font-medium text-emerald-300
               hover:bg-emerald-500/10 focus-visible:outline-none focus-visible:ring-2
-              focus-visible:ring-emerald-500/50
-              aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+              focus-visible:ring-emerald-500/50"
           >
             {labels.resumeCta}
           </button>
         )}
 
-        {/* Host-only: End game (not once the session is concluded) */}
-        {canControl && (
+        {/* End game (not once the session is concluded, to whoever may end it) */}
+        {isRunning && onEndgame != null && (
           <button
             type="button"
             data-slot="session-live-top-bar-endgame"
             onClick={onEndgame}
-            aria-disabled={onEndgame == null ? 'true' : undefined}
             className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-medium text-white
               hover:bg-rose-600 focus-visible:outline-none focus-visible:ring-2
-              focus-visible:ring-rose-400
-              aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+              focus-visible:ring-rose-400"
           >
             {labels.endgameCta}
           </button>

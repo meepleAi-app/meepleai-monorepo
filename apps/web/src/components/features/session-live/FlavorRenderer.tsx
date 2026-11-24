@@ -116,10 +116,15 @@ export function FlavorRenderer({
 }: FlavorRendererProps): ReactElement | null {
   const LazyFlavor = gameSlug != null ? FLAVOR_MAP[gameSlug]?.[view] : undefined;
   if (LazyFlavor == null) return null;
+  // #4763: a concluded game has nothing left to edit — the server answers 409 to the game-state
+  // update — and every flavor gates its editors on the Host role alone, so the Host renders a
+  // concluded game as any other player does.
+  const effectiveRole: ParticipantRole =
+    session.status === 'Completed' && viewerRole === 'Host' ? 'Player' : viewerRole;
   return (
     <LazyFlavor
       session={session}
-      viewerRole={viewerRole}
+      viewerRole={effectiveRole}
       sessionId={sessionId}
       className={className}
       livePoints={livePoints}

@@ -26,7 +26,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundError } from '@/lib/api/core/errors';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 
-import { liveSessionKeys, useLiveSession } from '../useLiveSession';
+import { liveSessionKeys, useLiveSession, useRefetchLiveSession } from '../useLiveSession';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -140,5 +140,39 @@ describe('useLiveSession — loading behaviour', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toBeNull();
+  });
+});
+
+// #4763: the live view refetches the session after pause/resume and on `session:endgame`.
+describe('useRefetchLiveSession', () => {
+  function withClient() {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    return { invalidate, wrapper };
+  }
+
+  it('invalidates exactly the detail query of that session', () => {
+    const { invalidate, wrapper } = withClient();
+    const { result } = renderHook(() => useRefetchLiveSession('session-1'), { wrapper });
+
+    result.current();
+
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: liveSessionKeys.detail('session-1'),
+      exact: true,
+    });
+  });
+
+  it.each([null, undefined, ''])('does nothing without a session id (%s)', sessionId => {
+    const { invalidate, wrapper } = withClient();
+    const { result } = renderHook(() => useRefetchLiveSession(sessionId), { wrapper });
+
+    result.current();
+
+    expect(invalidate).not.toHaveBeenCalled();
   });
 });

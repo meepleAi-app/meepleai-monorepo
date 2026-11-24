@@ -107,6 +107,20 @@ internal static class EndpointFilterExtensions
     }
 
     /// <summary>
+    /// Requires the caller to be the creator of the live session identified by the {sessionId} route
+    /// value. Returns 401 if unauthenticated, 404 if the session is missing, 403 for anyone else,
+    /// linked players included. Apply AFTER .RequireAuthenticatedUser(), in place of
+    /// .RequireLiveSessionParticipant().
+    /// </summary>
+    /// <param name="builder">The route handler builder.</param>
+    /// <returns>The builder for method chaining.</returns>
+    /// <remarks>Issue: #4763 - pause, resume, complete, save and player removal are the creator's.</remarks>
+    public static RouteHandlerBuilder RequireLiveSessionCreator(this RouteHandlerBuilder builder)
+    {
+        return builder.AddEndpointFilter<RequireLiveSessionCreatorFilter>();
+    }
+
+    /// <summary>
     /// Applies notification-specific rate limiting for bulk operations.
     /// Uses stricter limits than global rate limiting to prevent abuse.
     ///

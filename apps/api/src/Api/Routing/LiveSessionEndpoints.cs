@@ -59,7 +59,8 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/pause", HandlePauseSession)
             .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
+            .RequireLiveSessionCreator() // #4763: only the creator controls the lifecycle
+            .Produces(403)
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -68,7 +69,8 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/resume", HandleResumeSession)
             .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
+            .RequireLiveSessionCreator() // #4763: only the creator controls the lifecycle
+            .Produces(403)
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -77,7 +79,8 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/complete", HandleCompleteSession)
             .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
+            .RequireLiveSessionCreator() // #4763: only the creator controls the lifecycle
+            .Produces(403)
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -87,7 +90,8 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/save", HandleSaveSession)
             .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
+            .RequireLiveSessionCreator() // #4763: only the creator controls the lifecycle
+            .Produces(403)
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -106,7 +110,8 @@ internal static class LiveSessionEndpoints
 
         group.MapDelete("/live-sessions/{sessionId}/players/{playerId}", HandleRemovePlayer)
             .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
+            .RequireLiveSessionCreator() // #4763: only the creator controls the lifecycle
+            .Produces(403)
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -207,7 +212,8 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/save-complete", HandleSaveComplete)
             .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
+            .RequireLiveSessionCreator() // #4763: only the creator controls the lifecycle
+            .Produces(403)
             .Produces<SessionSaveResultDto>(200)
             .Produces(404)
             .Produces(409)

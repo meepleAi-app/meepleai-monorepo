@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
+using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
@@ -255,16 +257,130 @@ public sealed class LiveSessionParticipantAuthzEndpointTests : IClassFixture<Liv
         response.StatusCode.Should().Be(HttpStatusCode.Created);
     }
 
+    // ── Only the creator controls the lifecycle (#4763) ─────────────────────────────────
+
+    // #4763: pausa, ripresa, fine e salvataggio sono del creatore, come l'avvio; la rimozione di un giocatore segue
+    // l'aggiunta (#4398). Un giocatore o uno spettatore collegati a un account partecipano, ma non comandano. Il
+    // creatore è un editor perché `save-complete` controlla il piano del creatore e risponde anch'esso 403: con un
+    // creatore free il caso passerebbe anche senza il filtro. Premium non basta: nei test non c'è nessuna definizione
+    // di piano, e senza definizione il piano ricade su quello free; un editor ha i limiti illimitati.
+    [Theory(DisplayName = "Lifecycle routes answer 403 to a linked participant who is not the creator (#4763)")]
+    [InlineData("POST", "pause", PlayerRole.Player)]
+    [InlineData("POST", "pause", PlayerRole.Spectator)]
+    [InlineData("POST", "resume", PlayerRole.Player)]
+    [InlineData("POST", "resume", PlayerRole.Spectator)]
+    [InlineData("POST", "complete", PlayerRole.Player)]
+    [InlineData("POST", "complete", PlayerRole.Spectator)]
+    [InlineData("POST", "save", PlayerRole.Player)]
+    [InlineData("POST", "save", PlayerRole.Spectator)]
+    [InlineData("POST", "save-complete", PlayerRole.Player)]
+    [InlineData("POST", "save-complete", PlayerRole.Spectator)]
+    [InlineData("DELETE", "players/{guest}", PlayerRole.Player)]
+    [InlineData("DELETE", "players/{guest}", PlayerRole.Spectator)]
+    // Il RUOLO Host (primo posto) non è il controllo: il controllo è di chi ha creato la partita.
+    [InlineData("POST", "pause", PlayerRole.Host)]
+    [InlineData("POST", "complete", PlayerRole.Host)]
+    [InlineData("DELETE", "players/{guest}", PlayerRole.Host)]
+    public async Task LifecycleRoute_LinkedParticipantWhoIsNotTheCreator_Returns403(
+        string method, string route, PlayerRole role)
+    {
+        var (creatorClient, sessionId) = await CreateCreatorSessionAsync(role: "editor");
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var userBId = await SeedUserAsync(db);
+        var (_, tokenB) = await TestSessionHelper.CreateUserSessionAsync(db, userBId);
+        await mediator.Send(new AddPlayerToLiveSessionCommand(
+            SessionId: sessionId, DisplayName: "B", Color: PlayerColor.Blue, UserId: userBId, Role: role, AvatarUrl: null));
+        var guestId = await mediator.Send(new AddPlayerToLiveSessionCommand(
+            SessionId: sessionId, DisplayName: "C", Color: PlayerColor.Green, UserId: null, Role: null, AvatarUrl: null));
+        var creatorToken = creatorClient.DefaultRequestHeaders.GetValues("X-Test-Session-Token").First();
+        var start = await creatorClient.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/live-sessions/{sessionId}/start", creatorToken));
+        start.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var clientB = _factory.CreateClient();
+        clientB.DefaultRequestHeaders.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={tokenB}");
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            new HttpMethod(method),
+            $"/api/v1/live-sessions/{sessionId}/{route.Replace("{guest}", guestId.ToString(), StringComparison.Ordinal)}",
+            tokenB);
+        var response = await clientB.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, $"B ({role}) partecipa alla partita, ma non ne è il creatore");
+        var after = await LoadSessionAsync(sessionId);
+        after.Status.Should().Be(LiveSessionStatus.InProgress, "il rifiuto non deve aver toccato la partita");
+        after.Players.Should().Contain(p => p.Id == guestId && p.IsActive, "il rifiuto non deve aver tolto il giocatore");
+    }
+
+    [Fact(DisplayName = "The creator pauses, resumes, saves, removes a player and completes (#4763)")]
+    public async Task LifecycleRoutes_Creator_Succeed()
+    {
+        var (client, sessionId) = await CreateCreatorSessionAsync(role: "editor");
+        var token = client.DefaultRequestHeaders.GetValues("X-Test-Session-Token").First();
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            await mediator.Send(new AddPlayerToLiveSessionCommand(
+                SessionId: sessionId, DisplayName: "Giulia", Color: PlayerColor.Red, UserId: null, Role: null, AvatarUrl: null));
+        }
+        Guid marco;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            marco = await mediator.Send(new AddPlayerToLiveSessionCommand(
+                SessionId: sessionId, DisplayName: "Marco", Color: PlayerColor.Blue, UserId: null, Role: null, AvatarUrl: null));
+        }
+
+        async Task<HttpStatusCode> SendAsync(HttpMethod method, string route)
+        {
+            var request = TestSessionHelper.CreateAuthenticatedRequest(method, $"/api/v1/live-sessions/{sessionId}/{route}", token);
+            return (await client.SendAsync(request)).StatusCode;
+        }
+
+        (await SendAsync(HttpMethod.Post, "start")).Should().Be(HttpStatusCode.NoContent);
+        (await SendAsync(HttpMethod.Post, "pause")).Should().Be(HttpStatusCode.NoContent);
+        (await SendAsync(HttpMethod.Post, "resume")).Should().Be(HttpStatusCode.NoContent);
+        (await SendAsync(HttpMethod.Post, "save")).Should().Be(HttpStatusCode.NoContent);
+        (await SendAsync(HttpMethod.Post, "save-complete")).Should().Be(HttpStatusCode.OK);
+        (await SendAsync(HttpMethod.Delete, $"players/{marco}")).Should().Be(HttpStatusCode.NoContent);
+        (await SendAsync(HttpMethod.Post, "complete")).Should().Be(HttpStatusCode.NoContent);
+
+        (await LoadSessionAsync(sessionId)).Status.Should().Be(LiveSessionStatus.Completed);
+    }
+
+    [Theory(DisplayName = "Lifecycle routes on a nonexistent session answer 404, not 403 (#4763)")]
+    [InlineData("POST", "pause")]
+    [InlineData("POST", "complete")]
+    [InlineData("DELETE", "players/00000000-0000-0000-0000-000000000001")]
+    public async Task LifecycleRoute_NonexistentSession_Returns404(string method, string route)
+    {
+        var (clientB, tokenB) = await CreateOtherUserClientAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            new HttpMethod(method), $"/api/v1/live-sessions/{Guid.NewGuid()}/{route}", tokenB);
+        var response = await clientB.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────────
 
+    private async Task<LiveGameSession> LoadSessionAsync(Guid sessionId)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<ILiveSessionRepository>();
+        return (await repository.GetByIdAsync(sessionId, CancellationToken.None))!;
+    }
+
     /// <summary>Seeds a user + session, creates a LiveGameSession owned by that user, returns an authenticated client.</summary>
-    private async Task<(HttpClient Client, Guid SessionId)> CreateCreatorSessionAsync()
+    private async Task<(HttpClient Client, Guid SessionId)> CreateCreatorSessionAsync(string role = "user")
     {
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        var userId = await SeedUserAsync(db);
+        var userId = await SeedUserAsync(db, role);
         var (_, token) = await TestSessionHelper.CreateUserSessionAsync(db, userId);
 
         var sessionId = await mediator.Send(new CreateLiveSessionCommand(
@@ -288,7 +404,7 @@ public sealed class LiveSessionParticipantAuthzEndpointTests : IClassFixture<Liv
         return (client, token);
     }
 
-    private static async Task<Guid> SeedUserAsync(MeepleAiDbContext db)
+    private static async Task<Guid> SeedUserAsync(MeepleAiDbContext db, string role = "user")
     {
         var userId = Guid.NewGuid();
         db.Users.Add(new UserEntity
@@ -297,7 +413,7 @@ public sealed class LiveSessionParticipantAuthzEndpointTests : IClassFixture<Liv
             Email = $"authz-test-{userId:N}@test.local",
             DisplayName = "Authz Test User",
             PasswordHash = "not-a-real-hash",
-            Role = "user",
+            Role = role,
             Tier = "free",
             Status = "Active",
             EmailVerified = true,

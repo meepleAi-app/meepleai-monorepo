@@ -36,6 +36,7 @@ internal sealed class GetLiveSessionParticipantContextQueryHandler
 
         return new LiveSessionParticipantContextResult(
             Found: true,
-            Authorized: session.IsAuthorizedParticipant(query.UserId));
+            Authorized: session.IsAuthorizedParticipant(query.UserId),
+            IsCreator: query.UserId != Guid.Empty && session.CreatedByUserId == query.UserId);
     }
 }

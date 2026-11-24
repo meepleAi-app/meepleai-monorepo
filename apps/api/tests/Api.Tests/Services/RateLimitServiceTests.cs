@@ -255,6 +255,55 @@ public class RateLimitServiceTests
         result.RefillRate.Should().Be(10.0);
     }
 
+    [Theory]
+    [Trait("Issue", "3994")]
+    [InlineData("superadmin")]
+    [InlineData("SuperAdmin")]
+    public async Task GetConfigForRoleAsync_WithoutConfigService_SuperAdminGetsTheAdminLimits(string role)
+    {
+        // #3994: a superadmin counts as an admin everywhere. The switch had no superadmin arm, so it fell to the
+        // anonymous limits.
+        var service = new RateLimitService(
+            _mockRedis.Object,
+            _mockLogger.Object,
+            Options.Create(_config),
+            CreateEnvironment("Production"),
+            _timeProvider,
+            configService: null,
+            fallbackConfig: null);
+
+        var result = await service.GetConfigForRoleAsync(role, TestCancellationToken);
+
+        result.MaxTokens.Should().Be(_config.Admin.MaxTokens);
+        result.RefillRate.Should().Be(_config.Admin.RefillRate);
+    }
+
+    [Fact]
+    [Trait("Issue", "3994")]
+    public async Task GetConfigForRoleAsync_WithConfigService_SuperAdminGetsTheAdminLimits()
+    {
+        // #3994: with nothing configured the chain ends in the hardcoded defaults, which had no superadmin arm
+        // and threw ArgumentException for it.
+        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
+            .ReturnsAsync((int?)null);
+        _mockConfigService.Setup(c => c.GetValueAsync<double?>(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<string?>()))
+            .ReturnsAsync((double?)null);
+
+        var service = new RateLimitService(
+            _mockRedis.Object,
+            _mockLogger.Object,
+            Options.Create(_config),
+            CreateEnvironment("Production"),
+            _timeProvider,
+            _mockConfigService.Object,
+            fallbackConfig: null);
+
+        var superAdmin = await service.GetConfigForRoleAsync("superadmin", TestCancellationToken);
+        var admin = await service.GetConfigForRoleAsync("admin", TestCancellationToken);
+
+        superAdmin.Should().Be(admin);
+    }
+
     [Fact]
     public async Task GetConfigForRoleAsync_K6Scenario_AnonymousUserGets600Tokens()
     {

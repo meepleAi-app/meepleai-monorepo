@@ -6,6 +6,7 @@ using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Microsoft.Extensions.Logging;
+using Role = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Services;
 
@@ -171,8 +172,8 @@ internal sealed class RateLimitEvaluator : IRateLimitEvaluator
         // Authentication.UserTier: "free", "normal", "premium"
         // SystemConfiguration.UserTier: Free(0), Premium(1), Pro(2), Admin(3)
 
-        // Check if user is admin via Role (Admin is Role-based, not Tier-based)
-        if (user.Role.Value.Equals("admin", StringComparison.OrdinalIgnoreCase))
+        // Check if user is admin via Role (Admin is Role-based, not Tier-based). #3994: a superadmin counts as an admin.
+        if (user.Role.HasPermission(Role.Admin))
         {
             return UserTier.Admin;
         }

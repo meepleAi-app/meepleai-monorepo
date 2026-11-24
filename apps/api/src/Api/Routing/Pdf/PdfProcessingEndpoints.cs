@@ -193,7 +193,7 @@ internal static class PdfProcessingEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session!.RequireRole(UserRole.Admin).IsAuthorized;
 
         var command = new RetryPdfProcessingCommand(
             PdfId: pdfId,
@@ -250,7 +250,7 @@ internal static class PdfProcessingEndpoints
         var userId = session!.Principal!.Subject.Id;
 
         if (pdf.UploadedByUserId != userId &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !session!.RequireRole(UserRole.Admin).IsAuthorized)
         {
             return Results.Forbid();
         }
@@ -265,7 +265,7 @@ internal static class PdfProcessingEndpoints
         // Issue #4218: Real-time PDF status updates via Server-Sent Events
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
         var userId = session.Principal!.Subject.Id;
-        bool isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session.RequireRole(UserRole.Admin).IsAuthorized;
 
         // Set SSE headers
         httpContext.Response.ContentType = "text/event-stream";
@@ -297,7 +297,7 @@ internal static class PdfProcessingEndpoints
         // Get authenticated user
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
         var userId = session.Principal!.Subject.Id;
-        bool isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session.RequireRole(UserRole.Admin).IsAuthorized;
 
         // Set SSE headers
         httpContext.Response.ContentType = "text/event-stream";
@@ -343,7 +343,7 @@ internal static class PdfProcessingEndpoints
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session!.Principal!.Subject.Id;
-        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session!.RequireRole(UserRole.Admin).IsAuthorized;
 
         // DDD Migration Phase 4: Use CancelPdfProcessingCommand via IMediator
         var command = new CancelPdfProcessingCommand(
@@ -375,9 +375,9 @@ internal static class PdfProcessingEndpoints
     /// #4084: `Admin`/`Editor` literal-compared against the session role, excluding
     /// `SuperAdmin` — measured as a real 403 on a superadmin account calling this exact
     /// endpoint. Same anti-pattern as #3994 (<c>AgentTierLimits</c>). Scoped to the three
-    /// handlers in THIS file that reject outright (generate/index/extract); the five
-    /// `isAdmin`-bypass-bool sites elsewhere in this file are a different ownership-bypass
-    /// feature, not measured here, and are left for a separate issue.
+    /// handlers in THIS file that reject outright (generate/index/extract). The `isAdmin`
+    /// ownership bypasses elsewhere in this file are a different feature: #3994 moved them to
+    /// <c>session.RequireRole(UserRole.Admin)</c>, which counts a superadmin as an admin.
     /// </summary>
     internal static bool IsAdminEditorOrSuperAdmin(string? role) =>
         string.Equals(role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) ||

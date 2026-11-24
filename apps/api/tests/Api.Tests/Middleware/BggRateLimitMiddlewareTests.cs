@@ -220,6 +220,24 @@ public class BggRateLimitMiddlewareTests
     }
 
     [Fact]
+    [Trait("Issue", "3994")]
+    public async Task InvokeAsync_SuperAdminUser_BypassesRateLimit()
+    {
+        // #3994: a superadmin counts as an admin everywhere. `userRole == Role.Admin` gave it the tier limits.
+        var context = CreateHttpContext("/api/v1/bgg/search");
+        SetupAuthenticatedUser(context, userId: TestGuid(23), tier: "Free", role: "SuperAdmin");
+
+        await CreateMiddleware().InvokeAsync(context, _rateLimitServiceMock.Object);
+
+        context.Response.StatusCode.Should().Be(200);
+        _nextCalled.Should().BeTrue();
+        context.Response.Headers["X-RateLimit-Limit"].ToString().Should().Be("unlimited");
+        _rateLimitServiceMock.Verify(
+            x => x.CheckRateLimitAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task InvokeAsync_RateLimitExceeded_Returns429WithRetryAfter()
     {
         // Arrange

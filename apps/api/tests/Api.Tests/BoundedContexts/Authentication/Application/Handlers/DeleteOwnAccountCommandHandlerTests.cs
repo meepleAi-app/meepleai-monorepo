@@ -231,14 +231,15 @@ public class DeleteOwnAccountCommandHandlerTests
     }
 
     /// <summary>
-    /// #3873 DoD 5 — superadmin as the subject. Trigger and counter disagree: the trigger at
-    /// DeleteOwnAccountCommandHandler.cs:46 is <c>Role.IsAdmin()</c> (exact match on "admin"),
-    /// while <c>CountAdminsAsync</c> counts <c>admin OR superadmin</c>. So a lone superadmin is
-    /// counted as the last privileged account by the counter but never reaches it.
+    /// #3873 DoD 5 — superadmin as the subject. Trigger and counter disagreed: the trigger at
+    /// DeleteOwnAccountCommandHandler.cs:46 was <c>Role.IsAdmin()</c> (exact match on "admin", since
+    /// renamed <c>IsExactlyAdmin()</c>), while <c>CountAdminsAsync</c> counts <c>admin OR superadmin</c>.
+    /// So a lone superadmin was counted as the last privileged account by the counter but never reached
+    /// it. The trigger now names both roles.
     /// </summary>
     [Theory]
-    [InlineData("admin")]       // guarded today
-    [InlineData("superadmin")]  // #3873: NOT guarded today — the trigger is an exact match
+    [InlineData("admin")]
+    [InlineData("superadmin")]  // #3873: was not guarded, the trigger was an exact match
     public async Task Handle_LastPrivilegedAccount_ThrowsConflictException(string roleValue)
     {
         // Arrange

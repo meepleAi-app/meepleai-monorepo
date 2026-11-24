@@ -93,8 +93,8 @@ internal class BggRateLimitMiddleware
             var user = session.Principal!.Subject;
             var userRole = Role.Parse(user.Role);
 
-            // Admin bypass
-            if (_options.AdminBypass && userRole == Role.Admin)
+            // Admin bypass. #3994: a superadmin counts as an admin.
+            if (_options.AdminBypass && userRole.HasPermission(Role.Admin))
             {
                 context.Response.Headers["X-RateLimit-Limit"] = "unlimited";
                 context.Response.Headers["X-RateLimit-Remaining"] = "unlimited";

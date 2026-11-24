@@ -274,6 +274,33 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    /// <summary>
+    /// #3994: an admin reads a private document it does not own, and so does a superadmin, who counts as an admin
+    /// everywhere. The exact comparison with UserRole.Admin gave the superadmin the 403 of a plain user.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "3994")]
+    [InlineData(false, "")]
+    [InlineData(true, "")]
+    [InlineData(false, "/chunks")]
+    [InlineData(true, "/chunks")]
+    public async Task GetKbDocument_PrivateDocOwnedByOtherUser_AdminOrSuperAdmin_Returns200(bool superAdmin, string suffix)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var (ownerUserId, _) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (docId, _) = await SeedPrivateDocWithSingleChunkAsync(dbContext, ownerUserId);
+
+        var (_, token) = superAdmin
+            ? await TestSessionHelper.CreateSuperAdminSessionAsync(dbContext)
+            : await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, $"/api/v1/kb-docs/{docId}{suffix}", token));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     // ─── Seed helpers ────────────────────────────────────────────────────────
 
     /// <summary>

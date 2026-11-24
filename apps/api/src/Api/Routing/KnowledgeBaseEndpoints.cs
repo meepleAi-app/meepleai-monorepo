@@ -633,7 +633,7 @@ internal static class KnowledgeBaseEndpoints
         var userId = session!.Principal!.Subject.Id;
 
         if (result.UserId != userId &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !session!.RequireRole(UserRole.Admin).IsAuthorized)
         {
             return Results.Forbid();
         }
@@ -728,7 +728,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !session!.RequireRole(UserRole.Admin).IsAuthorized)
         {
             logger.LogWarning("User {UserId} denied access to close thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -760,7 +760,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !session!.RequireRole(UserRole.Admin).IsAuthorized)
         {
             logger.LogWarning("User {UserId} denied access to reopen thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -798,7 +798,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !session!.RequireRole(UserRole.Admin).IsAuthorized)
         {
             logger.LogWarning("User {UserId} denied access to update thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -838,7 +838,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !session!.RequireRole(UserRole.Admin).IsAuthorized)
         {
             logger.LogWarning("User {UserId} denied access to switch agent on thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -881,7 +881,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !session!.RequireRole(UserRole.Admin).IsAuthorized)
         {
             logger.LogWarning("User {UserId} denied access to add message to thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -936,7 +936,7 @@ internal static class KnowledgeBaseEndpoints
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session!.Principal!.Subject.Id;
-        var isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var isAdmin = session!.RequireRole(UserRole.Admin).IsAuthorized;
 
         var command = new DeleteMessageCommand(threadId, messageId, userId, isAdmin);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -968,7 +968,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !session!.RequireRole(UserRole.Admin).IsAuthorized)
         {
             logger.LogWarning("User {UserId} denied access to export thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -1303,7 +1303,7 @@ internal static class KnowledgeBaseEndpoints
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session.Principal!.Subject.Id;
-        var userIsAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userIsAdmin = session.RequireRole(UserRole.Admin).IsAuthorized;
         var query = new GetKbDocumentByIdQuery(id, RequestingUserId: userId, UserIsAdmin: userIsAdmin);
         var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(dto);
@@ -1340,7 +1340,7 @@ internal static class KnowledgeBaseEndpoints
 
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
         var userId = session.Principal!.Subject.Id;
-        var isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var isAdmin = session.RequireRole(UserRole.Admin).IsAuthorized;
         var query = new GetKbChunksQuery(
             id,
             RequestingUserId: userId,
@@ -1360,10 +1360,7 @@ internal static class KnowledgeBaseEndpoints
     {
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
         var userId = session.Principal!.Subject.Id;
-        var isAdmin = string.Equals(
-            session.Principal!.EffectiveActor.Role,
-            UserRole.Admin.ToString(),
-            StringComparison.OrdinalIgnoreCase);
+        var isAdmin = session.RequireRole(UserRole.Admin).IsAuthorized;
         var query = new GetKbChunkByIdQuery(id, RequestingUserId: userId, ChunkId: chunkId, UserIsAdmin: isAdmin);
         var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(dto);
@@ -1383,7 +1380,7 @@ internal static class KnowledgeBaseEndpoints
 
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
         var userId = session.Principal!.Subject.Id;
-        var isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var isAdmin = session.RequireRole(UserRole.Admin).IsAuthorized;
         var query = new SearchKbChunksQuery(id, RequestingUserId: userId, Query: body.Query, Skip: body.Skip ?? 0, Take: body.Take ?? 20, UserIsAdmin: isAdmin);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Enums;
+using Role = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -37,8 +38,8 @@ internal static class LlmUserContextMapper
     /// </summary>
     private static LlmUserTier MapTier(User user)
     {
-        // Admin role always gets Admin tier (highest access)
-        if (string.Equals(user.Role.Value, "admin", StringComparison.OrdinalIgnoreCase))
+        // Admin role always gets Admin tier (highest access). #3994: a superadmin counts as an admin.
+        if (user.Role.HasPermission(Role.Admin))
         {
             return LlmUserTier.Admin;
         }

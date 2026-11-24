@@ -477,6 +477,41 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
     // SESSION REVOKE ENDPOINT TESTS
     // ========================================
 
+    /// <summary>
+    /// #3994: another user's session is read and revoked by an admin, and a superadmin counts as an admin everywhere.
+    /// The exact comparison of the role claim with "admin" gave the superadmin the 404 of a plain user. One test, and
+    /// not one per step, because this class builds its host per test.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "3994")]
+    public async Task SessionOfAnotherUser_IsReadAndRevokedByASuperAdmin_AndNotByAPlainUser()
+    {
+        using var authScope = _factory.Services.CreateScope();
+        var dbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (targetUserId, _) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var targetSessionId = await dbContext.Set<UserSessionEntity>()
+            .Where(s => s.UserId == targetUserId).Select(s => s.Id).SingleAsync();
+        var (_, plainToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (_, superAdminToken) = await TestSessionHelper.CreateSuperAdminSessionAsync(dbContext);
+
+        var byPlainUser = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get, $"/api/v1/auth/sessions/{targetSessionId}/status", plainToken));
+        byPlainUser.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var status = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get, $"/api/v1/auth/sessions/{targetSessionId}/status", superAdminToken));
+        status.StatusCode.Should().Be(HttpStatusCode.OK, await status.Content.ReadAsStringAsync());
+
+        var revoke = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/auth/sessions/{targetSessionId}/revoke", superAdminToken));
+        revoke.StatusCode.Should().Be(HttpStatusCode.OK, await revoke.Content.ReadAsStringAsync());
+
+        using var verifyScope = _factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        (await verifyDb.Set<UserSessionEntity>().AsNoTracking().SingleAsync(s => s.Id == targetSessionId))
+            .RevokedAt.Should().NotBeNull();
+    }
+
     [Fact]
     public async Task RevokeSession_WithValidSession_ReturnsOk()
     {

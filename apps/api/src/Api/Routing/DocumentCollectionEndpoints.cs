@@ -183,8 +183,7 @@ internal static class DocumentCollectionEndpoints
 
             // Authorization: Users can only view their own collections unless they are admin
             var currentUserId = session!.Principal!.Subject.Id;
-            var isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(),
-                StringComparison.OrdinalIgnoreCase);
+            var isAdmin = session!.RequireRole(UserRole.Admin).IsAuthorized;
 
             if (currentUserId != userId && !isAdmin)
             {

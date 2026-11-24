@@ -11,6 +11,7 @@ using Api.Middleware.Exceptions;
 using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Role = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.Routing;
 
@@ -170,7 +171,7 @@ internal static class PdfRetrievalEndpoints
         // owner-or-shared-game access (admins bypass).
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session!.Principal!.Subject.Id;
-        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session!.RequireRole(UserRole.Admin).IsAuthorized;
 
         var pdf = await mediator.Send(new GetPdfTextQuery(pdfId, userId, isAdmin), ct).ConfigureAwait(false);
 
@@ -188,7 +189,7 @@ internal static class PdfRetrievalEndpoints
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session!.Principal!.Subject.Id;
-        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session!.RequireRole(UserRole.Admin).IsAuthorized;
 
         var regions = await mediator.Send(new GetPdfImageRegionsQuery(pdfId, userId, isAdmin), ct).ConfigureAwait(false);
         return Results.Json(new { regions });
@@ -214,7 +215,7 @@ internal static class PdfRetrievalEndpoints
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session!.Principal!.Subject.Id;
-        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session!.RequireRole(UserRole.Admin).IsAuthorized;
 
         // DDD Migration Phase 4: Use DownloadPdfQuery via IMediator
         var query = new DownloadPdfQuery(
@@ -553,7 +554,8 @@ internal static class PdfRetrievalEndpoints
     // Helpers
     private static bool CheckPdfAuthorization(Api.BoundedContexts.Authentication.Application.DTOs.UserDto user, PdfOwnershipResult pdf)
     {
-        bool isAdmin = string.Equals(user.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        // #3994: a superadmin counts as an admin. An unknown role is not an admin.
+        bool isAdmin = Role.TryParse(user.Role, out var role) && role.HasPermission(Role.Admin);
         bool isOwner = pdf.UploadedByUserId == user.Id;
         return isAdmin || isOwner;
     }

@@ -167,6 +167,13 @@ internal class RateLimitService : IRateLimitService
 
         var normalizedRole = role?.ToLowerInvariant() ?? "anonymous";
 
+        // #3994: a superadmin counts as an admin, and reads the admin's keys. There are no superadmin keys, and the
+        // hardcoded defaults have no superadmin row: without this the chain ended in an ArgumentException.
+        if (string.Equals(normalizedRole, "superadmin", StringComparison.Ordinal))
+        {
+            normalizedRole = "admin";
+        }
+
         // Get both maxTokens and refillRate from database with fallback
         var maxTokens = await GetRateLimitValueAsync<int>("MaxTokens", normalizedRole).ConfigureAwait(false);
         var refillRate = await GetRateLimitValueAsync<double>("RefillRate", normalizedRole).ConfigureAwait(false);
@@ -340,7 +347,8 @@ internal class RateLimitService : IRateLimitService
 
         var roleConfig = normalizedRole switch
         {
-            "admin" => _config.Admin,
+            // #3994: a superadmin counts as an admin, and has the admin's limits.
+            "admin" or "superadmin" => _config.Admin,
             "editor" => _config.Editor,
             "user" => _config.User,
             _ => _config.Anonymous

@@ -1,7 +1,7 @@
 /* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { Loader2, Users, Play, TrendingUp } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
@@ -10,9 +10,16 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
+import { linkedFirst, ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { getGameTemplateByName, type GameTemplate } from '@/lib/config/game-templates';
 import { API_PLAYER_COLORS } from '@/lib/sessions/player-colors';
 import { useSessionStore } from '@/lib/stores/session-store';
+
+/** A player seat. #4770: the creator's seat carries their account (see useSelfPlayer). */
+interface Seat {
+  name: string;
+  userId?: string;
+}
 
 interface GameDetails {
   id: string;
@@ -56,7 +63,22 @@ export default function GameToolkitLandingPage() {
   const [game, setGame] = useState<GameDetails | null>(null);
   const [template, setTemplate] = useState<GameTemplate | null>(null);
   const [loadingGame, setLoadingGame] = useState(true);
-  const [participants, setParticipants] = useState<string[]>(['']);
+  const [participants, setParticipants] = useState<Seat[]>([{ name: '' }]);
+
+  // #4770: the creator is the first player, linked to their account, as in the /sessions/new wizards
+  // (#4767). Seeded once, into the first seat and only while it is still empty; emptying the name
+  // or removing the seat is «Io non gioco».
+  const self = useSelfPlayer();
+  const seededSelf = useRef(false);
+  useEffect(() => {
+    if (!self || seededSelf.current) return;
+    seededSelf.current = true;
+    setParticipants(prev =>
+      prev[0]?.name === ''
+        ? [{ name: self.displayName, userId: self.userId }, ...prev.slice(1)]
+        : prev
+    );
+  }, [self]);
 
   // Load game details
   useEffect(() => {
@@ -93,7 +115,7 @@ export default function GameToolkitLandingPage() {
    * Handle start session
    */
   const handleStartSession = async () => {
-    const validParticipants = participants.filter(name => name.trim().length > 0);
+    const validParticipants = participants.filter(seat => seat.name.trim().length > 0);
 
     if (validParticipants.length === 0) {
       toast.error('Please add at least one participant');
@@ -134,12 +156,16 @@ export default function GameToolkitLandingPage() {
         return;
       }
 
+      // #4770: colors follow the seats; the linked creator is added first whatever their seat, because
+      // the server makes the first player the Host.
+      const entries = validParticipants.map((seat, index) => ({
+        displayName: seat.name.trim(),
+        color: API_PLAYER_COLORS[index],
+        userId: ownUserId(seat.userId, self),
+      }));
       const store = useSessionStore.getState();
-      for (const [index, name] of validParticipants.entries()) {
-        await store.addPlayer({
-          displayName: name.trim(),
-          color: API_PLAYER_COLORS[index],
-        });
+      for (const { userId, ...entry } of linkedFirst(entries)) {
+        await store.addPlayer({ ...entry, ...(userId ? { userId } : {}) });
       }
       await store.startSession();
 
@@ -154,7 +180,7 @@ export default function GameToolkitLandingPage() {
    * Add participant
    */
   const addParticipant = () => {
-    setParticipants([...participants, '']);
+    setParticipants([...participants, { name: '' }]);
   };
 
   /**
@@ -169,7 +195,8 @@ export default function GameToolkitLandingPage() {
    */
   const updateParticipant = (index: number, value: string) => {
     const updated = [...participants];
-    updated[index] = value;
+    // Editing the name keeps the link; emptying it unlinks the seat: an empty seat is nobody's.
+    updated[index] = { name: value, userId: value.trim() ? updated[index].userId : undefined };
     setParticipants(updated);
   };
 
@@ -262,11 +289,11 @@ export default function GameToolkitLandingPage() {
               <div>
                 <p className="text-sm font-semibold text-foreground mb-2">Players</p>
                 <div className="space-y-2">
-                  {participants.map((name, index) => (
+                  {participants.map((seat, index) => (
                     <div key={index} className="flex gap-2">
                       <input
                         type="text"
-                        value={name}
+                        value={seat.name}
                         onChange={e => updateParticipant(index, e.target.value)}
                         placeholder={`Player ${index + 1}`}
                         className="flex-1 px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-card dark:text-white"

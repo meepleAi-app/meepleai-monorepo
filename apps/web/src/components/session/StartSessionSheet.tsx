@@ -19,6 +19,7 @@ import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { linkedFirst, ownUserId, type SelfPlayer, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 import { ConflictError } from '@/lib/api/core/errors';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
@@ -32,6 +33,18 @@ interface SheetPlayer {
   id: string;
   name: string;
   color: PlayerColor;
+  /** #4770: the creator's seat, linked to their account (see useSelfPlayer). */
+  userId?: string;
+}
+
+/**
+ * The first seat: the creator, linked to their account (#4770, as the /sessions/new wizards do since
+ * #4767), or the neutral «Giocatore 1» while the user is not known. Removing the seat is «Io non gioco».
+ */
+function firstSeat(self: SelfPlayer | null): SheetPlayer {
+  return self
+    ? { id: `p-${Date.now()}`, name: self.displayName, color: 'Red', userId: self.userId }
+    : { id: `p-${Date.now()}`, name: 'Giocatore 1', color: 'Red' };
 }
 
 type SheetStep = 'players' | 'order';
@@ -72,11 +85,10 @@ export function StartSessionSheet({
   gameName,
 }: StartSessionSheetProps) {
   const router = useRouter();
+  const self = useSelfPlayer();
 
   const [step, setStep] = useState<SheetStep>('players');
-  const [players, setPlayers] = useState<SheetPlayer[]>([
-    { id: `p-${Date.now()}`, name: 'Giocatore 1', color: 'Red' },
-  ]);
+  const [players, setPlayers] = useState<SheetPlayer[]>(() => [firstSeat(self)]);
   const [newName, setNewName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +100,19 @@ export function StartSessionSheet({
   // it was made from — the next tap starts that one instead of creating another, but only while
   // the game and the players are still the same.
   const pendingStartRef = useRef<{ sessionId: string; key: string } | null>(null);
+
+  // #4770: the user is often not known on the first render. Seed them once, into the untouched neutral
+  // first seat only: after a name was written, a seat removed or one added, the seats are the user's.
+  const seededSelf = useRef(self !== null);
+  useEffect(() => {
+    if (!self || seededSelf.current) return;
+    seededSelf.current = true;
+    setPlayers(prev =>
+      prev.length === 1 && prev[0].userId === undefined && prev[0].name === 'Giocatore 1'
+        ? [{ ...prev[0], name: self.displayName, userId: self.userId }]
+        : prev
+    );
+  }, [self]);
 
   // Cleanup close-animation timer on unmount
   useEffect(() => {
@@ -102,7 +127,7 @@ export function StartSessionSheet({
     if (closeTimerRef.current !== null) clearTimeout(closeTimerRef.current);
     closeTimerRef.current = setTimeout(() => {
       setStep('players');
-      setPlayers([{ id: `p-${Date.now()}`, name: 'Giocatore 1', color: 'Red' }]);
+      setPlayers([firstSeat(self)]);
       setNewName('');
       setError(null);
       pendingStartRef.current = null;
@@ -168,20 +193,27 @@ export function StartSessionSheet({
           gameId,
         });
 
-        // Add players in turn order; collect the server-assigned IDs
-        const addedPlayerIds: string[] = [];
+        // #4770: the linked creator is added first whatever their seat, because the server makes the
+        // first player the Host; the turn order below keeps the order the list shows.
+        const idBySeat = new Map<string, string>();
         let failCount = 0;
-        for (const player of players) {
+        for (const player of linkedFirst(players)) {
+          const userId = ownUserId(player.userId, self);
           try {
             const playerId = await api.liveSessions.addPlayer(sessionId, {
               displayName: player.name,
               color: player.color,
+              ...(userId ? { userId } : {}),
             });
-            addedPlayerIds.push(playerId);
+            idBySeat.set(player.id, playerId);
           } catch {
             failCount++;
           }
         }
+        const addedPlayerIds = players.flatMap(p => {
+          const playerId = idBySeat.get(p.id);
+          return playerId ? [playerId] : [];
+        });
 
         if (addedPlayerIds.length === 0) {
           setError('Impossibile aggiungere i giocatori. Riprova.');
@@ -225,7 +257,7 @@ export function StartSessionSheet({
       setError(err instanceof Error ? err.message : 'Impossibile avviare la sessione.');
       setIsCreating(false);
     }
-  }, [players, gameId, gameName, router]);
+  }, [players, gameId, gameName, router, self]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
 

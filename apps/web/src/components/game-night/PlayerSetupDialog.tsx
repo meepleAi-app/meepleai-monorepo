@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { Gamepad2, Loader2, Plus, Trash2, Users } from 'lucide-react';
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 
 /**
@@ -30,6 +31,8 @@ const PLAYER_COLORS = [
 export interface PlayerSetup {
   displayName: string;
   color: PlayerColor;
+  /** #4770: the creator's seat, linked to their account (see useSelfPlayer). */
+  userId?: string;
 }
 
 /** Internal representation with a stable id for React keys. */
@@ -60,6 +63,21 @@ export function PlayerSetupDialog({
     { id: crypto.randomUUID(), displayName: '', color: PLAYER_COLORS[0].name },
   ]);
 
+  // #4770: the creator is the first player, linked to their account, as in the /sessions/new wizards
+  // (#4767). Seeded once, into the first seat and only while it is still empty: a name already written
+  // stays. Removing the seat, or emptying its name, is «Io non gioco».
+  const self = useSelfPlayer();
+  const seededSelf = useRef(false);
+  useEffect(() => {
+    if (!self || seededSelf.current) return;
+    seededSelf.current = true;
+    setPlayers(prev =>
+      prev[0]?.displayName === ''
+        ? [{ ...prev[0], displayName: self.displayName, userId: self.userId }, ...prev.slice(1)]
+        : prev
+    );
+  }, [self]);
+
   // Issue 2 fix: guard and color computation inside functional updater
   // so `players` is not a stale closure dependency.
   const addPlayer = useCallback(() => {
@@ -76,8 +94,16 @@ export function PlayerSetupDialog({
     setPlayers(prev => prev.filter(p => p.id !== id));
   }, []);
 
-  const updatePlayer = useCallback((id: string, field: keyof PlayerSetup, value: string) => {
-    setPlayers(prev => prev.map(p => (p.id === id ? { ...p, [field]: value as PlayerColor } : p)));
+  const updatePlayer = useCallback((id: string, field: 'displayName' | 'color', value: string) => {
+    setPlayers(prev =>
+      prev.map(p => {
+        if (p.id !== id) return p;
+        if (field === 'color') return { ...p, color: value as PlayerColor };
+        // Editing the name keeps the link (a nickname is still the same person); emptying it
+        // unlinks the seat: an empty seat is nobody's.
+        return { ...p, displayName: value, userId: value.trim() ? p.userId : undefined };
+      })
+    );
   }, []);
 
   const validPlayers = players.filter(p => p.displayName.trim().length > 0);
@@ -85,8 +111,13 @@ export function PlayerSetupDialog({
 
   // Issue 1 fix: strip internal `id` before passing to consumer
   const handleStart = useCallback(() => {
-    onStart(validPlayers.map(({ displayName, color }) => ({ displayName, color })));
-  }, [onStart, validPlayers]);
+    onStart(
+      validPlayers.map(({ displayName, color, userId }) => {
+        const linked = ownUserId(userId, self);
+        return { displayName, color, ...(linked ? { userId: linked } : {}) };
+      })
+    );
+  }, [onStart, validPlayers, self]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

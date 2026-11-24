@@ -4,6 +4,8 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
+using System.Text.Json;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 
@@ -17,17 +19,20 @@ internal sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuth
     private readonly IOAuthAccountRepository _oauthAccountRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<LinkOAuthAccountCommandHandler> _logger;
+    private readonly IAuditLogger _auditLogger;
 
     public LinkOAuthAccountCommandHandler(
         IUserRepository userRepository,
         IOAuthAccountRepository oauthAccountRepository,
         IUnitOfWork unitOfWork,
-        ILogger<LinkOAuthAccountCommandHandler> logger)
+        ILogger<LinkOAuthAccountCommandHandler> logger,
+        IAuditLogger auditLogger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _oauthAccountRepository = oauthAccountRepository ?? throw new ArgumentNullException(nameof(oauthAccountRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<LinkOAuthAccountResult> Handle(LinkOAuthAccountCommand command, CancellationToken cancellationToken)
@@ -82,6 +87,14 @@ internal sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuth
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully linked {Provider} OAuth account for user {UserId}", command.Provider, command.UserId);
+
+            // #3838
+            await _auditLogger.LogAsync(
+                AuditEventType.OAuthLinked,
+                actorUserId: command.UserId,
+                targetUserId: command.UserId,
+                metadata: JsonSerializer.Serialize(new { provider = command.Provider }),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return new LinkOAuthAccountResult
             {

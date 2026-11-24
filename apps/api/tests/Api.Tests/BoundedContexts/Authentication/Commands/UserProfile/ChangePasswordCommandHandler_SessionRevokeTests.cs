@@ -41,7 +41,8 @@ public sealed class ChangePasswordCommandHandler_SessionRevokeTests
         _handler = new ChangePasswordCommandHandler(
             _userRepo.Object,
             _sessionRepo.Object,
-            _uow.Object);
+            _uow.Object,
+            Mock.Of<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger>());
     }
 
     [Fact]

@@ -3,6 +3,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 
@@ -16,15 +17,18 @@ internal class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FACo
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AdminDisable2FACommandHandler> _logger;
+    private readonly IAuditLogger _auditLogger;
 
     public AdminDisable2FACommandHandler(
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
-        ILogger<AdminDisable2FACommandHandler> logger)
+        ILogger<AdminDisable2FACommandHandler> logger,
+        IAuditLogger auditLogger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<AdminDisable2FAResult> Handle(AdminDisable2FACommand command, CancellationToken cancellationToken)
@@ -92,6 +96,13 @@ internal class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FACo
                 "Admin {AdminUserId} successfully disabled 2FA for user {TargetUserId}",
                 command.AdminUserId,
                 command.TargetUserId);
+
+            // #3838
+            await _auditLogger.LogAsync(
+                AuditEventType.Admin2FADisabled,
+                actorUserId: command.AdminUserId,
+                targetUserId: command.TargetUserId,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return new AdminDisable2FAResult(Success: true);
         }

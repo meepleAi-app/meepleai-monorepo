@@ -2,6 +2,8 @@ using Api.Infrastructure;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
+using System.Text.Json;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
@@ -11,10 +13,12 @@ internal class RevokeAllUserSessionsCommandHandler : ICommandHandler<RevokeAllUs
     private readonly TimeProvider _timeProvider;
     private readonly ISessionCacheService? _sessionCache;
     private readonly ILogger<RevokeAllUserSessionsCommandHandler> _logger;
+    private readonly IAuditLogger _auditLogger;
 
     public RevokeAllUserSessionsCommandHandler(
         MeepleAiDbContext db,
         ILogger<RevokeAllUserSessionsCommandHandler> logger,
+        IAuditLogger auditLogger,
         ISessionCacheService? sessionCache = null,
         TimeProvider? timeProvider = null)
     {
@@ -22,6 +26,7 @@ internal class RevokeAllUserSessionsCommandHandler : ICommandHandler<RevokeAllUs
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _sessionCache = sessionCache;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<int> Handle(RevokeAllUserSessionsCommand request, CancellationToken cancellationToken)
@@ -70,6 +75,15 @@ internal class RevokeAllUserSessionsCommandHandler : ICommandHandler<RevokeAllUs
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Revoked {Count} sessions for user {UserId}", sessions.Count, request.UserId);
+
+        // #3838: an admin forced the user out of every device.
+        await _auditLogger.LogAsync(
+            AuditEventType.BulkSessionRevoke,
+            actorUserId: request.RevokedByUserId,
+            targetUserId: request.UserId,
+            metadata: JsonSerializer.Serialize(new { revokedCount = sessions.Count, byAdmin = true }),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
         return sessions.Count;
     }
 }

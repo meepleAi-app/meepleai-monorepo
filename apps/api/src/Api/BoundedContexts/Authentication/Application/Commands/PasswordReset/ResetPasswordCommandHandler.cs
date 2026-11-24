@@ -1,6 +1,7 @@
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.PasswordReset;
 
@@ -14,13 +15,16 @@ internal sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswor
 {
     private readonly IPasswordResetService _passwordResetService;
     private readonly ILogger<ResetPasswordCommandHandler> _logger;
+    private readonly IAuditLogger _auditLogger;
 
     public ResetPasswordCommandHandler(
         IPasswordResetService passwordResetService,
-        ILogger<ResetPasswordCommandHandler> logger)
+        ILogger<ResetPasswordCommandHandler> logger,
+        IAuditLogger auditLogger)
     {
         _passwordResetService = passwordResetService ?? throw new ArgumentNullException(nameof(passwordResetService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<ResetPasswordResult> Handle(ResetPasswordCommand command, CancellationToken cancellationToken)
@@ -63,6 +67,13 @@ internal sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswor
             }
 
             _logger.LogInformation("Password reset completed successfully for user {UserId}", userId);
+
+            // #3838: the self-service reset (by emailed token): the user drove it.
+            await _auditLogger.LogAsync(
+                AuditEventType.PasswordReset,
+                actorUserId: userId,
+                targetUserId: userId,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return new ResetPasswordResult
             {

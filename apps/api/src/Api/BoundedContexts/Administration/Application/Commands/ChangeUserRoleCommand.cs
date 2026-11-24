@@ -13,11 +13,13 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// <param name="NewRole">The new role to assign.</param>
 /// <param name="Reason">Optional reason for the role change.</param>
 /// <param name="AdminRole">The role of the admin performing this action (from session). Used for privilege level validation.</param>
+/// <param name="AdminId">#3838: the admin who changed the role, for the security audit log (actor of the entry).</param>
 [AuditableAction("UserRoleChange", "User", Level = 1)]
 [RequireTwoFactor(Reason = "Role escalation grants new privileges and must be guarded.")]
 internal record ChangeUserRoleCommand(
     string UserId,
     string NewRole,
     string? Reason = null,
-    string AdminRole = "user"
+    string AdminRole = "user",
+    Guid? AdminId = null
 ) : ICommand<UserDto>;

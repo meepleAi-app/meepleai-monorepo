@@ -33,4 +33,10 @@ internal sealed record HandleOAuthCallbackResult
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
     public string? SessionToken { get; init; }
+
+    /// <summary>
+    /// #3838: true when this callback linked the provider account to a user for the first time (a new user, or an
+    /// existing one matched by email), false for a returning login through an account already linked.
+    /// </summary>
+    public bool OAuthAccountLinked { get; init; }
 }

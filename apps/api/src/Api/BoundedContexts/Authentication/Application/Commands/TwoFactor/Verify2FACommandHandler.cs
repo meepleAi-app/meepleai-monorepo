@@ -3,6 +3,8 @@ using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
+using System.Text.Json;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 
@@ -27,19 +29,22 @@ internal sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<Verify2FACommandHandler> _logger;
+    private readonly IAuditLogger _auditLogger;
 
     public Verify2FACommandHandler(
         ITotpService totpService,
         ITempSessionService tempSessionService,
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
-        ILogger<Verify2FACommandHandler> logger)
+        ILogger<Verify2FACommandHandler> logger,
+        IAuditLogger auditLogger)
     {
         _totpService = totpService ?? throw new ArgumentNullException(nameof(totpService));
         _tempSessionService = tempSessionService ?? throw new ArgumentNullException(nameof(tempSessionService));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<Verify2FAResult> Handle(Verify2FACommand command, CancellationToken cancellationToken)
@@ -112,6 +117,17 @@ internal sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand
                 "2FA verification failed: Invalid code for user {UserId} (invalidated: {Invalidated})",
                 userId, nowInvalidated);
 
+            // #3838: a wrong second factor is a failed login, like a wrong password.
+            await _auditLogger.LogAsync(
+                AuditEventType.LoginFailure,
+                targetUserId: userId,
+                metadata: JsonSerializer.Serialize(new
+                {
+                    reason = "invalid_second_factor",
+                    sessionInvalidated = nowInvalidated,
+                }),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
             return new Verify2FAResult
             {
                 Success = false,
@@ -139,6 +155,14 @@ internal sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand
             await _userRepository.UpdateLockoutStateAsync(user, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
+
+        // #3838: with 2FA on, this is where the login succeeds (LoginCommandHandler logs it only when no
+        // second factor is needed).
+        await _auditLogger.LogAsync(
+            AuditEventType.LoginSuccess,
+            actorUserId: userId,
+            targetUserId: userId,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return new Verify2FAResult
         {

@@ -7,6 +7,8 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
+using System.Text.Json;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
 
@@ -22,13 +24,16 @@ internal class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleComm
 
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditLogger _auditLogger;
 
     public ChangeUserRoleCommandHandler(
         IUserRepository userRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IAuditLogger auditLogger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<UserDto> Handle(ChangeUserRoleCommand command, CancellationToken cancellationToken)
@@ -66,11 +71,20 @@ internal class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleComm
         }
 
         var newRole = Role.Parse(command.NewRole);
+        var oldRole = user.Role.Value;
         user.UpdateRole(newRole);
 
         // Persist updates - required because repository uses AsNoTracking
         await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #3838
+        await _auditLogger.LogAsync(
+            AuditEventType.RoleChanged,
+            actorUserId: command.AdminId,
+            targetUserId: user.Id,
+            metadata: JsonSerializer.Serialize(new { oldRole, newRole = user.Role.Value, reason = command.Reason }),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return new UserDto(
             Id: user.Id.ToString(),

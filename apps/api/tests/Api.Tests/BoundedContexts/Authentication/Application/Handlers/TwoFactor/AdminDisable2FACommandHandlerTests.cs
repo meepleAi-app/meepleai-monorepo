@@ -61,6 +61,7 @@ public class AdminDisable2FACommandHandlerTests
 
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
+    private readonly Mock<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger> _mockAuditLogger = new();
     private readonly AdminDisable2FACommandHandler _handler;
 
     public AdminDisable2FACommandHandlerTests()
@@ -71,7 +72,8 @@ public class AdminDisable2FACommandHandlerTests
         _handler = new AdminDisable2FACommandHandler(
             _mockUserRepository.Object,
             _mockUnitOfWork.Object,
-            NullLogger<AdminDisable2FACommandHandler>.Instance);
+            NullLogger<AdminDisable2FACommandHandler>.Instance,
+            _mockAuditLogger.Object);
     }
 
     /// <summary>
@@ -135,6 +137,17 @@ public class AdminDisable2FACommandHandlerTests
             r => r.UpdateAsync(targetUser, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        // #3838: the override is in the security audit log, with the admin as the actor.
+        _mockAuditLogger.Verify(a => a.LogAsync(
+                Api.BoundedContexts.SecurityAudit.Application.Services.AuditEventType.Admin2FADisabled,
+                adminId,
+                targetId,
+                null,
+                null,
+                null,
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     /// <summary>

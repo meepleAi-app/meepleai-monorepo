@@ -56,6 +56,25 @@ public static class AuditEventType
     /// </summary>
     public const string PasswordReset = "auth.password.reset";
 
+    /// <summary>
+    /// #3838: the user ended a session explicitly. <c>user_sessions.revoked_at</c> alone does not tell an
+    /// explicit logout from an expiry or a revocation. ActorUserId = TargetUserId = the user.
+    /// </summary>
+    public const string Logout = "auth.logout";
+
+    // ── Two-factor authentication (self-service) ───────────────────────
+
+    /// <summary>
+    /// #3838: the user turned 2FA on for their own account. ActorUserId = TargetUserId = the user.
+    /// </summary>
+    public const string TwoFactorEnabled = "auth.2fa.enabled";
+
+    /// <summary>
+    /// #3838: the user turned 2FA off for their own account (password and a code verified).
+    /// An admin override is <see cref="Admin2FADisabled"/>. ActorUserId = TargetUserId = the user.
+    /// </summary>
+    public const string TwoFactorDisabled = "auth.2fa.disabled";
+
     // ── Authentication (OAuth) ──────────────────────────────────────────
 
     /// <summary>

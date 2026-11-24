@@ -22,6 +22,7 @@ public class ChangeUserRoleCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger> _auditLoggerMock = new();
     private readonly ChangeUserRoleCommandHandler _handler;
 
     public ChangeUserRoleCommandHandlerTests()
@@ -30,7 +31,55 @@ public class ChangeUserRoleCommandHandlerTests
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _handler = new ChangeUserRoleCommandHandler(
             _userRepositoryMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            _auditLoggerMock.Object);
+    }
+
+    // #3838: a role change is a security event: who changed it, for whom, from what to what.
+    [Fact]
+    public async Task Handle_RoleChanged_WritesTheSecurityAuditEntry_WithTheAdminAsActor()
+    {
+        var userId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var user = new UserBuilder().WithId(userId).WithEmail("user@example.com").Build();
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        await _handler.Handle(
+            new ChangeUserRoleCommand(
+                UserId: userId.ToString(),
+                NewRole: Role.Editor.Value,
+                Reason: "moderatore",
+                AdminRole: Role.SuperAdmin.Value,
+                AdminId: adminId),
+            TestContext.Current.CancellationToken);
+
+        _auditLoggerMock.Verify(a => a.LogAsync(
+                Api.BoundedContexts.SecurityAudit.Application.Services.AuditEventType.RoleChanged,
+                adminId,
+                userId,
+                null,
+                null,
+                It.Is<string?>(m => m != null
+                    && m.Contains("\"oldRole\":\"user\"", StringComparison.Ordinal)
+                    && m.Contains("\"newRole\":\"editor\"", StringComparison.Ordinal)
+                    && m.Contains("\"reason\":\"moderatore\"", StringComparison.Ordinal)),
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_RoleChangeRefused_WritesNoSecurityAuditEntry()
+    {
+        var userId = Guid.NewGuid();
+        var act = () => _handler.Handle(
+            new ChangeUserRoleCommand(userId.ToString(), Role.Admin.Value, AdminRole: Role.Admin.Value),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<Exception>();
+        _auditLoggerMock.VerifyNoOtherCalls();
     }
     [Fact]
     public async Task Handle_PromoteUserToAdmin_UpdatesRoleAndReturnsDto()

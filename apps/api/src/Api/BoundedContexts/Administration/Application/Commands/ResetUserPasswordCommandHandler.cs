@@ -7,6 +7,8 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
+using System.Text.Json;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
 
@@ -15,15 +17,18 @@ internal class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswo
     private readonly IUserRepository _userRepository;
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditLogger _auditLogger;
 
     public ResetUserPasswordCommandHandler(
         IUserRepository userRepository,
         ISessionRepository sessionRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IAuditLogger auditLogger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task Handle(ResetUserPasswordCommand command, CancellationToken cancellationToken)
@@ -64,5 +69,13 @@ internal class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswo
         // to write, and the reset answered 200 while the old password kept working.
         await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #3838: an admin set a new password for the user.
+        await _auditLogger.LogAsync(
+            AuditEventType.PasswordReset,
+            actorUserId: command.AdminId,
+            targetUserId: user.Id,
+            metadata: JsonSerializer.Serialize(new { byAdmin = true }),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

@@ -624,9 +624,10 @@ public class FeatureFlagServiceTests
     }
 
     /// <summary>
-    /// #3873 DoD 5 — superadmin as the subject. The guard at FeatureFlagService.cs:145 is
+    /// #3873 DoD 5 — superadmin as the subject. The guard in FeatureFlagService was
     /// <c>Role.IsAdmin()</c>, an exact string match on "admin", so superadmin — which outranks
-    /// admin everywhere else per <c>Role.HasPermission</c> — is currently denied the bypass.
+    /// admin everywhere else per <c>Role.HasPermission</c> — was denied the bypass. It is now
+    /// <c>HasPermission(Role.Admin)</c>.
     /// </summary>
     [Fact]
     public async Task CanAccessFeatureAsync_SuperAdminBypassesTierRestrictions_ReturnsTrue()
@@ -671,7 +672,7 @@ public class FeatureFlagServiceTests
     }
 
     /// <summary>
-    /// Anti-widening net: widening <c>IsAdmin()</c> to cover superadmin must not turn the bypass
+    /// Anti-widening net: widening the guard to cover superadmin must not turn the bypass
     /// into a general privilege. Only <c>HasPermission(Role.Admin)</c> = {admin, superadmin} may pass.
     /// </summary>
     [Theory]

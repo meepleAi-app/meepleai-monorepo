@@ -193,7 +193,7 @@ internal static class PdfProcessingEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session!.RequireRole(UserRole.Admin).IsAuthorized;
 
         var command = new RetryPdfProcessingCommand(
             PdfId: pdfId,
@@ -250,7 +250,7 @@ internal static class PdfProcessingEndpoints
         var userId = session!.Principal!.Subject.Id;
 
         if (pdf.UploadedByUserId != userId &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !session!.RequireRole(UserRole.Admin).IsAuthorized)
         {
             return Results.Forbid();
         }
@@ -265,7 +265,7 @@ internal static class PdfProcessingEndpoints
         // Issue #4218: Real-time PDF status updates via Server-Sent Events
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
         var userId = session.Principal!.Subject.Id;
-        bool isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session.RequireRole(UserRole.Admin).IsAuthorized;
 
         // Set SSE headers
         httpContext.Response.ContentType = "text/event-stream";
@@ -297,7 +297,7 @@ internal static class PdfProcessingEndpoints
         // Get authenticated user
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
         var userId = session.Principal!.Subject.Id;
-        bool isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session.RequireRole(UserRole.Admin).IsAuthorized;
 
         // Set SSE headers
         httpContext.Response.ContentType = "text/event-stream";
@@ -343,7 +343,7 @@ internal static class PdfProcessingEndpoints
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session!.Principal!.Subject.Id;
-        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool isAdmin = session!.RequireRole(UserRole.Admin).IsAuthorized;
 
         // DDD Migration Phase 4: Use CancelPdfProcessingCommand via IMediator
         var command = new CancelPdfProcessingCommand(

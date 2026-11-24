@@ -49,6 +49,7 @@ public sealed class PdfAuthorizationIntegrationTests : IClassFixture<PdfAuthoriz
     private string _ownerToken = null!;
     private string _otherToken = null!;
     private string _adminToken = null!;
+    private string _superAdminToken = null!;
     private Guid _privatePdfId;
     private Guid _sharedPdfId;
 
@@ -66,6 +67,7 @@ public sealed class PdfAuthorizationIntegrationTests : IClassFixture<PdfAuthoriz
         (ownerId, _ownerToken) = await TestSessionHelper.CreateUserSessionAsync(db);
         (_, _otherToken) = await TestSessionHelper.CreateUserSessionAsync(db);
         (_, _adminToken) = await TestSessionHelper.CreateAdminSessionAsync(db);
+        (_, _superAdminToken) = await TestSessionHelper.CreateSuperAdminSessionAsync(db);
 
         var sharedGameId = await TestSessionHelper.SeedSharedGameAsync(db, "Catan");
 
@@ -153,6 +155,16 @@ public sealed class PdfAuthorizationIntegrationTests : IClassFixture<PdfAuthoriz
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Fact(Timeout = 90_000)]
+    [Trait("Issue", "3994")]
+    public async Task GetPdfText_SuperAdmin_PrivatePdf_Returns200()
+    {
+        // #3994: a superadmin counts as an admin everywhere. The exact comparison with UserRole.Admin gave it a 404.
+        var resp = await _adminClient.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, TextUrl(_privatePdfId), _superAdminToken));
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     // ---- #5 missing authz on PATCH /documents/{id}/active ----
 
     [Fact(Timeout = 90_000)]
@@ -176,6 +188,16 @@ public sealed class PdfAuthorizationIntegrationTests : IClassFixture<PdfAuthoriz
     {
         var resp = await _adminClient.SendAsync(
             TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Patch, ActiveUrl(_privatePdfId), _adminToken, new { isActive = true }));
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact(Timeout = 90_000)]
+    [Trait("Issue", "3994")]
+    public async Task SetActiveForRag_SuperAdmin_Returns200()
+    {
+        // #3994: the owner-or-admin gate (CheckPdfAuthorization) compared the role with UserRole.Admin exactly.
+        var resp = await _adminClient.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Patch, ActiveUrl(_privatePdfId), _superAdminToken, new { isActive = true }));
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 

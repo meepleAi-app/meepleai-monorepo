@@ -114,6 +114,31 @@ public sealed class PdfProgressEndpointTests : IClassFixture<PdfProgressHostFixt
         progress.GetProperty("pagesProcessed").GetInt32().Should().Be(7);
     }
 
+    /// <summary>
+    /// #3994: the progress of a PDF is for its uploader and for an admin, and a superadmin counts as an admin
+    /// everywhere. The exact comparison with UserRole.Admin gave the superadmin the 403 of a plain user. The PDF is
+    /// uploaded by the admin of this class, so neither caller below owns it.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "3994")]
+    [InlineData(true, HttpStatusCode.OK)]
+    [InlineData(false, HttpStatusCode.Forbidden)]
+    public async Task Progress_OfAnotherUsersPdf_IsForAnAdmin_AndASuperAdminIsOne(bool superAdmin, HttpStatusCode expected)
+    {
+        var pdfId = await SeedPdfAsync("Ready", progressJson: null, processedAt: DateTime.UtcNow);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, token) = superAdmin
+            ? await TestSessionHelper.CreateSuperAdminSessionAsync(db)
+            : await TestSessionHelper.CreateUserSessionAsync(db);
+
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/progress", token), Ct);
+
+        response.StatusCode.Should().Be(expected);
+    }
+
     private async Task<JsonElement> GetProgressAsync(Guid pdfId)
     {
         var response = await _client.SendAsync(

@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Role = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
@@ -29,7 +30,9 @@ internal class GetPdfAnalyticsQueryHandler : IRequestHandler<GetPdfAnalyticsQuer
 
         // Base query with optional user filtering
         var docsQuery = _dbContext.PdfDocuments.AsNoTracking().AsQueryable();
-        if (!string.Equals(request.UserRole, "Admin", StringComparison.OrdinalIgnoreCase) && request.UserId.HasValue)
+        // #3994: a superadmin counts as an admin and sees every upload too. An absent or unknown role is not an admin.
+        var callerIsAdmin = Role.TryParse(request.UserRole, out var callerRole) && callerRole.HasPermission(Role.Admin);
+        if (!callerIsAdmin && request.UserId.HasValue)
         {
             docsQuery = docsQuery.Where(p => p.UploadedByUserId == request.UserId.Value);
         }

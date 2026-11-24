@@ -13,10 +13,11 @@ using UserTier = Api.SharedKernel.Domain.ValueObjects.UserTier;
 namespace Api.Tests.BoundedContexts.SessionTracking.Infrastructure.Services;
 
 /// <summary>
-/// Issue #3873 — le due guardie di <see cref="SessionQuotaService"/> (righe 51 e 92) esentano dalla
-/// quota con <c>userRole.IsAdmin() || userRole.IsEditor()</c>, e quei due predicati sono confronti
-/// ESATTI. Il quinto ruolo, <c>superadmin</c>, non corrisponde a nessuno dei due: chi sta sopra
-/// l'admin finisce soggetto alla quota del suo tier, cioe' con MENO privilegi dell'admin.
+/// Issue #3873 — le due guardie di <see cref="SessionQuotaService"/> esentavano dalla quota con
+/// <c>userRole.IsAdmin() || userRole.IsEditor()</c>, e quei due predicati erano confronti ESATTI.
+/// Il quinto ruolo, <c>superadmin</c>, non corrispondeva a nessuno dei due: chi sta sopra l'admin
+/// finiva soggetto alla quota del suo tier, cioe' con MENO privilegi dell'admin. Ora le guardie
+/// sono <c>HasPermission(Role.Editor)</c>.
 ///
 /// I due <c>[Theory]</c> qui sotto fissano la tabella completa dei cinque ruoli:
 /// esenti = {superadmin, admin, editor} · soggetti a quota = {creator, user}.

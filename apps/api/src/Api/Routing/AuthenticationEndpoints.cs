@@ -27,6 +27,7 @@ using ActivateInvitedAccountCommand = Api.BoundedContexts.Authentication.Applica
 using ValidateInvitationTokenQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.ValidateInvitationTokenQuery;
 using GetPendingInvitationsQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.GetPendingInvitationsQuery;
 using GetInvitationByIdQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.GetInvitationByIdQuery;
+using Role = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.Routing;
 
@@ -409,7 +410,8 @@ internal static class AuthenticationEndpoints
             }
 
             var role = context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user";
-            var isAdmin = role.Equals("admin", StringComparison.OrdinalIgnoreCase);
+            // #3994: a superadmin counts as an admin. An unknown role claim is not an admin.
+            var isAdmin = Role.TryParse(role, out var parsedRole) && parsedRole.HasPermission(Role.Admin);
 
             // Execute query via CQRS
             var query = new GetSessionStatusQuery(sessionId, userId, isAdmin);
@@ -518,7 +520,8 @@ internal static class AuthenticationEndpoints
             }
 
             var role = context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user";
-            var isAdmin = role.Equals("admin", StringComparison.OrdinalIgnoreCase);
+            // #3994: a superadmin counts as an admin. An unknown role claim is not an admin.
+            var isAdmin = Role.TryParse(role, out var parsedRole) && parsedRole.HasPermission(Role.Admin);
 
             // Execute command via CQRS
             var command = new RevokeSessionCommand(sessionId, userId, isAdmin);

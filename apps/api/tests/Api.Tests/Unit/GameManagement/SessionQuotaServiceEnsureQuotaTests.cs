@@ -258,10 +258,10 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
     }
 
     /// <summary>
-    /// Issue #3873: the quota bypass in <see cref="SessionQuotaService.CheckQuotaAsync"/> is
-    /// <c>userRole.IsAdmin() || userRole.IsEditor()</c>, and <c>IsAdmin()</c> is an exact
-    /// comparison against "admin" — so superadmin, the one role that outranks admin, is the
-    /// only role this guard does not recognise.
+    /// Issue #3873: the quota bypass in <see cref="SessionQuotaService.CheckQuotaAsync"/> was
+    /// <c>userRole.IsAdmin() || userRole.IsEditor()</c>, and <c>IsAdmin()</c> was an exact
+    /// comparison against "admin" — so superadmin, the one role that outranks admin, was the
+    /// only role this guard did not recognise. It is now <c>HasPermission(Role.Editor)</c>.
     ///
     /// <para>The exemption must follow <c>HasPermission(Role.Editor)</c> = {editor, admin,
     /// superadmin}; creator and user stay subject to the tier quota.</para>

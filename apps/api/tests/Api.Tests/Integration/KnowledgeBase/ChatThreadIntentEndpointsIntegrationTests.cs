@@ -86,6 +86,35 @@ public sealed class ChatThreadIntentEndpointsIntegrationTests
         return json.RootElement.GetProperty("id").GetGuid();
     }
 
+    /// <summary>
+    /// #3994: a thread is read by its owner and by an admin, and a superadmin counts as an admin everywhere. The exact
+    /// comparison with UserRole.Admin gave the superadmin the 403 of a plain user. It lives here because this class
+    /// already creates threads through the endpoint.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "3994")]
+    [InlineData("superadmin", HttpStatusCode.OK)]
+    [InlineData("admin", HttpStatusCode.OK)]
+    [InlineData("user", HttpStatusCode.Forbidden)]
+    public async Task GetThread_OfAnotherUser_IsForAnAdmin_AndASuperAdminIsOne(string callerRole, HttpStatusCode expected)
+    {
+        var threadId = await CreateThreadAsync(agentType: null);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, token) = callerRole switch
+        {
+            "superadmin" => await TestSessionHelper.CreateSuperAdminSessionAsync(db),
+            "admin" => await TestSessionHelper.CreateAdminSessionAsync(db),
+            _ => await TestSessionHelper.CreateUserSessionAsync(db),
+        };
+
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, $"/api/v1/chat-threads/{threadId}", token));
+
+        response.StatusCode.Should().Be(expected);
+    }
+
     private async Task<int> ThreadCountAsync()
     {
         using var scope = _factory.Services.CreateScope();

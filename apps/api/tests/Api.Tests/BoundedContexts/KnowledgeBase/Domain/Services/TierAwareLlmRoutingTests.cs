@@ -164,6 +164,17 @@ public sealed class TierAwareLlmRoutingTests
     }
 
     [Fact]
+    [Trait("Issue", "3994")]
+    public void FromUser_SuperAdminRole_AlwaysReturnsAdminTier()
+    {
+        // #3994: a superadmin counts as an admin everywhere. The exact comparison with "admin" gave it the
+        // premium or user tier instead.
+        var user = CreateUser(Role.SuperAdmin, UserTier.Free);
+
+        LlmUserContextMapper.FromUser(user).Tier.Should().Be(LlmUserTier.Admin);
+    }
+
+    [Fact]
     public void FromUser_EditorRole_ReturnsEditorTier()
     {
         // Arrange

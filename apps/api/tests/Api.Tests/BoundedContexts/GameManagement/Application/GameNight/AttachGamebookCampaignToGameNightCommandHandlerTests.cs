@@ -242,6 +242,33 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_NightWithAPendingDraft_StartsTheNewSitting_AndLeavesTheDraftPending()
+    {
+        // #4780: the handler added the sitting and then called StartCurrentSession, which promotes the FIRST
+        // pending link by play order — on a night with a planned draft, the draft, not the sitting just added.
+        var organizer = Guid.NewGuid();
+        var gameNight = CreatePublishedEvent(organizer);
+        var draftSessionId = Guid.NewGuid();
+        gameNight.AddSession(draftSessionId, gameNight.GameIds[0], "Bozza pianificata");
+
+        var campaignId = Guid.NewGuid();
+        var sittingSessionId = Guid.NewGuid();
+        SetupCampaign(campaignId, CampaignDto(campaignId, Guid.NewGuid(), organizer, GameRefKind.Shared));
+        SetupCreateSession(sittingSessionId, "SIT333");
+        SetupUser(organizer, "Marco Rossi");
+        _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+
+        await _handler.Handle(
+            new AttachGamebookCampaignToGameNightCommand(gameNight.Id, campaignId, organizer),
+            TestContext.Current.CancellationToken);
+
+        gameNight.Sessions.Single(s => s.SessionId == sittingSessionId).Status
+            .Should().Be(GameNightSessionStatus.InProgress, "the sitting just attached is the one being played");
+        gameNight.Sessions.Single(s => s.SessionId == draftSessionId).Status
+            .Should().Be(GameNightSessionStatus.Pending, "the planned draft was not started");
+    }
+
+    [Fact]
     public async Task Handle_SecondSittingWhileFirstStillLive_Throws409MaxLive_NoSessionCreated()
     {
         // AC5: max-1-live holds on the gamebook resume path (the one the play-page CTA drives).

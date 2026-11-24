@@ -627,6 +627,30 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         seated.Concat(tracked).Should().OnlyContain(name => !name.Contains('@') && !name.Contains("bridge-"));
     }
 
+    // ── Which link a start promotes (#4780) ──────────────────────────────────
+
+    // «Avvia» adds a link and then promoted it with StartCurrentSession, which takes the FIRST pending link
+    // by play order: on a night with a planned draft, the draft. The live game was created for the new tracking
+    // Session, so its link stayed Pending while the draft's link went InProgress with no live game behind it.
+    [Fact(DisplayName = "Starting a game on a night with a pending draft promotes the new game, not the draft")]
+    public async Task Start_OnANightWithAPendingDraft_PromotesTheNewLink_AndLeavesTheDraftPending()
+    {
+        var (organizer, friend, gameId) = await SeedUsersAndGameAsync();
+        var draftTrackingId = await CreateDraftTrackingSessionAsync(organizer, friend, gameId);
+        var nightId = await SeedNightWithPendingDraftAsync(organizer, gameId, draftTrackingId);
+
+        var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+
+        (await LinkStatusAsync(started.SessionId)).Should().Be(
+            nameof(GameNightSessionStatus.InProgress), "the game just started is the one being played");
+        (await LinkStatusAsync(draftTrackingId)).Should().Be(
+            nameof(GameNightSessionStatus.Pending), "the planned draft was not started");
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        (await db.LiveGameSessions.AsNoTracking().SingleAsync(l => l.Id == started.LiveSessionId))
+            .TrackingSessionId.Should().Be(started.SessionId, "the live game belongs to the link that went InProgress");
+    }
+
     // ── Concurrency ──────────────────────────────────────────────────────────
 
     [Fact(DisplayName = "Two starts of the same night at once: exactly one tracking Session, link and live game")]
@@ -888,7 +912,7 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
 
     private Guid _secondFriend;
 
-    private async Task SeedNightWithPendingDraftAsync(Guid organizer, Guid gameId, Guid trackingSessionId)
+    private async Task<Guid> SeedNightWithPendingDraftAsync(Guid organizer, Guid gameId, Guid trackingSessionId)
     {
         var nightId = Guid.NewGuid();
         await using var scope = _factory.Services.CreateAsyncScope();
@@ -905,6 +929,7 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
             Status = nameof(GameNightSessionStatus.Pending),
         });
         await db.SaveChangesAsync();
+        return nightId;
     }
 
     private static GameNightEventEntity NightEntity(Guid nightId, Guid organizer, Guid gameId, DateTimeOffset now) => new()

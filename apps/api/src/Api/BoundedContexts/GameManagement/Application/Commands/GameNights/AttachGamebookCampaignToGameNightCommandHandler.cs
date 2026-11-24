@@ -112,10 +112,12 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
                     GamebookCampaignId: command.CampaignId,
                     SkipGameNightEnvelope: true), ct).ConfigureAwait(false);
 
-                // Both calls are required: AddSession registers the sitting; StartCurrentSession is
-                // where the #10 max-1-live guard lives (throws MaxLiveSessionsExceededException).
+                // Both calls are required: AddSession registers the sitting; StartSession is where the
+                // #10 max-1-live guard runs (throws MaxLiveSessionsExceededException). #4780: StartSession
+                // promotes THIS sitting — StartCurrentSession took the first pending link by play order,
+                // which on a night with a planned draft is the draft.
                 var gns = gameNight.AddSession(createResult.SessionId, campaign.GameRefId, campaign.Title);
-                gameNight.StartCurrentSession();
+                gameNight.StartSession(createResult.SessionId);
 
                 await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
 

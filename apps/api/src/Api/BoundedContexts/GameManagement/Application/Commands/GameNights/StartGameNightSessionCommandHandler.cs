@@ -106,7 +106,10 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
                 try
                 {
                     gns = gameNight.AddSession(createResult.SessionId, command.GameId, command.GameTitle);
-                    gameNight.StartCurrentSession();
+                    // #4780: promote THIS link. StartCurrentSession takes the first pending link by play
+                    // order, which on a night with a planned draft is the draft: the live game below would
+                    // belong to a link left Pending, and the draft's link would go live with no game.
+                    gameNight.StartSession(createResult.SessionId);
                 }
                 catch (InvalidOperationException ex)
                 {

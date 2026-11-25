@@ -32,6 +32,7 @@ import type {
   PlayerColor,
   CreateLiveSessionRequest,
 } from '@/lib/api/schemas/live-sessions.schemas';
+import { PLAYER_NAME_MAX_LENGTH } from '@/lib/session-live/player-name';
 import { playerColorsFullMessage } from '@/lib/sessions/player-colors';
 import { duplicatePlayerNameMessage, findDuplicatePlayerName } from '@/lib/sessions/player-names';
 
@@ -345,6 +346,7 @@ function AddPlayersStep({
           placeholder="Nome giocatore"
           value={newName}
           onChange={e => setNewName(e.target.value)}
+          maxLength={PLAYER_NAME_MAX_LENGTH}
           className="flex-1"
           onKeyDown={e => e.key === 'Enter' && addPlayer()}
         />

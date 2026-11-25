@@ -207,6 +207,31 @@ public class StartGameNightSessionCommandHandlerTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// #5150 review — a profile name reaches 128 characters and the tracking session takes 50
+    /// (<c>CreateSessionCommandValidator</c>): seeded whole, it made the start of the whole night answer 422.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5150")]
+    public async Task Handle_AnOrganizerWithAProfileNameOverTheLimit_IsSeatedWithTheNameCut()
+    {
+        var gameNight = CreatePublishedEvent();
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId, displayName: new string('a', 49) + " " + new string('b', 78)));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(Guid.NewGuid(), "XYZ789", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        await _handler.Handle(
+            new StartGameNightSessionCommand(gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId),
+            CancellationToken.None);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateSessionCommand>(c => c.Participants.Single().DisplayName == new string('a', 49)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task Handle_NoParticipants_SeedsOrganizerOwnerPlusAcceptedRsvpPlayers()
     {

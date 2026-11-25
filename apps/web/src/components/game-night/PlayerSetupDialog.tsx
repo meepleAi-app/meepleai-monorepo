@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
+import { PLAYER_NAME_MAX_LENGTH } from '@/lib/session-live/player-name';
 
 /**
  * Color palette for player tokens.
@@ -145,6 +146,7 @@ export function PlayerSetupDialog({
               <Input
                 value={player.displayName}
                 onChange={e => updatePlayer(player.id, 'displayName', e.target.value)}
+                maxLength={PLAYER_NAME_MAX_LENGTH}
                 placeholder="Nome giocatore"
                 className="flex-1"
               />

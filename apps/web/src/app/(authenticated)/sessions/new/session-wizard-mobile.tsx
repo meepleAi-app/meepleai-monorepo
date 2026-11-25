@@ -47,6 +47,7 @@ import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import { ConflictError } from '@/lib/api/core/errors';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
+import { PLAYER_NAME_MAX_LENGTH } from '@/lib/session-live/player-name';
 import { playerColorsFullMessage } from '@/lib/sessions/player-colors';
 import {
   duplicatePlayerNameMessage,
@@ -575,6 +576,7 @@ export function SessionWizardMobile({
                 placeholder="Nome giocatore"
                 value={newPlayerName}
                 onChange={e => setNewPlayerName(e.target.value)}
+                maxLength={PLAYER_NAME_MAX_LENGTH}
                 className="flex-1"
                 onKeyDown={e => e.key === 'Enter' && addPlayer()}
                 aria-label="Nome nuovo giocatore"

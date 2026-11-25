@@ -50,4 +50,24 @@ public sealed class RosterDisplayNamesTests
     {
         RosterDisplayNames.LooksLikeAnEmailAddress(value).Should().Be(expected);
     }
+
+    /// <summary>
+    /// #5150 — every name the server seats on its own passes through here, and a profile name reaches 128
+    /// characters: it leaves cut to the limit of a player.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5150")]
+    public void Resolve_AProfileNameOverTheLimit_IsCutToTheLimitOfAPlayer()
+    {
+        RosterDisplayNames.Resolve(new string('m', 128), RosterDisplayNames.Player).Should().HaveLength(50);
+    }
+
+    [Fact]
+    [Trait("Issue", "5150")]
+    public void Clamp_DoesNotLeaveHalfOfAnEmoji()
+    {
+        // 49 letters, then an emoji whose second half would fall over the limit.
+        Api.SharedKernel.Domain.Validation.PlayerNameLimit.Clamp(new string('a', 49) + "🎲" + "tail")
+            .Should().Be(new string('a', 49));
+    }
 }

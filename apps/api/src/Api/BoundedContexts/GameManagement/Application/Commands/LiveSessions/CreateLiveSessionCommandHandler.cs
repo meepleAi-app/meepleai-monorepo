@@ -23,7 +23,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessionCommand, Guid>
 {
     // The server compares display names after Trim().ToLowerInvariant() (LiveGameSession.AddPlayer)
-    // and the entity caps a name at 100 characters; the roster seeding must agree with both.
+    // and caps a name at PlayerNameLimit (#5150); the roster seeding must agree with both.
     private const int MaxDisplayNameLength = PlayerNameLimit.MaxLength;
 
     private readonly ILiveSessionRepository _sessionRepository;
@@ -228,6 +228,5 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
         return candidate;
     }
 
-    private static string Truncate(string value, int maxLength) =>
-        value.Length <= maxLength ? value : value[..maxLength].TrimEnd();
+    private static string Truncate(string value, int maxLength) => PlayerNameLimit.Clamp(value, maxLength);
 }

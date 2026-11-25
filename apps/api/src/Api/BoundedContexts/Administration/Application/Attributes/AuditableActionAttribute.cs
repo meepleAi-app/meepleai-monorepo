@@ -35,6 +35,15 @@ internal sealed class AuditableActionAttribute : Attribute
     /// </summary>
     public AuditUserIdSource UserIdSource { get; set; } = AuditUserIdSource.Caller;
 
+    /// <summary>
+    /// The command property that identifies the resource, for <c>audit_logs.resource_id</c>. Write it
+    /// with <c>nameof</c>. When it is not set, the behaviour takes the first of <c>Id</c>,
+    /// <c>UserId</c> and <c>TargetUserId</c> that the command has, which is right for a command
+    /// centred on a user and wrong for one that names its resource otherwise: #5154, where
+    /// <c>DeleteRuleCommentCommand</c> has no <c>Id</c> and the deleter became the resource.
+    /// </summary>
+    public string? ResourceIdProperty { get; set; }
+
     public AuditableActionAttribute(string action, string resource)
     {
         Action = action;

@@ -89,7 +89,7 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         }
 
         var (adminUserId, adminEmail, ipAddress, userAgent) = ExtractRequestContext();
-        var resourceId = ExtractResourceId(request);
+        var resourceId = ExtractResourceId(request, auditAttribute);
 
         var isAtomic = typeof(TRequest).GetCustomAttribute<AtomicAuditAttribute>() is not null;
 
@@ -143,7 +143,7 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
             var result = await next().ConfigureAwait(false);
             var payload = BuildOutboxPayload(
                 auditAttribute, adminUserId, resourceId, ipAddress, userAgent,
-                "Success", BuildMetadata(auditAttribute, adminEmail, request));
+                "Success", BuildMetadata(auditAttribute, adminEmail, request, result));
             await _auditService.EnqueueAuditAtomicAsync(payload, cancellationToken).ConfigureAwait(false);
             _sink.Clear();
             return result;
@@ -182,7 +182,7 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
                 // next() returned successfully; sink now contains the mutation snapshots.
                 var txPayload = BuildOutboxPayload(
                     auditAttribute, adminUserId, resourceId, ipAddress, userAgent,
-                    "Success", BuildMetadata(auditAttribute, adminEmail, request));
+                    "Success", BuildMetadata(auditAttribute, adminEmail, request, txResult));
 
                 // EnqueueAuditAtomicAsync flushes the outbox row into the open tx — does NOT swallow.
                 // If it throws, the catch block below rolls back.
@@ -259,7 +259,7 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
                 adminUserId,
                 resourceId,
                 "Success",
-                BuildMetadata(auditAttribute, adminEmail, request),
+                BuildMetadata(auditAttribute, adminEmail, request, response),
                 ipAddress,
                 userAgent,
                 cancellationToken).ConfigureAwait(false);
@@ -327,16 +327,20 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         return null;
     }
 
-    private static string? ExtractResourceId(TRequest request)
+    private static string? ExtractResourceId(TRequest request, AuditableActionAttribute attr)
     {
-        // Try common property names for resource identification
         var type = typeof(TRequest);
-        var idProp = type.GetProperty("Id") ?? type.GetProperty("UserId") ?? type.GetProperty("TargetUserId");
+
+        // #5154: a command that names its resource says which property it is. Without that, the
+        // common names are tried in order — and a command with a UserId but no Id records the user.
+        var idProp = attr.ResourceIdProperty is { } named
+            ? type.GetProperty(named)
+            : type.GetProperty("Id") ?? type.GetProperty("UserId") ?? type.GetProperty("TargetUserId");
 
         return idProp?.GetValue(request)?.ToString();
     }
 
-    private static string BuildMetadata(AuditableActionAttribute attr, string? adminEmail, TRequest request)
+    private static string BuildMetadata(AuditableActionAttribute attr, string? adminEmail, TRequest request, TResponse response)
     {
         var metadata = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -355,6 +359,15 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
             if (val is not null)
             {
                 metadata[prop.Name] = val.ToString();
+            }
+        }
+
+        // #5154: what the handler learned, e.g. whose rows a deletion removed.
+        if (response is IAuditDetails audited)
+        {
+            foreach (var (key, value) in audited.AuditDetails)
+            {
+                metadata[key] = value;
             }
         }
 

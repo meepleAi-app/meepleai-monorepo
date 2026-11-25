@@ -446,6 +446,79 @@ public sealed class AuditLoggingBehaviorTests
             "atomic path must NOT fall back to best-effort audit on failure");
     }
 
+    [Fact]
+    [Trait("Issue", "5154")]
+    public async Task Should_Record_The_Declared_ResourceIdProperty_And_Not_The_UserId()
+    {
+        SetupHttpContext();
+        var command = new TestNamedResourceCommand(ItemId: Guid.NewGuid(), UserId: Guid.NewGuid());
+        var payload = await CaptureBestEffortPayloadAsync<TestNamedResourceCommand, string>(command, "ok");
+
+        payload.ResourceId.Should().Be(command.ItemId.ToString());
+    }
+
+    [Fact]
+    [Trait("Issue", "5154")]
+    public async Task Should_Fall_Back_To_The_UserId_When_No_Property_Is_Declared()
+    {
+        SetupHttpContext();
+        var command = new TestUserCentredCommand(UserId: Guid.NewGuid());
+        var payload = await CaptureBestEffortPayloadAsync<TestUserCentredCommand, string>(command, "ok");
+
+        payload.ResourceId.Should().Be(command.UserId.ToString(), "a command centred on a user keeps the user as its resource");
+    }
+
+    [Fact]
+    [Trait("Issue", "5154")]
+    public async Task Should_Add_What_The_Handler_Learned_To_The_Details_Of_A_Success()
+    {
+        SetupHttpContext();
+        var author = Guid.NewGuid();
+        var payload = await CaptureBestEffortPayloadAsync<TestAuditedCommand, TestAuditedResponse>(
+            new TestAuditedCommand(Guid.NewGuid()), new TestAuditedResponse(author, 3));
+
+        using var details = System.Text.Json.JsonDocument.Parse(payload.Details);
+        details.RootElement.GetProperty("authorId").GetString().Should().Be(author.ToString());
+        details.RootElement.GetProperty("removed").GetInt32().Should().Be(3);
+        details.RootElement.GetProperty("commandType").GetString().Should().Be(nameof(TestAuditedCommand),
+            "the details of the command stay; the handler's are added to them");
+    }
+
+    /// <summary>
+    /// #5154 — <c>ResourceIdProperty</c> is a string: written without <c>nameof</c>, a typo would record
+    /// no resource at all, silently. Every declared name must be a property of its command.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5154")]
+    public void Every_Declared_ResourceIdProperty_Is_A_Property_Of_Its_Command()
+    {
+        var undeclared = typeof(AuditLoggingBehavior<,>).Assembly.GetTypes()
+            .Select(t => (Type: t, Attr: t.GetCustomAttributes(typeof(AuditableActionAttribute), false)
+                .Cast<AuditableActionAttribute>().SingleOrDefault()))
+            .Where(x => x.Attr?.ResourceIdProperty is not null)
+            .Where(x => x.Type.GetProperty(x.Attr!.ResourceIdProperty!) is null)
+            .Select(x => $"{x.Type.Name}.{x.Attr!.ResourceIdProperty}");
+
+        undeclared.Should().BeEmpty();
+        typeof(Api.BoundedContexts.GameManagement.Application.Commands.DeleteRuleCommentCommand)
+            .GetCustomAttributes(typeof(AuditableActionAttribute), false).Cast<AuditableActionAttribute>().Single()
+            .ResourceIdProperty.Should().NotBeNull("the scan must see at least the command that needs it, or it checks nothing");
+    }
+
+    private async Task<AuditOutboxPayload> CaptureBestEffortPayloadAsync<TRequest, TResponse>(TRequest command, TResponse response)
+        where TRequest : IRequest<TResponse>
+    {
+        AuditOutboxPayload? captured = null;
+        _auditServiceMock
+            .Setup(x => x.EnqueueAuditAsync(It.IsAny<AuditOutboxPayload>(), It.IsAny<CancellationToken>()))
+            .Callback<AuditOutboxPayload, CancellationToken>((p, _) => captured = p);
+
+        await CreateBehavior<TRequest, TResponse>().Handle(command, _ => Task.FromResult(response), CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        return captured!;
+    }
+
     private AuditLoggingBehavior<TRequest, TResponse> CreateBehavior<TRequest, TResponse>()
         where TRequest : IRequest<TResponse>
     {
@@ -469,3 +542,19 @@ internal record NonAuditableCommand(string Data) : IRequest<string>;
 [AuditableAction("AtomicTestAction", "AtomicTestResource", Level = 2)]
 [AtomicAudit]
 internal record TestAtomicAuditableCommand(Guid Id) : IRequest<string>;
+
+// #5154: a command that names its resource, one centred on a user, and one whose response adds details.
+[AuditableAction("NamedResourceAction", "Item", ResourceIdProperty = nameof(TestNamedResourceCommand.ItemId))]
+internal record TestNamedResourceCommand(Guid ItemId, Guid UserId) : IRequest<string>;
+
+[AuditableAction("UserCentredAction", "User")]
+internal record TestUserCentredCommand(Guid UserId) : IRequest<string>;
+
+[AuditableAction("AuditedAction", "Item")]
+internal record TestAuditedCommand(Guid Id) : IRequest<TestAuditedResponse>;
+
+internal sealed record TestAuditedResponse(Guid AuthorId, int Removed) : IAuditDetails
+{
+    public IReadOnlyDictionary<string, object?> AuditDetails =>
+        new Dictionary<string, object?>(StringComparer.Ordinal) { ["authorId"] = AuthorId, ["removed"] = Removed };
+}

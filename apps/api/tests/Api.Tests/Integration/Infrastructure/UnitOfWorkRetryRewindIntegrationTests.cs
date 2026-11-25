@@ -3,6 +3,7 @@ using Api.BoundedContexts.Administration.Application.Attributes;
 using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.GameManagement;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Events;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -118,6 +119,35 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
             "the first attempt's save was rolled back; the retry has to write the change again");
     }
 
+    /// <summary>
+    /// A row with a concurrency token (<c>xmin</c>, ADR-060). The failed attempt's update was saved and then rolled
+    /// back, and the tracker kept, as the original token, the one that update produced: the retry's
+    /// <c>UPDATE … WHERE xmin = …</c> matched no row and answered a concurrency conflict.
+    /// </summary>
+    [Fact]
+    public async Task AFailedCommit_DoesNotLeaveTheRolledBackTokenAsTheOriginal()
+    {
+        var organizerId = await SeedUserAsync($"organizer{Marker}", "Organizer");
+        var nightId = await SeedNightAsync(organizerId, $"before{Marker}");
+
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var night = await db.GameNightEvents.AsTracking().SingleAsync(n => n.Id == nightId, Ct);
+
+        _faults.Commit.Armed = true;
+        await uow.ExecuteInTransactionAsync(_ =>
+        {
+            night.Title = $"after{Marker}";
+            return Task.CompletedTask;
+        }, Ct);
+
+        _faults.Commit.Tripped.Should().BeTrue("the first commit must have failed, or this proves nothing");
+        await using var read = _serviceProvider!.CreateAsyncScope();
+        (await read.ServiceProvider.GetRequiredService<MeepleAiDbContext>().GameNightEvents.AsNoTracking()
+            .Where(n => n.Id == nightId).Select(n => n.Title).SingleAsync(Ct)).Should().Be($"after{Marker}");
+    }
+
     [Fact]
     public async Task WhatTheCallerTrackedBefore_StaysTrackedAfterARetry()
     {
@@ -206,6 +236,23 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
         return user.Id;
     }
 
+    private async Task<Guid> SeedNightAsync(Guid organizerId, string title)
+    {
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var night = new GameNightEventEntity
+        {
+            Id = Guid.NewGuid(),
+            OrganizerId = organizerId,
+            Title = title,
+            ScheduledAt = DateTimeOffset.UtcNow.AddDays(1),
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+        db.GameNightEvents.Add(night);
+        await db.SaveChangesAsync(Ct);
+        return night.Id;
+    }
+
     private async Task<int> CountUsersAsync(string email)
     {
         await using var scope = _serviceProvider!.CreateAsyncScope();
@@ -251,7 +298,8 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
             new($"transient failure at the {where}, injected by the test", new TimeoutException());
 
         private static bool TouchesAProbe(DbContext? context) =>
-            context!.ChangeTracker.Entries<UserEntity>().Any(e => e.Entity.Email.EndsWith(Marker, StringComparison.Ordinal));
+            context!.ChangeTracker.Entries<UserEntity>().Any(e => e.Entity.Email.EndsWith(Marker, StringComparison.Ordinal))
+            || context.ChangeTracker.Entries<GameNightEventEntity>().Any(e => e.Entity.Title.EndsWith(Marker, StringComparison.Ordinal));
 
         public sealed class SaveFault : SaveChangesInterceptor
         {

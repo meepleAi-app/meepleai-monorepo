@@ -6,6 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.Session;
 
@@ -81,7 +82,8 @@ internal sealed class JoinSessionCommandHandler : IRequestHandler<JoinSessionCom
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == request.UserId.Value, cancellationToken)
                 .ConfigureAwait(false);
-            var displayName = user?.DisplayName ?? user?.Email;
+            // #4780: every player of the session sees this name; the address is never one.
+            var displayName = user is null ? null : PlayerDisplayNames.ForOthers(user.DisplayName, user.Email, PlayerDisplayNames.Player);
             participant = SessionParticipant.CreateRegistered(invite.SessionId, request.UserId.Value, SessionParticipantRole.Player, displayName);
         }
         else

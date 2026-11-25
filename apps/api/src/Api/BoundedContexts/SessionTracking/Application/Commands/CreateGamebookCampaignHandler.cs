@@ -7,6 +7,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 
@@ -45,9 +46,8 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
         // CreateSessionCommandValidator requires one, and this mirrors the attach/start handlers
         // (resolve the caller via GetUserByIdQuery so the owner shows their name, not a literal).
         var owner = await _mediator.Send(new GetUserByIdQuery(cmd.OwnerUserId), cancellationToken).ConfigureAwait(false);
-        var ownerName = owner is not null && !string.IsNullOrWhiteSpace(owner.DisplayName)
-            ? owner.DisplayName
-            : owner?.Email ?? "Owner";
+        // #4780: never the address — the tracking session now seats its owner under this name.
+        var ownerName = PlayerDisplayNames.ForTheTable(owner?.DisplayName, owner?.Email, PlayerDisplayNames.Player);
 
         var participants = new List<ParticipantDto>
         {

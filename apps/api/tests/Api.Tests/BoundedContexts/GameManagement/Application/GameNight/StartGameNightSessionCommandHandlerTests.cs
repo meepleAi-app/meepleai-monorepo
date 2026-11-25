@@ -208,6 +208,35 @@ public class StartGameNightSessionCommandHandlerTests
     }
 
     /// <summary>
+    /// #4780 — with the account's address at hand, the name is compared with it: a name with the shape of an
+    /// address that is not the account's stays (the shape alone dropped <c>DJ@Home.TV</c>), and the address
+    /// itself, or a name that contains it, does not reach the table.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData("DJ@Home.TV", "DJ@Home.TV")]
+    [InlineData("organizer@example.com", "Organizzatore")]
+    [InlineData("Alice (organizer@example.com)", "Organizzatore")]
+    public async Task Handle_TheOrganizersNameIsComparedWithTheirAddress(string profileName, string seated)
+    {
+        var gameNight = CreatePublishedEvent();
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId, displayName: profileName)); // address organizer@example.com
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(Guid.NewGuid(), "XYZ789", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        await _handler.Handle(
+            new StartGameNightSessionCommand(gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId),
+            CancellationToken.None);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateSessionCommand>(c => c.Participants.Single().DisplayName == seated),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
     /// #5150 review — a profile name reaches 128 characters and the tracking session takes 50
     /// (<c>CreateSessionCommandValidator</c>): seeded whole, it made the start of the whole night answer 422.
     /// </summary>

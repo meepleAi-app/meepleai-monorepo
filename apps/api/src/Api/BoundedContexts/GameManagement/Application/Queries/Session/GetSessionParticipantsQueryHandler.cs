@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries.Session;
 using Api.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Queries.Session;
 
@@ -20,21 +21,37 @@ internal sealed class GetSessionParticipantsQueryHandler : IRequestHandler<GetSe
 
     public async Task<IReadOnlyList<SessionParticipantDto>> Handle(GetSessionParticipantsQuery request, CancellationToken cancellationToken)
     {
-        return await _dbContext.SessionParticipants
-            .Include(p => p.User)
+        var participants = await _dbContext.SessionParticipants
             .Where(p => p.SessionId == request.SessionId)
             .OrderBy(p => p.JoinedAt)
-            .Select(p => new SessionParticipantDto(
+            .Select(p => new
+            {
                 p.Id,
                 p.SessionId,
                 p.UserId,
                 p.GuestName,
-                p.GuestName ?? p.User!.DisplayName ?? p.User!.Email ?? "User",
+                UserDisplayName = p.User != null ? p.User.DisplayName : null,
+                UserEmail = p.User != null ? p.User.Email : null,
+                p.Role,
+                p.AgentAccessEnabled,
+                p.JoinedAt,
+                p.LeftAt,
+            })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // #4780: the name every participant sees — a guest's own, or the user's, never the user's address. The
+        // rule cannot run in SQL, so the projection brings the parts and the name is made here.
+        return participants.Select(p => new SessionParticipantDto(
+                p.Id,
+                p.SessionId,
+                p.UserId,
+                p.GuestName,
+                p.GuestName ?? PlayerDisplayNames.ForOthers(p.UserDisplayName, p.UserEmail, PlayerDisplayNames.Player),
                 p.Role,
                 p.AgentAccessEnabled,
                 p.JoinedAt,
                 p.LeftAt))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .ToList();
     }
 }

@@ -1,11 +1,13 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.Session;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 using FluentAssertions;
@@ -173,6 +175,38 @@ public sealed class JoinSessionCommandHandlerTests
         var act = () =>
             _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
+    }
+
+    /// <summary>
+    /// #4780 — a registered user without a name joined under their address: the participant's name was
+    /// <c>DisplayName ?? Email</c>, and every other player of the session sees it. Their address is never their
+    /// name at the table, written as it is or inside a longer one.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData(null)]
+    [InlineData("marta.rossi@example.com")]
+    [InlineData("Marta (marta.rossi@example.com)")]
+    public async Task Handle_ARegisteredUserWithoutAUsableName_JoinsWithoutTheirAddress(string? profileName)
+    {
+        await SeedSessionAndInvite(SessionId, HostUserId);
+        var userId = Guid.NewGuid();
+        _dbContext.Users.Add(new UserEntity
+        {
+            Id = userId,
+            Email = "marta.rossi@example.com",
+            DisplayName = profileName,
+            Role = "user",
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _sut.Handle(new JoinSessionCommand(TestPin, GuestName: null, UserId: userId), CancellationToken.None);
+
+        result.DisplayName.Should().Be("Giocatore");
+        var stored = await _dbContext.SessionParticipants.AsNoTracking().SingleAsync(p => p.UserId == userId);
+        stored.RegisteredDisplayName.Should().Be("Giocatore");
     }
 
     [Fact]

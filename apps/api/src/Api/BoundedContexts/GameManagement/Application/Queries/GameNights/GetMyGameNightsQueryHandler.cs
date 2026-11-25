@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 
@@ -33,7 +34,7 @@ internal sealed class GetMyGameNightsQueryHandler : IQueryHandler<GetMyGameNight
         var events = await _repository.GetByUserAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
         var organizerIds = events.Select(e => e.OrganizerId).Distinct().ToList();
-        var organizerNames = await GetUserDisplayNamesAsync(organizerIds, cancellationToken).ConfigureAwait(false);
+        var organizerNames = await GameNightUserNames.LoadAsync(_context, organizerIds, PlayerDisplayNames.Organizer, cancellationToken).ConfigureAwait(false);
 
         // #4706: guests invited by email are not in the RSVP rows; add them to the counts.
         var nightIds = events.Select(e => e.Id).ToList();
@@ -48,17 +49,5 @@ internal sealed class GetMyGameNightsQueryHandler : IQueryHandler<GetMyGameNight
             e, organizerNames.GetValueOrDefault(e.OrganizerId, "Unknown"), query.UserId,
             guests.GetValueOrDefault(e.Id),
             GameNightParticipation.ViewerRsvpStatus(e, query.UserId, guestStatuses))).ToList();
-    }
-
-    private async Task<Dictionary<Guid, string>> GetUserDisplayNamesAsync(List<Guid> userIds, CancellationToken cancellationToken)
-    {
-        var users = await _context.Users
-            .AsNoTracking()
-            .Where(u => userIds.Contains(u.Id))
-            .Select(u => new { u.Id, u.DisplayName, u.Email })
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        return users.ToDictionary(u => u.Id, u => u.DisplayName ?? u.Email ?? "Unknown");
     }
 }

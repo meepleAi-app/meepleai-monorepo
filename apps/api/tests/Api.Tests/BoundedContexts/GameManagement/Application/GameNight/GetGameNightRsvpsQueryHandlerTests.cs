@@ -73,6 +73,39 @@ public class GetGameNightRsvpsQueryHandlerTests : IDisposable
         result.Should().ContainSingle();
     }
 
+    /// <summary>
+    /// #4780 — the roster of a night is read by every guest, and a user without a usable name appeared under
+    /// their address (<c>DisplayName ?? Email</c>). A name that is not an address stays as it is, even when it
+    /// has the shape of one.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData(null, "Giocatore")]
+    [InlineData("marta.rossi@example.com", "Giocatore")]
+    [InlineData("Marta (marta.rossi@example.com)", "Giocatore")]
+    [InlineData("DJ@Home.TV", "DJ@Home.TV")]
+    public async Task Handle_TheRosterNeverShowsAGuestsAddress(string? profileName, string shown)
+    {
+        var organizerId = Guid.NewGuid();
+        var invitedId = Guid.NewGuid();
+        var evt = PublishedEventWith(organizerId, invitedId);
+        _db.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = invitedId,
+            Email = "marta.rossi@example.com",
+            DisplayName = profileName,
+            Role = "user",
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await _handler.Handle(
+            new GetGameNightRsvpsQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.Should().ContainSingle().Which.UserName.Should().Be(shown);
+    }
+
     [Fact]
     public async Task Handle_InvitedUser_ReturnsRoster()
     {

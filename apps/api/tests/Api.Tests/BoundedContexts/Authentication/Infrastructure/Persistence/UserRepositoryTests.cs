@@ -284,6 +284,42 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         persisted.TotpSecretEncrypted.Should().Be("encrypted_totp_secret_123");
         persisted.TwoFactorEnabledAt.Should().NotBeNull();
     }
+    /// <summary>
+    /// #4780 — <c>MapToDomain</c> fills a missing name with the address, because the domain needs one, and
+    /// <c>UpdateAsync</c> wrote the domain name back: any update of a user without a name stored the address as
+    /// their name, where every reader of the column shows it to other users.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task UpdateAsync_AUserWithoutAName_DoesNotStoreTheAddressAsTheName()
+    {
+        await ResetDatabaseAsync();
+        var id = Guid.NewGuid();
+        DbContext.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = id,
+            Email = "noname@example.com",
+            PasswordHash = PasswordHash.Create("UnusualPwd123!").Value,
+            DisplayName = null,
+            Role = "user",
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await DbContext.SaveChangesAsync(TestCancellationToken);
+        DbContext.ChangeTracker.Clear();
+
+        var user = await Repository.GetByIdAsync(id, TestCancellationToken);
+        user!.UpdatePreferences("it", "dark", emailNotifications: true, dataRetentionDays: 90);
+        await Repository.UpdateAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
+        DbContext.ChangeTracker.Clear();
+
+        var stored = await DbContext.Users.AsNoTracking()
+            .Where(u => u.Id == id).Select(u => new { u.DisplayName, u.Language }).SingleAsync(TestCancellationToken);
+        stored.Language.Should().Be("it", "the update itself is saved");
+        stored.DisplayName.Should().BeNull("the address the domain was given in place of a name is not a name");
+    }
+
     [Fact]
     public async Task UpdateAsync_ModifiedUser_PersistsChanges()
     {

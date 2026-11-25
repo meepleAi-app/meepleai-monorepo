@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 
@@ -66,6 +67,7 @@ internal sealed class GetGameNightByIdQueryHandler : IQueryHandler<GetGameNightB
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken)
             .ConfigureAwait(false);
 
-        return user?.DisplayName ?? user?.Email ?? "Unknown";
+        // #4780: every guest reads the organizer's name; the address is never one.
+        return user is null ? "Unknown" : PlayerDisplayNames.ForOthers(user.DisplayName, user.Email, PlayerDisplayNames.Organizer);
     }
 }

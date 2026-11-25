@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 
@@ -43,21 +44,9 @@ internal sealed class GetGameNightRsvpsQueryHandler : IQueryHandler<GetGameNight
             throw new ForbiddenException("Only the organizer or an invited player can view this game night's RSVPs.");
 
         var userIds = gameNight.Rsvps.Select(r => r.UserId).Distinct().ToList();
-        var userNames = await GetUserDisplayNamesAsync(userIds, cancellationToken).ConfigureAwait(false);
+        var userNames = await GameNightUserNames.LoadAsync(_context, userIds, PlayerDisplayNames.Player, cancellationToken).ConfigureAwait(false);
 
         return gameNight.Rsvps.Select(r => GameNightMapperHelper.MapToRsvpDto(
             r, userNames.GetValueOrDefault(r.UserId, "Unknown"))).ToList();
-    }
-
-    private async Task<Dictionary<Guid, string>> GetUserDisplayNamesAsync(List<Guid> userIds, CancellationToken cancellationToken)
-    {
-        var users = await _context.Users
-            .AsNoTracking()
-            .Where(u => userIds.Contains(u.Id))
-            .Select(u => new { u.Id, u.DisplayName, u.Email })
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        return users.ToDictionary(u => u.Id, u => u.DisplayName ?? u.Email ?? "Unknown");
     }
 }

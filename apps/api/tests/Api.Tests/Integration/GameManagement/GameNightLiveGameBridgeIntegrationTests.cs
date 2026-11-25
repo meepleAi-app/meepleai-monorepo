@@ -317,6 +317,8 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         var live = await scope.ServiceProvider.GetRequiredService<ILiveSessionRepository>()
             .GetByIdAsync(first.LiveSessionId!.Value);
         live!.Players.Select(p => p.UserId).Should().BeEquivalentTo(new Guid?[] { organizer, friend });
+        // #4780: the go-live copies the tracking names, and the tracking session named its owner «Owner».
+        live.Players.Select(p => p.DisplayName).Should().BeEquivalentTo(new[] { "Marta Organizzatrice", "Luca Amico" });
         live.Host!.UserId.Should().Be(organizer);
         live.Status.Should().Be(LiveSessionStatus.InProgress, "going live hands over a game that can be played");
     }
@@ -622,9 +624,8 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
 
         live.GetPlayer(live.TurnOrder[0])!.DisplayName.Should().Be("Organizzatore");
         seated.Should().BeEquivalentTo(new[] { "Organizzatore", "Giocatore", "Anna Amica" });
-        // The tracking Session names its own creator «Owner» whatever the roster says (Session.Create): not ours
-        // to change here, and not an address.
-        tracked.Should().Contain(new[] { "Giocatore", "Anna Amica" });
+        // #4780: the tracking Session's owner sits under the roster's name too — it was «Owner» whatever it got.
+        tracked.Should().BeEquivalentTo(new[] { "Organizzatore", "Giocatore", "Anna Amica" });
         seated.Concat(tracked).Should().OnlyContain(name => !name.Contains('@') && !name.Contains("bridge-"));
     }
 

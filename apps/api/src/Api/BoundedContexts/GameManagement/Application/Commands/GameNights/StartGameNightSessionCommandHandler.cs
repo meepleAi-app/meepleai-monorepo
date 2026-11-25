@@ -265,7 +265,7 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             {
                 Id = Guid.NewGuid(),
                 UserId = command.UserId,
-                DisplayName = RosterDisplayNames.Resolve(organizer.DisplayName, RosterDisplayNames.Organizer),
+                DisplayName = RosterDisplayNames.Resolve(organizer.DisplayName, organizer.Email, RosterDisplayNames.Organizer),
                 IsOwner = true,
                 JoinOrder = 0
             }
@@ -287,7 +287,7 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                DisplayName = RosterDisplayNames.Resolve(player.DisplayName, RosterDisplayNames.Player),
+                DisplayName = RosterDisplayNames.Resolve(player.DisplayName, player.Email, RosterDisplayNames.Player),
                 IsOwner = false,
                 JoinOrder = joinOrder++
             });

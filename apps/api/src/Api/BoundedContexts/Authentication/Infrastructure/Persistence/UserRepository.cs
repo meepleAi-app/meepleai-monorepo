@@ -151,9 +151,18 @@ public class UserRepository : RepositoryBase, IUserRepository
             throw new InvalidOperationException($"User with ID {entity.Id} not found for update");
         }
 
+        // #4780: MapToDomain gives a user without a name their address as one, because the domain needs a name.
+        // Written back, it became the stored name, shown to other users by every reader of the column. Read before
+        // the address changes, so a filler of the old address is recognised too.
+        var nameIsTheAddressFiller = string.IsNullOrWhiteSpace(existingUser.DisplayName)
+            && string.Equals(entity.DisplayName, existingUser.Email, StringComparison.OrdinalIgnoreCase);
+
         // Update scalar properties
         existingUser.Email = entity.Email.Value;
-        existingUser.DisplayName = entity.DisplayName;
+        if (!nameIsTheAddressFiller)
+        {
+            existingUser.DisplayName = entity.DisplayName;
+        }
         existingUser.PasswordHash = entity.PasswordHash?.Value;
         existingUser.Role = entity.Role.Value;
         existingUser.Tier = entity.Tier.Value;

@@ -20,10 +20,28 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// not roll back a deletion the user already saw succeed, and the behaviour writes an Error audit
 /// if the command itself fails.
 /// </para>
+/// <para>
+/// #5154: the resource of the row is the comment (<c>ResourceIdProperty</c>), and the
+/// <see cref="RuleCommentDeletion"/> it returns adds whose comment it was and how many replies went
+/// with it.
+/// </para>
 /// </remarks>
-[AuditableAction("RuleCommentDelete", "RuleSpecComment", Level = 1)]
+[AuditableAction("RuleCommentDelete", "RuleSpecComment", Level = 1,
+    ResourceIdProperty = nameof(DeleteRuleCommentCommand.CommentId))]
 internal record DeleteRuleCommentCommand(
     Guid CommentId,
     Guid UserId,
     bool IsAdmin
-) : IRequest<bool>;
+) : IRequest<RuleCommentDeletion>;
+
+/// <summary>
+/// What a deletion removed: the author of the root comment, and the replies deleted under it.
+/// </summary>
+internal sealed record RuleCommentDeletion(Guid CommentAuthorId, int RepliesDeleted) : IAuditDetails
+{
+    IReadOnlyDictionary<string, object?> IAuditDetails.AuditDetails => new Dictionary<string, object?>(StringComparer.Ordinal)
+    {
+        ["commentAuthorId"] = CommentAuthorId,
+        ["repliesDeleted"] = RepliesDeleted,
+    };
+}

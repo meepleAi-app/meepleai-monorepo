@@ -1,4 +1,7 @@
+using System.Text.Json;
 using Api.Tests.Infrastructure;
+using Api.BoundedContexts.Administration.Application;
+using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
@@ -70,6 +73,12 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
 
         // Register handler explicitly
         services.AddScoped<DeleteRuleCommentCommandHandler>();
+
+        // #5154: the audit row is written by the pipeline, which CreateBase does not wire. The other
+        // tests call the handler directly and do not go through it. No HttpContext: the row has no
+        // caller, which is not what these tests assert.
+        services.AddSingleton(new Moq.Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>().Object);
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditLoggingBehavior<,>));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -205,7 +214,7 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        result.Should().BeTrue();
+        result.Should().Be(new RuleCommentDeletion(_testUserId, RepliesDeleted: 0));
 
         // Verify comment is deleted
         var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, CancellationToken.None);
@@ -252,7 +261,7 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        result.Should().BeTrue();
+        result.Should().Be(new RuleCommentDeletion(_testUserId, RepliesDeleted: 0), "the author is the one whose comment the admin deleted");
 
         // Verify comment is deleted
         var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, CancellationToken.None);
@@ -312,7 +321,7 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        result.Should().BeTrue();
+        result.Should().Be(new RuleCommentDeletion(_testUserId, RepliesDeleted: 1));
 
         // Verify parent is deleted
         var parentComment = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == parentCommentId, TestCancellationToken);
@@ -321,6 +330,53 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         // Verify reply is also deleted (cascade)
         var replyComment = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == reply.Id, TestCancellationToken);
         replyComment.Should().BeNull("replies should be cascade deleted");
+    }
+
+    /// <summary>
+    /// #5154 — the audit row of a deletion names the comment, not the user who deleted it. The
+    /// behaviour took the first of <c>Id</c>, <c>UserId</c>, <c>TargetUserId</c>, and this command has
+    /// no <c>Id</c>: the resource was the deleter. The row also has to say whose comment it was and how
+    /// many replies went with it, because the admin override of #4005 deletes other users' subtrees.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5154")]
+    public async Task Deletion_ThroughThePipeline_AuditsTheCommentItsAuthorAndTheRepliesItTookWithIt()
+    {
+        await ResetDatabaseAsync();
+        var rootId = await CreateTestCommentAsync(_testUserId, "Root comment");
+        var replyId = Guid.NewGuid();
+        _dbContext!.RuleSpecComments.Add(new RuleSpecCommentEntity
+        {
+            Id = replyId, GameId = _testGameId, Version = "1.0.0", CommentText = "Reply",
+            UserId = _otherUserId, ParentCommentId = rootId, CreatedAt = DateTime.UtcNow,
+        });
+        _dbContext.RuleSpecComments.Add(new RuleSpecCommentEntity
+        {
+            Id = Guid.NewGuid(), GameId = _testGameId, Version = "1.0.0", CommentText = "Reply to the reply",
+            // Not the root's author: the row must name the root's, not the first reply removed.
+            UserId = _otherUserId, ParentCommentId = replyId, CreatedAt = DateTime.UtcNow,
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear(); // #3866: fine arrange — vedi CreateTestCommentAsync
+
+        using (var scope = _serviceProvider!.CreateScope())
+        {
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            await mediator.Send(new DeleteRuleCommentCommand(rootId, _otherUserId, IsAdmin: true), TestCancellationToken);
+        }
+
+        var rows = await _dbContext.AuditOutbox.AsNoTracking().ToListAsync(TestCancellationToken);
+        var payload = rows
+            .Select(r => JsonSerializer.Deserialize<AuditOutboxPayload>(r.PayloadJson)!)
+            .Should().ContainSingle(p => p.Action == "RuleCommentDelete").Subject;
+
+        payload.Result.Should().Be("Success");
+        payload.Resource.Should().Be("RuleSpecComment");
+        payload.ResourceId.Should().Be(rootId.ToString(), "the resource of the row is the deleted comment, not the deleter");
+
+        using var details = JsonDocument.Parse(payload.Details);
+        details.RootElement.GetProperty("commentAuthorId").GetString().Should().Be(_testUserId.ToString());
+        details.RootElement.GetProperty("repliesDeleted").GetInt32().Should().Be(2, "the reply and the reply to the reply");
     }
     /// <summary>
     /// Issue #5048: both requests read the comment before either deletes it — the interleaving
@@ -463,7 +519,8 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
     {
         try
         {
-            return (await handler.Handle(command, TestCancellationToken), null, db);
+            await handler.Handle(command, TestCancellationToken);
+            return (true, null, db);
         }
         catch (Exception ex)
         {

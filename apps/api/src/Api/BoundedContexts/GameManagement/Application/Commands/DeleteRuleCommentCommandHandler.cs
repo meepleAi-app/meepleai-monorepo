@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// <summary>
 /// Handles deletion of rule comments with ownership/admin authorization.
 /// </summary>
-internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleCommentCommand, bool>
+internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleCommentCommand, RuleCommentDeletion>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<DeleteRuleCommentCommandHandler> _logger;
@@ -22,7 +22,7 @@ internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComme
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<bool> Handle(DeleteRuleCommentCommand command, CancellationToken cancellationToken)
+    public async Task<RuleCommentDeletion> Handle(DeleteRuleCommentCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
         // Issue #3866: `.AsTracking()` is REQUIRED on both reads of this handler. The DbContext
@@ -43,9 +43,10 @@ internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComme
         }
 
         // Manually delete all replies (cascade delete - DeleteBehavior.Restrict requires manual handling)
+        var repliesDeleted = 0;
         if (comment.Replies?.Count > 0)
         {
-            await DeleteRepliesRecursivelyAsync(comment.Id, cancellationToken).ConfigureAwait(false);
+            repliesDeleted = await DeleteRepliesRecursivelyAsync(comment.Id, cancellationToken).ConfigureAwait(false);
         }
 
         _dbContext.RuleSpecComments.Remove(comment);
@@ -81,24 +82,29 @@ internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComme
         }
 
         _logger.LogInformation(
-            "Deleted comment {CommentId} by user {UserId} (admin: {IsAdmin})",
-            command.CommentId, command.UserId, command.IsAdmin);
+            "Deleted comment {CommentId} by user {UserId} (admin: {IsAdmin}), {RepliesDeleted} replies with it",
+            command.CommentId, command.UserId, command.IsAdmin, repliesDeleted);
 
-        return true;
+        return new RuleCommentDeletion(comment.UserId, repliesDeleted);
     }
 
-    private async Task DeleteRepliesRecursivelyAsync(Guid parentCommentId, CancellationToken cancellationToken)
+    /// <returns>The replies removed under <paramref name="parentCommentId"/>, at every depth.</returns>
+    private async Task<int> DeleteRepliesRecursivelyAsync(Guid parentCommentId, CancellationToken cancellationToken)
     {
         var replies = await _dbContext.RuleSpecComments
             .AsTracking()
             .Where(c => c.ParentCommentId == parentCommentId)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
+        var removed = 0;
         foreach (var reply in replies)
         {
             // Recursively delete nested replies
-            await DeleteRepliesRecursivelyAsync(reply.Id, cancellationToken).ConfigureAwait(false);
+            removed += await DeleteRepliesRecursivelyAsync(reply.Id, cancellationToken).ConfigureAwait(false);
             _dbContext.RuleSpecComments.Remove(reply);
+            removed++;
         }
+
+        return removed;
     }
 }

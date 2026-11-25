@@ -561,10 +561,11 @@ internal static class RuleSpecEndpoints
         var isAdmin = HasAdminOverride(session!.Principal!.EffectiveActor.Role);
         logger.LogInformation("User {UserId} deleting comment {CommentId}", userId, commentId);
 
+        // An absent comment is a NotFoundException (404) from the handler; it never answered false.
         var command = new DeleteRuleCommentCommand(commentId, userId, isAdmin);
-        var deleted = await mediator.Send(command, ct).ConfigureAwait(false);
+        await mediator.Send(command, ct).ConfigureAwait(false);
 
-        return deleted ? Results.NoContent() : Results.NotFound(new { error = "Comment not found" });
+        return Results.NoContent();
     }
 
     private static async Task<IResult> HandleBulkExport(

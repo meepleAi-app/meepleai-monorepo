@@ -190,7 +190,8 @@ public sealed class CreateLiveSessionForGameNightTests
     [Fact]
     public async Task Handle_ALongNameWithASuffix_StaysWithinTheNameLimit()
     {
-        var longName = new string('x', 100);
+        // #5150: a profile name can reach 128 characters; the seat takes 50.
+        var longName = new string('x', 80);
 
         await _sut.Handle(
             NightCommand(
@@ -200,7 +201,7 @@ public sealed class CreateLiveSessionForGameNightTests
             CancellationToken.None);
 
         _added!.Players.Should().HaveCount(2);
-        _added.Players.Select(p => p.DisplayName.Length).Should().OnlyContain(length => length <= 100);
+        _added.Players.Select(p => p.DisplayName.Length).Should().OnlyContain(length => length <= 50);
         _added.Players[1].DisplayName.Should().EndWith(" (2)");
     }
 

@@ -337,24 +337,25 @@ public sealed class LiveSessionValidatorTests
     }
 
     [Fact]
-    public async Task AddPlayer_DisplayNameExceeds100Characters_ShouldFail()
+    public async Task AddPlayer_DisplayNameExceeds50Characters_ShouldFail()
     {
         // Arrange
-        var command = ValidAddPlayerCommand() with { DisplayName = new string('a', 101) };
+        // #5150: the limit is the one of the correlated game session, which the start fills.
+        var command = ValidAddPlayerCommand() with { DisplayName = new string('a', 51) };
 
         // Act
         var result = await _addPlayerValidator.TestValidateAsync(command);
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.DisplayName)
-            .WithErrorMessage("Display name cannot exceed 100 characters");
+            .WithErrorMessage("Display name cannot exceed 50 characters");
     }
 
     [Fact]
-    public async Task AddPlayer_DisplayNameExactly100Characters_ShouldPass()
+    public async Task AddPlayer_DisplayNameExactly50Characters_ShouldPass()
     {
         // Arrange
-        var command = ValidAddPlayerCommand() with { DisplayName = new string('a', 100) };
+        var command = ValidAddPlayerCommand() with { DisplayName = new string('a', 50) };
 
         // Act
         var result = await _addPlayerValidator.TestValidateAsync(command);

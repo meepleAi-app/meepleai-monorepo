@@ -24,6 +24,7 @@ import { useAddLivePlayer } from '@/hooks/mutations/useAddLivePlayer';
 import { ApiError } from '@/lib/api/core/errors';
 import { type PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 import { usePlayerSearch } from '@/lib/game-nights/hooks/usePlayerSearch';
+import { clampPlayerName, PLAYER_NAME_MAX_LENGTH } from '@/lib/session-live/player-name';
 import { nextFreePlayerColor } from '@/lib/sessions/player-colors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -201,7 +202,8 @@ export function AddPlayerDialog({
 
   const handleSelectUser = useCallback((userId: string, name: string) => {
     setSelectedUserId(userId);
-    setDisplayName(name);
+    // #5150: a profile name reaches 128 characters, a seat takes 50.
+    setDisplayName(clampPlayerName(name));
     setSearchQuery('');
     setErrorMessage(null);
   }, []);
@@ -296,7 +298,7 @@ export function AddPlayerDialog({
                   setErrorMessage(null);
                 }}
                 placeholder={labels.displayNamePlaceholder}
-                maxLength={100}
+                maxLength={PLAYER_NAME_MAX_LENGTH}
                 required
                 disabled={isPending}
                 data-slot="add-player-display-name"

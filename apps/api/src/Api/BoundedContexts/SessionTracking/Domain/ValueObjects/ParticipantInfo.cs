@@ -1,3 +1,5 @@
+using Api.SharedKernel.Domain.Validation;
+
 namespace Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 
 /// <summary>
@@ -37,8 +39,8 @@ public record ParticipantInfo
         if (string.IsNullOrWhiteSpace(displayName))
             throw new ArgumentException("Display name cannot be empty.", nameof(displayName));
 
-        if (displayName.Length > 50)
-            throw new ArgumentException("Display name cannot exceed 50 characters.", nameof(displayName));
+        if (displayName.Length > PlayerNameLimit.MaxLength)
+            throw new ArgumentException($"Display name cannot exceed {PlayerNameLimit.MaxLength} characters.", nameof(displayName));
 
         if (joinOrder <= 0)
             throw new ArgumentException("Join order must be positive.", nameof(joinOrder));

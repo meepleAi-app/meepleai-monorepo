@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 
@@ -173,8 +174,8 @@ internal sealed class GameSession : AggregateRoot<Guid>
         if (winnerName != null)
         {
             var trimmed = winnerName.Trim();
-            if (trimmed.Length > 50)
-                throw new ValidationException("Winner name cannot exceed 50 characters");
+            if (trimmed.Length > PlayerNameLimit.MaxLength)
+                throw new ValidationException($"Winner name cannot exceed {PlayerNameLimit.MaxLength} characters");
             WinnerName = trimmed;
         }
         else

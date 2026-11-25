@@ -11,6 +11,7 @@
 import { useMemo } from 'react';
 
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
+import { clampPlayerName } from '@/lib/session-live/player-name';
 
 export interface SelfPlayer {
   userId: string;
@@ -20,9 +21,10 @@ export interface SelfPlayer {
 /**
  * Il nome del profilo; per chi non l'ha, il nome neutro che i wizard davano al primo giocatore.
  * Il nome va a tutti i partecipanti della partita: dall'email non si ricava niente.
+ * Un profilo arriva fino a 128 caratteri e un posto al tavolo ne prende 50 (#5150): il nome è tagliato.
  */
 export function selfDisplayName(displayName?: string | null): string {
-  return displayName?.trim() || 'Giocatore 1';
+  return clampPlayerName(displayName?.trim() || 'Giocatore 1');
 }
 
 /** `null` finché l'utente non è noto: il wizard resta com'era, senza collegare nessuno. */

@@ -12,6 +12,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
@@ -23,7 +24,7 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
 {
     // The server compares display names after Trim().ToLowerInvariant() (LiveGameSession.AddPlayer)
     // and the entity caps a name at 100 characters; the roster seeding must agree with both.
-    private const int MaxDisplayNameLength = 100;
+    private const int MaxDisplayNameLength = PlayerNameLimit.MaxLength;
 
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly TimeProvider _timeProvider;

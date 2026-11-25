@@ -1,5 +1,6 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -18,8 +19,8 @@ internal sealed class SessionPlayer : ValueObject
             throw new ValidationException("Player name cannot be empty");
 
         var trimmed = playerName.Trim();
-        if (trimmed.Length > 50)
-            throw new ValidationException("Player name cannot exceed 50 characters");
+        if (trimmed.Length > PlayerNameLimit.MaxLength)
+            throw new ValidationException($"Player name cannot exceed {PlayerNameLimit.MaxLength} characters");
 
         if (playerOrder < 1)
             throw new ValidationException("Player order must be at least 1");

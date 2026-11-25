@@ -155,6 +155,7 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         // strategy wraps the delegate so that transient errors trigger a retry of the whole lambda.
         // In test environments (no retry config), the strategy is non-retrying — one execution.
         var strategy = _dbContext.Database.CreateExecutionStrategy();
+        var firstAttempt = true;
         ChangeTrackerRewind? rewind = null;
 
         return await strategy.ExecuteAsync(async () =>
@@ -170,14 +171,15 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
             // did the audit outbox row of a failed commit. The first attempt takes the picture, the next ones go
             // back to it.
             _sink.Clear();
-            if (rewind is null)
+            if (firstAttempt)
             {
+                firstAttempt = false;
                 _eventCollector.Clear();
-                rewind = ChangeTrackerRewind.Capture(_dbContext, _eventCollector);
+                rewind = ChangeTrackerRewind.CaptureIfRetrying(strategy, _dbContext, _eventCollector);
             }
             else
             {
-                rewind.Restore();
+                rewind?.Restore();
             }
 
             // BeginTransactionAsync opens a real DB transaction. The handler's UoW.SaveChangesAsync

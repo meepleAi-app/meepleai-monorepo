@@ -44,13 +44,13 @@ internal sealed class UnitOfWork : IUnitOfWork
         var strategy = _context.Database.CreateExecutionStrategy();
 
         // #5145: see EfCoreUnitOfWork — every attempt starts from the tracker the caller handed in.
-        var rewind = ChangeTrackerRewind.Capture(_context, _eventCollector);
+        var rewind = ChangeTrackerRewind.CaptureIfRetrying(strategy, _context, _eventCollector);
         var attempt = 0;
 
         return await strategy.ExecuteAsync(async () =>
         {
             if (attempt++ > 0)
-                rewind.Restore();
+                rewind?.Restore();
 
             var transaction = await _context.Database
                 .BeginTransactionAsync(cancellationToken)

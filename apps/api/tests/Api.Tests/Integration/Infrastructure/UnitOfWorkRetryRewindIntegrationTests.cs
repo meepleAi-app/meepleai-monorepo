@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Events;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -217,6 +218,117 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
         audits.Should().Be(1);
     }
 
+    /// <summary>
+    /// A row the caller added before the transaction: the failed attempt inserted it, the commit failed, and the
+    /// insert was rolled back with it — but the tracker had accepted the row as <c>Unchanged</c>, and nothing
+    /// inserted it again.
+    /// </summary>
+    [Fact]
+    public async Task AFailedCommit_InsertsAgainARowTheCallerAddedBefore()
+    {
+        var email = $"added-before{Marker}";
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        db.Users.Add(NewUser(email));
+
+        _faults.Commit.Armed = true;
+        await uow.ExecuteInTransactionAsync(_ => Task.CompletedTask, Ct);
+
+        _faults.Commit.Tripped.Should().BeTrue();
+        (await CountUsersAsync(email)).Should().Be(1);
+    }
+
+    /// <summary>A row the caller deleted before the transaction: accepted, and so detached, by the failed attempt's save.</summary>
+    [Fact]
+    public async Task AFailedCommit_DeletesAgainARowTheCallerDeletedBefore()
+    {
+        var email = $"deleted-before{Marker}";
+        var userId = await SeedUserAsync(email, "to delete");
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        db.Users.Remove(await db.Users.AsTracking().SingleAsync(u => u.Id == userId, Ct));
+
+        _faults.Commit.Armed = true;
+        await uow.ExecuteInTransactionAsync(_ => Task.CompletedTask, Ct);
+
+        _faults.Commit.Tripped.Should().BeTrue();
+        (await CountUsersAsync(email)).Should().Be(0);
+    }
+
+    /// <summary>
+    /// A row the failed attempt added only through a collection of an entity tracked before: detached by the
+    /// rewind, it was still in the collection, and the retry's detection of changes added it again.
+    /// </summary>
+    [Fact]
+    public async Task AFailedSave_LeavesNoRowOfTheAttemptInACollectionOfTheCaller()
+    {
+        var userId = await SeedUserAsync($"codes{Marker}", "codes");
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var user = await db.Users.AsTracking().Include(u => u.BackupCodes).SingleAsync(u => u.Id == userId, Ct);
+
+        _faults.Save.Armed = true;
+        await uow.ExecuteInTransactionAsync(_ =>
+        {
+            // No key: EF takes an entity with a key, reached through a navigation, for an existing row.
+            user.BackupCodes.Add(new UserBackupCodeEntity { Id = Guid.Empty, UserId = userId, CodeHash = "probe" });
+            return Task.CompletedTask;
+        }, Ct);
+
+        _faults.Save.Tripped.Should().BeTrue();
+        await using var read = _serviceProvider!.CreateAsyncScope();
+        (await read.ServiceProvider.GetRequiredService<MeepleAiDbContext>().Set<UserBackupCodeEntity>().AsNoTracking()
+            .CountAsync(c => c.UserId == userId, Ct)).Should().Be(1, "one code per attempt was added, and one attempt counts");
+    }
+
+    /// <summary>
+    /// A many-to-many link removed by the failed attempt: its join row is a shared-type entity
+    /// (<c>Dictionary&lt;string, object&gt;</c>), detached when the deletion was accepted, and EF cannot find it again
+    /// from the object alone — the rewind attaches it through the entry it kept.
+    /// </summary>
+    [Fact]
+    public async Task AFailedCommit_PutsBackAManyToManyLinkAndTheRetryRemovesIt()
+    {
+        var (gameId, categoryId) = await SeedGameWithACategoryAsync();
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var game = await db.SharedGames.AsTracking().Include(g => g.Categories).SingleAsync(g => g.Id == gameId, Ct);
+
+        _faults.Commit.Armed = true;
+        await uow.ExecuteInTransactionAsync(_ =>
+        {
+            game.Categories.Remove(game.Categories.Single(c => c.Id == categoryId));
+            return Task.CompletedTask;
+        }, Ct);
+
+        _faults.Commit.Tripped.Should().BeTrue();
+        await using var read = _serviceProvider!.CreateAsyncScope();
+        (await read.ServiceProvider.GetRequiredService<MeepleAiDbContext>().SharedGames.AsNoTracking()
+            .Where(g => g.Id == gameId).SelectMany(g => g.Categories).CountAsync(Ct)).Should().Be(0);
+    }
+
+    private async Task<(Guid GameId, Guid CategoryId)> SeedGameWithACategoryAsync()
+    {
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var category = new GameCategoryEntity
+        {
+            Id = Guid.NewGuid(), Name = $"Probe {Guid.NewGuid():N}", Slug = $"probe-{Guid.NewGuid():N}", CreatedAt = DateTime.UtcNow,
+        };
+        var game = new SharedGameEntity
+        {
+            Id = Guid.NewGuid(), Title = $"Probe game{Marker}", YearPublished = 2024, CreatedAt = DateTime.UtcNow,
+        };
+        game.Categories.Add(category);
+        db.SharedGames.Add(game);
+        await db.SaveChangesAsync(Ct);
+        return (game.Id, category.Id);
+    }
+
     private static UserEntity NewUser(string email) => new()
     {
         Id = Guid.NewGuid(),
@@ -288,7 +400,10 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
         public Guid Marker { get; init; }
     }
 
-    /// <summary>One transient failure at the save, or just before the commit, of a probe user. Armed per test.</summary>
+    /// <summary>
+    /// One transient failure, at the next save or just before the next commit after it is armed. A test arms it right
+    /// before the unit of work it observes, so the next one is that one.
+    /// </summary>
     private sealed class TransientFaults
     {
         public SaveFault Save { get; } = new();
@@ -296,10 +411,6 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
 
         private static NpgsqlException Transient(string where) =>
             new($"transient failure at the {where}, injected by the test", new TimeoutException());
-
-        private static bool TouchesAProbe(DbContext? context) =>
-            context!.ChangeTracker.Entries<UserEntity>().Any(e => e.Entity.Email.EndsWith(Marker, StringComparison.Ordinal))
-            || context.ChangeTracker.Entries<GameNightEventEntity>().Any(e => e.Entity.Title.EndsWith(Marker, StringComparison.Ordinal));
 
         public sealed class SaveFault : SaveChangesInterceptor
         {
@@ -309,8 +420,7 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
             public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
                 DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
             {
-                if (Armed && eventData.Context!.ChangeTracker.Entries<UserEntity>()
-                        .Any(e => e.State is EntityState.Added or EntityState.Modified && e.Entity.Email.EndsWith(Marker, StringComparison.Ordinal)))
+                if (Armed)
                 {
                     Armed = false;
                     Tripped = true;
@@ -330,7 +440,7 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
                 DbTransaction transaction, TransactionEventData eventData, InterceptionResult result,
                 CancellationToken cancellationToken = default)
             {
-                if (Armed && TouchesAProbe(eventData.Context))
+                if (Armed)
                 {
                     Armed = false;
                     Tripped = true;

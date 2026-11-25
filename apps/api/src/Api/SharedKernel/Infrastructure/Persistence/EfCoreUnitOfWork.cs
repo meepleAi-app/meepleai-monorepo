@@ -49,13 +49,13 @@ internal class EfCoreUnitOfWork : IUnitOfWork
         // #5145: every attempt starts from the tracker and the events the caller handed in. Without it, a retry
         // found the failed attempt's rows (Added after a failed save, written again; Unchanged after a failed
         // commit, so a repeated change was not written). Not a Clear(): what the caller tracked before stays.
-        var rewind = ChangeTrackerRewind.Capture(_dbContext, _eventCollector);
+        var rewind = ChangeTrackerRewind.CaptureIfRetrying(strategy, _dbContext, _eventCollector);
         var attempt = 0;
 
         return await strategy.ExecuteAsync(async () =>
         {
             if (attempt++ > 0)
-                rewind.Restore();
+                rewind?.Restore();
 
             var transaction = await _dbContext.Database
                 .BeginTransactionAsync(cancellationToken)

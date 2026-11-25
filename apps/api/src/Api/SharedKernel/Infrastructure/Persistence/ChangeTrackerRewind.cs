@@ -2,6 +2,7 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Api.SharedKernel.Infrastructure.Persistence;
 
@@ -18,10 +19,26 @@ namespace Api.SharedKernel.Infrastructure.Persistence;
 /// a row it had updated carried, as original <c>xmin</c>, the one of the rolled-back update.
 /// </para>
 /// <para>
-/// Not a <c>ChangeTracker.Clear()</c>: what the caller tracked before the transaction stays, with the state and the
-/// values it had. The PDF pipeline and <c>IndexPdfCommandHandler</c> track documents before and save them after.
-/// Only the tracker is put back: a domain aggregate the caller built outside the delegate and the delegate
-/// mutates is not an EF entity, and stays mutated.
+/// Not a <c>ChangeTracker.Clear()</c>: what the caller tracked before the transaction stays, with the state, the
+/// property values and the navigations it had. The PDF pipeline and <c>IndexPdfCommandHandler</c> track documents
+/// before and save them after, and the pipeline's unsaved vector document is sent again by the retry's save.
+/// </para>
+/// <para>
+/// What it does not put back, and that no caller needs today:
+/// <list type="bullet">
+/// <item>a domain aggregate the caller built outside the delegate and the delegate mutates — it is not an EF entity
+/// (#5158);</item>
+/// <item>a mutable value mutated in place (a <c>List&lt;string&gt;</c> column): the picture holds the reference,
+/// not a copy;</item>
+/// <item>an owned value the failed attempt replaced on an entity tracked before: EF loses the relationship snapshot
+/// of the owner, and the retry's replacement is refused;</item>
+/// <item>events an aggregate raised outside the delegate but that the repository collects inside it: the retry
+/// collects them again only if the delegate raises them again.</item>
+/// </list>
+/// </para>
+/// <para>
+/// The picture is taken only when the strategy retries (<see cref="IExecutionStrategy.RetriesOnFailure"/>), and its
+/// cost grows with the tracker: a scope that keeps thousands of rows tracked across calls pays for them every time.
 /// </para>
 /// </remarks>
 internal sealed class ChangeTrackerRewind
@@ -41,26 +58,32 @@ internal sealed class ChangeTrackerRewind
         _collected = events?.PeekEvents().ToList() ?? [];
     }
 
-    /// <summary>Takes the picture, before the first attempt.</summary>
-    public static ChangeTrackerRewind Capture(DbContext context, IDomainEventCollector? events = null)
+    /// <summary>
+    /// Takes the picture, before the first attempt — or nothing, when <paramref name="strategy"/> never runs the
+    /// delegate twice and there will be no attempt to rewind.
+    /// </summary>
+    public static ChangeTrackerRewind? CaptureIfRetrying(
+        IExecutionStrategy strategy, DbContext context, IDomainEventCollector? events = null)
     {
+        ArgumentNullException.ThrowIfNull(strategy);
         ArgumentNullException.ThrowIfNull(context);
-        return new ChangeTrackerRewind(context, events);
+        return strategy.RetriesOnFailure ? new ChangeTrackerRewind(context, events) : null;
     }
 
     /// <summary>Puts the tracker and the events back as they were in the picture, before every attempt after the first.</summary>
     public void Restore()
     {
-        // What the failed attempt brought in goes. Entries() detects changes first, so an entity the attempt only
-        // reached through a navigation of a tracked one is found here too.
-        foreach (var entry in _context.ChangeTracker.Entries().ToList())
-        {
-            if (!_tracked.Contains(entry.Entity))
-                entry.State = EntityState.Detached;
-        }
-
-        foreach (var snapshot in _entries)
-            snapshot.Restore(_context);
+        // Two passes. The first puts the values, the states and the navigations back. EF keeps its own snapshot of
+        // each navigation, though, and the failed attempt's accepted save moved it: a collection put back looks, to
+        // EF, like an addition, and a delegate that removes the item again before the next detection leaves no
+        // difference to see. The detection in between brings EF's snapshots in line with what was put back — finding
+        // the join rows the first pass attached rather than making new ones — and the second pass undoes what that
+        // detection changed.
+        ForgetWhatTheAttemptBroughtIn();
+        PutThePictureBack();
+        _context.ChangeTracker.DetectChanges();
+        ForgetWhatTheAttemptBroughtIn();
+        PutThePictureBack();
 
         if (_events is not null)
         {
@@ -70,8 +93,30 @@ internal sealed class ChangeTrackerRewind
         }
     }
 
+    // What the failed attempt brought in goes. Entries() detects changes first, so an entity the attempt only reached
+    // through a navigation of a tracked one is found here too.
+    private void ForgetWhatTheAttemptBroughtIn()
+    {
+        foreach (var entry in _context.ChangeTracker.Entries().ToList())
+        {
+            if (!_tracked.Contains(entry.Entity))
+                entry.State = EntityState.Detached;
+        }
+    }
+
+    // An entity of the picture that the failed attempt detached (a deletion accepted before the commit failed) is
+    // attached again through the entry the picture kept, which knows its entity type: a shared-type entity — a
+    // many-to-many join row — cannot be found again from its CLR object alone.
+    private void PutThePictureBack()
+    {
+        var tracked = _context.ChangeTracker.Entries()
+            .ToDictionary(e => e.Entity, e => e, ReferenceEqualityComparer.Instance);
+        foreach (var snapshot in _entries)
+            snapshot.Restore(tracked.TryGetValue(snapshot.Entity, out var entry) ? entry : snapshot.Entry);
+    }
+
     private sealed record EntrySnapshot(
-        object Entity,
+        EntityEntry Entry,
         EntityState State,
         PropertyValues Original,
         PropertyValues Current,
@@ -79,8 +124,10 @@ internal sealed class ChangeTrackerRewind
         IReadOnlyList<(string Name, object? Value)> References,
         IReadOnlyList<(string Name, IReadOnlyList<object>? Items)> Collections)
     {
+        public object Entity => Entry.Entity;
+
         public static EntrySnapshot Of(EntityEntry entry) => new(
-            entry.Entity,
+            entry,
             entry.State,
             entry.OriginalValues.Clone(),
             entry.CurrentValues.Clone(),
@@ -90,13 +137,15 @@ internal sealed class ChangeTrackerRewind
                 .Select(c => (c.Metadata.Name, c.CurrentValue is null ? null : (IReadOnlyList<object>)c.CurrentValue.Cast<object>().ToList()))
                 .ToList());
 
-        public void Restore(DbContext context)
+        public void Restore(EntityEntry entry)
         {
-            var entry = context.Entry(Entity);
-
-            // Attached and unchanged first: from there the values decide what is modified, as they did for the caller.
+            // Attached and unchanged, with the original values of the picture. Setting an original value can flag the
+            // property as modified, so the current values go to the originals and the state back to unchanged; then
+            // the current values of the picture flag exactly the properties that differ, as they did for the caller.
             entry.State = EntityState.Unchanged;
             entry.OriginalValues.SetValues(Original);
+            entry.CurrentValues.SetValues(Original);
+            entry.State = EntityState.Unchanged;
             entry.CurrentValues.SetValues(Current);
 
             foreach (var (name, value) in References)
@@ -107,7 +156,7 @@ internal sealed class ChangeTrackerRewind
             }
 
             foreach (var (name, items) in Collections)
-                RestoreCollection(entry.Collection(name), items);
+                RestoreCollection(entry, entry.Collection(name), items);
 
             switch (State)
             {
@@ -116,14 +165,14 @@ internal sealed class ChangeTrackerRewind
                     entry.State = State;
                     break;
                 case EntityState.Modified:
-                    entry.DetectChanges();
+                    // A property the caller marked modified without changing its value (Update() marks them all).
                     foreach (var property in Modified)
                         entry.Property(property).IsModified = true;
                     break;
             }
         }
 
-        private void RestoreCollection(CollectionEntry collection, IReadOnlyList<object>? items)
+        private static void RestoreCollection(EntityEntry owner, CollectionEntry collection, IReadOnlyList<object>? items)
         {
             if (items is null || collection.CurrentValue is null)
                 return;
@@ -136,13 +185,13 @@ internal sealed class ChangeTrackerRewind
             foreach (var item in collection.CurrentValue.Cast<object>().ToList())
             {
                 if (!wanted.Contains(item))
-                    accessor.Remove(Entity, item);
+                    accessor.Remove(owner.Entity, item);
             }
 
             foreach (var item in items)
             {
-                if (!accessor.Contains(Entity, item))
-                    accessor.Add(Entity, item, forMaterialization: false);
+                if (!accessor.Contains(owner.Entity, item))
+                    accessor.Add(owner.Entity, item, forMaterialization: false);
             }
         }
     }

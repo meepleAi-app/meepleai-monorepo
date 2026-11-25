@@ -7,6 +7,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Persistence;
 using Api.Services;
 using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -154,6 +155,7 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         // strategy wraps the delegate so that transient errors trigger a retry of the whole lambda.
         // In test environments (no retry config), the strategy is non-retrying — one execution.
         var strategy = _dbContext.Database.CreateExecutionStrategy();
+        ChangeTrackerRewind? rewind = null;
 
         return await strategy.ExecuteAsync(async () =>
         {
@@ -162,8 +164,21 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
             // not observe stale snapshots/events from the failed attempt. NOTE: this does NOT undo
             // MediatR.Publish dispatches that already occurred during the failed attempt's
             // base.SaveChangesAsync — that's a known constraint of [AtomicAudit] (see attribute doc).
+            //
+            // #5145: the change tracker too. The handler's rows of a failed attempt stayed tracked — Added after a
+            // failed save, written again by the retry; accepted after a failed commit, not written again — and so
+            // did the audit outbox row of a failed commit. The first attempt takes the picture, the next ones go
+            // back to it.
             _sink.Clear();
-            _eventCollector.Clear();
+            if (rewind is null)
+            {
+                _eventCollector.Clear();
+                rewind = ChangeTrackerRewind.Capture(_dbContext, _eventCollector);
+            }
+            else
+            {
+                rewind.Restore();
+            }
 
             // BeginTransactionAsync opens a real DB transaction. The handler's UoW.SaveChangesAsync
             // flushes the mutation into this tx without committing. EnqueueAuditAtomicAsync then

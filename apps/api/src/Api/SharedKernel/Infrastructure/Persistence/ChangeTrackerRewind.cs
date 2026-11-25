@@ -2,6 +2,7 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Api.SharedKernel.Infrastructure.Persistence;
@@ -19,9 +20,17 @@ namespace Api.SharedKernel.Infrastructure.Persistence;
 /// a row it had updated carried, as original <c>xmin</c>, the one of the rolled-back update.
 /// </para>
 /// <para>
-/// Not a <c>ChangeTracker.Clear()</c>: what the caller tracked before the transaction stays, with the state, the
-/// property values and the navigations it had. The PDF pipeline and <c>IndexPdfCommandHandler</c> track documents
-/// before and save them after, and the pipeline's unsaved vector document is sent again by the retry's save.
+/// Not a <c>ChangeTracker.Clear()</c>: what the caller tracked before the transaction stays, with the state and the
+/// property values it had. The PDF pipeline and <c>IndexPdfCommandHandler</c> track documents before and save them
+/// after, and the pipeline's unsaved vector document is sent again by the retry's save.
+/// </para>
+/// <para>
+/// Of the navigations, the references are in the picture and the collections are not. Putting a reference back makes
+/// EF fix up the collection on the other side — an orphan the failed attempt took out of its parent's collection goes
+/// back into it, and so does the join row of a many-to-many link. Without the references the orphan stayed out, and
+/// the retry's <c>Remove</c> had nothing to remove (measured); putting the collections back by hand on top changed
+/// nothing. The references are read through the model, not through <c>EntityEntry.References</c>, which detects
+/// changes for every entry it builds: with a large collection on the principal side, that read grew quadratically.
 /// </para>
 /// <para>
 /// What it does not put back, and that no caller needs today:
@@ -73,12 +82,12 @@ internal sealed class ChangeTrackerRewind
     /// <summary>Puts the tracker and the events back as they were in the picture, before every attempt after the first.</summary>
     public void Restore()
     {
-        // Two passes. The first puts the values, the states and the navigations back. EF keeps its own snapshot of
-        // each navigation, though, and the failed attempt's accepted save moved it: a collection put back looks, to
-        // EF, like an addition, and a delegate that removes the item again before the next detection leaves no
-        // difference to see. The detection in between brings EF's snapshots in line with what was put back — finding
-        // the join rows the first pass attached rather than making new ones — and the second pass undoes what that
-        // detection changed.
+        // Two passes. The first puts the values, the states and the references back, and EF's fix-up the collections. EF keeps its own
+        // snapshot of each navigation, though, and the failed attempt's accepted save moved it: a link put back looks,
+        // to EF, like an addition, and a delegate that removes it again before the next detection leaves no difference
+        // to see. The detection in between brings EF's snapshots in line with what was put back — finding the join
+        // rows the first pass attached rather than making new ones — and the second pass undoes what that detection
+        // changed.
         ForgetWhatTheAttemptBroughtIn();
         PutThePictureBack();
         _context.ChangeTracker.DetectChanges();
@@ -121,8 +130,7 @@ internal sealed class ChangeTrackerRewind
         PropertyValues Original,
         PropertyValues Current,
         IReadOnlyList<string> Modified,
-        IReadOnlyList<(string Name, object? Value)> References,
-        IReadOnlyList<(string Name, IReadOnlyList<object>? Items)> Collections)
+        IReadOnlyList<(INavigation Navigation, object? Value)> References)
     {
         public object Entity => Entry.Entity;
 
@@ -132,9 +140,9 @@ internal sealed class ChangeTrackerRewind
             entry.OriginalValues.Clone(),
             entry.CurrentValues.Clone(),
             entry.Properties.Where(p => p.IsModified).Select(p => p.Metadata.Name).ToList(),
-            entry.References.Select(r => (r.Metadata.Name, r.CurrentValue)).ToList(),
-            entry.Collections
-                .Select(c => (c.Metadata.Name, c.CurrentValue is null ? null : (IReadOnlyList<object>)c.CurrentValue.Cast<object>().ToList()))
+            entry.Metadata.GetNavigations()
+                .Where(n => !n.IsCollection)
+                .Select(n => (n, n.GetGetter().GetClrValueUsingContainingEntity(entry.Entity)))
                 .ToList());
 
         public void Restore(EntityEntry entry)
@@ -148,15 +156,11 @@ internal sealed class ChangeTrackerRewind
             entry.State = EntityState.Unchanged;
             entry.CurrentValues.SetValues(Current);
 
-            foreach (var (name, value) in References)
+            foreach (var (navigation, value) in References)
             {
-                var reference = entry.Reference(name);
-                if (!ReferenceEquals(reference.CurrentValue, value))
-                    reference.CurrentValue = value;
+                if (!ReferenceEquals(navigation.GetGetter().GetClrValueUsingContainingEntity(entry.Entity), value))
+                    entry.Reference(navigation.Name).CurrentValue = value;
             }
-
-            foreach (var (name, items) in Collections)
-                RestoreCollection(entry, entry.Collection(name), items);
 
             switch (State)
             {
@@ -169,29 +173,6 @@ internal sealed class ChangeTrackerRewind
                     foreach (var property in Modified)
                         entry.Property(property).IsModified = true;
                     break;
-            }
-        }
-
-        private static void RestoreCollection(EntityEntry owner, CollectionEntry collection, IReadOnlyList<object>? items)
-        {
-            if (items is null || collection.CurrentValue is null)
-                return;
-
-            var accessor = collection.Metadata.GetCollectionAccessor();
-            if (accessor is null)
-                return;
-
-            var wanted = new HashSet<object>(items, ReferenceEqualityComparer.Instance);
-            foreach (var item in collection.CurrentValue.Cast<object>().ToList())
-            {
-                if (!wanted.Contains(item))
-                    accessor.Remove(owner.Entity, item);
-            }
-
-            foreach (var item in items)
-            {
-                if (!accessor.Contains(owner.Entity, item))
-                    accessor.Add(owner.Entity, item, forMaterialization: false);
             }
         }
     }

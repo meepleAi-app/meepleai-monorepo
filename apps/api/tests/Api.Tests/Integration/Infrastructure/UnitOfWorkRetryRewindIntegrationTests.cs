@@ -258,6 +258,59 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// A change the caller made before the transaction, on a row with <c>xmin</c>: accepted by the failed attempt's
+    /// save, it went with the rollback. The retry writes it again, against the token the row has.
+    /// </summary>
+    [Fact]
+    public async Task AFailedCommit_WritesAgainAChangeTheCallerMadeBefore()
+    {
+        var organizerId = await SeedUserAsync($"modified-before{Marker}", "Organizer");
+        var nightId = await SeedNightAsync(organizerId, $"before{Marker}");
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var night = await db.GameNightEvents.AsTracking().SingleAsync(n => n.Id == nightId, Ct);
+        night.Title = $"after{Marker}";
+
+        _faults.Commit.Armed = true;
+        await uow.ExecuteInTransactionAsync(_ => Task.CompletedTask, Ct);
+
+        _faults.Commit.Tripped.Should().BeTrue();
+        (await ReadNightAsync(nightId)).Title.Should().Be($"after{Marker}");
+    }
+
+    /// <summary>
+    /// A row the failed attempt changed and the retry leaves alone. Putting its original values back flagged it as
+    /// modified, and the retry sent an <c>UPDATE</c> with the values it already had, which moved its <c>xmin</c>.
+    /// </summary>
+    [Fact]
+    public async Task AFailedCommit_DoesNotWriteARowTheRetryLeavesAlone()
+    {
+        var organizerId = await SeedUserAsync($"left-alone{Marker}", "Organizer");
+        var nightId = await SeedNightAsync(organizerId, $"before{Marker}");
+        var tokenBefore = (await ReadNightAsync(nightId)).Xmin;
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var night = await db.GameNightEvents.AsTracking().SingleAsync(n => n.Id == nightId, Ct);
+        var attempts = 0;
+
+        _faults.Commit.Armed = true;
+        await uow.ExecuteInTransactionAsync(_ =>
+        {
+            if (attempts++ == 0)
+                night.Title = $"after{Marker}"; // only the attempt that fails changes it
+            return Task.CompletedTask;
+        }, Ct);
+
+        _faults.Commit.Tripped.Should().BeTrue();
+        attempts.Should().Be(2);
+        var stored = await ReadNightAsync(nightId);
+        stored.Title.Should().Be($"before{Marker}");
+        stored.Xmin.Should().Be(tokenBefore, "the retry changed nothing, so nothing is written");
+    }
+
+    /// <summary>
     /// An item the failed attempt took out of a collection of an entity tracked before — a required relationship, so
     /// the item is deleted as an orphan. The rewind puts the item back as it was, but the collection still lacked it:
     /// the retry's <c>Remove</c> found nothing to remove, and the deletion was lost.
@@ -371,6 +424,14 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
         db.GameNightEvents.Add(night);
         await db.SaveChangesAsync(Ct);
         return night.Id;
+    }
+
+    private async Task<(string Title, uint Xmin)> ReadNightAsync(Guid nightId)
+    {
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var night = await scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>().GameNightEvents.AsNoTracking()
+            .SingleAsync(n => n.Id == nightId, Ct);
+        return (night.Title, night.Xmin);
     }
 
     private async Task<int> CountUsersAsync(string email)

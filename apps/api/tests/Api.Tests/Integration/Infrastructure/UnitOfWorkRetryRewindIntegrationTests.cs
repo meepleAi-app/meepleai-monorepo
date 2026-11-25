@@ -258,30 +258,38 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// A row the failed attempt added only through a collection of an entity tracked before: detached by the
-    /// rewind, it was still in the collection, and the retry's detection of changes added it again.
+    /// An item the failed attempt took out of a collection of an entity tracked before — a required relationship, so
+    /// the item is deleted as an orphan. The rewind puts the item back as it was, but the collection still lacked it:
+    /// the retry's <c>Remove</c> found nothing to remove, and the deletion was lost.
     /// </summary>
     [Fact]
-    public async Task AFailedSave_LeavesNoRowOfTheAttemptInACollectionOfTheCaller()
+    public async Task AFailedSave_RemovesAgainAnItemTheAttemptTookFromACollection()
     {
         var userId = await SeedUserAsync($"codes{Marker}", "codes");
+        await using (var seed = _serviceProvider!.CreateAsyncScope())
+        {
+            var seedDb = seed.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            seedDb.Set<UserBackupCodeEntity>().Add(new UserBackupCodeEntity { Id = Guid.NewGuid(), UserId = userId, CodeHash = "probe" });
+            await seedDb.SaveChangesAsync(Ct);
+        }
+
         await using var scope = _serviceProvider!.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var user = await db.Users.AsTracking().Include(u => u.BackupCodes).SingleAsync(u => u.Id == userId, Ct);
+        var code = user.BackupCodes.Single();
 
         _faults.Save.Armed = true;
         await uow.ExecuteInTransactionAsync(_ =>
         {
-            // No key: EF takes an entity with a key, reached through a navigation, for an existing row.
-            user.BackupCodes.Add(new UserBackupCodeEntity { Id = Guid.Empty, UserId = userId, CodeHash = "probe" });
+            user.BackupCodes.Remove(code);
             return Task.CompletedTask;
         }, Ct);
 
         _faults.Save.Tripped.Should().BeTrue();
         await using var read = _serviceProvider!.CreateAsyncScope();
         (await read.ServiceProvider.GetRequiredService<MeepleAiDbContext>().Set<UserBackupCodeEntity>().AsNoTracking()
-            .CountAsync(c => c.UserId == userId, Ct)).Should().Be(1, "one code per attempt was added, and one attempt counts");
+            .CountAsync(c => c.UserId == userId, Ct)).Should().Be(0, "the retry removes the code again, and the orphan is deleted");
     }
 
     /// <summary>

@@ -23,6 +23,7 @@ import { linkedFirst, ownUserId, type SelfPlayer, useSelfPlayer } from '@/hooks/
 import { api } from '@/lib/api';
 import { ConflictError } from '@/lib/api/core/errors';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
+import { PLAYER_NAME_MAX_LENGTH } from '@/lib/session-live/player-name';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -345,6 +346,7 @@ export function StartSessionSheet({
             <Input
               value={newName}
               onChange={e => setNewName(e.target.value)}
+              maxLength={PLAYER_NAME_MAX_LENGTH}
               onKeyDown={e => {
                 if (e.key === 'Enter') addPlayer();
               }}

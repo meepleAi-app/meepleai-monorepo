@@ -84,6 +84,14 @@ describe('CreateSessionStep — #4750: «Aggiungi me»', () => {
     expect(screen.queryByRole('button', { name: 'Aggiungi me' })).not.toBeInTheDocument();
   });
 
+  // #5150: il server prende al più 50 caratteri per il nome di un giocatore; il campo non ne accetta di più.
+  it('ogni posto accetta al più il limite di un giocatore', () => {
+    renderStep();
+
+    expect(screen.getByTestId('player-input-0')).toHaveAttribute('maxLength', '50');
+    expect(screen.getByTestId('player-input-1')).toHaveAttribute('maxLength', '50');
+  });
+
   it('il posto dell’utente non ha il cestino: se ne esce con «Io non gioco»', async () => {
     const user = userEvent.setup();
     currentUser.value = MARCO;

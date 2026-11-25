@@ -75,7 +75,8 @@ public class LiveSessionPlayerTests
     [Fact]
     public void Constructor_DisplayNameTooLong_ThrowsValidationException()
     {
-        ((Action)(() => CreatePlayer(displayName: new string('x', 101)))).Should().Throw<ValidationException>();
+        // #5150: 50, the limit of the correlated game session the start fills.
+        ((Action)(() => CreatePlayer(displayName: new string('x', 51)))).Should().Throw<ValidationException>();
     }
 
     [Fact]

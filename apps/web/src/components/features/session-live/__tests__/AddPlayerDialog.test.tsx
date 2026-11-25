@@ -38,9 +38,17 @@ vi.mock('@/hooks/mutations/useAddLivePlayer', () => ({
 vi.mock('@/lib/game-nights/hooks/usePlayerSearch', () => ({
   usePlayerSearch: ({ query }: { query: string }) => ({
     data:
-      query.length > 0
-        ? [{ id: 'user-uuid-001', displayName: 'Giulia', email: 'giulia@example.com' }]
-        : [],
+      query === 'Lungo'
+        ? [
+            {
+              id: 'user-uuid-002',
+              displayName: 'Lunghissimo '.repeat(8).trim(),
+              email: 'l@example.com',
+            },
+          ]
+        : query.length > 0
+          ? [{ id: 'user-uuid-001', displayName: 'Giulia', email: 'giulia@example.com' }]
+          : [],
     isFetching: false,
   }),
 }));
@@ -250,6 +258,57 @@ describe('AddPlayerDialog (#2505)', () => {
         color: 'Red',
       }),
       expect.any(Object)
+    );
+  });
+
+  // #5150: a seat takes 50 characters, a profile name up to 128. Sent whole, the server refuses it.
+  it('registered mode: a profile name over the limit is cut to the seat limit', async () => {
+    mutateMock.mockImplementation((_req, { onSuccess }) => onSuccess?.());
+    render(
+      <AddPlayerDialog
+        sessionId={SESSION_ID}
+        players={[]}
+        open={true}
+        onClose={vi.fn()}
+        labels={LABELS}
+      />,
+      { wrapper: makeWrapper(new QueryClient()) }
+    );
+
+    fireEvent.click(screen.getByText('Utente registrato'));
+    fireEvent.change(screen.getByPlaceholderText('Cerca per nome…'), {
+      target: { value: 'Lungo' },
+    });
+    const profileName = 'Lunghissimo '.repeat(8).trim();
+    await waitFor(() => expect(screen.getByText(profileName)).toBeInTheDocument());
+    fireEvent.click(screen.getByText(profileName));
+    fireEvent.click(screen.getByText('Aggiungi'));
+
+    await waitFor(() => expect(mutateMock).toHaveBeenCalledOnce());
+    expect(mutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        displayName: 'Lunghissimo Lunghissimo Lunghissimo Lunghissimo Lu',
+        userId: 'user-uuid-002',
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it('guest mode: the name field takes no more than the seat limit', () => {
+    render(
+      <AddPlayerDialog
+        sessionId={SESSION_ID}
+        players={[]}
+        open={true}
+        onClose={vi.fn()}
+        labels={LABELS}
+      />,
+      { wrapper: makeWrapper(new QueryClient()) }
+    );
+
+    expect(screen.getByPlaceholderText(LABELS.displayNamePlaceholder)).toHaveAttribute(
+      'maxLength',
+      '50'
     );
   });
 

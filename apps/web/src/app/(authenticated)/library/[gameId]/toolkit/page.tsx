@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { Button } from '@/components/ui/primitives/button';
 import { linkedFirst, ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { getGameTemplateByName, type GameTemplate } from '@/lib/config/game-templates';
+import { PLAYER_NAME_MAX_LENGTH } from '@/lib/session-live/player-name';
 import { API_PLAYER_COLORS } from '@/lib/sessions/player-colors';
 import { useSessionStore } from '@/lib/stores/session-store';
 
@@ -295,6 +296,7 @@ export default function GameToolkitLandingPage() {
                         type="text"
                         value={seat.name}
                         onChange={e => updateParticipant(index, e.target.value)}
+                        maxLength={PLAYER_NAME_MAX_LENGTH}
                         placeholder={`Player ${index + 1}`}
                         className="flex-1 px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-card dark:text-white"
                         disabled={isLoading}

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 
@@ -10,7 +11,8 @@ namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 /// </summary>
 internal sealed class LiveSessionPlayer : Entity<Guid>
 {
-    private const int MaxDisplayNameLength = 100;
+    // #5150: the limit of every step a player's name goes through, the start included.
+    private const int MaxDisplayNameLength = PlayerNameLimit.MaxLength;
     private const int MaxAvatarUrlLength = 500;
 
 #pragma warning disable CS8618

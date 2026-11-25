@@ -190,7 +190,8 @@ public sealed class CreateLiveSessionForGameNightTests
     [Fact]
     public async Task Handle_ALongNameWithASuffix_StaysWithinTheNameLimit()
     {
-        var longName = new string('x', 100);
+        // #5150: a profile name can reach 128 characters; the seat takes 50.
+        var longName = new string('x', 80);
 
         await _sut.Handle(
             NightCommand(
@@ -200,8 +201,29 @@ public sealed class CreateLiveSessionForGameNightTests
             CancellationToken.None);
 
         _added!.Players.Should().HaveCount(2);
-        _added.Players.Select(p => p.DisplayName.Length).Should().OnlyContain(length => length <= 100);
-        _added.Players[1].DisplayName.Should().EndWith(" (2)");
+        _added.Players[0].DisplayName.Should().Be(new string('x', 50), "cut exactly at the limit");
+        _added.Players[1].DisplayName.Should().Be(new string('x', 46) + " (2)", "the suffix stays within the limit");
+    }
+
+    /// <summary>
+    /// #5150 review: the suffix cut fell in the middle of an emoji and left half of it, which is not valid
+    /// UTF-8. The cut keeps the whole character or none of it.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5150")]
+    public async Task Handle_TheSuffixCut_DoesNotLeaveHalfOfAnEmoji()
+    {
+        // 45 letters and an emoji: the suffix " (2)" leaves room for 46 units, the emoji ends at the 47th.
+        var name = new string('x', 45) + "🎲" + "yy";
+
+        await _sut.Handle(
+            NightCommand(
+                Guid.NewGuid(),
+                new LiveSessionInitialPlayer(Guid.NewGuid(), name),
+                new LiveSessionInitialPlayer(Guid.NewGuid(), name)),
+            CancellationToken.None);
+
+        _added!.Players[1].DisplayName.Should().Be(new string('x', 45) + " (2)");
     }
 
     [Fact]

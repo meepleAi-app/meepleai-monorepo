@@ -188,6 +188,13 @@ describe('StartSessionSheet — #4770: il creatore gioca, collegato al suo accou
     ]);
   });
 
+  // #5150: il server prende al più 50 caratteri per il nome di un giocatore; il campo non ne accetta di più.
+  it('il nome di un nuovo giocatore accetta al più il limite di un giocatore', () => {
+    render(<StartSessionSheet open onOpenChange={vi.fn()} gameId="game-1" gameName="Catan" />);
+
+    expect(screen.getByTestId('new-player-input')).toHaveAttribute('maxLength', '50');
+  });
+
   it('il creatore entra per primo (il server ne fa l’Host) ma l’ordine dei turni resta quello mostrato', async () => {
     render(<StartSessionSheet open onOpenChange={vi.fn()} gameId="game-1" gameName="Catan" />);
     fireEvent.change(screen.getByTestId('new-player-input'), { target: { value: 'Bob' } });

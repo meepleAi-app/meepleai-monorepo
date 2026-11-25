@@ -24,6 +24,20 @@ describe('selfDisplayName', () => {
     expect(selfDisplayName(undefined)).toBe('Giocatore 1');
     expect(selfDisplayName('   ')).toBe('Giocatore 1');
   });
+
+  // #5150: il nome del profilo arriva fino a 128 caratteri, un posto al tavolo ne prende 50. Seminato
+  // intero, il server rifiutava il creatore all'aggiunta (prima: la partita non si avviava).
+  it('taglia il nome del profilo al limite di un giocatore', () => {
+    const name = selfDisplayName(`${'a'.repeat(49)} ${'b'.repeat(78)}`);
+
+    expect(name).toBe('a'.repeat(49));
+    expect(selfDisplayName('c'.repeat(128))).toHaveLength(50);
+  });
+
+  it('non lascia a metà un carattere fuori dal piano base', () => {
+    // 49 lettere e un'emoji: l'emoji occupa due unità, e la seconda cadrebbe oltre il limite.
+    expect(selfDisplayName(`${'a'.repeat(49)}🎲${'b'.repeat(10)}`)).toBe('a'.repeat(49));
+  });
 });
 
 describe('ownUserId', () => {

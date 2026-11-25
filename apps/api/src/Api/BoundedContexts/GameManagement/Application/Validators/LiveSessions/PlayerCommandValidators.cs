@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using FluentValidation;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Validators.LiveSessions;
 
@@ -18,8 +19,9 @@ internal sealed class AddPlayerToLiveSessionCommandValidator : AbstractValidator
         RuleFor(x => x.DisplayName)
             .NotEmpty()
             .WithMessage("Display name is required")
-            .MaximumLength(100)
-            .WithMessage("Display name cannot exceed 100 characters");
+            // #5150: the start copies the seat into the correlated game session, which takes no more.
+            .MaximumLength(PlayerNameLimit.MaxLength)
+            .WithMessage($"Display name cannot exceed {PlayerNameLimit.MaxLength} characters");
 
         RuleFor(x => x.Color)
             .IsInEnum()

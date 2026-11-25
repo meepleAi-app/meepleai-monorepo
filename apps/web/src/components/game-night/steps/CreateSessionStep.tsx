@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { linkedFirst, ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 import { ConflictError } from '@/lib/api/core/errors';
+import { PLAYER_NAME_MAX_LENGTH } from '@/lib/session-live/player-name';
 import { API_PLAYER_COLORS } from '@/lib/sessions/player-colors';
 import {
   duplicatePlayerNameMessage,
@@ -260,6 +261,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
               placeholder={`Giocatore ${index + 1}`}
               value={player.name}
               onChange={e => handlePlayerChange(player.id, e.target.value)}
+              maxLength={PLAYER_NAME_MAX_LENGTH}
               data-testid={`player-input-${index}`}
               id={`${formId}-player-${index}`}
               aria-invalid={isInConflict(player) ? true : undefined}

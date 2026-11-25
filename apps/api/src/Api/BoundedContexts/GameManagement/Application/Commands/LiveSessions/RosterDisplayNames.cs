@@ -1,3 +1,5 @@
+using Api.SharedKernel.Domain.Validation;
+
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
 /// <summary>
@@ -20,8 +22,15 @@ internal static class RosterDisplayNames
     /// <summary>The organizer of the night, seated by the server, with no usable name.</summary>
     public const string Organizer = "Organizzatore";
 
+    /// <remarks>
+    /// #5150: the name leaves cut to <see cref="PlayerNameLimit.MaxLength"/>. Every name the server seats on its
+    /// own comes through here (the night's organizer and players, the go-live's organizer), and a profile name
+    /// reaches 128 characters: seeded whole, the tracking session refused it and the whole start answered 422.
+    /// </remarks>
     public static string Resolve(string? displayName, string fallback) =>
-        string.IsNullOrWhiteSpace(displayName) || LooksLikeAnEmailAddress(displayName) ? fallback : displayName;
+        string.IsNullOrWhiteSpace(displayName) || LooksLikeAnEmailAddress(displayName)
+            ? fallback
+            : PlayerNameLimit.Clamp(displayName.Trim());
 
     /// <summary>One «@» with something before it, a dot in the domain, no spaces: the shape of an address.</summary>
     internal static bool LooksLikeAnEmailAddress(string value)

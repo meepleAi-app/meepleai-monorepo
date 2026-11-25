@@ -485,6 +485,59 @@ public sealed class AuditLoggingBehaviorTests
     }
 
     /// <summary>
+    /// #5154 review — the handler has already saved when the details are read. Details that throw must not
+    /// turn that saved mutation into a failure and an Error row: the row is a Success with the command, and
+    /// names the error.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5154")]
+    public async Task Should_Keep_The_Operation_And_A_Success_Row_When_The_Details_Throw()
+    {
+        SetupHttpContext();
+        var payload = await CaptureBestEffortPayloadAsync<TestThrowingDetailsCommand, TestThrowingDetailsResponse>(
+            new TestThrowingDetailsCommand(Guid.NewGuid()), new TestThrowingDetailsResponse());
+
+        payload.Result.Should().Be("Success");
+        using var details = System.Text.Json.JsonDocument.Parse(payload.Details);
+        details.RootElement.GetProperty("auditDetailsError").GetString().Should().Be(nameof(InvalidOperationException));
+        details.RootElement.GetProperty("commandType").GetString().Should().Be(nameof(TestThrowingDetailsCommand));
+    }
+
+    [Fact]
+    [Trait("Issue", "5154")]
+    public async Task Should_Not_Let_The_Details_Replace_The_Commands_Keys_Or_Carry_A_Sensitive_Name()
+    {
+        SetupHttpContext();
+        var payload = await CaptureBestEffortPayloadAsync<TestForgingDetailsCommand, TestForgingDetailsResponse>(
+            new TestForgingDetailsCommand(Guid.NewGuid()), new TestForgingDetailsResponse());
+
+        using var details = System.Text.Json.JsonDocument.Parse(payload.Details);
+        details.RootElement.GetProperty("commandType").GetString().Should().Be(nameof(TestForgingDetailsCommand));
+        details.RootElement.TryGetProperty("password", out _).Should().BeFalse();
+        details.RootElement.GetProperty("extra").GetInt32().Should().Be(1, "a new key is added");
+    }
+
+    [Fact]
+    [Trait("Issue", "5154")]
+    public async Task Should_Add_The_Details_On_The_Atomic_Path_Too()
+    {
+        SetupHttpContext();
+        AuditOutboxPayload? captured = null;
+        _auditServiceMock
+            .Setup(x => x.EnqueueAuditAtomicAsync(It.IsAny<AuditOutboxPayload>(), It.IsAny<CancellationToken>()))
+            .Callback<AuditOutboxPayload, CancellationToken>((p, _) => captured = p);
+
+        await CreateBehavior<TestAtomicAuditedCommand, TestAuditedResponse>().Handle(
+            new TestAtomicAuditedCommand(Guid.NewGuid()),
+            _ => Task.FromResult(new TestAuditedResponse(Guid.NewGuid(), 2)),
+            CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        using var details = System.Text.Json.JsonDocument.Parse(captured!.Details);
+        details.RootElement.GetProperty("removed").GetInt32().Should().Be(2);
+    }
+
+    /// <summary>
     /// #5154 — <c>ResourceIdProperty</c> is a string: written without <c>nameof</c>, a typo would record
     /// no resource at all, silently. Every declared name must be a property of its command.
     /// </summary>
@@ -557,4 +610,29 @@ internal sealed record TestAuditedResponse(Guid AuthorId, int Removed) : IAuditD
 {
     public IReadOnlyDictionary<string, object?> AuditDetails =>
         new Dictionary<string, object?>(StringComparer.Ordinal) { ["authorId"] = AuthorId, ["removed"] = Removed };
+}
+
+[AuditableAction("AtomicAuditedAction", "Item")]
+[AtomicAudit]
+internal record TestAtomicAuditedCommand(Guid Id) : IRequest<TestAuditedResponse>;
+
+[AuditableAction("ThrowingDetailsAction", "Item")]
+internal record TestThrowingDetailsCommand(Guid Id) : IRequest<TestThrowingDetailsResponse>;
+
+internal sealed class TestThrowingDetailsResponse : IAuditDetails
+{
+    public IReadOnlyDictionary<string, object?> AuditDetails => throw new InvalidOperationException("not serialisable");
+}
+
+[AuditableAction("ForgingDetailsAction", "Item")]
+internal record TestForgingDetailsCommand(Guid Id) : IRequest<TestForgingDetailsResponse>;
+
+internal sealed class TestForgingDetailsResponse : IAuditDetails
+{
+    public IReadOnlyDictionary<string, object?> AuditDetails => new Dictionary<string, object?>(StringComparer.Ordinal)
+    {
+        ["commandType"] = "Forged",
+        ["password"] = "hunter2",
+        ["extra"] = 1,
+    };
 }

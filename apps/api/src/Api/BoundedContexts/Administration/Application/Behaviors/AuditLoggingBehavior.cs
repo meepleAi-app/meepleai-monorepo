@@ -253,13 +253,15 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
             var response = await next().ConfigureAwait(false);
 
             // next() has completed — the handler's SaveChanges has fired, so the interceptor has
-            // populated the sink with any [Auditable] entity snapshots.
+            // populated the sink with any [Auditable] entity snapshots. The details are built inside the
+            // swallowing enqueue (#5154): they now read the response, and a response whose details cannot
+            // be serialised must not turn a saved mutation into a 500 and an Error row.
             await EnqueueBestEffortAuditAsync(
                 auditAttribute,
                 adminUserId,
                 resourceId,
                 "Success",
-                BuildMetadata(auditAttribute, adminEmail, request, response),
+                () => BuildMetadata(auditAttribute, adminEmail, request, response),
                 ipAddress,
                 userAgent,
                 cancellationToken).ConfigureAwait(false);
@@ -276,7 +278,7 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
                 adminUserId,
                 resourceId,
                 "Error",
-                BuildErrorMetadata(auditAttribute, adminEmail, request, ex),
+                () => BuildErrorMetadata(auditAttribute, adminEmail, request, ex),
                 ipAddress,
                 userAgent,
                 cancellationToken).ConfigureAwait(false);
@@ -352,7 +354,7 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         // Extract relevant properties from the command (exclude sensitive data)
         foreach (var prop in typeof(TRequest).GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            if (prop.Name is "Password" or "Token" or "Secret" or "ApiKey")
+            if (IsSensitive(prop.Name))
                 continue;
 
             var val = prop.GetValue(request);
@@ -362,17 +364,37 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
             }
         }
 
-        // #5154: what the handler learned, e.g. whose rows a deletion removed.
+        // #5154: what the handler learned, e.g. whose rows a deletion removed. Added, never replacing what
+        // the command and the caller already put there, and with the same names left out.
         if (response is IAuditDetails audited)
         {
-            foreach (var (key, value) in audited.AuditDetails)
+            try
             {
-                metadata[key] = value;
+                var withDetails = new Dictionary<string, object?>(metadata, StringComparer.Ordinal);
+                foreach (var (key, value) in audited.AuditDetails)
+                {
+                    if (!IsSensitive(key))
+                        withDetails.TryAdd(key, value);
+                }
+
+                return JsonSerializer.Serialize(withDetails);
+            }
+#pragma warning disable CA1031 // A response's details are the handler's code: whatever they throw, the row keeps the command
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                metadata["auditDetailsError"] = ex.GetType().Name;
             }
         }
 
         return JsonSerializer.Serialize(metadata);
     }
+
+    private static bool IsSensitive(string name) =>
+        name.Equals("Password", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("Token", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("Secret", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("ApiKey", StringComparison.OrdinalIgnoreCase);
 
     private static string BuildErrorMetadata(AuditableActionAttribute attr, string? adminEmail, TRequest request, Exception ex)
     {
@@ -485,7 +507,7 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         string? adminUserId,
         string? resourceId,
         string result,
-        string details,
+        Func<string> buildDetails,
         string? ipAddress,
         string? userAgent,
         CancellationToken cancellationToken)
@@ -493,7 +515,7 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         try
         {
             var payload = BuildOutboxPayload(
-                attr, adminUserId, resourceId, ipAddress, userAgent, result, details);
+                attr, adminUserId, resourceId, ipAddress, userAgent, result, buildDetails());
 
             await _auditService.EnqueueAuditAsync(payload, cancellationToken).ConfigureAwait(false);
         }

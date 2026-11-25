@@ -353,7 +353,8 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         _dbContext.RuleSpecComments.Add(new RuleSpecCommentEntity
         {
             Id = Guid.NewGuid(), GameId = _testGameId, Version = "1.0.0", CommentText = "Reply to the reply",
-            UserId = _testUserId, ParentCommentId = replyId, CreatedAt = DateTime.UtcNow,
+            // Not the root's author: the row must name the root's, not the first reply removed.
+            UserId = _otherUserId, ParentCommentId = replyId, CreatedAt = DateTime.UtcNow,
         });
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear(); // #3866: fine arrange — vedi CreateTestCommentAsync

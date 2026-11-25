@@ -39,7 +39,7 @@ internal record DeleteRuleCommentCommand(
 /// </summary>
 internal sealed record RuleCommentDeletion(Guid CommentAuthorId, int RepliesDeleted) : IAuditDetails
 {
-    public IReadOnlyDictionary<string, object?> AuditDetails => new Dictionary<string, object?>(StringComparer.Ordinal)
+    IReadOnlyDictionary<string, object?> IAuditDetails.AuditDetails => new Dictionary<string, object?>(StringComparer.Ordinal)
     {
         ["commentAuthorId"] = CommentAuthorId,
         ["repliesDeleted"] = RepliesDeleted,

@@ -82,15 +82,10 @@ internal sealed class ChangeTrackerRewind
     /// <summary>Puts the tracker and the events back as they were in the picture, before every attempt after the first.</summary>
     public void Restore()
     {
-        // Two passes. The first puts the values, the states and the references back, and EF's fix-up the collections. EF keeps its own
-        // snapshot of each navigation, though, and the failed attempt's accepted save moved it: a link put back looks,
-        // to EF, like an addition, and a delegate that removes it again before the next detection leaves no difference
-        // to see. The detection in between brings EF's snapshots in line with what was put back — finding the join
-        // rows the first pass attached rather than making new ones — and the second pass undoes what that detection
-        // changed.
-        ForgetWhatTheAttemptBroughtIn();
-        PutThePictureBack();
-        _context.ChangeTracker.DetectChanges();
+        // One pass. The collections are not put back by hand: EF's fix-up puts the item back when its reference or its
+        // join row returns, and moves EF's own snapshot of the collection with it, so a retry that takes the item out
+        // again leaves a difference to detect. Put back by hand, a collection looked to EF like an addition, and it
+        // took a detection and a second pass to undo it.
         ForgetWhatTheAttemptBroughtIn();
         PutThePictureBack();
 

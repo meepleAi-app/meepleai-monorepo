@@ -1,5 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -29,8 +31,12 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 /// </remarks>
 internal sealed class CancelGameNightCommandHandler : ICommandHandler<CancelGameNightCommand>
 {
+    /// <summary>#4780: the 409 of a night whose game is being played. The client says «termina prima la partita».</summary>
+    public const string LiveGameInProgressCode = "game_night_has_live_game";
+
     private readonly IGameNightEventRepository _repository;
     private readonly IGameNightInvitationRepository _invitations;
+    private readonly ILiveSessionRepository _liveSessions;
     private readonly IUnitOfWork _unitOfWork;
     private readonly HybridCache _cache;
     private readonly ILogger<CancelGameNightCommandHandler> _logger;
@@ -38,12 +44,14 @@ internal sealed class CancelGameNightCommandHandler : ICommandHandler<CancelGame
     public CancelGameNightCommandHandler(
         IGameNightEventRepository repository,
         IGameNightInvitationRepository invitations,
+        ILiveSessionRepository liveSessions,
         IUnitOfWork unitOfWork,
         HybridCache cache,
         ILogger<CancelGameNightCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _invitations = invitations ?? throw new ArgumentNullException(nameof(invitations));
+        _liveSessions = liveSessions ?? throw new ArgumentNullException(nameof(liveSessions));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -59,6 +67,18 @@ internal sealed class CancelGameNightCommandHandler : ICommandHandler<CancelGame
         if (gameNight.OrganizerId != command.UserId)
             throw new AccessDeniedException("Only the organizer can cancel a game night");
 
+        // #4780 (decision of 2026-11-25): a night is not cancelled under a game being played. Its live game and the
+        // correlated GameSession would keep their quota slot until someone ended them, from a night nobody can open
+        // any more. «Being played» is a live game started and not completed — InProgress or Paused: a pause frees the
+        // night's link (it goes back to Pending), so the link alone does not say it. Not asked again of a night
+        // already cancelled, so that a retry stays the no-op it was.
+        if (gameNight.Status is not (GameNightStatus.Cancelled or GameNightStatus.Completed)
+            && await HasAGameBeingPlayedAsync(gameNight, cancellationToken).ConfigureAwait(false))
+        {
+            throw new ConflictException(
+                LiveGameInProgressCode, "A game of this night is being played: end it before cancelling the night.");
+        }
+
         try
         {
             gameNight.Cancel();
@@ -72,6 +92,24 @@ internal sealed class CancelGameNightCommandHandler : ICommandHandler<CancelGame
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await DropCachedPagesAsync(gameNight.Id, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// True when a sitting of the night has a live game started and not completed. A night has at most five sittings,
+    /// so one read each.
+    /// </summary>
+    private async Task<bool> HasAGameBeingPlayedAsync(GameNightEvent gameNight, CancellationToken cancellationToken)
+    {
+        foreach (var sitting in gameNight.Sessions)
+        {
+            var live = await _liveSessions
+                .GetByTrackingSessionIdAsync(sitting.SessionId, cancellationToken)
+                .ConfigureAwait(false);
+            if (live?.Status is LiveSessionStatus.InProgress or LiveSessionStatus.Paused)
+                return true;
+        }
+
+        return false;
     }
 
     private async Task DropCachedPagesAsync(Guid gameNightId, CancellationToken cancellationToken)

@@ -1,7 +1,9 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -29,12 +31,13 @@ public sealed class CancelGameNightCommandHandlerTests
 
     private readonly Mock<IGameNightEventRepository> _nights = new();
     private readonly Mock<IGameNightInvitationRepository> _invitations = new();
+    private readonly Mock<ILiveSessionRepository> _liveSessions = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<HybridCache> _cache = new();
     private readonly Mock<ILogger<CancelGameNightCommandHandler>> _logger = new();
 
     private CancelGameNightCommandHandler CreateHandler() =>
-        new(_nights.Object, _invitations.Object, _unitOfWork.Object, _cache.Object, _logger.Object);
+        new(_nights.Object, _invitations.Object, _liveSessions.Object, _unitOfWork.Object, _cache.Object, _logger.Object);
 
     private static GameNightInvitation Invitation(Guid nightId, string token, GameNightInvitationStatus status) =>
         GameNightInvitation.Reconstitute(
@@ -214,5 +217,86 @@ public sealed class CancelGameNightCommandHandlerTests
         var act = () => CreateHandler().Handle(new CancelGameNightCommand(night.Id, organizerId), cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    // ── #4780: not under a game being played ───────────────────────────────────────────────────────────────
+
+    /// <summary>A night with a sitting, whose tracking session id is the one its live game hangs off.</summary>
+    private GameNightEvent GivenANightWithASitting(Guid organizerId, LiveGameSession? liveGame)
+    {
+        var night = GivenAPublishedNight(organizerId);
+        var trackingId = Guid.NewGuid();
+        night.AddSession(trackingId, Guid.NewGuid(), "Catan");
+        GivenInvitations(night.Id);
+        _liveSessions.Setup(r => r.GetByTrackingSessionIdAsync(trackingId, It.IsAny<CancellationToken>())).ReturnsAsync(liveGame);
+        return night;
+    }
+
+    private static LiveGameSession LiveGame(LiveSessionStatus status)
+    {
+        var live = LiveGameSession.Create(Guid.NewGuid(), Guid.NewGuid(), "Catan", TimeProvider.System);
+        if (status == LiveSessionStatus.Created)
+            return live;
+        live.AddPlayer(null, "Marta", PlayerColor.Red, TimeProvider.System);
+        live.Start(TimeProvider.System);
+        if (status == LiveSessionStatus.Paused)
+            live.Pause(TimeProvider.System);
+        if (status == LiveSessionStatus.Completed)
+            live.Complete(TimeProvider.System);
+        return live;
+    }
+
+    /// <summary>
+    /// #4780 (decision of 2026-11-25) — cancelled under a game being played, the night left the live game and its
+    /// GameSession holding a quota slot from a night nobody could open any more. The cancellation is refused with a
+    /// 409 the client explains. A paused game counts: the pause frees the night's link, not the quota.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData(LiveSessionStatus.InProgress)]
+    [InlineData(LiveSessionStatus.Paused)]
+    public async Task Handle_AGameBeingPlayed_RefusesTheCancellation(LiveSessionStatus status)
+    {
+        var organizerId = Guid.NewGuid();
+        var night = GivenANightWithASitting(organizerId, LiveGame(status));
+
+        var act = () => CreateHandler().Handle(new CancelGameNightCommand(night.Id, organizerId), CancellationToken.None);
+
+        (await act.Should().ThrowAsync<ConflictException>()).Which.ErrorCode
+            .Should().Be(CancelGameNightCommandHandler.LiveGameInProgressCode);
+        night.Status.Should().NotBe(GameNightStatus.Cancelled);
+        _nights.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A live game created and never started, or one already completed, holds nothing: the night cancels.</summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData(LiveSessionStatus.Created)]
+    [InlineData(LiveSessionStatus.Completed)]
+    [InlineData(null)]
+    public async Task Handle_NoGameBeingPlayed_CancelsTheNight(LiveSessionStatus? status)
+    {
+        var organizerId = Guid.NewGuid();
+        var night = GivenANightWithASitting(organizerId, status is { } s ? LiveGame(s) : null);
+
+        await CreateHandler().Handle(new CancelGameNightCommand(night.Id, organizerId), CancellationToken.None);
+
+        night.Status.Should().Be(GameNightStatus.Cancelled);
+    }
+
+    /// <summary>A night cancelled before this rule, under a game: the retry stays the no-op it was, and drops the pages.</summary>
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task Handle_AnAlreadyCancelledNight_IsNotAskedAboutItsGames()
+    {
+        var organizerId = Guid.NewGuid();
+        var night = GivenANightWithASitting(organizerId, LiveGame(LiveSessionStatus.InProgress));
+        night.Cancel();
+
+        await CreateHandler().Handle(new CancelGameNightCommand(night.Id, organizerId), CancellationToken.None);
+
+        night.Status.Should().Be(GameNightStatus.Cancelled);
+        _liveSessions.Verify(
+            r => r.GetByTrackingSessionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

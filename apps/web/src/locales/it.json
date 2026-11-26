@@ -4646,7 +4646,8 @@
         "kickGuest": "Rimuovi",
         "publishedToast": "Inviti inviati",
         "publishedToastDescription": "Gli invitati riceveranno una notifica.",
-        "cancelledToast": "Serata annullata"
+        "cancelledToast": "Serata annullata",
+        "cancelBlockedByLiveGame": "C’è una partita in corso: terminala prima di annullare la serata."
       },
       "bystander": {
         "privateTitle": "Serata privata",

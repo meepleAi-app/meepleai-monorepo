@@ -52,6 +52,7 @@ import { useSharedGames, useSharedGamesByIds } from '@/hooks/queries/useSharedGa
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/hooks/useTranslation';
+import { GAME_NIGHT_HAS_LIVE_GAME_CODE } from '@/lib/api/clients/gameNightsClient';
 import { ApiError } from '@/lib/api/core/errors';
 import { GAME_NIGHT_FULL_CODE } from '@/lib/api/game-night-invitations';
 import type {
@@ -264,12 +265,20 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   function handleCancel() {
     cancelMutation.mutate(id, {
       onSuccess: () => toast({ title: t('gameNightDetail.actor.host.cancelledToast') }),
-      onError: () =>
+      onError: error => {
+        // #4780: a night is not cancelled under a game being played; the 409 has its own code, and says so.
+        const gameBeingPlayed =
+          error instanceof ApiError && error.code === GAME_NIGHT_HAS_LIVE_GAME_CODE;
         toast({
           title: t('common.error'),
-          description: t('gameNightDetail.rsvp.errors.generic'),
+          description: t(
+            gameBeingPlayed
+              ? 'gameNightDetail.actor.host.cancelBlockedByLiveGame'
+              : 'gameNightDetail.rsvp.errors.generic'
+          ),
           variant: 'destructive',
-        }),
+        });
+      },
     });
   }
 

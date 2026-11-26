@@ -33,7 +33,6 @@ vi.mock('@/stores/game-night', () => ({
     addPlayer: vi.fn(),
     addGame: vi.fn(),
     reset: vi.fn(),
-    activeSessions: [],
   }),
 }));
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast: vi.fn() }) }));

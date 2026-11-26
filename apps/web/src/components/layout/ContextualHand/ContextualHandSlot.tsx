@@ -1,32 +1,24 @@
 'use client';
 
-import {
-  Gamepad2,
-  Bot,
-  Wrench,
-  Play,
-  Pause,
-  Dice5,
-  MessageSquare,
-  Hash,
-  BookOpen,
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Gamepad2, Play, Pause, Hash, BookOpen } from 'lucide-react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
-import type { MeepleEntityType, CardStatus } from '@/components/ui/data-display/meeple-card/types';
+import type { CardStatus } from '@/components/ui/data-display/meeple-card/types';
 import { cn } from '@/lib/utils';
 import {
   useContextualHandStore,
   selectCurrentSession,
-  selectCreateResult,
   selectContext,
   selectKbReadiness,
 } from '@/stores/contextual-hand';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-export type HandSlotType = 'game' | 'agent' | 'toolkit' | 'session' | 'kb';
+/**
+ * The slots of the hand. #4780: «Agente» and «Toolkit» are gone — on the mobile bar they stayed empty (#4771), and
+ * the hand had nothing else to show in them.
+ */
+export type HandSlotType = 'game' | 'session' | 'kb';
 
 interface ContextualHandSlotProps {
   slotType: HandSlotType;
@@ -41,10 +33,6 @@ function slotIcon(slotType: HandSlotType) {
   switch (slotType) {
     case 'game':
       return <Gamepad2 className="h-4 w-4" />;
-    case 'agent':
-      return <Bot className="h-4 w-4" />;
-    case 'toolkit':
-      return <Wrench className="h-4 w-4" />;
     case 'session':
       return <Hash className="h-4 w-4" />;
     case 'kb':
@@ -56,10 +44,6 @@ function slotLabel(slotType: HandSlotType) {
   switch (slotType) {
     case 'game':
       return 'Gioco';
-    case 'agent':
-      return 'Agente AI';
-    case 'toolkit':
-      return 'Toolkit';
     case 'session':
       return 'Partita';
     case 'kb':
@@ -67,32 +51,14 @@ function slotLabel(slotType: HandSlotType) {
   }
 }
 
-function _slotEntity(slotType: HandSlotType): MeepleEntityType {
-  switch (slotType) {
-    case 'game':
-      return 'game';
-    case 'agent':
-      return 'agent';
-    case 'toolkit':
-      return 'toolkit';
-    case 'session':
-      return 'session';
-    case 'kb':
-      return 'kb';
-  }
-}
-
 // ─── Component ────────────────────────────────────────────────────────────
 
 export function ContextualHandSlot({ slotType, collapsed, className }: ContextualHandSlotProps) {
-  const router = useRouter();
   const context = useContextualHandStore(selectContext);
   const currentSession = useContextualHandStore(selectCurrentSession);
-  const createResult = useContextualHandStore(selectCreateResult);
   const kbReadiness = useContextualHandStore(selectKbReadiness);
   const pauseSession = useContextualHandStore(s => s.pauseSession);
   const resumeSession = useContextualHandStore(s => s.resumeSession);
-  const rollDice = useContextualHandStore(s => s.rollDice);
   const checkKbReadiness = useContextualHandStore(s => s.checkKbReadiness);
 
   // ── Collapsed: icon-only pill ───────────────────────────────────────
@@ -171,76 +137,24 @@ export function ContextualHandSlot({ slotType, collapsed, className }: Contextua
     );
   }
 
-  if (slotType === 'agent') {
-    const agentId = createResult?.agentDefinitionId;
-    return (
-      <div className={cn('space-y-1.5', className)}>
-        <MeepleCard
-          entity="agent"
-          variant="compact"
-          title={agentId ? 'Agente AI' : 'Nessun agente'}
-          badge={agentId ? 'Pronto' : '--'}
-        />
-        {agentId && (
-          <button
-            onClick={() => router.push(`/chat?agentId=${agentId}`)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 min-h-[44px]"
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-            Chiedi
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  if (slotType === 'kb') {
-    const isReady = kbReadiness?.isReady ?? false;
-    return (
-      <div className={cn('space-y-1.5', className)}>
-        <MeepleCard
-          entity="kb"
-          variant="compact"
-          title="Knowledge Base"
-          badge={kbReadiness ? (isReady ? 'Pronta' : 'Non pronta') : '--'}
-          status={isReady ? 'active' : undefined}
-        />
-        {currentSession?.gameId && (
-          <button
-            onClick={() => checkKbReadiness(currentSession.gameId)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 min-h-[44px]"
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            Vedi stato
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  // toolkit
-  const toolkitId = createResult?.toolkitId;
-  const firstParticipantId = createResult?.participants?.[0]?.id;
+  // kb
+  const isReady = kbReadiness?.isReady ?? false;
   return (
     <div className={cn('space-y-1.5', className)}>
       <MeepleCard
-        entity="toolkit"
+        entity="kb"
         variant="compact"
-        title={toolkitId ? 'Toolkit' : 'Nessun toolkit'}
-        badge={toolkitId ? 'Attivo' : '--'}
+        title="Knowledge Base"
+        badge={kbReadiness ? (isReady ? 'Pronta' : 'Non pronta') : '--'}
+        status={isReady ? 'active' : undefined}
       />
-      {toolkitId && (
+      {currentSession?.gameId && (
         <button
-          disabled={!firstParticipantId}
-          title={!firstParticipantId ? 'Avvia la partita' : undefined}
-          onClick={async () => {
-            if (!firstParticipantId) return;
-            await rollDice(firstParticipantId, '2d6');
-          }}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => checkKbReadiness(currentSession.gameId)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 min-h-[44px]"
         >
-          <Dice5 className="h-3.5 w-3.5" />
-          Tira dado
+          <BookOpen className="h-3.5 w-3.5" />
+          Vedi stato
         </button>
       )}
     </div>

@@ -120,8 +120,11 @@ export function GameNightSessionsList({
         {sessions.map(session => {
           const meta = STATUS_MAP[session.status] ?? FALLBACK_STATUS;
           const Icon = meta.icon;
+          // #4780: to the live game only for a viewer its page lets in; anyone else stays on the night.
           const href =
-            !isCompleted && session.liveSessionId ? liveGameHref(session.liveSessionId) : nightHref;
+            !isCompleted && session.liveSessionId && session.canOpenLiveGame
+              ? liveGameHref(session.liveSessionId)
+              : nightHref;
 
           return (
             <Link

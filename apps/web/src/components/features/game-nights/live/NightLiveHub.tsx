@@ -30,6 +30,11 @@ export interface NightLiveHubCurrentGame {
    * Absent for a sitting with no live game (it predates the bridge): the jump action is then not offered.
    */
   readonly liveSessionId?: string;
+  /**
+   * #4780: the viewer may open that live game (its creator, or an active player seated under their account).
+   * An invitee who is not at the table would get a 403 there, so the jump action is offered only with it.
+   */
+  readonly canOpenLiveGame?: boolean;
   readonly title: string;
   readonly emoji?: string;
   readonly cover?: readonly [string, string];
@@ -479,8 +484,9 @@ function CurrentGameCard({
             </h2>
           </div>
           {/* The game is played on its live page: the action exists only when the sitting has a live game
-              (one that predates the bridge has none, and there is nowhere to jump to). */}
-          {onJumpToSession && liveSessionId ? (
+              (one that predates the bridge has none, and there is nowhere to jump to), and only for a viewer
+              that page lets in (#4780). */}
+          {onJumpToSession && liveSessionId && game.canOpenLiveGame ? (
             <button
               type="button"
               onClick={() => onJumpToSession(liveSessionId)}

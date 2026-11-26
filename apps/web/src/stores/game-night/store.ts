@@ -4,14 +4,7 @@ import { immer } from 'zustand/middleware/immer';
 
 import type { SessionParticipant } from '@/stores/session/types';
 
-import type {
-  GameNightSummary,
-  GameNightGame,
-  TimelineSlot,
-  GameNightActiveSession,
-  DiaryEntry,
-  PlayerResource,
-} from './types';
+import type { GameNightSummary, GameNightGame, TimelineSlot, PlayerResource } from './types';
 
 interface GameNightState {
   gameNights: GameNightSummary[];
@@ -21,8 +14,6 @@ interface GameNightState {
   players: SessionParticipant[];
   selectedGames: GameNightGame[];
   timeline: TimelineSlot[];
-  activeSessions: GameNightActiveSession[];
-  diary: DiaryEntry[];
   playerResources: PlayerResource[];
 
   setGameNights: (nights: GameNightSummary[]) => void;
@@ -34,9 +25,6 @@ interface GameNightState {
   addGame: (game: GameNightGame) => void;
   removeGame: (gameId: string) => void;
   setTimeline: (timeline: TimelineSlot[]) => void;
-  setActiveSessions: (sessions: GameNightActiveSession[]) => void;
-  addDiaryEntry: (entry: DiaryEntry) => void;
-  setDiary: (entries: DiaryEntry[]) => void;
   setPlayerResources: (resources: PlayerResource[]) => void;
   updatePlayerResource: (participantId: string, key: string, value: number) => void;
   reset: () => void;
@@ -50,8 +38,6 @@ const initialState = {
   players: [] as SessionParticipant[],
   selectedGames: [] as GameNightGame[],
   timeline: [] as TimelineSlot[],
-  activeSessions: [] as GameNightActiveSession[],
-  diary: [] as DiaryEntry[],
   playerResources: [] as PlayerResource[],
 };
 
@@ -98,20 +84,6 @@ export const useGameNightStore = create<GameNightState>()(
       setTimeline: timeline =>
         set(s => {
           s.timeline = timeline;
-        }),
-      setActiveSessions: sessions =>
-        set(s => {
-          s.activeSessions = sessions;
-        }),
-      addDiaryEntry: entry =>
-        set(s => {
-          if (!s.diary.some(e => e.id === entry.id)) {
-            s.diary.push(entry);
-          }
-        }),
-      setDiary: entries =>
-        set(s => {
-          s.diary = entries;
         }),
       setPlayerResources: resources =>
         set(s => {

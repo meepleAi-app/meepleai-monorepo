@@ -130,15 +130,14 @@ describe('ContextualHandSlot', () => {
     it('renders correct label for each slot type', () => {
       const labels: Record<string, string> = {
         game: 'Gioco',
-        agent: 'Agente AI',
-        toolkit: 'Toolkit',
+        kb: 'Knowledge Base',
         session: 'Partita',
       };
 
       for (const [type, label] of Object.entries(labels)) {
         setMockState({ context: 'idle' });
         const { unmount } = render(
-          <ContextualHandSlot slotType={type as 'game' | 'agent' | 'toolkit' | 'session'} />
+          <ContextualHandSlot slotType={type as 'game' | 'session' | 'kb'} />
         );
         expect(screen.getByText(label)).toBeInTheDocument();
         unmount();
@@ -196,80 +195,6 @@ describe('ContextualHandSlot', () => {
 
       const card = screen.getByTestId('meeple-card-game');
       expect(card).toHaveAttribute('data-title', 'Gioco corrente');
-    });
-  });
-
-  // ── Agent slot ──────────────────────────────────────────────────────
-
-  describe('agent slot', () => {
-    it('renders agent ready badge when agentDefinitionId exists', () => {
-      setMockState({
-        context: 'active',
-        currentSession: activeSession,
-        createResult: {
-          sessionId: 's1',
-          sessionCode: 'XYZ',
-          participants: [],
-          gameNightEventId: 'gn1',
-          gameNightWasCreated: true,
-          agentDefinitionId: 'a1',
-          toolkitId: 't1',
-        },
-      });
-
-      render(<ContextualHandSlot slotType="agent" />);
-
-      const card = screen.getByTestId('meeple-card-agent');
-      expect(card).toHaveAttribute('data-badge', 'Pronto');
-      expect(screen.getByText('Chiedi')).toBeInTheDocument();
-    });
-
-    it('renders no-agent state when agentDefinitionId is null', () => {
-      setMockState({
-        context: 'active',
-        currentSession: activeSession,
-        createResult: {
-          sessionId: 's1',
-          sessionCode: 'XYZ',
-          participants: [],
-          gameNightEventId: 'gn1',
-          gameNightWasCreated: true,
-          agentDefinitionId: null,
-          toolkitId: null,
-        },
-      });
-
-      render(<ContextualHandSlot slotType="agent" />);
-
-      const card = screen.getByTestId('meeple-card-agent');
-      expect(card).toHaveAttribute('data-title', 'Nessun agente');
-      expect(card).toHaveAttribute('data-badge', '--');
-    });
-  });
-
-  // ── Toolkit slot ────────────────────────────────────────────────────
-
-  describe('toolkit slot', () => {
-    it('renders toolkit with Tira dado button when toolkitId exists', () => {
-      setMockState({
-        context: 'active',
-        currentSession: activeSession,
-        createResult: {
-          sessionId: 's1',
-          sessionCode: 'XYZ',
-          participants: [],
-          gameNightEventId: 'gn1',
-          gameNightWasCreated: true,
-          agentDefinitionId: null,
-          toolkitId: 'tk1',
-        },
-      });
-
-      render(<ContextualHandSlot slotType="toolkit" />);
-
-      const card = screen.getByTestId('meeple-card-toolkit');
-      expect(card).toHaveAttribute('data-badge', 'Attivo');
-      expect(screen.getByText('Tira dado')).toBeInTheDocument();
     });
   });
 });

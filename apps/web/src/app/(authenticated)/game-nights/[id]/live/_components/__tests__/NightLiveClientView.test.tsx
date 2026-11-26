@@ -252,6 +252,7 @@ describe('NightLiveClientView — Published happy path', () => {
           id: IN_PROGRESS_SESSION_ID,
           sessionId: IN_PROGRESS_SESSION_ID,
           liveSessionId: LIVE_ID,
+          canOpenLiveGame: true,
           title: 'Spirit Island',
         },
       }),

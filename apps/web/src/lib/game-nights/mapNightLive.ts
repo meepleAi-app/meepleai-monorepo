@@ -219,6 +219,8 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
         sessionId: currentSession.sessionId,
         // #4752: where the game is played; undefined for a sitting with no live game.
         liveSessionId: currentSession.liveSessionId ?? undefined,
+        // #4780: the BE says whether the viewer may open it; an older payload without the field reads as «no».
+        canOpenLiveGame: currentSession.canOpenLiveGame === true,
         title: toTitle(currentSession),
         cover: coverFromGameId(currentSession.gameId),
       }

@@ -121,6 +121,9 @@ export const GameNightSessionDtoSchema = z.object({
   // OPTIONAL + nullable for graceful degradation: a sitting with no live game (a draft not yet taken
   // live, or one that predates the bridge) has none, and an older BE payload omits the field.
   liveSessionId: z.string().uuid().nullable().optional(),
+  // #4780: whether the viewer may open that live game — the rule of its page's gate (its creator, or an
+  // active player seated under the viewer's account). Absent in an older payload, which reads as «no».
+  canOpenLiveGame: z.boolean().optional(),
 });
 export type GameNightSessionDto = z.infer<typeof GameNightSessionDtoSchema>;
 

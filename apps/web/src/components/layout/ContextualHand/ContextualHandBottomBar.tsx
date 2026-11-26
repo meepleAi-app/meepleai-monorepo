@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { BookOpen, Gamepad2, Bot, Wrench, Hash, X } from 'lucide-react';
+import { BookOpen, Gamepad2, Hash, X } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useContextualHandStore, selectContext, selectIsLoading } from '@/stores/contextual-hand';
@@ -15,8 +15,6 @@ const TABS: { type: HandSlotType; icon: typeof Hash; label: string }[] = [
   { type: 'session', icon: Hash, label: 'Partita' },
   { type: 'game', icon: Gamepad2, label: 'Gioco' },
   { type: 'kb', icon: BookOpen, label: 'KB' },
-  { type: 'agent', icon: Bot, label: 'Agente' },
-  { type: 'toolkit', icon: Wrench, label: 'Toolkit' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────
@@ -24,7 +22,7 @@ const TABS: { type: HandSlotType; icon: typeof Hash; label: string }[] = [
 /**
  * ContextualHandBottomBar — mobile bottom bar (<md only).
  *
- * Shows 4 icon buttons. Tapping one opens a bottom sheet with that slot's
+ * Shows 3 icon buttons (#4780: «Agente» and «Toolkit» were empty, and are gone). Tapping one opens a bottom sheet with that slot's
  * details and actions. Hidden when context is idle (no active session).
  */
 export function ContextualHandBottomBar() {

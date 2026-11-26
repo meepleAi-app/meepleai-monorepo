@@ -54,5 +54,6 @@ export function mapNightSessions(dto: GameNightLiveDto): GameNightActiveSession[
       startedAt: session.startedAt ?? undefined,
       completedAt: session.completedAt ?? undefined,
       liveSessionId: session.liveSessionId ?? undefined,
+      canOpenLiveGame: session.canOpenLiveGame === true,
     }));
 }

@@ -318,6 +318,26 @@ describe('mapNightLiveToViewModel — currentGame (Slice C1)', () => {
     expect(mapNightLiveToViewModel(absent, NOW).currentGame?.liveSessionId).toBeUndefined();
   });
 
+  // #4780: whether the viewer may open the current live game; an older payload without it reads as «no».
+  it.each([
+    [true, true],
+    [false, false],
+    [undefined, false],
+  ])('carries canOpenLiveGame=%s of the current sitting as %s', (canOpenLiveGame, expected) => {
+    const dto = live({
+      sessions: [
+        session({
+          status: 'InProgress',
+          startedAt: '2026-07-04T22:00:00Z',
+          liveSessionId: 'bbbb3333-3333-4333-8333-333333333333',
+          ...(canOpenLiveGame === undefined ? {} : { canOpenLiveGame }),
+        }),
+      ],
+    });
+
+    expect(mapNightLiveToViewModel(dto, NOW).currentGame?.canOpenLiveGame).toBe(expected);
+  });
+
   it('currentGame is null when no session is InProgress', () => {
     const allDone = live({
       sessions: [

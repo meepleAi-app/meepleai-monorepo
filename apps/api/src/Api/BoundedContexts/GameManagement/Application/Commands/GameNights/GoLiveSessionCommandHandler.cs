@@ -264,7 +264,7 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
     /// planned by someone else does not leave the organizer without the controls.
     /// </para>
     /// </summary>
-    private async Task<Guid?> EnsureLiveGameAsync(
+    private async Task<Guid> EnsureLiveGameAsync(
         GoLiveSessionCommand command, Guid gameId, string gameTitle, CancellationToken cancellationToken)
     {
         // System read (#4883): the organizer is the only caller this handler lets through, and a draft
@@ -300,7 +300,7 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
             InitialPlayers: players,
             StartImmediately: true), cancellationToken).ConfigureAwait(false);
 
-        return liveSessionId == Guid.Empty ? null : liveSessionId;
+        return liveSessionId;
     }
 
     // True iff the DbUpdateException is the unique index on live_game_sessions.tracking_session_id (#4780):

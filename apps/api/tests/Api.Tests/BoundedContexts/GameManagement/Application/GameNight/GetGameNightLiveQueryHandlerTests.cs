@@ -472,14 +472,14 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
     // #4752 (the night → live game bridge): the live game is reached from the tracking Session the
     // link points at (LiveGameSession.TrackingSessionId), so the FE can link «Current game» to
     // /sessions/{LiveSessionId}/live without a new column on the night.
-    private async Task SeedLiveGameAsync(Guid liveId, Guid? trackingSessionId, DateTime createdAt)
+    private async Task SeedLiveGameAsync(Guid liveId, Guid? trackingSessionId, DateTime createdAt, Guid? createdBy = null)
     {
         _db.LiveGameSessions.Add(new Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity
         {
             Id = liveId,
             SessionCode = liveId.ToString("N")[..6].ToUpperInvariant(),
             GameName = "Catan",
-            CreatedByUserId = Guid.NewGuid(),
+            CreatedByUserId = createdBy ?? Guid.NewGuid(),
             ScoringConfigJson = "{}",
             TrackingSessionId = trackingSessionId,
             CreatedAt = createdAt,
@@ -536,4 +536,70 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
 
         result.Sessions.Should().ContainSingle().Which.LiveSessionId.Should().Be(older);
     }
+
+    /// <summary>
+    /// #4780 — «Apri sessione live» was offered to every reader of the night, and the live page answered 403 to
+    /// an invitee who is not at the table. The night now says whether the caller may open the game, by the rule of
+    /// that page's gate (<c>LiveGameSession.IsAuthorizedParticipant</c>): its creator, or an active player seated
+    /// under the caller's account.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData(true, null, true)]
+    [InlineData(false, true, true)]
+    [InlineData(false, false, false)]
+    [InlineData(false, null, false)]
+    public async Task Handle_SaysWhetherTheCallerMayOpenTheLiveGame(bool callerCreatedIt, bool? callerSeatedActive, bool canOpen)
+    {
+        var organizerId = Guid.NewGuid();
+        var trackingId = Guid.NewGuid();
+        var liveId = Guid.NewGuid();
+        await SeedLiveGameAsync(liveId, trackingId, DateTime.UtcNow, createdBy: callerCreatedIt ? organizerId : Guid.NewGuid());
+        _db.Set<Api.Infrastructure.Entities.GameManagement.SessionPlayerEntity>().Add(Player(liveId, userId: Guid.NewGuid(), active: true));
+        if (callerSeatedActive is { } active)
+            _db.Set<Api.Infrastructure.Entities.GameManagement.SessionPlayerEntity>().Add(Player(liveId, organizerId, active));
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(trackingId, evt.GameIds[0], "Catan");
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        var session = result.Sessions.Should().ContainSingle().Which;
+        session.LiveSessionId.Should().Be(liveId);
+        session.CanOpenLiveGame.Should().Be(canOpen);
+    }
+
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task Handle_ASittingWithoutALiveGame_CannotBeOpened()
+    {
+        var organizerId = Guid.NewGuid();
+        var evt = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        evt.Publish([]);
+        evt.AddSession(Guid.NewGuid(), evt.GameIds[0], "Catan");
+        _repo.Setup(r => r.GetByIdAsync(evt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(evt);
+
+        var result = await _handler.Handle(
+            new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
+
+        result.Sessions.Should().ContainSingle().Which.CanOpenLiveGame.Should().BeFalse();
+    }
+
+    private static Api.Infrastructure.Entities.GameManagement.SessionPlayerEntity Player(Guid liveId, Guid userId, bool active) => new()
+    {
+        Id = Guid.NewGuid(),
+        LiveGameSessionId = liveId,
+        UserId = userId,
+        DisplayName = $"Player {userId:N}"[..14],
+        Color = "Red",
+        Role = "Player",
+        JoinedAt = DateTime.UtcNow,
+        IsActive = active,
+    };
 }

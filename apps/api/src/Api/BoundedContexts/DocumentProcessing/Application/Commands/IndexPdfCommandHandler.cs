@@ -546,7 +546,8 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     /// <summary>
     /// Detaches every text chunk and pgvector row the tracker holds, whatever its state: after a rolled-back attempt
     /// none of them is true of the database (the new ones <c>Added</c>, or <c>Unchanged</c> if their batch was saved
-    /// before the rollback; the old ones <c>Deleted</c>). The handler tracks no other row of these two types.
+    /// before the rollback; the old ones <c>Deleted</c>). The handler tracks no other row of these two types — as long
+    /// as each call has a scope of its own: <c>KbReindexProcessorService</c> gives one to every PDF (#5162).
     /// </summary>
     private void ForgetStagedChunkRows()
     {

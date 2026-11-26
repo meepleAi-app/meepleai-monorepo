@@ -4,6 +4,7 @@ using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Middleware.Exceptions;
 using Api.Observability;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using OtpNet;
 
@@ -511,8 +512,11 @@ internal class TotpService : ITotpService
         // user-initiated transaction unless it runs through an execution strategy. Wrap the whole
         // read-verify-mark-used unit so a serialization conflict rolls back and re-runs atomically as one
         // retriable operation — matching the repo convention (HandleOAuthCallbackCommandHandler, AuditLoggingBehavior, …).
-        var strategy = _dbContext.Database.CreateExecutionStrategy();
-        var outcome = await strategy.ExecuteAsync(async () =>
+        // #5162: through ExecuteRewindingAsync, not the bare strategy. After a commit that failed (a 40001, or the
+        // connection lost), the tracker still held the code marked used: the retry's query found it unused in the
+        // database, identity resolution handed back the tracked instance, IsUsed = true was no change, only UsedAt
+        // was written — and the code stayed usable. Every attempt now starts from the tracker as it was before.
+        var outcome = await _dbContext.ExecuteRewindingAsync(async _ =>
         {
             // Use transaction with Serializable isolation to prevent concurrent use of same code
             using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken).ConfigureAwait(false);
@@ -592,7 +596,7 @@ internal class TotpService : ITotpService
                 await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
                 throw new InvalidOperationException("Failed to verify backup code due to cryptographic error", ex);
             }
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
 
         // #2894 review: non-transactional side-effects run exactly ONCE on the final outcome, deliberately
         // OUTSIDE strategy.ExecuteAsync. A commit-time serialization conflict (Postgres 40001) is transient,

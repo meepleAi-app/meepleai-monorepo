@@ -49,6 +49,12 @@ public class MeepleAiDbContext : DbContext
     private readonly DomainEventDispatchMode _dispatchMode;
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// The collector this context drains at every save (#5162): a retry loop that puts the tracker back has to put
+    /// back the events of the same collector, or a failed commit, which drained them, loses them.
+    /// </summary>
+    internal IDomainEventCollector DomainEventCollector => _eventCollector;
+
     public MeepleAiDbContext(
         DbContextOptions<MeepleAiDbContext> options,
         IMediator mediator,

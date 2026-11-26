@@ -1,4 +1,3 @@
-using System.Data.Common;
 using Api.BoundedContexts.Administration.Application.Attributes;
 using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.Infrastructure;
@@ -10,10 +9,10 @@ using Api.SharedKernel.Domain.Events;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Xunit;
@@ -43,7 +42,7 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
     private const string Marker = "@retry-5145.test";
 
     private readonly SharedTestcontainersFixture _fixture;
-    private readonly TransientFaults _faults = new();
+    private readonly TransientDatabaseFaults _faults = new();
     private string _databaseName = string.Empty;
     private ServiceProvider? _serviceProvider;
 
@@ -198,6 +197,64 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
             .Where(r => r.EventType == typeof(RetryProbeEvent).FullName)
             .CountAsync(Ct);
         queued.Should().Be(1, "the failed attempt's event stays in the collector unless the retry puts it back as it was");
+    }
+
+    /// <summary>
+    /// #5162 — the same rewind for the code paths that open the strategy and the transaction themselves
+    /// (<c>MeepleAiDbContext.ExecuteRewindingAsync</c>): a row the failed attempt added is not written next to the
+    /// retry's.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5162")]
+    public async Task ExecuteRewindingAsync_AFailedSave_IsNotWrittenAgainNextToTheRetry()
+    {
+        var email = $"rewinding{Marker}";
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        _faults.Save.Armed = true;
+        await db.ExecuteRewindingAsync(async ct =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            db.Users.Add(NewUser(email));
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }, Ct);
+
+        _faults.Save.Tripped.Should().BeTrue("the first save must have failed, or this proves nothing");
+        (await CountUsersAsync(email)).Should().Be(1);
+    }
+
+    /// <summary>
+    /// #5162 — an event collected before the strategy (a handler that stages its aggregate first) is drained by the
+    /// first attempt's save. Its commit fails: the retry has to find the event in the collector again, the one the
+    /// context drains, or no outbox row is written for it.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5162")]
+    public async Task ExecuteRewindingAsync_AFailedCommit_KeepsTheEventsCollectedBefore()
+    {
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var events = scope.ServiceProvider.GetRequiredService<IDomainEventCollector>();
+        var marker = Guid.NewGuid();
+        db.Users.Add(NewUser($"staged{Marker}"));
+        events.Collect(new RetryProbeEvent { Marker = marker }); // raised once, before the strategy
+
+        _faults.Commit.Armed = true;
+        await db.ExecuteRewindingAsync(async ct =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }, Ct);
+
+        _faults.Commit.Tripped.Should().BeTrue("the first commit must have failed, or this proves nothing");
+        (await CountUsersAsync($"staged{Marker}")).Should().Be(1, "the staged row is written again by the retry");
+        var queued = await db.DomainEventOutbox.AsNoTracking()
+            .Where(r => r.EventType == typeof(RetryProbeEvent).FullName)
+            .CountAsync(Ct);
+        queued.Should().Be(1, "the event the failed commit drained is put back for the retry's save");
     }
 
     [Fact]
@@ -467,57 +524,5 @@ public sealed class UnitOfWorkRetryRewindIntegrationTests : IAsyncLifetime
     internal sealed class RetryProbeEvent : DomainEventBase
     {
         public Guid Marker { get; init; }
-    }
-
-    /// <summary>
-    /// One transient failure, at the next save or just before the next commit after it is armed. A test arms it right
-    /// before the unit of work it observes, so the next one is that one.
-    /// </summary>
-    private sealed class TransientFaults
-    {
-        public SaveFault Save { get; } = new();
-        public CommitFault Commit { get; } = new();
-
-        private static NpgsqlException Transient(string where) =>
-            new($"transient failure at the {where}, injected by the test", new TimeoutException());
-
-        public sealed class SaveFault : SaveChangesInterceptor
-        {
-            public volatile bool Armed;
-            public volatile bool Tripped;
-
-            public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
-                DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
-            {
-                if (Armed)
-                {
-                    Armed = false;
-                    Tripped = true;
-                    throw Transient("save");
-                }
-
-                return base.SavingChangesAsync(eventData, result, cancellationToken);
-            }
-        }
-
-        public sealed class CommitFault : DbTransactionInterceptor
-        {
-            public volatile bool Armed;
-            public volatile bool Tripped;
-
-            public override ValueTask<InterceptionResult> TransactionCommittingAsync(
-                DbTransaction transaction, TransactionEventData eventData, InterceptionResult result,
-                CancellationToken cancellationToken = default)
-            {
-                if (Armed)
-                {
-                    Armed = false;
-                    Tripped = true;
-                    throw Transient("commit");
-                }
-
-                return base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
-            }
-        }
     }
 }

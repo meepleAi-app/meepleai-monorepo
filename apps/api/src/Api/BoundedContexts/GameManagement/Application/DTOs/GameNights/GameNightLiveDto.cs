@@ -65,4 +65,8 @@ public sealed record GameNightSessionDto(
     // the FE links the card to /sessions/{LiveSessionId}/live. Resolved from the tracking Session the
     // link points at (LiveGameSession.TrackingSessionId); null for a sitting that has no live game
     // (a draft not yet taken live, or one that predates the bridge).
-    Guid? LiveSessionId = null);
+    Guid? LiveSessionId = null,
+    // #4780: whether the caller may open that live game — the rule of its page's gate
+    // (LiveGameSession.IsAuthorizedParticipant: its creator, or an active player seated under the caller's
+    // account). An invitee who is not at the table would get a 403 there, so the night does not offer it.
+    bool CanOpenLiveGame = false);

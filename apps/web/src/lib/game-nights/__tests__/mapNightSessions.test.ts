@@ -77,6 +77,7 @@ describe('mapNightSessions', () => {
       startedAt: '2026-07-04T20:00:00Z',
       completedAt: '2026-07-04T21:00:00Z',
       liveSessionId: undefined,
+      canOpenLiveGame: false,
     });
   });
 
@@ -92,6 +93,21 @@ describe('mapNightSessions', () => {
     expect(withLive.liveSessionId).toBe(LIVE1);
     expect(withoutLive.liveSessionId).toBeUndefined();
     expect(nullLive.liveSessionId).toBeUndefined();
+  });
+
+  // #4780: the BE says whether the viewer may open each live game; an older payload without it reads as «no».
+  it('carries whether the viewer may open the live game, «no» when the read does not say', () => {
+    const [allowed, refused, absent] = mapNightSessions(
+      live([
+        session({ sessionId: S1, playOrder: 1, liveSessionId: LIVE1, canOpenLiveGame: true }),
+        session({ sessionId: S2, playOrder: 2, liveSessionId: LIVE1, canOpenLiveGame: false }),
+        session({ sessionId: S3, playOrder: 3, liveSessionId: LIVE1 }),
+      ])
+    );
+
+    expect(allowed.canOpenLiveGame).toBe(true);
+    expect(refused.canOpenLiveGame).toBe(false);
+    expect(absent.canOpenLiveGame).toBe(false);
   });
 
   it('orders the sittings by play order, whatever order the read returned them in', () => {

@@ -70,6 +70,11 @@ export interface GameNightActiveSession {
    * Absent for a sitting with no live game (a draft not yet taken live, or one that predates the bridge).
    */
   liveSessionId?: string;
+  /**
+   * #4780: the viewer may open that live game (its creator, or an active player seated under their account).
+   * Without it a card does not link there: the live page would answer 403.
+   */
+  canOpenLiveGame?: boolean;
 }
 
 export interface PlayerResource {

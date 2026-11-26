@@ -21,6 +21,8 @@ const CURRENT_GAME: NightLiveHubCurrentGame = {
   sessionId: 's-spirit-may17',
   // #4752: the live game where the table plays it — what the jump action opens.
   liveSessionId: 'live-spirit-may17',
+  // #4780: the viewer may open it (its creator, or seated at the table).
+  canOpenLiveGame: true,
   title: 'Spirit Island',
   emoji: '🌋',
   cover: ['hsl(210 50% 30%)', 'hsl(150 50% 38%)'],
@@ -316,6 +318,25 @@ describe('NightLiveHub', () => {
       expect(screen.getAllByText('Spirit Island').length).toBeGreaterThan(0);
       expect(screen.queryByRole('button', { name: /Apri sessione live/ })).not.toBeInTheDocument();
     });
+
+    // #4780: an invitee who is not at the table would get a 403 on the live page: the jump is not offered.
+    it.each([false, true])(
+      'offers no jump to a viewer the live page does not let in (mobile: %s)',
+      mobile => {
+        render(
+          <NightLiveHub
+            {...baseProps}
+            mobile={mobile}
+            currentGame={{ ...CURRENT_GAME, canOpenLiveGame: false }}
+            onJumpToSession={() => undefined}
+          />
+        );
+        expect(screen.getAllByText('Spirit Island').length).toBeGreaterThan(0);
+        expect(
+          screen.queryByRole('button', { name: /Apri sessione live/ })
+        ).not.toBeInTheDocument();
+      }
+    );
 
     it('renders empty state when currentGame=null', () => {
       render(<NightLiveHub {...baseProps} currentGame={null} />);

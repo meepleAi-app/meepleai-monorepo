@@ -84,21 +84,35 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
         // One batched, AsNoTracking read scoped to this night's sessionIds (same shape as the two
         // above). If more than one live game carries a tracking id — which the bridge never creates —
         // the oldest wins, the same rule as ILiveSessionRepository.GetByTrackingSessionIdAsync.
+        // #4780: with each live game, whether the caller may open it. The rule is the one of the live page's gate
+        // (LiveGameSession.IsAuthorizedParticipant), written here as a projection so the read stays one query:
+        // the creator, or an active player seated under the caller's account.
+        var caller = query.CallerUserId;
         var liveSessionRows = sessionIds.Count == 0
             ? []
             : await _db.LiveGameSessions.AsNoTracking()
                 .Where(l => l.TrackingSessionId != null && sessionIds.Contains(l.TrackingSessionId.Value))
-                .Select(l => new { TrackingSessionId = l.TrackingSessionId!.Value, l.Id, l.CreatedAt })
+                .Select(l => new
+                {
+                    TrackingSessionId = l.TrackingSessionId!.Value,
+                    l.Id,
+                    l.CreatedAt,
+                    CallerCanOpen = caller != Guid.Empty
+                        && (l.CreatedByUserId == caller || l.Players.Any(p => p.IsActive && p.UserId == caller)),
+                })
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
-        var liveSessionIds = liveSessionRows
+        var liveGames = liveSessionRows
             .GroupBy(row => row.TrackingSessionId)
             .ToDictionary(
                 group => group.Key,
-                group => group.OrderBy(row => row.CreatedAt).ThenBy(row => row.Id).First().Id);
+                group => group.OrderBy(row => row.CreatedAt).ThenBy(row => row.Id).First());
 
         Guid? LiveSessionIdFor(GameNightSession s) =>
-            liveSessionIds.TryGetValue(s.SessionId, out var liveId) ? liveId : null;
+            liveGames.TryGetValue(s.SessionId, out var live) ? live.Id : null;
+
+        bool CanOpenLiveGameFor(GameNightSession s) =>
+            liveGames.TryGetValue(s.SessionId, out var live) && live.CallerCanOpen;
 
         var sessions = gameNight.Sessions
             .OrderBy(s => s.PlayOrder)
@@ -113,7 +127,8 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
                 WinnerNameFor(s),
                 s.StartedAt,
                 s.CompletedAt,
-                LiveSessionIdFor(s)))
+                LiveSessionIdFor(s),
+                CanOpenLiveGameFor(s)))
             .ToList();
 
         // The winner picker candidates = the participants of the (single) live session, where "live"

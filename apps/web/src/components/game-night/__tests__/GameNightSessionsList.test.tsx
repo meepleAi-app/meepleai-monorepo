@@ -57,8 +57,8 @@ describe('GameNightSessionsList — #4156 (D7)', () => {
   // #4752: a sitting with a live game is played there, not on the night page.
   it('links a sitting that has a live game to where it is played', () => {
     const sessions: GameNightActiveSession[] = [
-      { ...SESSIONS[0], liveSessionId: 'live-1' },
-      { ...SESSIONS[1], liveSessionId: 'live-2' },
+      { ...SESSIONS[0], liveSessionId: 'live-1', canOpenLiveGame: true },
+      { ...SESSIONS[1], liveSessionId: 'live-2', canOpenLiveGame: true },
     ];
     render(<GameNightSessionsList sessions={sessions} gameNightId="night-1" />);
     expect(hrefs()).toEqual(['/sessions/live-1/live', '/sessions/live-2/live']);
@@ -67,14 +67,26 @@ describe('GameNightSessionsList — #4156 (D7)', () => {
   it('keeps the night page for a sitting with no live game, next to one that has it', () => {
     const sessions: GameNightActiveSession[] = [
       SESSIONS[0], // predates the bridge: no live game
-      { ...SESSIONS[1], liveSessionId: 'live-2' },
+      { ...SESSIONS[1], liveSessionId: 'live-2', canOpenLiveGame: true },
     ];
     render(<GameNightSessionsList sessions={sessions} gameNightId="night-1" />);
     expect(hrefs()).toEqual(['/game-nights/night-1/live', '/sessions/live-2/live']);
   });
 
+  // #4780: the live page answers 403 to a viewer who is neither its creator nor seated at the table.
+  it('keeps the night page for a live game the viewer may not open', () => {
+    const sessions: GameNightActiveSession[] = [
+      { ...SESSIONS[0], liveSessionId: 'live-1', canOpenLiveGame: false },
+      { ...SESSIONS[1], liveSessionId: 'live-2' },
+    ];
+    render(<GameNightSessionsList sessions={sessions} gameNightId="night-1" />);
+    expect(hrefs()).toEqual(['/game-nights/night-1/live', '/game-nights/night-1/live']);
+  });
+
   it('links to the summary, not to a live game, once the night is completed', () => {
-    const sessions: GameNightActiveSession[] = [{ ...SESSIONS[0], liveSessionId: 'live-1' }];
+    const sessions: GameNightActiveSession[] = [
+      { ...SESSIONS[0], liveSessionId: 'live-1', canOpenLiveGame: true },
+    ];
     render(<GameNightSessionsList sessions={sessions} gameNightId="night-1" isCompleted />);
     expect(hrefs()).toEqual(['/game-nights/night-1/summary']);
   });

@@ -49,23 +49,6 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var session = await _sessionRepository
-            .GetByIdAsync(request.SessionId, cancellationToken)
-            .ConfigureAwait(false)
-            ?? throw new NotFoundException($"Session {request.SessionId} not found.");
-
-        if (session.UserId != request.UserId)
-        {
-            throw new ForbiddenException("Only the session owner can resume this session.");
-        }
-
-        // Load this session's link row (may be null for unattached/solo sessions).
-        var ownLinkRow = await _db.GameNightSessions
-            .FirstOrDefaultAsync(gns => gns.SessionId == session.Id, cancellationToken)
-            .ConfigureAwait(false);
-
-        Guid? gameNightId = ownLinkRow?.GameNightEventId;
-
         // Wrap ALL mutations in an explicit transaction so that auto-pausing siblings
         // and resuming the target session commit (or roll back) atomically.
         // The two SaveChangesAsync calls are still needed to satisfy the partial unique
@@ -83,6 +66,26 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
             // La strategy può rieseguire l'intero delegate: senza questo Clear, un retry
             // pubblicherebbe gli eventi diario due volte per la stessa ripresa.
             diaryEntities.Clear();
+
+            // #5158: the session is read, and checked, INSIDE the delegate. Read before it, a retry after a
+            // transient failure found the aggregate the failed attempt had already resumed, and Resume() refused
+            // it (not Paused, a 409). Each attempt now starts from the database.
+            var session = await _sessionRepository
+                .GetByIdAsync(request.SessionId, ct)
+                .ConfigureAwait(false)
+                ?? throw new NotFoundException($"Session {request.SessionId} not found.");
+
+            if (session.UserId != request.UserId)
+            {
+                throw new ForbiddenException("Only the session owner can resume this session.");
+            }
+
+            // Load this session's link row (may be null for unattached/solo sessions).
+            var ownLinkRow = await _db.GameNightSessions
+                .FirstOrDefaultAsync(gns => gns.SessionId == session.Id, ct)
+                .ConfigureAwait(false);
+
+            Guid? gameNightId = ownLinkRow?.GameNightEventId;
             {
             // Invariant guard: free every other "InProgress" link slot in the same GameNight
             // BEFORE flipping our own row to InProgress, so the partial unique index from T1

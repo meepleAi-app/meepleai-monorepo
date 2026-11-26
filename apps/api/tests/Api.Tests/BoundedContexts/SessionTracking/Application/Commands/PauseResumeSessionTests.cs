@@ -13,6 +13,7 @@ using Api.SharedKernel.Infrastructure;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -44,6 +45,7 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
     private CreateSessionCommandHandler? _createHandler;
     private PauseSessionCommandHandler? _pauseHandler;
     private ResumeSessionCommandHandler? _resumeHandler;
+    private readonly TransientDatabaseFaults _faults = new();
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -58,6 +60,8 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+        // #5158: inert until a test arms one. The host retries (CreateBase), so an armed fault is replayed.
+        services.ConfigureDbContext<MeepleAiDbContext>(options => options.AddInterceptors(_faults.Save, _faults.Commit));
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
@@ -226,6 +230,35 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             .ToListAsync(TestCancellationToken);
         autoPauseEvents.Should().HaveCount(1);
         autoPauseEvents[0].Payload.Should().Contain("auto_pause_on_resume");
+    }
+
+    /// <summary>
+    /// #5158 — the strategy runs the work again after a transient failure. The session was read before the work,
+    /// so the retry found the aggregate the failed attempt had already resumed, and <c>Resume()</c> refused it (not
+    /// Paused, a 409): a resume that only needed its commit again failed. Every attempt now reads the session as it
+    /// is stored.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5158")]
+    public async Task Resume_WhoseFirstCommitFailed_ResumesTheSession()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var created = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        await _pauseHandler!.Handle(new PauseSessionCommand(created.SessionId, userId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        _faults.Commit.Armed = true;
+        await _resumeHandler!.Handle(new ResumeSessionCommand(created.SessionId, userId), TestCancellationToken);
+
+        _faults.Commit.Tripped.Should().BeTrue("the first commit must have failed, or this proves nothing");
+        _dbContext.ChangeTracker.Clear();
+        var persisted = await _dbContext.SessionTrackingSessions
+            .AsNoTracking()
+            .FirstAsync(s => s.Id == created.SessionId, TestCancellationToken);
+        persisted.Status.Should().Be(nameof(SessionStatus.Active));
+        (await _dbContext.SessionEvents.AsNoTracking()
+                .CountAsync(e => e.SessionId == created.SessionId && e.EventType == "session_resumed", TestCancellationToken))
+            .Should().Be(1, "the failed attempt's diary row was rolled back; the retry writes its own");
     }
 
     /// <summary>

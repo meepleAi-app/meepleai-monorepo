@@ -535,9 +535,8 @@ internal class TotpService : ITotpService
 
                 if (backupCodes.Count == 0)
                 {
+                    // The audit is written after the strategy, in the switch below (#5164).
                     _logger.LogWarning("Backup code verify failed: No unused codes for user {UserId}", userId);
-                    await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
-                        "No unused backup codes available").ConfigureAwait(false);
                     return BackupCodeOutcome.NoCodes;
                 }
 
@@ -572,11 +571,9 @@ internal class TotpService : ITotpService
                     }
                 }
 
-                // No match found. Non-transactional side-effects (failed-attempt tracking, alert, metrics)
+                // No match found. Non-transactional side-effects (failed-attempt tracking, alert, metrics, audit)
                 // run once after the strategy completes — see the switch below.
                 _logger.LogWarning("Backup code verify failed: Invalid code for user {UserId}", userId);
-                await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
-                    "Failed backup code attempt").ConfigureAwait(false);
 
                 return BackupCodeOutcome.NoMatch;
             }
@@ -609,13 +606,22 @@ internal class TotpService : ITotpService
                 MeepleAiMetrics.Record2FAVerification("backup_code", success: true, userId: userId.ToString()); // SEC-08
                 return true;
 
+            // #5164: the audit of a failed attempt is written here, after the strategy. Inside the delegate it went
+            // through AuditService, which saves on this same context, into the Serializable transaction — which a
+            // failed attempt never commits: the row was rolled back with it, and no failed attempt left a trace.
             case BackupCodeOutcome.NoMatch:
+                await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
+                    "Failed backup code attempt").ConfigureAwait(false);
                 await TrackFailedAttemptAsync(userId, "backup").ConfigureAwait(false); // SEC-05 lockout
                 await CheckAndTriggerSecurityAlertAsync(userId, "BackupCode", cancellationToken).ConfigureAwait(false);
                 MeepleAiMetrics.Record2FAVerification("backup_code", success: false, userId: userId.ToString()); // SEC-08
                 return false;
 
             case BackupCodeOutcome.NoCodes:
+                await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
+                    "No unused backup codes available").ConfigureAwait(false);
+                return false;
+
             default:
                 return false;
         }

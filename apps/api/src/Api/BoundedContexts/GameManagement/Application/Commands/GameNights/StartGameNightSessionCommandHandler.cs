@@ -59,19 +59,6 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var gameNight = await _repository.GetByIdAsync(command.GameNightId, cancellationToken).ConfigureAwait(false)
-            ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
-
-        if (gameNight.OrganizerId != command.UserId)
-            throw new ForbiddenException("Only the organizer can start sessions.");
-
-        // WS1 DEC-4: guard-before-create. Reject a blocked 2nd-open (409) BEFORE the
-        // cross-BC CreateSessionCommand commits a durable (orphan) tracking Session.
-        gameNight.EnsureCanStartSession();
-
-        // Build participant list: auto-seed organizer when command provides none.
-        var participants = await BuildParticipantsAsync(gameNight, command, cancellationToken).ConfigureAwait(false);
-
         // WS1 DEC-5 (atomicity): the cross-BC Session INSERT and the aggregate link run in ONE
         // explicit transaction. CreateSessionCommand's inner SaveChangesAsync enlists in this
         // ambient tx (same scoped DbContext) instead of committing on its own, so if the aggregate
@@ -90,6 +77,23 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
         {
             result = await _unitOfWork.ExecuteInTransactionAsync(async ct =>
             {
+                // #5158: the night is read, and checked, INSIDE the delegate. Read before it, a retry after a
+                // transient failure found the aggregate the failed attempt had already given an in-progress
+                // session, and the guard below refused it (MaxLiveSessionsExceeded, a 409). Each attempt now
+                // starts from the database.
+                var gameNight = await _repository.GetByIdAsync(command.GameNightId, ct).ConfigureAwait(false)
+                    ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
+
+                if (gameNight.OrganizerId != command.UserId)
+                    throw new ForbiddenException("Only the organizer can start sessions.");
+
+                // WS1 DEC-4: guard-before-create. Reject a blocked 2nd-open (409) BEFORE the
+                // cross-BC CreateSessionCommand stages a tracking Session.
+                gameNight.EnsureCanStartSession();
+
+                // Build participant list: auto-seed organizer when command provides none.
+                var participants = await BuildParticipantsAsync(gameNight, command, ct).ConfigureAwait(false);
+
                 // WS1 DEC-3: SkipGameNightEnvelope=true — the GameNightEvent aggregate (AddSession
                 // below) is the SOLE linker against command.GameNightId, so CreateSessionCommand does
                 // NOT mint a phantom ad-hoc night that would double-link the session.

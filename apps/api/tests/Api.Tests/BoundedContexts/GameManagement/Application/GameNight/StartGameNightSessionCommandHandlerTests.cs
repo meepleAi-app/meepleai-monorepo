@@ -677,4 +677,41 @@ public class StartGameNightSessionCommandHandlerTests
         _mockMediator.Verify(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    /// <summary>
+    /// #5158 — the strategy runs the work again after a transient failure. The night was read before the work, so
+    /// the retry found the aggregate the failed attempt had already given an in-progress session, and StartSession
+    /// refused the new one (MaxLiveSessionsExceeded, a 409). Every attempt now reads the night as it is stored.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5158")]
+    public async Task Handle_RetriedAfterATransientFailure_StartsOnTheNightAsStored()
+    {
+        var organizerId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // A repository reads the stored night again on every call: a new aggregate, with nothing in progress.
+        _mockRepository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => CreatePublishedEvent(organizerId));
+        var saved = new List<GameNightEvent>();
+        _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightEvent, CancellationToken>((night, _) => saved.Add(night))
+            .Returns(Task.CompletedTask);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(organizerId));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(sessionId, "ABC123", [], Guid.Empty, false, null, null));
+        var unitOfWork = new Mock<IUnitOfWork>().SetupExecuteInTransactionRetriedOnce<StartGameNightSessionResult>();
+        var handler = new StartGameNightSessionCommandHandler(
+            _mockRepository.Object, _mockMediator.Object, unitOfWork.Object, _mockAutoSaveScheduler.Object);
+
+        var result = await handler.Handle(
+            new StartGameNightSessionCommand(Guid.NewGuid(), gameId, "Catan", organizerId), CancellationToken.None);
+
+        Assert.Equal(sessionId, result.SessionId);
+        Assert.Equal(2, saved.Count);
+        Assert.NotSame(saved[0], saved[1]);
+        Assert.Equal(GameNightSessionStatus.InProgress, Assert.Single(saved[1].Sessions).Status);
+    }
 }

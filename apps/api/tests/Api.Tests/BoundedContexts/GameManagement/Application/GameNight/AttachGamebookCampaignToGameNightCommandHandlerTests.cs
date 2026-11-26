@@ -8,6 +8,7 @@ using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
@@ -387,5 +388,88 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
 
         await act.Should().ThrowAsync<NotFoundException>();
         _repo.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// #5158 — the catch of InvalidOperationException now wraps only AddSession and StartSession, as on the start
+    /// (#4752): with the night read inside the work, a wide catch would turn an EF failure into a 409 that carries
+    /// its message. The quota of the tracking session, an InvalidOperationException too, keeps its 409.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5158")]
+    public async Task Handle_AnInvalidOperationOutsideTheAggregate_IsNotTurnedIntoAConflict()
+    {
+        var organizer = Guid.NewGuid();
+        var gameNight = CreatePublishedEvent(organizer);
+        var campaignId = Guid.NewGuid();
+        SetupCampaign(campaignId, CampaignDto(campaignId, Guid.NewGuid(), organizer, GameRefKind.Shared));
+        SetupCreateSession(Guid.NewGuid());
+        SetupUser(organizer, "Marco");
+        _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+        _repo.Setup(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The instance of entity type cannot be tracked"));
+
+        var act = () => _handler.Handle(
+            new AttachGamebookCampaignToGameNightCommand(gameNight.Id, campaignId, organizer),
+            TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
+        thrown.Which.Should().NotBeOfType<ConflictException>();
+    }
+
+    [Fact]
+    [Trait("Issue", "5158")]
+    public async Task Handle_TheTrackingSessionQuota_IsStillAConflictWithItsMessage()
+    {
+        var organizer = Guid.NewGuid();
+        var gameNight = CreatePublishedEvent(organizer);
+        var campaignId = Guid.NewGuid();
+        SetupCampaign(campaignId, CampaignDto(campaignId, Guid.NewGuid(), organizer, GameRefKind.Shared));
+        SetupUser(organizer, "Marco");
+        _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+        _mediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new SessionQuotaExceededException("Hai raggiunto il limite di 3 sessioni.", 3, 3));
+
+        var act = () => _handler.Handle(
+            new AttachGamebookCampaignToGameNightCommand(gameNight.Id, campaignId, organizer),
+            TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<ConflictException>()).Which.Message.Should().Be("Hai raggiunto il limite di 3 sessioni.");
+    }
+
+    /// <summary>
+    /// #5158 — the strategy runs the work again after a transient failure. The night was read before the work, so
+    /// the retry found the aggregate the failed attempt had already given an in-progress sitting, and StartSession
+    /// refused the new one with a 409. Every attempt now reads the night as it is stored.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5158")]
+    public async Task Handle_RetriedAfterATransientFailure_AttachesToTheNightAsStored()
+    {
+        var organizer = Guid.NewGuid();
+        var campaignId = Guid.NewGuid();
+        SetupCampaign(campaignId, CampaignDto(campaignId, Guid.NewGuid(), organizer, GameRefKind.Shared));
+        SetupCreateSession(Guid.NewGuid());
+        SetupUser(organizer, "Marco");
+
+        // A repository reads the stored night again on every call: a new aggregate, with nothing in progress.
+        _repo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => CreatePublishedEvent(organizer));
+        var saved = new List<GameNightEvent>();
+        _repo.Setup(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightEvent, CancellationToken>((night, _) => saved.Add(night))
+            .Returns(Task.CompletedTask);
+        var handler = new AttachGamebookCampaignToGameNightCommandHandler(
+            _repo.Object, _mediator.Object,
+            new Mock<IUnitOfWork>().SetupExecuteInTransactionRetriedOnce<AttachGamebookCampaignToGameNightResult>().Object,
+            _autoSave.Object);
+
+        await handler.Handle(
+            new AttachGamebookCampaignToGameNightCommand(Guid.NewGuid(), campaignId, organizer),
+            TestContext.Current.CancellationToken);
+
+        saved.Should().HaveCount(2, "each attempt saves its night");
+        saved[1].Should().NotBeSameAs(saved[0], "the retry works on the night read again");
+        saved[1].Sessions.Should().ContainSingle().Which.Status.Should().Be(GameNightSessionStatus.InProgress);
     }
 }

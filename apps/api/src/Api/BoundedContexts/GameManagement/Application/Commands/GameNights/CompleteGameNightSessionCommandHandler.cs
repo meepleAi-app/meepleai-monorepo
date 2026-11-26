@@ -43,34 +43,38 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var gameNight = await _repository.GetByIdAsync(command.GameNightId, cancellationToken).ConfigureAwait(false)
-            ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
-
-        if (gameNight.OrganizerId != command.UserId)
-            throw new ForbiddenException("Only the organizer can complete sessions.");
-
-        var currentSession = gameNight.CurrentSession
-            ?? throw new ConflictException("No in-progress session to complete.");
-        var trackingSessionId = currentSession.SessionId;
-
-        // Load the tracking Session up front to (a) write-validate the winner and (b) build the
-        // finalize ranks — a WinnerId that is not a participant is a 409, not a silent no-winner
-        // (panel must-fix #3).
-        var session = await _sessionRepository.GetByIdAsync(trackingSessionId, cancellationToken).ConfigureAwait(false)
-            ?? throw new NotFoundException("Session", trackingSessionId.ToString());
-
-        if (command.WinnerId.HasValue && session.Participants.All(p => p.Id != command.WinnerId.Value))
-            throw new ConflictException("Winner must be a participant of the session.");
-
-        var finalRanks = BuildFinalRanks(session.Participants, command.WinnerId);
-
         // #3636: ExecuteInTransactionAsync — BeginTransactionAsync lancia sotto la retry strategy
         // attiva fuori da Testing. Rollback e commit sono ora della UoW, quindi `commitStarted` e i
         // rollback manuali spariscono; i catch restano solo per mappare l'eccezione.
+        // #5158: the night is read, and checked, INSIDE the delegate. Read before it, a retry after a transient
+        // failure found the aggregate the failed attempt had already completed, and CompleteCurrentSession refused
+        // it («no in-progress session») with a 409. Each attempt now starts from the database.
+        Guid completedSessionId;
         try
         {
-            await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+            completedSessionId = await _unitOfWork.ExecuteInTransactionAsync(async ct =>
             {
+                var gameNight = await _repository.GetByIdAsync(command.GameNightId, ct).ConfigureAwait(false)
+                    ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
+
+                if (gameNight.OrganizerId != command.UserId)
+                    throw new ForbiddenException("Only the organizer can complete sessions.");
+
+                var currentSession = gameNight.CurrentSession
+                    ?? throw new ConflictException("No in-progress session to complete.");
+                var trackingSessionId = currentSession.SessionId;
+
+                // Load the tracking Session up front to (a) write-validate the winner and (b) build the
+                // finalize ranks — a WinnerId that is not a participant is a 409, not a silent no-winner
+                // (panel must-fix #3).
+                var session = await _sessionRepository.GetByIdAsync(trackingSessionId, ct).ConfigureAwait(false)
+                    ?? throw new NotFoundException("Session", trackingSessionId.ToString());
+
+                if (command.WinnerId.HasValue && session.Participants.All(p => p.Id != command.WinnerId.Value))
+                    throw new ConflictException("Winner must be a participant of the session.");
+
+                var finalRanks = BuildFinalRanks(session.Participants, command.WinnerId);
+
                 try
                 {
                     gameNight.CompleteCurrentSession(command.WinnerId);
@@ -98,12 +102,14 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
             // delegate può essere rieseguito, quindi i broadcast possono ripetersi. Stesso effetto
             // (i client si riallineano), stessa mitigazione; spostarli fuori è SI-3-proper.
             // RequestedBy = session.UserId: this is a trusted internal orchestration path. The caller's
-            // authority was already enforced above (organizer check, line 49) — the FinalizeSessionCommand
+            // authority was already enforced above (the organizer check) — the FinalizeSessionCommand
             // IDOR guard targets direct HTTP callers, so we finalize on behalf of the tracking session's
             // owner to avoid spuriously blocking a legitimate game-night completion.
                 await _mediator.Send(
                     new FinalizeSessionCommand(trackingSessionId, finalRanks, session.UserId, NoWinner: !command.WinnerId.HasValue),
                     ct).ConfigureAwait(false);
+
+                return trackingSessionId;
             }, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException)
@@ -111,7 +117,7 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
             throw new ConflictException("The session was modified concurrently. Please retry.");
         }
 
-        await _autoSaveScheduler.RemoveAsync(trackingSessionId, cancellationToken).ConfigureAwait(false);
+        await _autoSaveScheduler.RemoveAsync(completedSessionId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

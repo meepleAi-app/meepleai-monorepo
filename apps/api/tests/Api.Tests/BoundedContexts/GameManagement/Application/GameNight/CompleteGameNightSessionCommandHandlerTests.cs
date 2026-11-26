@@ -1,6 +1,7 @@
 using Api.Tests.TestHelpers;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -37,7 +38,7 @@ public class CompleteGameNightSessionCommandHandlerTests
     {
         // #3636: l'handler consegna il lavoro alla UoW invece di pilotare Begin/Commit.
         // Senza questo setup il mock non esegue il delegate e nulla accade.
-        _uow.SetupExecuteInTransaction();
+        _uow.SetupExecuteInTransaction<Guid>();
         _handler = new CompleteGameNightSessionCommandHandler(
             _gameNightRepo.Object, _sessionRepo.Object, _mediator.Object, _uow.Object, _autoSave.Object);
         _mediator.Setup(m => m.Send(It.IsAny<FinalizeSessionCommand>(), It.IsAny<CancellationToken>()))
@@ -129,7 +130,7 @@ public class CompleteGameNightSessionCommandHandlerTests
         // transazione e che l'handler non ne apra di proprie.
         _uow.Verify(
             u => u.ExecuteInTransactionAsync(
-                It.IsAny<Func<CancellationToken, Task>>(),
+                It.IsAny<Func<CancellationToken, Task<Guid>>>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _uow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -211,7 +212,7 @@ public class CompleteGameNightSessionCommandHandlerTests
         var (night, _) = StartedNightWithTwoPlayers(organizerId);
         // #3636: il fallimento emerge dal SaveChanges interno alla UoW.
         _uow.Setup(u => u.ExecuteInTransactionAsync(
-                It.IsAny<Func<CancellationToken, Task>>(),
+                It.IsAny<Func<CancellationToken, Task<Guid>>>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new DbUpdateConcurrencyException());
 
@@ -259,5 +260,45 @@ public class CompleteGameNightSessionCommandHandlerTests
 
         var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
         thrown.Which.Should().NotBeOfType<ConflictException>();
+    }
+
+    /// <summary>
+    /// #5158 — the strategy runs the work again after a transient failure. The night was read before the work, so
+    /// the retry found the aggregate the failed attempt had already completed, and CompleteCurrentSession refused it
+    /// («no in-progress session») with a 409. Every attempt now reads the night as it is stored.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5158")]
+    public async Task Handle_RetriedAfterATransientFailure_CompletesTheNightAsStored()
+    {
+        var organizerId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var session = Session.Create(organizerId, gameId, SessionType.GameSpecific);
+        _sessionRepo.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+
+        // A repository reads the stored night again on every call: a new aggregate, still in progress.
+        _gameNightRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                var night = GameNightEvent.Create(organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [gameId]);
+                night.Publish([]);
+                night.AddSession(session.Id, gameId, "Catan");
+                night.StartCurrentSession();
+                return night;
+            });
+        var saved = new List<GameNightEvent>();
+        _gameNightRepo.Setup(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightEvent, CancellationToken>((night, _) => saved.Add(night))
+            .Returns(Task.CompletedTask);
+        var handler = new CompleteGameNightSessionCommandHandler(
+            _gameNightRepo.Object, _sessionRepo.Object, _mediator.Object,
+            new Mock<IUnitOfWork>().SetupExecuteInTransactionRetriedOnce<Guid>().Object, _autoSave.Object);
+
+        await handler.Handle(new CompleteGameNightSessionCommand(Guid.NewGuid(), null, organizerId), CancellationToken.None);
+
+        saved.Should().HaveCount(2, "each attempt saves its night");
+        saved[1].Should().NotBeSameAs(saved[0], "the retry works on the night read again");
+        saved[1].Sessions.Should().ContainSingle().Which.Status.Should().Be(GameNightSessionStatus.Completed);
+        _autoSave.Verify(a => a.RemoveAsync(session.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

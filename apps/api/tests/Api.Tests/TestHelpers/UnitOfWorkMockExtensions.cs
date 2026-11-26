@@ -54,4 +54,24 @@ internal static class UnitOfWorkMockExtensions
 
         return mock;
     }
+
+    /// <summary>
+    /// The retry of the execution strategy, without a database (#5158): the work runs, its outcome is thrown away as a
+    /// failed commit's would be, and it runs again; the second run's result is returned. A handler that reads its
+    /// aggregate outside the work finds, on the second run, the aggregate the first run already changed. With it, a
+    /// repository double must hand back a NEW aggregate on every read, as a real one does.
+    /// </summary>
+    public static Mock<IUnitOfWork> SetupExecuteInTransactionRetriedOnce<T>(this Mock<IUnitOfWork> mock)
+    {
+        mock.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<T>>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(async (Func<CancellationToken, Task<T>> work, CancellationToken ct) =>
+            {
+                await work(ct).ConfigureAwait(false);
+                return await work(ct).ConfigureAwait(false);
+            });
+
+        return mock;
+    }
 }

@@ -121,10 +121,19 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             };
         }
 
+        // #5162: the provider is asked once, before any transaction. The state is single-use and so is the code: run
+        // again by a retry of the execution strategy, the exchange answered «Invalid state parameter. Possible CSRF
+        // attack.» to a sign-in whose only fault was a commit that failed for a moment.
+        var (signIn, refused) = await SignInWithProviderAsync(command).ConfigureAwait(false);
+        if (signIn is null)
+        {
+            return refused!;
+        }
+
         // For InMemory database (tests), execute directly without transaction
         var result = isInMemory
-            ? await ExecuteOAuthCallbackAsync(command, transaction: null, cancellationToken).ConfigureAwait(false)
-            : await ExecuteInTransactionAsync(command, cancellationToken).ConfigureAwait(false);
+            ? await ExecuteOAuthCallbackAsync(command, signIn, transaction: null, cancellationToken).ConfigureAwait(false)
+            : await ExecuteInTransactionAsync(command, signIn, cancellationToken).ConfigureAwait(false);
 
         // #3838: audited only once the transaction has committed. The audit logger writes on its own connection, so
         // logging inside the transaction would record a link or a login that the rollback then undoes.
@@ -138,29 +147,116 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
 
     private async Task<HandleOAuthCallbackResult> ExecuteInTransactionAsync(
         HandleOAuthCallbackCommand command,
+        ProviderSignIn signIn,
         CancellationToken cancellationToken)
     {
-        // For real database, wrap in execution strategy to support retrying execution strategy
-        var strategy = _db.Database.CreateExecutionStrategy();
-        return await strategy.ExecuteAsync(async ct =>
+        // For real database, wrap in execution strategy to support retrying execution strategy.
+        // #5162: every attempt starts from the tracker as it was here. A failed attempt left its rows in it — a new
+        // user still Added after a failed save, accepted ones after a failed commit — and the retry worked on them.
+        try
         {
-            var transaction = await _db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
-            try
+            return await _db.ExecuteRewindingAsync(async ct =>
             {
-                var result = await ExecuteOAuthCallbackAsync(command, transaction, ct).ConfigureAwait(false);
-
-                if (result.Success)
+                var transaction = await _db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+                try
                 {
-                    await transaction.CommitAsync(ct).ConfigureAwait(false);
-                }
+                    var result = await ExecuteOAuthCallbackAsync(command, signIn, transaction, ct).ConfigureAwait(false);
 
-                return result;
-            }
-            finally
+                    if (result.Success)
+                    {
+                        await transaction.CommitAsync(ct).ConfigureAwait(false);
+                    }
+
+                    return result;
+                }
+                finally
+                {
+                    await transaction.DisposeAsync().ConfigureAwait(false);
+                }
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (PersistenceFailure.IsInfrastructure(ex))
+        {
+            // The database stayed unavailable through every retry (RetryLimitExceededException), or failed in a way
+            // the strategy does not retry: EF unwraps only a DbUpdateException, and IsLeftToTheStrategy reads the
+            // whole chain. Both get the answer of a context that is gone, not a 500.
+            _logger.LogError(ex, "Database unavailable during OAuth callback for provider {Provider}", command.Provider);
+            return new HandleOAuthCallbackResult
             {
-                await transaction.DisposeAsync().ConfigureAwait(false);
+                Success = false,
+                ErrorMessage = "Database connection error. Please try again."
+            };
+        }
+    }
+
+    /// <summary>What the provider said about the user, asked once per callback (#5162).</summary>
+    private sealed record ProviderSignIn(OAuthUserInfo UserInfo, OAuthTokenResponse TokenResponse);
+
+    /// <summary>
+    /// Validates the single-use state, exchanges the single-use code and reads the user, outside any transaction:
+    /// none of it can run twice. Returns the sign-in, or the result that refuses it.
+    /// </summary>
+    private async Task<(ProviderSignIn? SignIn, HandleOAuthCallbackResult? Refused)> SignInWithProviderAsync(
+        HandleOAuthCallbackCommand command)
+    {
+        try
+        {
+            // Step 1: Validate state and exchange code for user info
+            var (tokenSuccess, userInfo, tokenResponse) = await ValidateAndExchangeTokenAsync(
+                command.Provider, command.State, command.Code).ConfigureAwait(false);
+            if (!tokenSuccess)
+            {
+                return (null, new HandleOAuthCallbackResult
+                {
+                    Success = false,
+                    ErrorMessage = userInfo as string ?? "OAuth authentication failed"
+                });
             }
-        }, cancellationToken).ConfigureAwait(false);
+
+            // Step 2: Validate user info is not null
+            if (userInfo is not OAuthUserInfo oauthUserInfo)
+            {
+                _logger.LogError("Failed to retrieve user information from OAuth provider {Provider}", command.Provider);
+                return (null, new HandleOAuthCallbackResult
+                {
+                    Success = false,
+                    ErrorMessage = "Failed to retrieve user information from OAuth provider"
+                });
+            }
+
+            return (new ProviderSignIn(oauthUserInfo, tokenResponse!), null);
+        }
+        catch (OAuthTokenExchangeException ex)
+        {
+            _logger.LogError(ex, "OAuth token exchange failed for provider {Provider}", command.Provider);
+            return (null, new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = "OAuth token exchange failed. Please try again."
+            });
+        }
+        catch (OAuthUserInfoException ex)
+        {
+            _logger.LogError(ex, "OAuth user info retrieval failed for provider {Provider}", command.Provider);
+            return (null, new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = "Failed to get user information from OAuth provider. Please try again."
+            });
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // HANDLER BOUNDARY: the state store and the provider can fail in ways of their own (Redis down, a malformed
+        // answer); the callback answers with a result, as it does for the database part.
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during OAuth callback for provider {Provider}", command.Provider);
+            return (null, new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = "An unexpected error occurred during OAuth authentication"
+            });
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -204,38 +300,16 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
     /// </summary>
     private async Task<HandleOAuthCallbackResult> ExecuteOAuthCallbackAsync(
         HandleOAuthCallbackCommand command,
+        ProviderSignIn signIn,
         IDbContextTransaction? transaction,
         CancellationToken cancellationToken)
     {
         try
         {
-            // Step 1: Validate state and exchange code for user info
-            var (tokenSuccess, userInfo, tokenResponse) = await ValidateAndExchangeTokenAsync(
-                command.Provider, command.State, command.Code).ConfigureAwait(false);
-            if (!tokenSuccess)
-            {
-                return new HandleOAuthCallbackResult
-                {
-                    Success = false,
-                    ErrorMessage = userInfo as string ?? "OAuth authentication failed"
-                };
-            }
-
-            // Step 2: Validate user info is not null
-            var oauthUserInfo = userInfo as OAuthUserInfo;
-            if (oauthUserInfo == null)
-            {
-                _logger.LogError("Failed to retrieve user information from OAuth provider {Provider}", command.Provider);
-                return new HandleOAuthCallbackResult
-                {
-                    Success = false,
-                    ErrorMessage = "Failed to retrieve user information from OAuth provider"
-                };
-            }
-
+            // Steps 1 and 2 (state, code, user info) ran once, before the transaction (#5162).
             // Step 3: Find or create user and link OAuth account
             var (user, isNewUser, linkedNow) = await FindOrCreateUserAsync(
-                command.Provider, oauthUserInfo, tokenResponse!, command.AcceptLanguage, cancellationToken)
+                command.Provider, signIn.UserInfo, signIn.TokenResponse, command.AcceptLanguage, cancellationToken)
                 .ConfigureAwait(false);
 
             // Step 4: Create session for authenticated user
@@ -245,7 +319,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 sessionToken = await CreateSessionForUserAsync(
                     user.Id, command.IpAddress, command.UserAgent, cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!IsLeftToTheStrategy(ex, transaction))
             {
                 _logger.LogError(ex, "Failed to create session for user {UserId} during OAuth callback", user.Id);
 
@@ -281,40 +355,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 OAuthAccountLinked = linkedNow,
             };
         }
-        catch (OAuthTokenExchangeException ex)
-        {
-            _logger.LogError(ex, "OAuth token exchange failed for provider {Provider}", command.Provider);
-            // I6: unified compensation path. The other catches fire BEFORE
-            // FindOrCreateUserAsync mutates the DB, so the InMemory branch
-            // is a no-op there; the helper centralises the transaction
-            // rollback so we don't duplicate the "if transaction != null"
-            // dance in every catch.
-            await RollbackOAuthAttemptAsync(
-                transaction, command.Provider, userIdToClean: null, isNewUserToClean: false, cancellationToken)
-                .ConfigureAwait(false);
-            return new HandleOAuthCallbackResult
-            {
-                Success = false,
-                ErrorMessage = "OAuth token exchange failed. Please try again."
-            };
-        }
-        catch (OAuthUserInfoException ex)
-        {
-            _logger.LogError(ex, "OAuth user info retrieval failed for provider {Provider}", command.Provider);
-            // I6: unified compensation path. The other catches fire BEFORE
-            // FindOrCreateUserAsync mutates the DB, so the InMemory branch
-            // is a no-op there; the helper centralises the transaction
-            // rollback so we don't duplicate the "if transaction != null"
-            // dance in every catch.
-            await RollbackOAuthAttemptAsync(
-                transaction, command.Provider, userIdToClean: null, isNewUserToClean: false, cancellationToken)
-                .ConfigureAwait(false);
-            return new HandleOAuthCallbackResult
-            {
-                Success = false,
-                ErrorMessage = "Failed to get user information from OAuth provider. Please try again."
-            };
-        }
+        // The provider's own failures (token exchange, user info) are answered by SignInWithProviderAsync, before
+        // this part runs (#5162).
         catch (SharedKernel.Domain.Exceptions.ValidationException ex)
         {
             _logger.LogError(ex, "Validation failed during OAuth callback for provider {Provider}", command.Provider);
@@ -355,8 +397,10 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         // Specific exceptions (ValidationException, DomainException) caught separately above.
         // Generic catch handles unexpected infrastructure failures (DB, network, memory)
         // to prevent exception propagation to API layer. Returns Result<T> pattern.
+        // #5162: except a failure of the infrastructure under the execution strategy, which goes up to it — it rolls
+        // back and runs this part again. Caught here, a save that failed for a moment ended the sign-in.
 #pragma warning restore S125
-        catch (Exception ex)
+        catch (Exception ex) when (!IsLeftToTheStrategy(ex, transaction))
         {
             _logger.LogError(ex, "Unexpected error during OAuth callback for provider {Provider}", command.Provider);
             // I6: unified compensation path. The other catches fire BEFORE
@@ -377,6 +421,13 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         // Note: Transaction disposal is handled by 'await using' in the ExecuteAsync wrapper
         // No finally block needed - this avoids double-disposal issues
     }
+
+    /// <summary>
+    /// A failure the execution strategy retries — the database slow, unreachable, restarting — when there is a
+    /// strategy to retry it, that is, under a transaction (the InMemory path of the tests has neither).
+    /// </summary>
+    private static bool IsLeftToTheStrategy(Exception ex, IDbContextTransaction? transaction) =>
+        transaction is not null && PersistenceFailure.IsInfrastructure(ex);
 
     /// <summary>
     /// I6 — unified compensation for an OAuth callback that fails after the

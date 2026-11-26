@@ -69,7 +69,6 @@ internal sealed class KbReindexProcessorService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var jobRepository = scope.ServiceProvider.GetRequiredService<IKbReindexJobRepository>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Load the job + its PDF list. The job row already exists (created by the
@@ -116,9 +115,17 @@ internal sealed class KbReindexProcessorService : BackgroundService
 
             try
             {
-                await mediator
-                    .Send(new IndexPdfCommand(pdfId.ToString()), ct)
-                    .ConfigureAwait(false);
+                // #5162: a scope of its own for every PDF. IndexPdfCommandHandler leaves the text chunks and the
+                // embeddings of its PDF tracked: in the job's scope they piled up, and the transaction of every
+                // later PDF photographed them all for the rewind of a retry (its cost grows with the tracker) and
+                // attached them again on a retry, only for the handler to detach them.
+                var pdfScope = _scopeFactory.CreateAsyncScope();
+                await using (pdfScope.ConfigureAwait(false))
+                {
+                    await pdfScope.ServiceProvider.GetRequiredService<IMediator>()
+                        .Send(new IndexPdfCommand(pdfId.ToString()), ct)
+                        .ConfigureAwait(false);
+                }
 
                 job.IncrementProcessed();
                 await jobRepository.UpdateAsync(job, ct).ConfigureAwait(false);

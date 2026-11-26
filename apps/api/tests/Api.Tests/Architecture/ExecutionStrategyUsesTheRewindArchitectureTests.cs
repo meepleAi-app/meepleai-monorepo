@@ -16,6 +16,8 @@ namespace Api.Tests.Architecture;
 /// <remarks>
 /// Text scan of the API source, comments left out. A new direct use has to go through the helper, or be added here
 /// with its reason; an entry whose file no longer opens the strategy fails too, so the list does not outlive the code.
+/// Limit, admitted: it reads the text <c>Database.CreateExecutionStrategy(</c>, so a strategy reached another way
+/// (a facade held in a variable, <c>IExecutionStrategyFactory</c>) is not seen; none exists today.
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Architecture")]

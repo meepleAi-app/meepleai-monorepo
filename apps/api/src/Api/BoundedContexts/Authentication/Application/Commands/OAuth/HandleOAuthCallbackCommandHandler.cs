@@ -175,9 +175,11 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 }
             }, cancellationToken).ConfigureAwait(false);
         }
-        catch (RetryLimitExceededException ex)
+        catch (Exception ex) when (PersistenceFailure.IsInfrastructure(ex))
         {
-            // The database stayed unavailable through every retry: the same answer as a context that is gone.
+            // The database stayed unavailable through every retry (RetryLimitExceededException), or failed in a way
+            // the strategy does not retry: EF unwraps only a DbUpdateException, and IsLeftToTheStrategy reads the
+            // whole chain. Both get the answer of a context that is gone, not a 500.
             _logger.LogError(ex, "Database unavailable during OAuth callback for provider {Provider}", command.Provider);
             return new HandleOAuthCallbackResult
             {

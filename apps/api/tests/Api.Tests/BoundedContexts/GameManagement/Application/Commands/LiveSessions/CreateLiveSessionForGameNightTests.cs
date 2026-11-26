@@ -89,7 +89,7 @@ public sealed class CreateLiveSessionForGameNightTests
         _added.Should().NotBeNull();
         _added!.TrackingSessionId.Should().Be(trackingId);
         _companion.Verify(
-            c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -488,7 +488,7 @@ public sealed class CreateLiveSessionForGameNightTests
     public async Task Handle_WithoutAnExistingTrackingSession_DoesNotRunTheOwnershipCheck()
     {
         // The ordinary creation makes its own companion: there is nothing to adopt, so nothing to check.
-        _companion.Setup(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        _companion.Setup(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid());
 
         await _sut.Handle(

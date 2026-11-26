@@ -208,6 +208,36 @@ public class StartGameNightSessionCommandHandlerTests
     }
 
     /// <summary>
+    /// #4780 — no address reaches the table: the account's, a name that contains it, or another one. The old address
+    /// of a user without a name, kept as one after it changed, is not the account's — and the live game's seats,
+    /// which judge by the shape, would have called the same organizer «Giocatore» (review of #5161).
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData("DJ@Home.TV", "Organizzatore")]
+    [InlineData("vecchio@example.com", "Organizzatore")]
+    [InlineData("organizer@example.com", "Organizzatore")]
+    [InlineData("Alice (organizer@example.com)", "Organizzatore")]
+    public async Task Handle_TheOrganizersNameIsComparedWithTheirAddress(string profileName, string seated)
+    {
+        var gameNight = CreatePublishedEvent();
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId, displayName: profileName)); // address organizer@example.com
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(Guid.NewGuid(), "XYZ789", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        await _handler.Handle(
+            new StartGameNightSessionCommand(gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId),
+            CancellationToken.None);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateSessionCommand>(c => c.Participants.Single().DisplayName == seated),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
     /// #5150 review — a profile name reaches 128 characters and the tracking session takes 50
     /// (<c>CreateSessionCommandValidator</c>): seeded whole, it made the start of the whole night answer 422.
     /// </summary>

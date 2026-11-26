@@ -90,7 +90,7 @@ public class EnsureCompanionCommandHandlerTests
     private void SetupCompanion(Guid companionId)
     {
         _companionMock
-            .Setup(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(companionId);
     }
 
@@ -110,7 +110,28 @@ public class EnsureCompanionCommandHandlerTests
 
         // Assert
         _companionMock.Verify(
-            c => c.CreateCompanionAsync(DefaultUserId, DefaultGameId, It.IsAny<CancellationToken>()),
+            c => c.CreateCompanionAsync(DefaultUserId, DefaultGameId, It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// #4780, review of #5161 — the companion of a game created without one called its owner «Owner». It takes the
+    /// creator's name at the table, not the first seat's.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task Handle_TheCompanionNamesItsOwnerAsTheTableDoes()
+    {
+        var session = CreateSessionNeedsCompanion();
+        session.AddPlayer(null, "Luca", PlayerColor.Red, TimeProvider.System);
+        session.AddPlayer(DefaultUserId, "Marta", PlayerColor.Blue, TimeProvider.System);
+        SetupRepoGetById(DefaultSessionId, session);
+        SetupCompanion(DefaultCompanionId);
+
+        await _handler.Handle(new EnsureCompanionCommand(DefaultSessionId), CancellationToken.None);
+
+        _companionMock.Verify(
+            c => c.CreateCompanionAsync(DefaultUserId, DefaultGameId, "Marta", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -193,7 +214,7 @@ public class EnsureCompanionCommandHandlerTests
 
         // Assert
         _companionMock.Verify(
-            c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -245,7 +266,7 @@ public class EnsureCompanionCommandHandlerTests
 
         // Assert
         _companionMock.Verify(
-            c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -307,7 +328,7 @@ public class EnsureCompanionCommandHandlerTests
 
         // Assert
         _companionMock.Verify(
-            c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -409,7 +430,7 @@ public class EnsureCompanionCommandHandlerTests
 
         // Assert — CreateCompanionAsync was called exactly once (not a second time)
         _companionMock.Verify(
-            c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

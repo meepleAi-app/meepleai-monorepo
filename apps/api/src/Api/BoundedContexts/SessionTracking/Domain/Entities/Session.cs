@@ -226,6 +226,7 @@ public class Session : IDomainEventSource
     /// <param name="location">Optional location.</param>
     /// <param name="sessionDate">Optional session date (defaults to now).</param>
     /// <param name="gamebookCampaignId">Optional libro-game campaign link (#2632 SI-1); non-null only for GameNight-attached gamebook play.</param>
+    /// <param name="ownerDisplayName">The name the owner sits under (#4780); «Owner» only when there is none.</param>
     /// <returns>New session instance.</returns>
     public static Session Create(
         Guid userId,
@@ -233,7 +234,8 @@ public class Session : IDomainEventSource
         SessionType sessionType,
         string? location = null,
         DateTime? sessionDate = null,
-        Guid? gamebookCampaignId = null)
+        Guid? gamebookCampaignId = null,
+        string? ownerDisplayName = null)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("User ID cannot be empty.", nameof(userId));
@@ -260,9 +262,14 @@ public class Session : IDomainEventSource
             Xmin = 0,
         };
 
-        // Automatically add creator as first participant (owner)
+        // Automatically add creator as first participant (owner). #4780: under the name the caller gives it — the
+        // literal «Owner» reached the live table through the go-live, and the night's winner through the roster.
+        // The literal stays only for a caller that has no name to give.
         session.AddParticipant(
-            ParticipantInfo.Create(displayName: "Owner", isOwner: true, joinOrder: 1),
+            ParticipantInfo.Create(
+                displayName: string.IsNullOrWhiteSpace(ownerDisplayName) ? "Owner" : ownerDisplayName,
+                isOwner: true,
+                joinOrder: 1),
             userId
         );
 

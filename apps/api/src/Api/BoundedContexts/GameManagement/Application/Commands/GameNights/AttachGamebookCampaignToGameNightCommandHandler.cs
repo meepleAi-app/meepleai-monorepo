@@ -11,6 +11,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 
@@ -69,9 +70,10 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
 
         // Resolve the caller's real display name (mirrors StartGameNightSessionCommandHandler);
         // a hardcoded literal would persist to session_participants and surface in the player list.
+        // #4780: never the address — the tracking session now seats its owner under this name.
         var caller = await _mediator.Send(new GetUserByIdQuery(command.CallerUserId), cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("User", command.CallerUserId.ToString());
-        var displayName = !string.IsNullOrWhiteSpace(caller.DisplayName) ? caller.DisplayName : caller.Email;
+        var displayName = RosterDisplayNames.Resolve(caller.DisplayName, caller.Email, RosterDisplayNames.Organizer);
 
         // Seed the caller as the sole owner participant (a gamebook sitting is typically solo).
         var participants = new List<ParticipantDto>

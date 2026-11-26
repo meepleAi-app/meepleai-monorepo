@@ -40,13 +40,32 @@ public class CompanionSessionServiceTests
             .ReturnsAsync(true);
 
         var sut = CreateSut();
-        var trackingId = await sut.CreateCompanionAsync(userId, gameId, CancellationToken.None);
+        var trackingId = await sut.CreateCompanionAsync(userId, gameId, null, CancellationToken.None);
 
         captured.Should().NotBeNull();
         captured!.Id.Should().Be(trackingId);
         captured.UserId.Should().Be(userId);
         captured.GameId.Should().Be(gameId);
         _sessionRepo.Verify(r => r.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>#4780 — the owner of the companion sits under the name the caller gives it, and only without one under «Owner».</summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData("Marta", "Marta")]
+    [InlineData(null, "Owner")]
+    public async Task CreateCompanionAsync_TheOwnerSitsUnderTheNameItIsGiven(string? ownerName, string seated)
+    {
+        Session? captured = null;
+        _sessionRepo.Setup(r => r.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()))
+            .Callback<Session, CancellationToken>((s, _) => captured = s)
+            .Returns(Task.CompletedTask);
+        var gameId = Guid.NewGuid();
+        _sharedGameRepo.Setup(r => r.ExistsByIdAsync(gameId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        await CreateSut().CreateCompanionAsync(Guid.NewGuid(), gameId, ownerName, CancellationToken.None);
+
+        captured!.Participants.Should().ContainSingle(p => p.IsOwner).Which.DisplayName.Should().Be(seated);
     }
 
     [Fact]
@@ -58,7 +77,7 @@ public class CompanionSessionServiceTests
             .ReturnsAsync(false);
 
         var sut = CreateSut();
-        var act = () => sut.CreateCompanionAsync(userId, gameId, CancellationToken.None);
+        var act = () => sut.CreateCompanionAsync(userId, gameId, null, CancellationToken.None);
 
         // A GameId that points at no catalog row must surface as 404, not a 500 FK violation
         // at the downstream SaveChanges (#2552, respects #2568 "never InvalidOperationException").

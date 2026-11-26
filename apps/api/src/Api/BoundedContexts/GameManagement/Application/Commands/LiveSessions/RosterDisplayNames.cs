@@ -13,14 +13,19 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 /// it that way), so a user without a name reaches the handlers as <c>DisplayName == Email</c>; and a
 /// tracking Session joined elsewhere can carry the address as a participant name. A blank check alone would
 /// never fire on real data.</para>
+///
+/// <para>#4780: the rule lives in <see cref="PlayerDisplayNames"/>, which the other bounded contexts use too.
+/// With the account's address at hand (<see cref="Resolve(string?, string?, string)"/>) the name is compared with
+/// it; without (<see cref="Resolve(string?, string)"/>, a name from the tracking roster or typed by hand) the
+/// shape of an address decides.</para>
 /// </summary>
 internal static class RosterDisplayNames
 {
     /// <summary>A seated player with no usable name; also what a blank requested name becomes.</summary>
-    public const string Player = "Giocatore";
+    public const string Player = PlayerDisplayNames.Player;
 
     /// <summary>The organizer of the night, seated by the server, with no usable name.</summary>
-    public const string Organizer = "Organizzatore";
+    public const string Organizer = PlayerDisplayNames.Organizer;
 
     /// <remarks>
     /// #5150: the name leaves cut to <see cref="PlayerNameLimit.MaxLength"/>. Every name the server seats on its
@@ -28,19 +33,12 @@ internal static class RosterDisplayNames
     /// reaches 128 characters: seeded whole, the tracking session refused it and the whole start answered 422.
     /// </remarks>
     public static string Resolve(string? displayName, string fallback) =>
-        string.IsNullOrWhiteSpace(displayName) || LooksLikeAnEmailAddress(displayName)
-            ? fallback
-            : PlayerNameLimit.Clamp(displayName.Trim());
+        PlayerDisplayNames.ForTheTable(displayName, email: null, fallback);
+
+    /// <summary>The name of a user whose address is known: compared with it, not judged by its shape.</summary>
+    public static string Resolve(string? displayName, string? email, string fallback) =>
+        PlayerDisplayNames.ForTheTable(displayName, email, fallback);
 
     /// <summary>One «@» with something before it, a dot in the domain, no spaces: the shape of an address.</summary>
-    internal static bool LooksLikeAnEmailAddress(string value)
-    {
-        var name = value.Trim();
-        var at = name.IndexOf('@', StringComparison.Ordinal);
-
-        return at > 0
-            && at == name.LastIndexOf('@')
-            && name.IndexOf('.', at) > at + 1
-            && !name.Any(char.IsWhiteSpace);
-    }
+    internal static bool LooksLikeAnEmailAddress(string value) => PlayerDisplayNames.LooksLikeAnEmailAddress(value);
 }

@@ -288,7 +288,7 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
             {
                 players.Add(new LiveSessionInitialPlayer(
                     organizer.Id,
-                    RosterDisplayNames.Resolve(organizer.DisplayName, RosterDisplayNames.Organizer)));
+                    RosterDisplayNames.Resolve(organizer.DisplayName, organizer.Email, RosterDisplayNames.Organizer)));
             }
         }
 

@@ -289,6 +289,33 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
         persistedSession.Participants.Should().Contain(p => p.DisplayName == "Sara" && p.UserId == null);
     }
 
+    /// <summary>
+    /// #4780 — the owner sat as «Owner» whatever name the command gave it: <c>Session.Create</c> wrote the literal,
+    /// and the handler skipped the owner's entry. The go-live copies these names to the live table, so the host of
+    /// a live born from a night was «Owner», and so was the winner of the night.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task Handle_TheOwnerSitsUnderTheNameTheCommandGivesIt()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+
+        var result = await _handler!.Handle(new CreateSessionCommand(
+            UserId: userId,
+            GameId: gameId,
+            SessionType: nameof(Api.BoundedContexts.SessionTracking.Domain.Entities.SessionType.Generic),
+            SessionDate: null,
+            Location: null,
+            Participants: new List<ParticipantDto> { new() { DisplayName = "Marta Rossi", IsOwner = true, UserId = userId } },
+            GameNightEventId: null), TestCancellationToken);
+
+        result.Participants.Should().ContainSingle(p => p.IsOwner).Which.DisplayName.Should().Be("Marta Rossi");
+        _dbContext!.ChangeTracker.Clear();
+        var persisted = await _dbContext.SessionTrackingSessions.AsNoTracking().Include(s => s.Participants)
+            .SingleAsync(s => s.Id == result.SessionId, TestCancellationToken);
+        persisted.Participants.Should().ContainSingle(p => p.IsOwner).Which.DisplayName.Should().Be("Marta Rossi");
+    }
+
     [Fact]
     public async Task Handle_ExistingNightProvided_AttachesGameToNight()
     {

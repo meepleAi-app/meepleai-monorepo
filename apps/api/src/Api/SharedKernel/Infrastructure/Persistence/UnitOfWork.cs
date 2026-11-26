@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,12 +12,14 @@ namespace Api.SharedKernel.Infrastructure.Persistence;
 internal sealed class UnitOfWork : IUnitOfWork
 {
     private readonly MeepleAiDbContext _context;
+    private readonly IDomainEventCollector? _eventCollector;
     private IDbContextTransaction? _currentTransaction;
 
-    public UnitOfWork(MeepleAiDbContext context)
+    public UnitOfWork(MeepleAiDbContext context, IDomainEventCollector? eventCollector = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         _context = context;
+        _eventCollector = eventCollector;
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -40,8 +43,15 @@ internal sealed class UnitOfWork : IUnitOfWork
         // the transaction legal under the retry strategy active outside Testing.
         var strategy = _context.Database.CreateExecutionStrategy();
 
+        // #5145: see EfCoreUnitOfWork — every attempt starts from the tracker the caller handed in.
+        var rewind = ChangeTrackerRewind.CaptureIfRetrying(strategy, _context, _eventCollector);
+        var attempt = 0;
+
         return await strategy.ExecuteAsync(async () =>
         {
+            if (attempt++ > 0)
+                rewind?.Restore();
+
             var transaction = await _context.Database
                 .BeginTransactionAsync(cancellationToken)
                 .ConfigureAwait(false);

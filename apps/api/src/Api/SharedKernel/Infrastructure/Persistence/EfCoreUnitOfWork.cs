@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,11 +12,15 @@ namespace Api.SharedKernel.Infrastructure.Persistence;
 internal class EfCoreUnitOfWork : IUnitOfWork
 {
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IDomainEventCollector? _eventCollector;
     private IDbContextTransaction? _currentTransaction;
 
-    public EfCoreUnitOfWork(MeepleAiDbContext dbContext)
+    // The collector is optional so that the reduced containers of the tests, and the tests that build the unit
+    // of work by hand, still build it; the application registers one (#5145).
+    public EfCoreUnitOfWork(MeepleAiDbContext dbContext, IDomainEventCollector? eventCollector = null)
     {
         _dbContext = dbContext;
+        _eventCollector = eventCollector;
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -41,8 +46,17 @@ internal class EfCoreUnitOfWork : IUnitOfWork
         // more than once.
         var strategy = _dbContext.Database.CreateExecutionStrategy();
 
+        // #5145: every attempt starts from the tracker and the events the caller handed in. Without it, a retry
+        // found the failed attempt's rows (Added after a failed save, written again; Unchanged after a failed
+        // commit, so a repeated change was not written). Not a Clear(): what the caller tracked before stays.
+        var rewind = ChangeTrackerRewind.CaptureIfRetrying(strategy, _dbContext, _eventCollector);
+        var attempt = 0;
+
         return await strategy.ExecuteAsync(async () =>
         {
+            if (attempt++ > 0)
+                rewind?.Restore();
+
             var transaction = await _dbContext.Database
                 .BeginTransactionAsync(cancellationToken)
                 .ConfigureAwait(false);

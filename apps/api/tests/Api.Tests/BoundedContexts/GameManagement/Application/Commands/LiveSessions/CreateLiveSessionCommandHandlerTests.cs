@@ -17,8 +17,8 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Commands.LiveSess
 ///
 /// Verifies the atomic Saga contract introduced in Issue #2501 SP0:
 ///   - When <c>command.GameId</c> is present, the handler creates a SessionTracking.Session
-///     companion via <see cref="ICompanionSessionService"/> BEFORE building the LiveGameSession,
-///     populates <c>LiveGameSession.TrackingSessionId</c> with the companion id, and commits both
+///     companion via <see cref="ICompanionSessionService"/> once the seats are taken (#4780: its owner gets the
+///     creator's name at the table), populates <c>LiveGameSession.TrackingSessionId</c> with the companion id, and commits both
 ///     aggregates in a single <see cref="IUnitOfWork.SaveChangesAsync"/> (one EF transaction →
 ///     no orphan LiveGameSession is ever persisted if the companion insert fails).
 ///   - When <c>command.GameId</c> is null, no companion is created and TrackingSessionId stays null.
@@ -33,7 +33,7 @@ public sealed class CreateLiveSessionCommandHandlerTests
         var sessionRepo = new Mock<ILiveSessionRepository>();
         var uow = new Mock<IUnitOfWork>();
         var companion = new Mock<ICompanionSessionService>();
-        companion.Setup(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        companion.Setup(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("companion insert failed"));
 
         var sut = new CreateLiveSessionCommandHandler(sessionRepo.Object, TimeProvider.System, uow.Object, companion.Object,
@@ -57,7 +57,7 @@ public sealed class CreateLiveSessionCommandHandlerTests
             .Returns(Task.CompletedTask);
         var uow = new Mock<IUnitOfWork>();
         var companion = new Mock<ICompanionSessionService>();
-        companion.Setup(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        companion.Setup(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(trackingId);
 
         var sut = new CreateLiveSessionCommandHandler(sessionRepo.Object, TimeProvider.System, uow.Object, companion.Object,
@@ -90,6 +90,34 @@ public sealed class CreateLiveSessionCommandHandlerTests
 
         Assert.NotNull(added);
         Assert.Null(added!.TrackingSessionId);
-        companion.Verify(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        companion.Verify(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// #4780, review of #5161 — the companion called its owner «Owner» whatever their name, and the history (the
+    /// players and the winner) and the dice read it. It takes the creator's name at the table: after the seats,
+    /// so a name the table made distinct is the one it gets.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData(true, "Marta (2)")]
+    [InlineData(false, null)]
+    public async Task Handle_TheCompanionNamesItsOwnerAsTheTableDoes(bool creatorSeated, string? ownerName)
+    {
+        var userId = Guid.NewGuid();
+        var companion = new Mock<ICompanionSessionService>();
+        companion.Setup(c => c.CreateCompanionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+        var sut = new CreateLiveSessionCommandHandler(Mock.Of<ILiveSessionRepository>(), TimeProvider.System, Mock.Of<IUnitOfWork>(),
+            companion.Object, Mock.Of<IGameNightEventRepository>(), Mock.Of<IMediator>(), NullLogger<CreateLiveSessionCommandHandler>.Instance);
+        List<LiveSessionInitialPlayer> players = [new(null, "Marta")];
+        if (creatorSeated)
+            players.Add(new(userId, "Marta"));
+
+        await sut.Handle(
+            new CreateLiveSessionCommand(UserId: userId, GameName: "Catan", GameId: Guid.NewGuid(), InitialPlayers: players),
+            CancellationToken.None);
+
+        companion.Verify(c => c.CreateCompanionAsync(userId, It.IsAny<Guid>(), ownerName, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

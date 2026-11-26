@@ -89,16 +89,6 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
 
             trackingSessionId = existingTrackingSessionId;
         }
-        else if (command.GameId.HasValue)
-        {
-            // ADR-083 SP0: create the SessionTracking.Session companion at-creation (Saga).
-            // Add-only (no SaveChanges here): the single SaveChangesAsync below commits the
-            // companion and the LiveGameSession atomically in one EF transaction — a companion
-            // failure rolls back the LiveGameSession, so no orphan is ever persisted.
-            trackingSessionId = await _companionSessionService
-                .CreateCompanionAsync(command.UserId, command.GameId.Value, cancellationToken)
-                .ConfigureAwait(false);
-        }
 
         var session = LiveGameSession.Create(
             Guid.NewGuid(),
@@ -113,6 +103,20 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
             trackingSessionId: trackingSessionId);
 
         SeedInitialPlayers(session, command.InitialPlayers, trackingSessionId);
+
+        if (trackingSessionId is null && command.GameId is { } gameId)
+        {
+            // ADR-083 SP0: create the SessionTracking.Session companion at-creation (Saga).
+            // Add-only (no SaveChanges here): the single SaveChangesAsync below commits the
+            // companion and the LiveGameSession atomically in one EF transaction — a companion
+            // failure rolls back the LiveGameSession, so no orphan is ever persisted.
+            // #4780: after the seats, so that the companion names its owner as the table does.
+            var creatorsSeat = session.Players.FirstOrDefault(p => p.UserId == command.UserId);
+            trackingSessionId = await _companionSessionService
+                .CreateCompanionAsync(command.UserId, gameId, creatorsSeat?.DisplayName, cancellationToken)
+                .ConfigureAwait(false);
+            session.SetTrackingSessionId(trackingSessionId.Value);
+        }
 
         // The start needs a player: with an empty roster the game stays Created, which is all the domain
         // allows. The caller's tier and role are read BEFORE anything is staged, so an unknown caller

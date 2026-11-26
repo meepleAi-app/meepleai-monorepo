@@ -208,13 +208,14 @@ public class StartGameNightSessionCommandHandlerTests
     }
 
     /// <summary>
-    /// #4780 — with the account's address at hand, the name is compared with it: a name with the shape of an
-    /// address that is not the account's stays (the shape alone dropped <c>DJ@Home.TV</c>), and the address
-    /// itself, or a name that contains it, does not reach the table.
+    /// #4780 — no address reaches the table: the account's, a name that contains it, or another one. The old address
+    /// of a user without a name, kept as one after it changed, is not the account's — and the live game's seats,
+    /// which judge by the shape, would have called the same organizer «Giocatore» (review of #5161).
     /// </summary>
     [Theory]
     [Trait("Issue", "4780")]
-    [InlineData("DJ@Home.TV", "DJ@Home.TV")]
+    [InlineData("DJ@Home.TV", "Organizzatore")]
+    [InlineData("vecchio@example.com", "Organizzatore")]
     [InlineData("organizer@example.com", "Organizzatore")]
     [InlineData("Alice (organizer@example.com)", "Organizzatore")]
     public async Task Handle_TheOrganizersNameIsComparedWithTheirAddress(string profileName, string seated)

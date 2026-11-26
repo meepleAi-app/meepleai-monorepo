@@ -152,6 +152,35 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// #4780, review of #5161 — the organizer's name seats them in the campaign's tracking session, and from there
+    /// the roster and the winner of the night: never an address, theirs (<c>player@example.com</c>) or another.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData("player@example.com", "Organizzatore")]
+    [InlineData("Marco (player@example.com)", "Organizzatore")]
+    [InlineData("marco@vecchio.it", "Organizzatore")]
+    [InlineData("Marco Rossi", "Marco Rossi")]
+    public async Task Handle_TheOrganizerIsNeverSeatedUnderAnAddress(string profileName, string seated)
+    {
+        var organizer = Guid.NewGuid();
+        var gameNight = CreatePublishedEvent(organizer);
+        var campaignId = Guid.NewGuid();
+        SetupCampaign(campaignId, CampaignDto(campaignId, Guid.NewGuid(), organizer, GameRefKind.Shared));
+        SetupCreateSession(Guid.NewGuid());
+        SetupUser(organizer, profileName);
+        _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+
+        await _handler.Handle(
+            new AttachGamebookCampaignToGameNightCommand(gameNight.Id, campaignId, organizer),
+            TestContext.Current.CancellationToken);
+
+        _mediator.Verify(m => m.Send(
+            It.Is<CreateSessionCommand>(c => c.Participants.Single(p => p.IsOwner).DisplayName == seated),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task Handle_HappyPath_WrapsWorkInCommittedTransaction()
     {

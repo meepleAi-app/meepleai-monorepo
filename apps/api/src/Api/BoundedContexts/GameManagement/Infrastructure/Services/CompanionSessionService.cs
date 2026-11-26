@@ -27,7 +27,7 @@ internal sealed class CompanionSessionService : ICompanionSessionService
     }
 
     /// <inheritdoc />
-    public async Task<Guid> CreateCompanionAsync(Guid userId, Guid gameId, CancellationToken ct)
+    public async Task<Guid> CreateCompanionAsync(Guid userId, Guid gameId, string? ownerDisplayName, CancellationToken ct)
     {
         // #2552: the companion's game_id is an FK to shared_games (Restrict). Session.Create only
         // validates Guid != Empty, so a valid-but-nonexistent GameId would otherwise surface as a
@@ -38,7 +38,7 @@ internal sealed class CompanionSessionService : ICompanionSessionService
             throw new NotFoundException("Game", gameId.ToString());
         }
 
-        var companion = Session.Create(userId, gameId, SessionType.GameSpecific);
+        var companion = Session.Create(userId, gameId, SessionType.GameSpecific, ownerDisplayName: ownerDisplayName);
         await _sessionRepository.AddAsync(companion, ct).ConfigureAwait(false);
         return companion.Id;
     }

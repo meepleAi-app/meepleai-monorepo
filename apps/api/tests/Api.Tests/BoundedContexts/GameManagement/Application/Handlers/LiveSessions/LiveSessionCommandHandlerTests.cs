@@ -148,6 +148,11 @@ public class LiveSessionCommandHandlerTests
             Mock.Of<IGameNightEventRepository>(), Mock.Of<IMediator>(), NullLogger<CreateLiveSessionCommandHandler>.Instance);
         var scoringDimensions = new List<string> { "Points", "Bonus" };
         var dimensionUnits = new Dictionary<string, string> { { "Points", "pts" }, { "Bonus", "pts" } };
+        // With a game the handler creates a companion; an unconfigured mock would hand it Guid.Empty, which the
+        // live game refuses as its tracking id (#4780 sets it after the seats, through SetTrackingSessionId).
+        _companionSessionServiceMock
+            .Setup(s => s.CreateCompanionAsync(DefaultUserId, It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
         var command = new CreateLiveSessionCommand(
             DefaultUserId,
             "Terraforming Mars",
@@ -216,7 +221,7 @@ public class LiveSessionCommandHandlerTests
         // silently and the assertion below was missing).
         var expectedTrackingSessionId = Guid.NewGuid();
         _companionSessionServiceMock
-            .Setup(s => s.CreateCompanionAsync(DefaultUserId, gameId, It.IsAny<CancellationToken>()))
+            .Setup(s => s.CreateCompanionAsync(DefaultUserId, gameId, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedTrackingSessionId);
 
         var command = new CreateLiveSessionCommand(
@@ -244,7 +249,7 @@ public class LiveSessionCommandHandlerTests
         capturedSession.AgentMode.Should().Be(AgentSessionMode.Assistant);
         capturedSession.TrackingSessionId.Should().Be(expectedTrackingSessionId);
         _companionSessionServiceMock.Verify(
-            s => s.CreateCompanionAsync(DefaultUserId, gameId, It.IsAny<CancellationToken>()), Times.Once);
+            s => s.CreateCompanionAsync(DefaultUserId, gameId, It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion

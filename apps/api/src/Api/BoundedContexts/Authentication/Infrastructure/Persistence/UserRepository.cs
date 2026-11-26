@@ -152,14 +152,16 @@ public class UserRepository : RepositoryBase, IUserRepository
         }
 
         // #4780: MapToDomain gives a user without a name their address as one, because the domain needs a name.
-        // Written back, it became the stored name, shown to other users by every reader of the column. Read before
-        // the address changes, so a filler of the old address is recognised too.
-        var nameIsTheAddressFiller = string.IsNullOrWhiteSpace(existingUser.DisplayName)
-            && string.Equals(entity.DisplayName, existingUser.Email, StringComparison.OrdinalIgnoreCase);
+        // Written back, it became the stored name, shown to other users by every reader of the column. A name equal
+        // to the address, the old one or the new one, is never written, whatever the column holds: the domain name
+        // may be a stale filler of a user who has set a real name since it was read. Registration and the profile
+        // refuse an «@» in a name, so no name a user chose is lost.
+        var nameIsAnAddress = IsTheAddress(entity.DisplayName, existingUser.Email)
+            || IsTheAddress(entity.DisplayName, entity.Email.Value);
 
         // Update scalar properties
         existingUser.Email = entity.Email.Value;
-        if (!nameIsTheAddressFiller)
+        if (!nameIsAnAddress)
         {
             existingUser.DisplayName = entity.DisplayName;
         }
@@ -317,6 +319,10 @@ public class UserRepository : RepositoryBase, IUserRepository
             .Where(bc => bc.UserId == userId)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    private static bool IsTheAddress(string? name, string? address) =>
+        !string.IsNullOrWhiteSpace(name)
+        && string.Equals(name.Trim(), address?.Trim(), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Maps persistence entity to domain entity.

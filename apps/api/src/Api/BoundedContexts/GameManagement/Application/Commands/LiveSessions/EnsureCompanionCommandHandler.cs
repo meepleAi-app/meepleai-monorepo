@@ -80,9 +80,11 @@ internal sealed class EnsureCompanionCommandHandler : ICommandHandler<EnsureComp
         if (session.GameId == null)
             return null;
 
-        // Create the companion (add-only — no SaveChanges inside).
+        // Create the companion (add-only — no SaveChanges inside), its owner under the creator's name at the table
+        // (#4780).
+        var creatorsSeat = session.Players.FirstOrDefault(p => p.UserId == session.CreatedByUserId);
         var companionId = await _companionSessionService
-            .CreateCompanionAsync(session.CreatedByUserId, session.GameId.Value, cancellationToken)
+            .CreateCompanionAsync(session.CreatedByUserId, session.GameId.Value, creatorsSeat?.DisplayName, cancellationToken)
             .ConfigureAwait(false);
 
         session.SetTrackingSessionId(companionId);

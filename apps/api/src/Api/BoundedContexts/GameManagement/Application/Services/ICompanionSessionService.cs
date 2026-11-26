@@ -11,7 +11,14 @@ public interface ICompanionSessionService
     /// Adds (no SaveChanges) a companion Session and returns its id.
     /// Caller commits it atomically together with the LiveGameSession via IUnitOfWork.
     /// </summary>
-    Task<Guid> CreateCompanionAsync(Guid userId, Guid gameId, CancellationToken ct);
+    /// <param name="userId">The creator of the live game, owner of the companion.</param>
+    /// <param name="gameId">The game, which must exist.</param>
+    /// <param name="ownerDisplayName">
+    /// #4780: the name the owner has at the table. The history and the dice name the companion's owner by it; with
+    /// none, they read «Owner».
+    /// </param>
+    /// <param name="ct">Cancellation.</param>
+    Task<Guid> CreateCompanionAsync(Guid userId, Guid gameId, string? ownerDisplayName, CancellationToken ct);
 
     /// <summary>
     /// True iff the tracking Session exists and was created by <paramref name="userId"/>. #4752: a live

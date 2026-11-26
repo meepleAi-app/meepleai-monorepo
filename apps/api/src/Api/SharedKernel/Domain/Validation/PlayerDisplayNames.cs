@@ -11,9 +11,11 @@ namespace Api.SharedKernel.Domain.Validation;
 /// <c>DisplayName ?? Email</c> themselves.
 /// </para>
 /// <para>
-/// When the account's address is known, the name is compared with it: <c>DJ@Home.TV</c> is a name, the account's
-/// own address is not, nor is <c>Marta (marta@example.com)</c>. Only when no address is known — a guest typed
-/// by hand — does the shape of an address decide.
+/// When the account's address is known, a name that contains it goes, even when it is not only the address:
+/// <c>Marta (marta@example.com)</c>, or <c>user@localhost</c>, which has no shape of an address. A name with the shape
+/// of an address goes in any case, even when it is not the account's (decision of #4780): the filler written before
+/// an address changed is the old address, which the new one does not find. <c>DJ@Home.TV</c> goes with it, and it can
+/// only come from OAuth or an admin, since registration and the profile refuse an «@» in a name.
 /// </para>
 /// <para>The strings are Italian like the rest of the roster the server writes.</para>
 /// </remarks>
@@ -34,8 +36,8 @@ internal static class PlayerDisplayNames
         var name = displayName.Trim();
         var address = email?.Trim();
 
-        if (!string.IsNullOrEmpty(address))
-            return name.Contains(address, StringComparison.OrdinalIgnoreCase) ? fallback : name;
+        if (!string.IsNullOrEmpty(address) && name.Contains(address, StringComparison.OrdinalIgnoreCase))
+            return fallback;
 
         return LooksLikeAnEmailAddress(name) ? fallback : name;
     }

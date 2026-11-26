@@ -53,7 +53,7 @@ public sealed class CreateGamebookCampaignHandlerTests
             .ReturnsAsync(new CreateSessionResult(
                 Guid.NewGuid(), "ABC123", new List<ParticipantDto>(), Guid.Empty, false, null, null));
 
-        // Owner display-name resolution (null → the handler falls back to "Owner").
+        // Owner display-name resolution (null → the handler falls back to «Giocatore», #4780).
         _mediator
             .Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((UserDto?)null);
@@ -107,6 +107,35 @@ public sealed class CreateGamebookCampaignHandlerTests
                 // owner (CreateSessionCommandValidator requires an IsOwner participant).
                 && c.Participants.Any(p => p.IsOwner && p.UserId == userId)
                 && c.Participants.Any(p => p.DisplayName == "Alice")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// #4780, review of #5161 — the owner of a campaign sits in its tracking session under their name: never an
+    /// address, theirs or another, and «Giocatore» without one. No test looked at it.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData(null, "Giocatore")]
+    [InlineData("owner@example.com", "Giocatore")]
+    [InlineData("Ada (owner@example.com)", "Giocatore")]
+    [InlineData("ada@vecchio.it", "Giocatore")]
+    [InlineData("Ada Lovelace", "Ada Lovelace")]
+    public async Task Handle_TheOwnerIsNeverSeatedUnderAnAddress(string? profileName, string seated)
+    {
+        var userId = Guid.NewGuid();
+        _mediator
+            .Setup(m => m.Send(It.Is<GetUserByIdQuery>(q => q.UserId == userId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserDto(
+                Id: userId, Email: "owner@example.com", DisplayName: profileName!, Role: "User", Tier: "Free",
+                CreatedAt: DateTime.UtcNow, IsTwoFactorEnabled: false, TwoFactorEnabledAt: null, Level: 1,
+                ExperiencePoints: 0, EmailVerified: true, EmailVerifiedAt: DateTime.UtcNow,
+                VerificationGracePeriodEndsAt: null, OnboardingCompleted: true, OnboardingSkipped: false));
+
+        await CreateHandler().Handle(new CreateGamebookCampaignCommand(Guid.NewGuid(), userId, "Campaign"), CancellationToken.None);
+
+        _mediator.Verify(m => m.Send(
+            It.Is<CreateSessionCommand>(c => c.Participants.Single(p => p.IsOwner).DisplayName == seated),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

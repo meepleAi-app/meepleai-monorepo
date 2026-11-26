@@ -75,15 +75,16 @@ public class GetGameNightRsvpsQueryHandlerTests : IDisposable
 
     /// <summary>
     /// #4780 — the roster of a night is read by every guest, and a user without a usable name appeared under
-    /// their address (<c>DisplayName ?? Email</c>). A name that is not an address stays as it is, even when it
-    /// has the shape of one.
+    /// their address (<c>DisplayName ?? Email</c>). Nor any other address: the old one, kept as a name after the
+    /// address changed, is not the account's.
     /// </summary>
     [Theory]
     [Trait("Issue", "4780")]
     [InlineData(null, "Giocatore")]
     [InlineData("marta.rossi@example.com", "Giocatore")]
     [InlineData("Marta (marta.rossi@example.com)", "Giocatore")]
-    [InlineData("DJ@Home.TV", "DJ@Home.TV")]
+    [InlineData("marta@vecchio.it", "Giocatore")]
+    [InlineData("Marta Rossi", "Marta Rossi")]
     public async Task Handle_TheRosterNeverShowsAGuestsAddress(string? profileName, string shown)
     {
         var organizerId = Guid.NewGuid();

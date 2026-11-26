@@ -320,6 +320,72 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         stored.DisplayName.Should().BeNull("the address the domain was given in place of a name is not a name");
     }
 
+    /// <summary>
+    /// #4780, review of #5161 — the user was read without a name, so with the address as one, and another request set
+    /// a real name before the update. The filler was left out only while the column was blank: it overwrote the name.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task UpdateAsync_AStaleFiller_DoesNotOverwriteANameSetSince()
+    {
+        await ResetDatabaseAsync();
+        var id = await SeedUserWithoutANameAsync("stale@example.com");
+
+        var user = await Repository.GetByIdAsync(id, TestCancellationToken);
+        await DbContext.Users.Where(u => u.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.DisplayName, "Marta"), TestCancellationToken);
+        user!.UpdatePreferences("it", "dark", emailNotifications: true, dataRetentionDays: 90);
+        await Repository.UpdateAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
+        DbContext.ChangeTracker.Clear();
+
+        (await DbContext.Users.AsNoTracking().Where(u => u.Id == id).Select(u => u.DisplayName).SingleAsync(TestCancellationToken))
+            .Should().Be("Marta");
+    }
+
+    /// <summary>#4780 — the new address is not written as a name either, when the address changes with it.</summary>
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task UpdateAsync_ANameThatIsTheNewAddress_IsNotWritten()
+    {
+        await ResetDatabaseAsync();
+        var user = CreateTestUser("before@example.com", Role.User);
+        user.UpdateDisplayName("Marta");
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
+        DbContext.ChangeTracker.Clear();
+
+        var loaded = await Repository.GetByIdAsync(user.Id, TestCancellationToken);
+        loaded!.UpdateEmail(new Email("after@example.com"));
+        loaded.UpdateDisplayName("After@Example.com");
+        await Repository.UpdateAsync(loaded, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
+        DbContext.ChangeTracker.Clear();
+
+        var stored = await DbContext.Users.AsNoTracking()
+            .Where(u => u.Id == user.Id).Select(u => new { u.DisplayName, u.Email }).SingleAsync(TestCancellationToken);
+        stored.Email.Should().Be("after@example.com", "the update itself is saved");
+        stored.DisplayName.Should().Be("Marta");
+    }
+
+    private async Task<Guid> SeedUserWithoutANameAsync(string email)
+    {
+        var id = Guid.NewGuid();
+        DbContext.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = id,
+            Email = email,
+            PasswordHash = PasswordHash.Create("UnusualPwd123!").Value,
+            DisplayName = null,
+            Role = "user",
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await DbContext.SaveChangesAsync(TestCancellationToken);
+        DbContext.ChangeTracker.Clear();
+        return id;
+    }
+
     [Fact]
     public async Task UpdateAsync_ModifiedUser_PersistsChanges()
     {

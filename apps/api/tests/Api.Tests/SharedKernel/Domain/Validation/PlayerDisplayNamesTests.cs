@@ -6,9 +6,9 @@ using Xunit;
 namespace Api.Tests.SharedKernel.Domain.Validation;
 
 /// <summary>
-/// #4780 — the name other players see for a user is never their address. With the account's address at hand the
-/// name is compared with it; the shape of an address decides only for a name without an account. The cases are the
-/// ones the shape alone got wrong: <c>DJ@Home.TV</c> dropped, <c>nome (a@b.it)</c> and <c>user@localhost</c> kept.
+/// #4780 — the name other players see for a user is never an address. With the account's address at hand, a name
+/// that contains it goes; a name with the shape of an address goes in any case, the account's or not — the old
+/// address a user without a name kept as one after changing it is not the account's any more.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "SharedKernel")]
@@ -24,9 +24,11 @@ public sealed class PlayerDisplayNamesTests
     [InlineData("  Marta@Example.COM ", "marta@example.com", Fallback)]
     [InlineData("Marta (marta@example.com)", "marta@example.com", Fallback)]
     [InlineData("user@localhost", "user@localhost", Fallback)]
-    [InlineData("DJ@Home.TV", "marta@example.com", "DJ@Home.TV")]
+    [InlineData("vecchio@example.com", "nuovo@example.com", Fallback)]
+    [InlineData("DJ@Home.TV", "marta@example.com", Fallback)]
+    [InlineData("marta@work", "marta@example.com", "marta@work")]
     [InlineData("  Marta Rossi  ", "marta@example.com", "Marta Rossi")]
-    public void ForOthers_WithTheAccountsAddress_ComparesTheNameWithIt(string? name, string email, string shown)
+    public void ForOthers_WithTheAccountsAddress_DropsItAndAnyOtherAddress(string? name, string email, string shown)
     {
         PlayerDisplayNames.ForOthers(name, email, Fallback).Should().Be(shown);
     }

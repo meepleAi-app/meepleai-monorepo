@@ -16,6 +16,7 @@ using Api.Models;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -359,19 +360,18 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         // The production Npgsql context uses a retrying execution strategy, which forbids
         // user-initiated transactions unless they run inside the strategy's executed delegate
         // (same pattern as ReindexDocumentCommandHandler).
-        var strategy = _dbContext.Database.CreateExecutionStrategy();
         try
         {
-            await strategy.ExecuteAsync(async () =>
+            // #5162: every attempt starts from the tracker as it is here, with the record Added and the session
+            // modified. Before, a retry after a failed commit found the record already accepted: it was not written
+            // again, the enqueue no longer found it, and an upload that could be retried failed.
+            await _dbContext.ExecuteRewindingAsync(async _ =>
             {
                 using var transaction = await _dbContext.Database
                     .BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
                 // Not acceptAllChangesOnSuccess: false — EnqueuePdfCommandHandler saves again on this same
-                // context, and a record still in the Added state would be inserted twice (23505). If a
-                // transient failure makes the strategy re-run the delegate, the record is not written
-                // again and the enqueue no longer finds it (NotFoundException; the job's foreign key would
-                // refuse it anyway): the upload fails and the stored object is removed below.
+                // context, and a record still in the Added state would be inserted twice (23505).
                 await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
                 // EnqueuePdfCommandHandler saves on the shared DbContext under this ambient transaction,
@@ -381,7 +381,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                     cancellationToken).ConfigureAwait(false);
 
                 await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-            }).ConfigureAwait(false);
+            }, cancellationToken).ConfigureAwait(false);
         }
         catch
         {

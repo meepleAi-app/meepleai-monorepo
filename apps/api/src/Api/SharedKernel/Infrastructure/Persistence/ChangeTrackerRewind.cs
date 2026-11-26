@@ -64,7 +64,8 @@ internal sealed class ChangeTrackerRewind
         _events = events;
         _entries = context.ChangeTracker.Entries().Select(EntrySnapshot.Of).ToList();
         _tracked = new HashSet<object>(_entries.Select(e => e.Entity), ReferenceEqualityComparer.Instance);
-        _collected = events?.PeekEvents().ToList() ?? [];
+        // A Mock.Of collector answers PeekEvents() with null (MeepleAiDbContext guards the same way).
+        _collected = events?.PeekEvents()?.ToList() ?? [];
     }
 
     /// <summary>

@@ -6,6 +6,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -100,8 +101,10 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
         // The production Npgsql context uses a retrying execution strategy, which forbids
         // user-initiated transactions unless they run inside the strategy's executed delegate so a
         // transient-failure retry re-runs the WHOLE transaction as one retriable unit.
-        var strategy = _dbContext.Database.CreateExecutionStrategy();
-        await strategy.ExecuteAsync(async () =>
+        // #5162: and from the tracker as it was here. The reset is staged above, outside the delegate: after a failed
+        // commit it was already accepted (Unchanged), so the retry's save did not write it again and committed the job
+        // next to a document left in its old state.
+        await _dbContext.ExecuteRewindingAsync(async _ =>
         {
             using var transaction = await _dbContext.Database
                 .BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
@@ -149,6 +152,6 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
                     command.PdfId);
                 throw;
             }
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 }

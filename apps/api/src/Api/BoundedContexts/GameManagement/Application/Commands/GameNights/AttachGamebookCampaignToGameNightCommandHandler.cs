@@ -150,6 +150,20 @@ internal sealed class AttachGamebookCampaignToGameNightCommandHandler
             // rolled back — no orphan — and maps to the blocked-modal 409.
             throw new MaxLiveSessionsExceededException(command.GameNightId);
         }
+        catch (DbUpdateException ex) when (GameNightLinkIndexViolations.IsLiveSlot(ex))
+        {
+            // #5167: two attaches (or an attach and a start) that both passed the guard in memory can meet at the
+            // partial-unique live-slot index before the xmin check tells them apart. The loser's whole tx has rolled
+            // back: the same blocked-modal 409 the start answers, not a 500.
+            throw new MaxLiveSessionsExceededException(command.GameNightId);
+        }
+        catch (DbUpdateException ex) when (GameNightLinkIndexViolations.IsPlayOrder(ex))
+        {
+            // #5167: or at the per-night play-order index — both added a link with the same PlayOrder. The same
+            // retryable 409 as the start: a retry reads the committed link.
+            throw new ConflictException(
+                "Another session was added to this game night at the same time. Please retry.");
+        }
         catch (SessionQuotaExceededException ex)
         {
             // The tracking-session quota of CreateSessionCommand is an InvalidOperationException: the wide catch

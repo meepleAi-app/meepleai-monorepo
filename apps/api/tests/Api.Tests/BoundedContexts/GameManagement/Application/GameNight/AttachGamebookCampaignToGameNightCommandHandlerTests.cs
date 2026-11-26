@@ -417,6 +417,41 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
         thrown.Which.Should().NotBeOfType<ConflictException>();
     }
 
+    /// <summary>
+    /// #5167 — two attaches (or an attach and a start) that both passed the guard in memory meet at one of the two
+    /// unique indexes of the night's links. The start answered 409 since #4780; the attach let the DbUpdateException
+    /// out, a 500. Another index stays a DbUpdateException: only these two are a race between two writers.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "5167")]
+    [InlineData("ix_game_night_sessions_unique_active", typeof(MaxLiveSessionsExceededException))]
+    [InlineData("IX_game_night_sessions_event_play_order", typeof(ConflictException))]
+    [InlineData("some_other_index", typeof(DbUpdateException))]
+    public async Task Handle_TwoWritersMeetingAtALinkIndex_IsAConflict(string index, Type expected)
+    {
+        Api.Infrastructure.EntityConfigurations.GameManagement.GameNightSessionEntityConfiguration.UniqueActiveIndexName
+            .Should().Be("ix_game_night_sessions_unique_active", "the case names the index the code matches");
+        Api.Infrastructure.EntityConfigurations.GameManagement.GameNightSessionEntityConfiguration.PlayOrderIndexName
+            .Should().Be("IX_game_night_sessions_event_play_order", "the case names the index the code matches");
+
+        var organizer = Guid.NewGuid();
+        var gameNight = CreatePublishedEvent(organizer);
+        var campaignId = Guid.NewGuid();
+        SetupCampaign(campaignId, CampaignDto(campaignId, Guid.NewGuid(), organizer, GameRefKind.Shared));
+        SetupCreateSession(Guid.NewGuid());
+        SetupUser(organizer, "Marco");
+        _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
+        _repo.Setup(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("unique violation", new Npgsql.PostgresException(
+                "duplicate key value violates unique constraint", "ERROR", "ERROR", "23505", constraintName: index)));
+
+        var act = () => _handler.Handle(
+            new AttachGamebookCampaignToGameNightCommand(gameNight.Id, campaignId, organizer),
+            TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<Exception>()).Which.Should().BeOfType(expected);
+    }
+
     [Fact]
     [Trait("Issue", "5158")]
     public async Task Handle_TheTrackingSessionQuota_IsStillAConflictWithItsMessage()

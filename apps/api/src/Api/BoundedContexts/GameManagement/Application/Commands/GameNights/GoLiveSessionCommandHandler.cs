@@ -227,7 +227,7 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
             // in-memory guard instead of an uncaught 500.
             throw new MaxLiveSessionsExceededException(gameNight.Id);
         }
-        catch (DbUpdateException ex) when (IsGameNightLiveSlotViolation(ex))
+        catch (DbUpdateException ex) when (GameNightLinkIndexViolations.IsLiveSlot(ex))
         {
             // Belt-and-suspenders: the partial-unique live-slot index rejected a second InProgress
             // row for this night. Dedicated catch on THIS write — deliberately not relying on the
@@ -309,12 +309,4 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
         ex.InnerException is Npgsql.PostgresException pg
         && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
         && string.Equals(pg.ConstraintName, LiveGameSessionEntityConfiguration.TrackingSessionIdIndexName, StringComparison.Ordinal);
-
-    // True iff the DbUpdateException is the partial-unique-index violation on the GameNight live slot
-    // (game_night_sessions InProgress per event), not some other constraint. Uses the shared index-name
-    // constant so this catch can never drift from the index declaration.
-    private static bool IsGameNightLiveSlotViolation(DbUpdateException ex) =>
-        ex.InnerException is Npgsql.PostgresException pg
-        && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
-        && string.Equals(pg.ConstraintName, GameNightSessionEntityConfiguration.UniqueActiveIndexName, StringComparison.Ordinal);
 }

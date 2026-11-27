@@ -126,4 +126,64 @@ public sealed class EmailServiceInvitationLinkTests
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("Failed to send invitation email");
     }
+
+    // #5173: the invitation of a provisioned (pending) user is redeemed by activating that user — POST
+    // /auth/activate-account, from /setup-account. /accept-invite creates a user, and a second one with the same
+    // email is refused by the unique index.
+    [Fact]
+    public async Task ProvisionedInvitationEmail_LinksSetupAccount_AndGreetsTheInviteeByName()
+    {
+        var captured = CaptureSentEmail();
+        var service = new EmailService(_configuration, _logger.Object, _sender.Object);
+
+        await service.SendInvitationEmailAsync(
+            toEmail: "recipient@example.com",
+            displayName: "Mario Rossi",
+            role: "User",
+            token: "abc123",
+            invitedByName: "Admin",
+            customMessage: null,
+            expiresAt: new DateTime(2026, 12, 4, 10, 0, 0, DateTimeKind.Utc),
+            ct: CancellationToken.None);
+
+        var body = captured().HtmlBody;
+        body.Should().Contain($"{FrontendBaseUrl}/setup-account?token=abc123");
+        body.Should().NotContain("/accept-invite");
+        body.Should().Contain("Ciao Mario Rossi!");
+        body.Should().Contain("<strong>Admin</strong> ti ha invitato");
+    }
+
+    // #5173: somebody invited with no name gets a generated one, and the email does not greet them by it — as the
+    // account emails do (AuthEmailTexts).
+    [Fact]
+    public async Task ProvisionedInvitationEmail_DoesNotGreetTheInviteeByAGeneratedName()
+    {
+        var captured = CaptureSentEmail();
+        var service = new EmailService(_configuration, _logger.Object, _sender.Object);
+        var generated = Api.BoundedContexts.Authentication.Domain.Constants.GeneratedDisplayName.Create();
+
+        await service.SendInvitationEmailAsync(
+            toEmail: "recipient@example.com",
+            displayName: generated,
+            role: "User",
+            token: "abc123",
+            invitedByName: "Admin",
+            customMessage: null,
+            expiresAt: new DateTime(2026, 12, 4, 10, 0, 0, DateTimeKind.Utc),
+            ct: CancellationToken.None);
+
+        var body = captured().HtmlBody;
+        body.Should().NotContain(generated);
+        body.Should().Contain("Ciao!");
+    }
+
+    private Func<EmailRequest> CaptureSentEmail()
+    {
+        EmailRequest? captured = null;
+        _sender
+            .Setup(s => s.SendAsync(It.IsAny<EmailRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<EmailRequest, CancellationToken>((req, _) => captured = req)
+            .Returns(Task.CompletedTask);
+        return () => captured ?? throw new InvalidOperationException("No email was sent");
+    }
 }

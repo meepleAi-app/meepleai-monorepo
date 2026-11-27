@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.Infrastructure.Security;
 using Api.Services.Email;
 
@@ -745,7 +746,11 @@ internal partial class EmailService
         DateTime expiresAt)
     {
         var roleDisplay = string.IsNullOrWhiteSpace(role) ? "utente" : role;
-        var safeDisplayName = System.Net.WebUtility.HtmlEncode(displayName);
+        // #5173: somebody invited with no name has a generated one — not a name to greet them by, as in the
+        // account emails (AuthEmailTexts).
+        var greeting = GeneratedDisplayName.IsGenerated(displayName)
+            ? "Ciao!"
+            : $"Ciao {System.Net.WebUtility.HtmlEncode(displayName)}!";
         var safeInvitedByName = System.Net.WebUtility.HtmlEncode(invitedByName);
         var expiryFormatted = expiresAt.ToString("dd MMMM yyyy", CultureInfo.GetCultureInfo("it-IT"));
 
@@ -774,7 +779,7 @@ internal partial class EmailService
     </div>
 
     <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
-        <h2 style=""color: #2c3e50; margin-top: 0;"">Ciao {safeDisplayName}!</h2>
+        <h2 style=""color: #2c3e50; margin-top: 0;"">{greeting}</h2>
 
         <p><strong>{safeInvitedByName}</strong> ti ha invitato a unirti a MeepleAI come <strong>{roleDisplay}</strong>.</p>
 {customMessageBlock}

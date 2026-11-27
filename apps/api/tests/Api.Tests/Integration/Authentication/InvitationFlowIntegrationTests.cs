@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 using Api.BoundedContexts.Authentication.Application.Commands.RevokeInvitation;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries.Invitation;
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.Authentication.Infrastructure.Repositories;
@@ -45,6 +46,7 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private FakeTimeProvider _timeProvider = null!;
+    private readonly CapturingInvitationEmails _emails = new();
     private readonly Action<string> _output;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -93,9 +95,10 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
         services.AddSingleton<GameSuggestionChannel>();
 
-        // Override IEmailService with NoOpEmailService (has behavior)
+        // #5173: the invitation emails are captured, so a test redeems the token the email carried — not one it
+        // seeded itself. Every other email is the NoOpEmailService's no-op.
         services.RemoveAll<IEmailService>();
-        services.AddSingleton<IEmailService>(new Api.Tests.TestHelpers.NoOpEmailService());
+        services.AddSingleton<IEmailService>(_emails);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -552,8 +555,280 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
         var newInvitation = await invitationRepo.GetByIdAsync(resendResult.Id, TestCancellationToken);
         newInvitation.Should().NotBeNull();
         newInvitation!.Status.Should().Be(Api.BoundedContexts.Authentication.Domain.Enums.InvitationStatus.Pending);
+        newInvitation.PendingUserId.Should().BeNull("a plain invitation has no pending user, and its resend makes none");
+
+        // #5173: a plain invitation creates its user on redeem — both of its emails link /accept-invite.
+        _emails.Sent.Should().HaveCount(2);
+        _emails.Sent.Should().OnlyContain(sent => !sent.ToSetupAccount);
+        _emails.Sent[1].Token.Should().Be(resendResult.Token);
 
         _output("Resend verified: old token expired, new token created");
+    }
+
+    #endregion
+
+    #region #5173: a provisioned invitation is redeemed by activating its pending user
+
+    /// <summary>
+    /// #5173: <c>ProvisionAndInviteUserCommand</c> creates the user first (<c>Pending</c>), so its email must link
+    /// <c>/setup-account</c>, which activates that user. <c>/accept-invite</c> creates a user, and the email's unique
+    /// index refuses a second one. The email also carries the invitee's name, the inviter (not the invitee), the
+    /// admin's message and the expiry the admin chose.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAndInvite_EmailsTheSetupLink_WhoseTokenActivatesThePendingUser()
+    {
+        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
+        var invitationRepo = _serviceProvider!.GetRequiredService<IInvitationTokenRepository>();
+        var email = $"setup-{Guid.NewGuid():N}@test.meepleai.dev";
+
+        var provisioned = await mediator.Send(new ProvisionAndInviteUserCommand(
+            Email: email,
+            DisplayName: "Mario Rossi",
+            Role: "User",
+            Tier: "free",
+            CustomMessage: "Ti aspettiamo al tavolo",
+            ExpiresInDays: 10,
+            GameSuggestions: new List<GameSuggestionDto>(),
+            InvitedByUserId: AdminUserId
+        ), TestCancellationToken);
+
+        var invitation = await invitationRepo.GetByIdAsync(provisioned.Id, TestCancellationToken);
+        invitation!.PendingUserId.Should().NotBeNull();
+
+        var sent = _emails.Sent.Should().ContainSingle().Subject;
+        sent.ToSetupAccount.Should().BeTrue(
+            "the invitation has a pending user: /setup-account activates it, /accept-invite would try a second user with the same email");
+        sent.ToEmail.Should().Be(email.ToLowerInvariant());
+        sent.DisplayName.Should().Be("Mario Rossi");
+        sent.InvitedByName.Should().Be("Admin", "the invitee did not invite themselves");
+        sent.CustomMessage.Should().Be("Ti aspettiamo al tavolo");
+        sent.ExpiresAt.Should().BeCloseTo(_timeProvider.GetUtcNow().UtcDateTime.AddDays(10), TimeSpan.FromSeconds(1));
+
+        await ActivateWithEmailedTokenAsync(sent.Token, invitation.PendingUserId!.Value);
+    }
+
+    /// <summary>
+    /// #5173 (#5160's writer): a CSV row with no name column used the address as the pending user's name, and
+    /// <c>UserRepository.AddAsync</c> stored it in <c>users.display_name</c>. Somebody who chose no name gets a
+    /// generated one, as at registration and with OAuth.
+    /// </summary>
+    [Fact]
+    public async Task BulkInvite_WithoutANameColumn_GivesThePendingUserAGeneratedName_NotTheAddress()
+    {
+        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
+        var invitationRepo = _serviceProvider!.GetRequiredService<IInvitationTokenRepository>();
+        var email = $"bulk-noname-{Guid.NewGuid():N}@test.meepleai.dev";
+
+        var result = await mediator.Send(new BulkSendInvitationsCommand(
+            CsvContent: $"email,role\n{email},User",
+            InvitedByUserId: AdminUserId
+        ), TestCancellationToken);
+
+        result.Failed.Should().BeEmpty();
+        var invitation = await invitationRepo.GetByIdAsync(
+            result.Successful.Should().ContainSingle().Subject.Id, TestCancellationToken);
+        var pendingUserId = invitation!.PendingUserId!.Value;
+
+        // The column itself: the repository would read an empty name back as the address either way.
+        var storedName = await _dbContext!.Users.AsNoTracking()
+            .Where(u => u.Id == pendingUserId)
+            .Select(u => u.DisplayName)
+            .SingleAsync(TestCancellationToken);
+        storedName.Should().NotContain("@");
+        GeneratedDisplayName.IsGenerated(storedName).Should().BeTrue($"«{storedName}» should be a generated name");
+
+        var sent = _emails.Sent.Should().ContainSingle().Subject;
+        sent.ToSetupAccount.Should().BeTrue();
+        sent.DisplayName.Should().Be(storedName);
+        sent.InvitedByName.Should().Be("Admin");
+
+        await ActivateWithEmailedTokenAsync(sent.Token, pendingUserId);
+    }
+
+    /// <summary>
+    /// #5173: the resend of a provisioned invitation answered 409 — the pending user is a user with that email —
+    /// and, past that, made a token with no pending user, which /setup-account cannot activate. It succeeds while
+    /// the user is still pending: the new token is the same user's, keeps the admin's message, and its email links
+    /// /setup-account. The old token no longer activates anything.
+    /// </summary>
+    [Fact]
+    public async Task ResendInvitation_OfAProvisionedInvitation_EmailsANewSetupLink_ThatActivatesTheSameUser()
+    {
+        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
+        var invitationRepo = _serviceProvider!.GetRequiredService<IInvitationTokenRepository>();
+        var email = $"resend-provisioned-{Guid.NewGuid():N}@test.meepleai.dev";
+
+        var provisioned = await mediator.Send(new ProvisionAndInviteUserCommand(
+            Email: email,
+            DisplayName: "Giulia Bianchi",
+            Role: "User",
+            Tier: "free",
+            CustomMessage: "Porta i dadi",
+            ExpiresInDays: 7,
+            GameSuggestions: new List<GameSuggestionDto>(),
+            InvitedByUserId: AdminUserId
+        ), TestCancellationToken);
+        var pendingUserId = (await invitationRepo.GetByIdAsync(provisioned.Id, TestCancellationToken))!
+            .PendingUserId!.Value;
+        var firstToken = _emails.Sent.Should().ContainSingle().Subject.Token;
+
+        var resent = await mediator.Send(new ResendInvitationCommand(
+            InvitationId: provisioned.Id,
+            ResendByUserId: AdminUserId
+        ), TestCancellationToken);
+
+        var renewed = await invitationRepo.GetByIdAsync(resent.Id, TestCancellationToken);
+        renewed!.PendingUserId.Should().Be(pendingUserId, "the resend is the same pending user's invitation");
+        renewed.CustomMessage.Should().Be("Porta i dadi");
+        (await invitationRepo.GetByIdAsync(provisioned.Id, TestCancellationToken))!.Status
+            .Should().Be(Api.BoundedContexts.Authentication.Domain.Enums.InvitationStatus.Expired);
+
+        _emails.Sent.Should().HaveCount(2);
+        var sent = _emails.Sent[1];
+        sent.ToSetupAccount.Should().BeTrue();
+        sent.Token.Should().NotBe(firstToken);
+        sent.DisplayName.Should().Be("Giulia Bianchi");
+        sent.InvitedByName.Should().Be("Admin");
+        sent.CustomMessage.Should().Be("Porta i dadi");
+        sent.ExpiresAt.Should().BeCloseTo(renewed.ExpiresAt, TimeSpan.FromMilliseconds(1));
+
+        var withTheOldToken = () => mediator.Send(
+            new ActivateInvitedAccountCommand(Token: firstToken, Password: "SecureUnusualPwd123!"),
+            TestCancellationToken);
+        await withTheOldToken.Should().ThrowAsync<NotFoundException>();
+
+        await ActivateWithEmailedTokenAsync(sent.Token, pendingUserId);
+    }
+
+    /// <summary>
+    /// #5173: the resend of a provisioned invitation still refuses once its user is no longer pending — there is
+    /// nobody left to invite, as for a plain invitation whose email already has a user.
+    /// </summary>
+    [Fact]
+    public async Task ResendInvitation_OfAProvisionedInvitation_WhoseUserIsNoLongerPending_IsAConflict()
+    {
+        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
+        var invitationRepo = _serviceProvider!.GetRequiredService<IInvitationTokenRepository>();
+        var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
+        var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
+        var email = $"resend-active-{Guid.NewGuid():N}@test.meepleai.dev";
+
+        var provisioned = await mediator.Send(new ProvisionAndInviteUserCommand(
+            Email: email,
+            DisplayName: "Luca Verdi",
+            Role: "User",
+            Tier: "free",
+            CustomMessage: null,
+            ExpiresInDays: 7,
+            GameSuggestions: new List<GameSuggestionDto>(),
+            InvitedByUserId: AdminUserId
+        ), TestCancellationToken);
+        var pendingUserId = (await invitationRepo.GetByIdAsync(provisioned.Id, TestCancellationToken))!
+            .PendingUserId!.Value;
+
+        // The user became active while this invitation stayed pending.
+        var user = await userRepo.GetByIdAsync(pendingUserId, TestCancellationToken);
+        user!.ActivateFromInvitation(
+            Api.BoundedContexts.Authentication.Domain.ValueObjects.PasswordHash.Create("SecureUnusualPwd123!"),
+            _timeProvider);
+        await userRepo.UpdateAsync(user, TestCancellationToken);
+        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        var resend = () => mediator.Send(new ResendInvitationCommand(
+            InvitationId: provisioned.Id,
+            ResendByUserId: AdminUserId
+        ), TestCancellationToken);
+
+        await resend.Should().ThrowAsync<ConflictException>();
+        _emails.Sent.Should().ContainSingle("nothing is sent for a refused resend");
+        (await invitationRepo.GetByIdAsync(provisioned.Id, TestCancellationToken))!.Status
+            .Should().Be(Api.BoundedContexts.Authentication.Domain.Enums.InvitationStatus.Pending);
+    }
+
+    /// <summary>The emailed token, redeemed where the email links it, activates exactly that pending user.</summary>
+    private async Task ActivateWithEmailedTokenAsync(string rawToken, Guid pendingUserId)
+    {
+        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
+        var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
+
+        var activation = await mediator.Send(new ActivateInvitedAccountCommand(
+            Token: rawToken,
+            Password: "SecureUnusualPwd123!"
+        ), TestCancellationToken);
+
+        activation.SessionToken.Should().NotBeNullOrEmpty();
+        var activated = await userRepo.GetByIdAsync(pendingUserId, TestCancellationToken);
+        activated!.Status.Should().Be(UserAccountStatus.Active);
+    }
+
+    /// <summary>
+    /// An invitation email as the handler sent it. <see cref="ToSetupAccount"/> says which overload: the one whose
+    /// link is <c>/setup-account?token=</c> (activate a pending user) or the one whose link is
+    /// <c>/accept-invite?token=</c> (create the user). Which link each overload builds is fixed by
+    /// <c>EmailServiceInvitationLinkTests</c>.
+    /// </summary>
+    private sealed record SentInvitation(
+        string ToEmail,
+        bool ToSetupAccount,
+        string Token,
+        string? DisplayName,
+        string InvitedByName,
+        string? CustomMessage,
+        DateTime? ExpiresAt);
+
+    /// <summary>
+    /// #5173: records the two invitation emails; every other email is <c>NoOpEmailService</c>'s. Re-implementing
+    /// <see cref="IEmailService"/> maps the interface's two invitation methods onto these.
+    /// </summary>
+    private sealed class CapturingInvitationEmails : Api.Tests.TestHelpers.NoOpEmailService, IEmailService
+    {
+        private readonly List<SentInvitation> _sent = new();
+        private readonly Lock _gate = new();
+
+        public IReadOnlyList<SentInvitation> Sent
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _sent.ToList();
+                }
+            }
+        }
+
+        public new Task SendInvitationEmailAsync(
+            string toEmail,
+            string role,
+            string token,
+            string invitedByName,
+            CancellationToken ct = default)
+        {
+            Record(new SentInvitation(toEmail, false, token, null, invitedByName, null, null));
+            return Task.CompletedTask;
+        }
+
+        public new Task SendInvitationEmailAsync(
+            string toEmail,
+            string displayName,
+            string role,
+            string token,
+            string invitedByName,
+            string? customMessage,
+            DateTime expiresAt,
+            CancellationToken ct = default)
+        {
+            Record(new SentInvitation(toEmail, true, token, displayName, invitedByName, customMessage, expiresAt));
+            return Task.CompletedTask;
+        }
+
+        private void Record(SentInvitation sent)
+        {
+            lock (_gate)
+            {
+                _sent.Add(sent);
+            }
+        }
     }
 
     #endregion

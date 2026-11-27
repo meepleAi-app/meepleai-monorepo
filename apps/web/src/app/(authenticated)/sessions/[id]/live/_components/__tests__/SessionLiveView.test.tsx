@@ -2945,3 +2945,65 @@ describe('SessionLiveView — #4763: the creator controls the live game', () => 
     expect(refetchLiveSessionMock).toHaveBeenCalledTimes(1);
   });
 });
+
+// #4780: «Termina partita» completed the game, but its best-effort follow-up did not reach the night: the night
+// still counts the sitting in progress. The creator is told, and linked to the night, where «Completa partita» is.
+describe('SessionLiveView — #4780 a completed game whose night still holds it open', () => {
+  const CREATOR = '55555555-5555-4555-8555-555555555555';
+  const NIGHT = 'bbbb2222-2222-4222-8222-222222222222';
+
+  function givenACompletedGame(nightSittingStillOpen: boolean) {
+    useLiveSessionMock.mockReturnValue({
+      data: {
+        ...MOCK_SESSION_DTO,
+        status: 'Completed',
+        completedAt: new Date().toISOString(),
+        createdByUserId: CREATOR,
+        gameNightId: NIGHT,
+        nightSittingStillOpen,
+      },
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  it('links its creator to the night', () => {
+    useCurrentUserMock.mockReturnValue({ data: { id: CREATOR } });
+    givenACompletedGame(true);
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    const notice = container.querySelector('[data-slot="session-live-night-still-open"]');
+    expect(notice).toBeInTheDocument();
+    expect(notice!.querySelector('a')).toHaveAttribute('href', `/game-nights/${NIGHT}/live`);
+  });
+
+  it('says nothing once the night closed the sitting', () => {
+    useCurrentUserMock.mockReturnValue({ data: { id: CREATOR } });
+    givenACompletedGame(false);
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    expect(container.querySelector('[data-slot="session-live-night-still-open"]')).toBeNull();
+  });
+
+  it('says nothing to another participant, who cannot complete the sitting', () => {
+    useCurrentUserMock.mockReturnValue({ data: { id: 'user-not-host' } });
+    givenACompletedGame(true);
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    expect(container.querySelector('[data-slot="session-live-night-still-open"]')).toBeNull();
+  });
+});

@@ -138,6 +138,10 @@ export const LiveSessionDtoSchema = z.object({
   scoringConfig: LiveSessionScoringConfigDtoSchema,
   // #3025 L1: opaque live game-state (per-game typing = L2). Optional for back-compat.
   gameState: z.unknown().nullable().optional(),
+  // #4780: a completed game whose night still holds its sitting in progress — the follow-up of «Termina partita»
+  // did not reach the night. Filled by the BE for a completed game only; optional for an older payload.
+  gameNightId: z.string().uuid().nullable().optional(),
+  nightSittingStillOpen: z.boolean().optional(),
 });
 
 export type LiveSessionDto = z.infer<typeof LiveSessionDtoSchema>;

@@ -22,6 +22,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.LiveSess
 public class LiveSessionQueryHandlerTests
 {
     private readonly Mock<ILiveSessionRepository> _sessionRepositoryMock;
+    private readonly Mock<Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.IGameNightEventRepository> _gameNightRepositoryMock = new();
 
     public LiveSessionQueryHandlerTests()
     {
@@ -103,7 +104,7 @@ public class LiveSessionQueryHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object);
+        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object, _gameNightRepositoryMock.Object);
         var query = new GetLiveSessionQuery(sessionId);
 
         // Act
@@ -141,7 +142,7 @@ public class LiveSessionQueryHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object);
+        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object, _gameNightRepositoryMock.Object);
         var query = new GetLiveSessionQuery(sessionId);
 
         // Act
@@ -173,7 +174,7 @@ public class LiveSessionQueryHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((LiveGameSession?)null);
 
-        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object);
+        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object, _gameNightRepositoryMock.Object);
         var query = new GetLiveSessionQuery(sessionId);
 
         // Act & Assert
@@ -189,7 +190,7 @@ public class LiveSessionQueryHandlerTests
     public async Task GetLiveSession_NullQuery_ThrowsArgumentNullException()
     {
         // Arrange
-        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object);
+        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object, _gameNightRepositoryMock.Object);
 
         // Act & Assert
         var act =
@@ -211,7 +212,7 @@ public class LiveSessionQueryHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, cancellationToken))
             .ReturnsAsync(session);
 
-        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object);
+        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object, _gameNightRepositoryMock.Object);
         var query = new GetLiveSessionQuery(sessionId);
 
         // Act
@@ -235,7 +236,7 @@ public class LiveSessionQueryHandlerTests
             .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object);
+        var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object, _gameNightRepositoryMock.Object);
         var query = new GetLiveSessionQuery(sessionId);
 
         // Act
@@ -751,7 +752,7 @@ public class LiveSessionQueryHandlerTests
     {
         // Act & Assert
         var act =
-            () => new GetLiveSessionQueryHandler(null!);
+            () => new GetLiveSessionQueryHandler(null!, _gameNightRepositoryMock.Object);
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -789,5 +790,69 @@ public class LiveSessionQueryHandlerTests
         var act =
             () => new GetSessionPlayersQueryHandler(null!);
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    // ========================================================================
+    // #4780: a completed game whose night still holds its sitting open
+    // ========================================================================
+
+    /// <summary>
+    /// «Termina partita» completes the live game and then, best effort, the sitting of its night. When that
+    /// follow-up failed, the live page showed a completed game and no way to close the night's sitting. The read
+    /// now says the night still holds it open, and names the night.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task GetLiveSession_ACompletedGame_SaysWhetherItsNightStillHoldsTheSittingOpen(bool sittingInProgress, bool stillOpen)
+    {
+        var trackingId = Guid.NewGuid();
+        var session = CompletedGameWithACompanion(trackingId);
+        var night = Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightEvent.Create(
+            Guid.NewGuid(), "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        night.Publish([]);
+        night.AddSession(trackingId, night.GameIds[0], "Catan");
+        night.StartSession(trackingId);
+        if (!sittingInProgress)
+            night.CompleteCurrentSession(null);
+        _sessionRepositoryMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        _gameNightRepositoryMock.Setup(r => r.GetByLinkedSessionIdAsync(trackingId, It.IsAny<CancellationToken>())).ReturnsAsync(night);
+
+        var dto = await new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object, _gameNightRepositoryMock.Object)
+            .Handle(new GetLiveSessionQuery(session.Id), TestContext.Current.CancellationToken);
+
+        dto.GameNightId.Should().Be(night.Id);
+        dto.NightSittingStillOpen.Should().Be(stillOpen);
+    }
+
+    /// <summary>A game being played, or one with no night: nothing to say, and the night is not read.</summary>
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task GetLiveSession_AGameBeingPlayed_DoesNotReadTheNight()
+    {
+        var session = LiveGameSession.Create(
+            Guid.NewGuid(), Guid.NewGuid(), "Catan", TimeProvider.System, trackingSessionId: Guid.NewGuid());
+        session.AddPlayer(null, "Marta", PlayerColor.Red, TimeProvider.System);
+        session.Start(TimeProvider.System);
+        _sessionRepositoryMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+
+        var dto = await new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object, _gameNightRepositoryMock.Object)
+            .Handle(new GetLiveSessionQuery(session.Id), TestContext.Current.CancellationToken);
+
+        dto.NightSittingStillOpen.Should().BeFalse();
+        dto.GameNightId.Should().BeNull();
+        _gameNightRepositoryMock.Verify(
+            r => r.GetByLinkedSessionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static LiveGameSession CompletedGameWithACompanion(Guid trackingId)
+    {
+        var session = LiveGameSession.Create(
+            Guid.NewGuid(), Guid.NewGuid(), "Catan", TimeProvider.System, trackingSessionId: trackingId);
+        session.AddPlayer(null, "Marta", PlayerColor.Red, TimeProvider.System);
+        session.Start(TimeProvider.System);
+        session.Complete(TimeProvider.System);
+        return session;
     }
 }

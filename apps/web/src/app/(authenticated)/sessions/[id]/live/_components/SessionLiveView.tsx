@@ -81,6 +81,7 @@ import {
   type ReactElement,
 } from 'react';
 
+import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useIntl } from 'react-intl';
 import { toast } from 'sonner';
@@ -132,6 +133,7 @@ import { liveSessionConflictKey } from '@/lib/session-live/live-session-conflict
 import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
 import { mergeHydratedDiary } from '@/lib/session-live/merge-hydrated-diary';
+import { nightSittingLeftOpen } from '@/lib/session-live/night-sitting-left-open';
 import { hasRequiredRole, type ParticipantRole } from '@/lib/session-live/participant-role';
 import { finalScores } from '@/lib/session-live/round-scores';
 import { isSessionCreator } from '@/lib/session-live/session-creator';
@@ -523,6 +525,8 @@ export function SessionLiveView(): ReactElement {
   // checks. Not `viewerRole`: that comes from the player linked to the user, and an owner who is
   // not at the table as a player would lose the panel the server still lets them use.
   const isSessionOwner = isSessionCreator(sessionQuery.data, currentUser?.id);
+  // #4780: the night that still holds this completed game open, said to its creator; null otherwise.
+  const nightLeftOpenId = nightSittingLeftOpen(sessionQuery.data, currentUser?.id);
 
   // #4763: pause, resume, end and adding players are the creator's (the server answers 403 to anyone
   // else), and a concluded game has nothing left to control. The visual-test fixture has no account:
@@ -1513,6 +1517,25 @@ export function SessionLiveView(): ReactElement {
             }
             labels={connectionLostLabels}
           />
+        </div>
+      )}
+
+      {/* #4780: the game is over but its night still counts it in progress — «Completa partita» is there. */}
+      {nightLeftOpenId && (
+        <div className="px-4 pt-2">
+          <div
+            role="status"
+            data-slot="session-live-night-still-open"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+          >
+            <span>{t('pages.sessionLive.nightStillOpen.message')}</span>
+            <Link
+              href={`/game-nights/${nightLeftOpenId}/live`}
+              className="font-semibold text-primary underline-offset-2 hover:underline"
+            >
+              {t('pages.sessionLive.nightStillOpen.cta')}
+            </Link>
+          </div>
         </div>
       )}
 

@@ -4634,7 +4634,8 @@
         "kickGuest": "Remove",
         "publishedToast": "Invites sent",
         "publishedToastDescription": "Guests will receive a notification.",
-        "cancelledToast": "Game night cancelled"
+        "cancelledToast": "Game night cancelled",
+        "cancelBlockedByLiveGame": "A game is being played: end it before cancelling the game night."
       },
       "bystander": {
         "privateTitle": "Private game night",

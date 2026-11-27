@@ -38,6 +38,9 @@ import {
 
 import type { HttpClient } from '../core/httpClient';
 
+/** The 409 code of a night that cannot be cancelled while one of its games is being played (#4780). */
+export const GAME_NIGHT_HAS_LIVE_GAME_CODE = 'game_night_has_live_game';
+
 export interface GameNightsClient {
   getUpcoming(): Promise<GameNightDto[]>;
   // F20 #1974: dashboard "Recenti" slot — recently completed game nights.
@@ -60,6 +63,7 @@ export interface GameNightsClient {
   create(data: CreateGameNightInput): Promise<string>;
   update(id: string, data: UpdateGameNightInput): Promise<void>;
   publish(id: string): Promise<void>;
+  // #4780: 409 `GAME_NIGHT_HAS_LIVE_GAME_CODE` while a game of the night is being played.
   cancel(id: string): Promise<void>;
   invite(id: string, userIds: string[]): Promise<void>;
   rsvp(id: string, response: RsvpStatus): Promise<void>;

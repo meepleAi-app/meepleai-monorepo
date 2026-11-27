@@ -24,8 +24,6 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
     public string? CustomMessage { get; private set; }
     public Guid? PendingUserId { get; private set; }
 
-    private readonly List<InvitationGameSuggestion> _gameSuggestions = new();
-    public IReadOnlyList<InvitationGameSuggestion> GameSuggestions => _gameSuggestions.AsReadOnly();
 
     private static readonly string[] AllowedRoles = { "User", "Editor", "Admin" };
 
@@ -117,16 +115,6 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
             CustomMessage = customMessage,
             PendingUserId = pendingUserId
         };
-    }
-
-    /// <summary>
-    /// Adds a game suggestion to this invitation token.
-    /// </summary>
-    /// <param name="gameId">The game to suggest or pre-add</param>
-    /// <param name="type">Whether the game is pre-added or merely suggested</param>
-    public void AddGameSuggestion(Guid gameId, GameSuggestionType type)
-    {
-        _gameSuggestions.Add(InvitationGameSuggestion.Create(Id, gameId, type));
     }
 
     /// <summary>

@@ -53,7 +53,7 @@ internal static class AdminUserInvitationEndpoints
             .WithName("ProvisionAndInviteUser")
             .WithTags("Admin", "Invitations")
             .WithSummary("Provision a pending user and send invitation email")
-            .WithDescription("Creates a user in Pending status and sends an invitation email in one operation. Supports game suggestions and custom messages.")
+            .WithDescription("Creates a user in Pending status and sends an invitation email in one operation. Supports a custom message.")
             .Produces<InvitationDto>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status409Conflict);
@@ -241,7 +241,6 @@ internal static class AdminUserInvitationEndpoints
             Tier: request.Tier ?? "free",
             CustomMessage: request.CustomMessage,
             ExpiresInDays: request.ExpiresInDays ?? 7,
-            GameSuggestions: request.GameSuggestions ?? new List<GameSuggestionDto>(),
             InvitedByUserId: session.Principal!.EffectiveActor.Id);
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

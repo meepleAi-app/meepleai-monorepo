@@ -15,6 +15,5 @@ internal sealed record ProvisionAndInviteUserCommand(
     string Tier,
     string? CustomMessage,
     int ExpiresInDays,
-    List<GameSuggestionDto> GameSuggestions,
     Guid InvitedByUserId
 ) : ICommand<InvitationDto>;

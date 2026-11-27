@@ -371,7 +371,6 @@ public sealed class InvitationSecurityTests
             Tier: "Free",
             CustomMessage: xssPayload,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: Guid.NewGuid());
 
         var result = validator.Validate(command);
@@ -396,7 +395,6 @@ public sealed class InvitationSecurityTests
             Tier: "Free",
             CustomMessage: longXss,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: Guid.NewGuid());
 
         // Act
@@ -432,7 +430,6 @@ public sealed class InvitationSecurityTests
             Tier: "Free",
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: Guid.NewGuid());
 
         var result = validator.Validate(command);
@@ -460,7 +457,6 @@ public sealed class InvitationSecurityTests
             Tier: "Free",
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: Guid.NewGuid());
 
         // Act
@@ -487,7 +483,6 @@ public sealed class InvitationSecurityTests
             Tier: "Free",
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: Guid.Empty);
 
         var result = validator.Validate(command);
@@ -511,7 +506,6 @@ public sealed class InvitationSecurityTests
             Tier: "Free",
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: Guid.NewGuid());
 
         var result = validator.Validate(command);
@@ -534,7 +528,6 @@ public sealed class InvitationSecurityTests
             Tier: invalidTier,
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: Guid.NewGuid());
 
         var result = validator.Validate(command);
@@ -557,7 +550,6 @@ public sealed class InvitationSecurityTests
             Tier: "Free",
             CustomMessage: null,
             ExpiresInDays: days,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: Guid.NewGuid());
 
         var result = validator.Validate(command);

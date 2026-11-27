@@ -5,7 +5,6 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
-using Api.BoundedContexts.Authentication.Infrastructure.Services;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -59,7 +58,6 @@ public class ActivateInvitedAccountCommandHandlerLanguageTests
             users.Object,
             new Mock<ISessionRepository>().Object,
             new Mock<IUnitOfWork>().Object,
-            new GameSuggestionChannel(),
             TimeProvider.System,
             NullLogger<ActivateInvitedAccountCommandHandler>.Instance);
         return (handler, pending);

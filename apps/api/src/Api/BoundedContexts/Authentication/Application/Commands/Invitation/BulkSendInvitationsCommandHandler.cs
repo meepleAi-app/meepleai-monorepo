@@ -105,7 +105,6 @@ internal sealed class BulkSendInvitationsCommandHandler
                         Tier: tier,
                         CustomMessage: null,
                         ExpiresInDays: expiresInDays,
-                        GameSuggestions: new List<GameSuggestionDto>(),
                         InvitedByUserId: command.InvitedByUserId),
                     cancellationToken).ConfigureAwait(false);
                 successful.Add(result);

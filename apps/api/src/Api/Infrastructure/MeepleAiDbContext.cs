@@ -451,8 +451,6 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.AccessRequest>(); // ISSUE-124: Access request domain entity
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.WaitlistEntry>(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.InvitationToken>(); // Admin Invitation Flow: domain aggregate
-        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.InvitationGameSuggestion>(); // Admin Invitation Flow: domain entity
-        modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.GameSuggestion>(); // Admin Invitation Flow: domain aggregate
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSession>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSessionState>(); // ISSUE-2403
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameStateSnapshot>(); // ISSUE-2403

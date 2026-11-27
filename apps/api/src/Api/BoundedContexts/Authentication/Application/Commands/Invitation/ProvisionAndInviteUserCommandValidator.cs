@@ -13,7 +13,6 @@ internal sealed class ProvisionAndInviteUserCommandValidator : AbstractValidator
     // ma non si invita nessuno direttamente in Enterprise — e InvitationSecurityTests lo asserisce.
     // E' una politica di invito, non il vocabolario dei tier (#3842).
     private static readonly string[] ValidTiers = { "Free", "Premium", "Pro" };
-    private static readonly string[] ValidGameSuggestionTypes = { "PreAdded", "Suggested" };
 
     public ProvisionAndInviteUserCommandValidator()
     {
@@ -58,23 +57,5 @@ internal sealed class ProvisionAndInviteUserCommandValidator : AbstractValidator
             .NotEqual(Guid.Empty)
             .WithMessage("InvitedByUserId is required");
 
-        RuleFor(x => x.GameSuggestions)
-            .Must(gs => gs == null || gs.Count <= 20)
-            .WithMessage("Game suggestions must not exceed 20 items");
-
-        RuleForEach(x => x.GameSuggestions)
-            .ChildRules(gs =>
-            {
-                gs.RuleFor(g => g.GameId)
-                    .NotEqual(Guid.Empty)
-                    .WithMessage("Game suggestion GameId cannot be empty");
-
-                gs.RuleFor(g => g.Type)
-                    .NotEmpty()
-                    .WithMessage("Game suggestion Type is required")
-                    .Must(type => ValidGameSuggestionTypes.Contains(type, StringComparer.OrdinalIgnoreCase))
-                    .WithMessage($"Game suggestion Type must be one of: {string.Join(", ", ValidGameSuggestionTypes)}");
-            })
-            .When(x => x.GameSuggestions is not null);
     }
 }

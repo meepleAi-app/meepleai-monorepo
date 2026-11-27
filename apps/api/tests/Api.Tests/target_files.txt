@@ -89,7 +89,6 @@ BoundedContexts/UserLibrary/Application/Handlers/UnlinkAgentFromPrivateGameComma
 BoundedContexts/UserLibrary/Application/Handlers/UpdateLibraryEntryCommandHandlerTests.cs
 BoundedContexts/UserLibrary/Application/Handlers/UpdateLibraryShareLinkCommandHandlerTests.cs
 BoundedContexts/UserLibrary/Application/Handlers/WishlistCommandHandlerTests.cs
-BoundedContexts/UserLibrary/Domain/Entities/GameSuggestionTests.cs
 BoundedContexts/UserLibrary/Domain/Entities/ProposalMigrationTests.cs
 BoundedContexts/UserLibrary/Domain/Entities/WishlistItemTests.cs
 BoundedContexts/UserLibrary/Handlers/SaveAgentConfigCommandHandlerTests.cs

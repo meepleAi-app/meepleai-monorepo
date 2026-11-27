@@ -6,7 +6,6 @@ using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.Authentication.Infrastructure.Repositories;
-using Api.BoundedContexts.Authentication.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.Services;
@@ -93,7 +92,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
 
         // Register services needed by handlers
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
-        services.AddSingleton<GameSuggestionChannel>();
 
         // #5173: the invitation emails are captured, so a test redeems the token the email carried — not one it
         // seeded itself. Every other email is the NoOpEmailService's no-op.
@@ -159,7 +157,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
         // Arrange
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
         var email = $"invited-{Guid.NewGuid():N}@test.meepleai.dev";
-        var gameId = Guid.NewGuid();
 
         // Step 1: Provision and invite
         var provisionResult = await mediator.Send(new ProvisionAndInviteUserCommand(
@@ -169,10 +166,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             Tier: "free",
             CustomMessage: "Welcome to MeepleAI!",
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>
-            {
-                new(gameId, "PreAdded")
-            },
             InvitedByUserId: AdminUserId
         ), TestCancellationToken);
 
@@ -181,7 +174,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
         provisionResult.Should().NotBeNull();
         provisionResult.Email.Should().Be(email.ToLowerInvariant());
         provisionResult.Status.Should().Be("Pending");
-        provisionResult.GameSuggestions.Should().HaveCount(1);
 
         // Step 2: Verify pending user exists in DB
         var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
@@ -235,7 +227,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             Tier: "free",
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: AdminUserId
         ), TestCancellationToken);
 
@@ -435,7 +426,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             Tier: "free",
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: AdminUserId
         ), TestCancellationToken);
 
@@ -449,7 +439,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             Tier: "free",
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: AdminUserId
         ), TestCancellationToken);
 
@@ -481,7 +470,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             Tier: "free",
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: AdminUserId
         ), TestCancellationToken);
 
@@ -589,7 +577,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             Tier: "free",
             CustomMessage: "Ti aspettiamo al tavolo",
             ExpiresInDays: 10,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: AdminUserId
         ), TestCancellationToken);
 
@@ -666,7 +653,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             Tier: "free",
             CustomMessage: "Porta i dadi",
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: AdminUserId
         ), TestCancellationToken);
         var pendingUserId = (await invitationRepo.GetByIdAsync(provisioned.Id, TestCancellationToken))!
@@ -721,7 +707,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             Tier: "free",
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: AdminUserId
         ), TestCancellationToken);
         var pendingUserId = (await invitationRepo.GetByIdAsync(provisioned.Id, TestCancellationToken))!
@@ -891,7 +876,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             Tier: "free",
             CustomMessage: null,
             ExpiresInDays: 7,
-            GameSuggestions: new List<GameSuggestionDto>(),
             InvitedByUserId: AdminUserId
         ), TestCancellationToken);
 

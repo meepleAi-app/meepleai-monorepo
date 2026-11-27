@@ -10,7 +10,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
 /// <summary>
 /// Tests for InvitationToken extended functionality: CustomMessage, PendingUserId,
-/// GameSuggestions collection, and TimeProvider-based factory method.
+/// and TimeProvider-based factory method.
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "Authentication")]
@@ -152,78 +152,6 @@ public sealed class InvitationTokenExtendedTests
 
     #endregion
 
-    #region GameSuggestions Tests
-
-    [Fact]
-    public void AddGameSuggestion_AttachesSuggestion()
-    {
-        // Arrange
-        var token = InvitationToken.Create(
-            TestEmail,
-            TestRole,
-            TestPendingUserId,
-            TestCustomMessage,
-            expiresInDays: 7,
-            _timeProvider,
-            TestTokenHash);
-
-        var gameId = Guid.NewGuid();
-
-        // Act
-        token.AddGameSuggestion(gameId, GameSuggestionType.PreAdded);
-
-        // Assert
-        token.GameSuggestions.Should().ContainSingle();
-        token.GameSuggestions[0].GameId.Should().Be(gameId);
-        token.GameSuggestions[0].Type.Should().Be(GameSuggestionType.PreAdded);
-        token.GameSuggestions[0].InvitationTokenId.Should().Be(token.Id);
-    }
-
-    [Fact]
-    public void AddGameSuggestion_MultipleTypes_AttachesAll()
-    {
-        // Arrange
-        var token = InvitationToken.Create(
-            TestEmail,
-            TestRole,
-            TestPendingUserId,
-            TestCustomMessage,
-            expiresInDays: 7,
-            _timeProvider,
-            TestTokenHash);
-
-        var preAddedGameId = Guid.NewGuid();
-        var suggestedGameId = Guid.NewGuid();
-
-        // Act
-        token.AddGameSuggestion(preAddedGameId, GameSuggestionType.PreAdded);
-        token.AddGameSuggestion(suggestedGameId, GameSuggestionType.Suggested);
-
-        // Assert
-        token.GameSuggestions.Count.Should().Be(2);
-        token.GameSuggestions.Should().Contain(s => s.GameId == preAddedGameId && s.Type == GameSuggestionType.PreAdded);
-        token.GameSuggestions.Should().Contain(s => s.GameId == suggestedGameId && s.Type == GameSuggestionType.Suggested);
-    }
-
-    [Fact]
-    public void GameSuggestions_InitiallyEmpty()
-    {
-        // Arrange & Act
-        var token = InvitationToken.Create(
-            TestEmail,
-            TestRole,
-            TestPendingUserId,
-            TestCustomMessage,
-            expiresInDays: 7,
-            _timeProvider,
-            TestTokenHash);
-
-        // Assert
-        token.GameSuggestions.Should().BeEmpty();
-    }
-
-    #endregion
-
     #region Backward Compatibility Tests
 
     [Fact]
@@ -238,7 +166,6 @@ public sealed class InvitationTokenExtendedTests
         token.Status.Should().Be(InvitationStatus.Pending);
         token.CustomMessage.Should().BeNull();
         token.PendingUserId.Should().BeNull();
-        token.GameSuggestions.Should().BeEmpty();
     }
 
     #endregion

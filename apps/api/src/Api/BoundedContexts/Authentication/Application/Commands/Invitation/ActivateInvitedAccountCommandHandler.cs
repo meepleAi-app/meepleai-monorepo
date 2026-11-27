@@ -6,7 +6,6 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
-using Api.BoundedContexts.Authentication.Infrastructure.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Enums;
@@ -17,8 +16,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 
 /// <summary>
 /// Handles activation of an invited user account (two-phase).
-/// Phase 1 (sync): Validates token, sets password, activates user, creates session.
-/// Phase 2 (async): Dispatches game suggestions to Channel for background processing.
+/// Validates token, sets password, activates user, creates session, in one transaction.
 /// </summary>
 internal sealed class ActivateInvitedAccountCommandHandler
     : ICommandHandler<ActivateInvitedAccountCommand, ActivationResultDto>
@@ -27,7 +25,6 @@ internal sealed class ActivateInvitedAccountCommandHandler
     private readonly IUserRepository _userRepo;
     private readonly ISessionRepository _sessionRepo;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly GameSuggestionChannel _gameSuggestionChannel;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ActivateInvitedAccountCommandHandler> _logger;
 
@@ -36,7 +33,6 @@ internal sealed class ActivateInvitedAccountCommandHandler
         IUserRepository userRepo,
         ISessionRepository sessionRepo,
         IUnitOfWork unitOfWork,
-        GameSuggestionChannel gameSuggestionChannel,
         TimeProvider timeProvider,
         ILogger<ActivateInvitedAccountCommandHandler> logger)
     {
@@ -44,7 +40,6 @@ internal sealed class ActivateInvitedAccountCommandHandler
         _userRepo = userRepo ?? throw new ArgumentNullException(nameof(userRepo));
         _sessionRepo = sessionRepo ?? throw new ArgumentNullException(nameof(sessionRepo));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _gameSuggestionChannel = gameSuggestionChannel ?? throw new ArgumentNullException(nameof(gameSuggestionChannel));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -54,7 +49,7 @@ internal sealed class ActivateInvitedAccountCommandHandler
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // ── Phase 1: Synchronous, atomic transaction ──────────────────────
+        // ── Synchronous, atomic transaction ──────────────────────
 
         // 1. Hash the raw token (same SHA-256 pattern as AcceptInvitationCommandHandler)
         var tokenHash = Convert.ToBase64String(
@@ -111,36 +106,6 @@ internal sealed class ActivateInvitedAccountCommandHandler
         _logger.LogInformation(
             "User {UserId} activated from invitation {InvitationId}",
             user.Id, invitation.Id);
-
-        // ── Phase 2: Async, fire-and-forget game suggestion dispatch ──────
-
-        if (invitation.GameSuggestions.Count > 0)
-        {
-            var invitedByUserId = invitation.InvitedByUserId != Guid.Empty
-                ? invitation.InvitedByUserId
-                : user.InvitedByUserId ?? Guid.Empty;
-
-            try
-            {
-                await _gameSuggestionChannel.Writer.WriteAsync(
-                    new GameSuggestionEvent(
-                        user.Id,
-                        invitedByUserId,
-                        invitation.GameSuggestions),
-                    cancellationToken).ConfigureAwait(false);
-
-                _logger.LogInformation(
-                    "Dispatched {Count} game suggestions for user {UserId}",
-                    invitation.GameSuggestions.Count, user.Id);
-            }
-#pragma warning disable CA1031 // Fire-and-forget: don't let channel errors roll back activation
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex,
-                    "Failed to dispatch game suggestions for user {UserId}", user.Id);
-            }
-#pragma warning restore CA1031
-        }
 
         // 11. Return result
         return new ActivationResultDto(

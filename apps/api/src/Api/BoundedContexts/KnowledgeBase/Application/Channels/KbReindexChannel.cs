@@ -12,8 +12,7 @@ internal sealed record KbReindexJobRequest(Guid JobId, Guid GameId, Guid UserId)
 /// Unbounded in-process channel that decouples the HTTP POST handler (writer) from
 /// the background reindex worker (single reader). Singleton in DI.
 ///
-/// Issue #941 / ADR-057. Pattern mirrors
-/// <see cref="Api.BoundedContexts.Authentication.Infrastructure.Services.GameSuggestionChannel"/>.
+/// Issue #941 / ADR-057. It mirrored the invitation game-suggestion channel, removed with that feature (#5174).
 /// </summary>
 internal sealed class KbReindexChannel
 {

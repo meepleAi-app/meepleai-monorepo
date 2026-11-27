@@ -30,7 +30,6 @@ Logica di business pura e modelli di dominio:
   - `UserCollectionEntry`: Aggregate root per collezioni generiche polimorfiche
   - `WishlistItem`: Aggregate root per wishlist con priorita, prezzo target e visibilita
   - `LibraryShareLink`: Aggregate root per link di condivisione con token sicuro e scadenza
-  - `GameSuggestion`: Aggregate root per suggerimenti giochi da altri utenti
   - `ProposalMigration`: Aggregate root per scelta di migrazione post-approvazione proposta
   - `GameSession`: Entita per sessioni di gioco registrate (durata, esito, giocatori)
   - `GameChecklist`: Entita per passi della checklist di setup
@@ -56,11 +55,10 @@ Logica di business pura e modelli di dominio:
   - `PrivatePdfAssociatedEvent`, `PrivatePdfRemovedEvent`
   - `ItemAddedToCollectionEvent`, `ItemRemovedFromCollectionEvent`
   - `WishlistItemAddedEvent`, `WishlistItemUpdatedEvent`, `WishlistItemRemovedEvent`
-  - `GameSuggestionAcceptedEvent`
-- **Repositories/**: Interfacce repository (8 contratti)
+- **Repositories/**: Interfacce repository
   - `IUserLibraryRepository`, `IUserCollectionRepository`, `IPrivateGameRepository`
   - `IWishlistRepository`, `IGameLabelRepository`, `ILibraryShareLinkRepository`
-  - `IGameSuggestionRepository`, `IProposalMigrationRepository`
+  - `IProposalMigrationRepository`
 - **Services/**: Domain services
   - `IGameLibraryQuotaService`: Servizio per gestione limiti/quote della libreria
 - **Constants/**: Costanti di dominio
@@ -94,8 +92,6 @@ Orchestrazione e casi d'uso (CQRS pattern con MediatR):
 - **Validators/**: FluentValidation validators per comandi e query
 - **EventHandlers/**: Gestori di domain events
   - `CreateProposalMigrationOnApprovalHandler`: Crea migrazione quando una proposta viene approvata
-  - `GamePreAddedHandler`: Gestisce pre-aggiunta gioco
-  - `GameSuggestedHandler`: Gestisce suggerimenti di gioco
   - `PrivatePdfRemovedEventHandler`: Pulizia vettori quando un PDF privato viene rimosso
 
 ### Infrastructure/
@@ -103,7 +99,7 @@ Implementazioni concrete e adattatori:
 - **Persistence/**: Implementazioni EF Core dei repository (8 repository)
   - `UserLibraryRepository`, `UserCollectionRepository`, `PrivateGameRepository`
   - `WishlistRepository`, `GameLabelRepository`, `LibraryShareLinkRepository`
-  - `GameSuggestionRepository`, `ProposalMigrationRepository`
+  - `ProposalMigrationRepository`
 - **Services/**: Implementazioni concrete di servizi
   - `GameLibraryQuotaService`: Implementazione limiti/quote libreria
 - **DependencyInjection/**: Registrazione servizi nel container DI
@@ -238,7 +234,6 @@ Vedi `Infrastructure/Persistence/`:
 - `UserCollectionEntry`: Collezione generica polimorfica con metadati flessibili
 - `WishlistItem`: Elemento wishlist con priorita e prezzo target
 - `LibraryShareLink`: Link condivisione con token sicuro e analytics
-- `GameSuggestion`: Suggerimento gioco con stato accettazione/rifiuto
 - `ProposalMigration`: Scelta migrazione post-approvazione con concurrency control
 - `GameSession`: Sessione di gioco con durata, esito e giocatori
 - `GameChecklist`: Passo checklist di setup con ordine di visualizzazione

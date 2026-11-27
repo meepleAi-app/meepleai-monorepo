@@ -96,9 +96,6 @@ public sealed class RepositoryReconstitutionArchitectureTests
             "applicati al salvataggio, quindi non cambiano il valore letto.",
         ["Api.BoundedContexts.UserLibrary.Infrastructure.Persistence.GameLabelRepository → GameLabel.CreateCustom"] =
             "Id e CreatedAt tornano via reflection; GameLabel è un'Entity senza eventi.",
-        ["Api.BoundedContexts.UserLibrary.Infrastructure.Persistence.GameSuggestionRepository → GameSuggestion.Create"] =
-            "Id e CreatedAt tornano via reflection; l'evento di Accept, chiamato per ripristinare il flag, è pulito " +
-            "con ClearDomainEvents prima del return.",
         ["Api.BoundedContexts.UserLibrary.Infrastructure.Persistence.PrivateGameRepository → PrivateGame.CreateFromBgg"] =
             "Id, date, BggSyncedAt e cancellazione tornano via reflection; eventi puliti con ClearDomainEvents.",
         ["Api.BoundedContexts.UserLibrary.Infrastructure.Persistence.PrivateGameRepository → PrivateGame.CreateManual"] =

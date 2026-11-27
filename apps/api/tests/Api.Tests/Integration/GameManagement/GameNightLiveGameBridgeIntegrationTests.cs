@@ -483,6 +483,15 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         var history = await SendAsync(new Api.BoundedContexts.SessionTracking.Application.Queries.GetSessionHistoryQuery(
             organizer, GameId: null, Limit: 10, Offset: 0));
         history.Single(h => h.Id == started.SessionId).WinnerName.Should().BeNull("two players share first place");
+
+        // The finalize's own record of the winner — the diary, and the event built from the same value — names none
+        // either: «the first rank-1 participant found» picked one of the two.
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var finalized = await scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>().SessionEvents.AsNoTracking()
+            .SingleAsync(e => e.SessionId == started.SessionId && e.EventType == "session_finalized");
+        // Parsed, not matched as text: jsonb gives the payload back in its own formatting.
+        using var payload = System.Text.Json.JsonDocument.Parse(finalized.Payload);
+        payload.RootElement.GetProperty("winnerId").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
     }
 
     /// <summary>

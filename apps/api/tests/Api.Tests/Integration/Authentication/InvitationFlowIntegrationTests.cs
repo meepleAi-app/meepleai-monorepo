@@ -746,6 +746,44 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             .Should().Be(Api.BoundedContexts.Authentication.Domain.Enums.InvitationStatus.Pending);
     }
 
+    /// <summary>
+    /// The resend of a plain invitation still refuses once somebody has an account with that email: the check
+    /// #5173 narrowed to plain invitations keeps holding for them.
+    /// </summary>
+    [Fact]
+    public async Task ResendInvitation_OfAPlainInvitation_WhoseEmailNowHasAUser_IsAConflict()
+    {
+        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
+        var invitationRepo = _serviceProvider!.GetRequiredService<IInvitationTokenRepository>();
+        var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
+        var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
+        var email = $"resend-registered-{Guid.NewGuid():N}@test.meepleai.dev";
+
+        var invited = await mediator.Send(new SendInvitationCommand(
+            Email: email,
+            Role: "User",
+            InvitedByUserId: AdminUserId
+        ), TestCancellationToken);
+
+        await userRepo.AddAsync(new Api.BoundedContexts.Authentication.Domain.Entities.User(
+            Guid.NewGuid(),
+            new Api.BoundedContexts.Authentication.Domain.ValueObjects.Email(email),
+            "Registered Meanwhile",
+            Api.BoundedContexts.Authentication.Domain.ValueObjects.PasswordHash.Create("SecureUnusualPwd123!"),
+            Api.SharedKernel.Domain.ValueObjects.Role.User), TestCancellationToken);
+        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        var resend = () => mediator.Send(new ResendInvitationCommand(
+            InvitationId: invited.Id,
+            ResendByUserId: AdminUserId
+        ), TestCancellationToken);
+
+        await resend.Should().ThrowAsync<ConflictException>();
+        _emails.Sent.Should().ContainSingle("nothing is sent for a refused resend");
+        (await invitationRepo.GetByIdAsync(invited.Id, TestCancellationToken))!.Status
+            .Should().Be(Api.BoundedContexts.Authentication.Domain.Enums.InvitationStatus.Pending);
+    }
+
     /// <summary>The emailed token, redeemed where the email links it, activates exactly that pending user.</summary>
     private async Task ActivateWithEmailedTokenAsync(string rawToken, Guid pendingUserId)
     {

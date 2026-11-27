@@ -90,18 +90,21 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // Finalize session using domain method
         session.Finalize();
 
-        // Update participant final ranks (need to access through persistence for now)
-        // For now, this is a known limitation that will be addressed in refactoring
+        // #4780: the ranks are kept on the participants. They were computed and dropped («known limitation»), and the
+        // history's winner, the night recap's leaderboard and the export read an empty column.
+        session.RecordFinalRanks(request.FinalRanks);
+
+        // #4780: the winner is the single participant ranked 1. A tie at the top (1, 1, 3 — a competition ranking is
+        // valid since #4780) gives none, and FirstOrDefault would have picked one of the two. With NoWinner the ranks
+        // only order the participants (#4752). The event and the diary below read the same value.
+        var winnerIdRaw = WinnerOf(request);
 
         // BE-3 #1590: emit session.finalized domain event BEFORE UpdateAsync so it is collected
         // (SessionRepository.UpdateAsync calls CollectDomainEvents — Task 5) and durably logged to
         // domain_event_logs atomically with the session update + the session_events diary row below.
         // This MediatR dispatch ALSO activates the previously-dormant KnowledgeBase
         // SessionFinalizedEventHandler cascade cleanup (it was raised for SSE only until now).
-        // #4752: with NoWinner the ranks only order the participants — rank 1 is NOT a winner.
-        var winnerIdForEvent = request.NoWinner
-            ? Guid.Empty
-            : request.FinalRanks.FirstOrDefault(kvp => kvp.Value == 1).Key;
+        var winnerIdForEvent = winnerIdRaw;
         var winnerNameForEvent = winnerIdForEvent != Guid.Empty
             ? session.Participants.FirstOrDefault(p => p.Id == winnerIdForEvent)?.DisplayName
             : null;
@@ -140,12 +143,6 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // Save session (adds tracked changes; SaveChangesAsync below flushes)
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
 
-        // Get winner (rank 1) from the FinalRanks dictionary.
-        var winnerIdRaw = request.NoWinner
-            ? Guid.Empty
-            : request.FinalRanks
-                .FirstOrDefault(kvp => kvp.Value == 1)
-                .Key;
         Guid? winnerIdNullable = winnerIdRaw != Guid.Empty ? winnerIdRaw : null;
 
         // P1B-T2: emit session_finalized diary event in the same transaction.
@@ -270,5 +267,15 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
             finalScores,
             LiveActiveWarning: liveActiveWarning
         );
+    }
+
+    /// <summary>The single participant ranked 1, or <see cref="Guid.Empty"/> with a tie at the top or NoWinner.</summary>
+    private static Guid WinnerOf(FinalizeSessionCommand request)
+    {
+        if (request.NoWinner)
+            return Guid.Empty;
+
+        var firstPlace = request.FinalRanks.Where(kvp => kvp.Value == 1).Select(kvp => kvp.Key).Take(2).ToList();
+        return firstPlace.Count == 1 ? firstPlace[0] : Guid.Empty;
     }
 }

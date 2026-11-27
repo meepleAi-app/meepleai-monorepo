@@ -495,6 +495,26 @@ public class Session : IDomainEventSource
     }
 
     /// <summary>
+    /// #4780 — keeps the final rank of every participant. The finalize used to compute the ranks and drop them («known
+    /// limitation»), and the history's winner, the night recap's leaderboard and the export read an empty column.
+    /// </summary>
+    /// <param name="finalRanks">The rank of each participant, by participant id: all of them, none other.</param>
+    public void RecordFinalRanks(IReadOnlyDictionary<Guid, int> finalRanks)
+    {
+        ArgumentNullException.ThrowIfNull(finalRanks);
+
+        if (finalRanks.Count != _participants.Count || _participants.Any(p => !finalRanks.ContainsKey(p.Id)))
+            throw new ArgumentException("Every participant, and only the participants, must have a final rank.", nameof(finalRanks));
+
+        foreach (var participant in _participants)
+        {
+            participant.SetFinalRank(finalRanks[participant.Id]);
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
     /// Sets the polymorphic score data for this session and raises a
     /// <see cref="Events.SessionScoresUpdatedEvent"/>.
     ///

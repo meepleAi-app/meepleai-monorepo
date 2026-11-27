@@ -303,6 +303,59 @@ public sealed class FinalizeSessionDiaryTests : IAsyncLifetime
         scoreboardElement.GetArrayLength().Should().Be(0);
     }
 
+    /// <summary>
+    /// #4780 — a tie at the top is a valid competition ranking (1, 1, 3), and it has no winner even when the caller
+    /// does not say NoWinner: «the first rank-1 participant found» named one of the two in the result, the event and
+    /// the diary. The ranks are kept on the participants.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task Finalize_WithATieAtTheTop_HasNoWinner_AndKeepsTheRanks()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var createResult = await _createHandler!.Handle(
+            BuildCreateCommand(userId, gameId, guestNames: new[] { "Guest A", "Guest B" }),
+            TestCancellationToken);
+
+        _dbContext!.ChangeTracker.Clear();
+        var participantIds = await _dbContext.SessionTrackingParticipants
+            .AsNoTracking()
+            .Where(p => p.SessionId == createResult.SessionId)
+            .OrderBy(p => p.JoinOrder)
+            .Select(p => p.Id)
+            .ToListAsync(TestCancellationToken);
+        var finalRanks = new Dictionary<Guid, int>
+        {
+            { participantIds[0], 1 },
+            { participantIds[1], 1 },
+            { participantIds[2], 3 }
+        };
+
+        var result = await _finalizeHandler!.Handle(
+            new FinalizeSessionCommand(createResult.SessionId, finalRanks, userId),
+            TestCancellationToken);
+
+        result.WinnerId.Should().BeNull("two participants share first place");
+
+        _dbContext.ChangeTracker.Clear();
+        var diary = await _dbContext.SessionEvents
+            .AsNoTracking()
+            .SingleAsync(e => e.SessionId == createResult.SessionId && e.EventType == "session_finalized", TestCancellationToken);
+        using var doc = JsonDocument.Parse(diary.Payload!);
+        doc.RootElement.GetProperty("winnerId").ValueKind.Should().Be(JsonValueKind.Null);
+
+        var kept = await _dbContext.SessionTrackingParticipants
+            .AsNoTracking()
+            .Where(p => p.SessionId == createResult.SessionId)
+            .ToDictionaryAsync(p => p.Id, p => p.FinalRank, TestCancellationToken);
+        kept.Should().BeEquivalentTo(new Dictionary<Guid, int?>
+        {
+            [participantIds[0]] = 1,
+            [participantIds[1]] = 1,
+            [participantIds[2]] = 3,
+        });
+    }
+
     private static CreateSessionCommand BuildCreateCommand(
         Guid userId,
         Guid gameId,

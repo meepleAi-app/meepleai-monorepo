@@ -73,7 +73,11 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
                 if (command.WinnerId.HasValue && session.Participants.All(p => p.Id != command.WinnerId.Value))
                     throw new ConflictException("Winner must be a participant of the session.");
 
-                var finalRanks = BuildFinalRanks(session.Participants, command.WinnerId);
+                // #4780: from the live, the live ranks — when they still name exactly this session's participants (one
+                // could have joined since they were read). Otherwise, the ranks the night always built.
+                var finalRanks = command.FinalRanks is { } liveRanks && RanksEveryParticipant(liveRanks, session.Participants)
+                    ? new Dictionary<Guid, int>(liveRanks)
+                    : BuildFinalRanks(session.Participants, command.WinnerId);
 
                 try
                 {
@@ -121,8 +125,9 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
     }
 
     /// <summary>
-    /// The ranks <see cref="FinalizeSessionCommand"/> needs: every participant, exactly 1..N with no gaps
-    /// (its validator rejects anything else). The winner is 1 and the rest follow in join order; with no
+    /// The ranks <see cref="FinalizeSessionCommand"/> needs when the night completes the game itself (no live
+    /// ranks, #4780): every participant, 1..N with no ties, a valid competition ranking. The winner is 1 and the
+    /// rest follow in join order; with no
     /// winner the order is just the join order, and <c>NoWinner</c> tells the finalize not to record rank 1
     /// as one.
     ///
@@ -131,6 +136,14 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
     /// (<c>[2,2]</c>) the finalize failed its own validation, so a night game could not be completed.
     /// The unit tests mocked the finalize away and never saw it.</para>
     /// </summary>
+    private static bool RanksEveryParticipant(
+        IReadOnlyDictionary<Guid, int> ranks,
+        IEnumerable<Api.BoundedContexts.SessionTracking.Domain.Entities.Participant> participants)
+    {
+        var ids = participants.Select(p => p.Id).ToHashSet();
+        return ids.SetEquals(ranks.Keys);
+    }
+
     internal static Dictionary<Guid, int> BuildFinalRanks(
         IEnumerable<Api.BoundedContexts.SessionTracking.Domain.Entities.Participant> participants, Guid? winnerId)
     {

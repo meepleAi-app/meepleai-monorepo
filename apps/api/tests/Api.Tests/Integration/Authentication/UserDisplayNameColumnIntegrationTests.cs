@@ -132,6 +132,25 @@ public sealed class UserDisplayNameColumnIntegrationTests : IAsyncLifetime
         GeneratedDisplayName.IsGenerated(user.DisplayName).Should().BeTrue();
     }
 
+    /// <summary>
+    /// A name that is still blank — written as "" on purpose, the NOT NULL lets it through — is read blank, not as the
+    /// address: the readers who show it to others put their neutral name in its place (#4780).
+    /// </summary>
+    [Fact]
+    public async Task TheRepository_ReadsABlankName_Blank_NeverTheAddress()
+    {
+        const string email = "blank-read-5160@example.com";
+        var id = await InsertAsync(email, displayName: string.Empty);
+
+        await using var scope = _serviceProvider!.CreateAsyncScope();
+        var repository = new UserRepository(
+            scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>(),
+            scope.ServiceProvider.GetRequiredService<IDomainEventCollector>());
+        var user = await repository.GetByIdAsync(id, Ct);
+
+        user!.DisplayName.Should().BeEmpty("a blank name is not replaced by the address, nor by a name made at each read");
+    }
+
     private async Task<Guid> InsertAsync(string email, string? displayName)
     {
         var id = Guid.NewGuid();

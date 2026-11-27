@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.Infrastructure.Security;
 using Api.SharedKernel.Application.Interfaces;
 using FluentValidation;
@@ -84,7 +85,11 @@ internal sealed class BulkSendInvitationsCommandHandler
             }
 
             // Optional CSV columns: displayName (col 2), tier (col 3), expiresInDays (col 4)
-            var displayName = parts.Length > 2 && !string.IsNullOrWhiteSpace(parts[2]) ? parts[2].Trim() : email;
+            // #5173 (#5160): no name in the row is no name chosen — a generated one, as at registration and with
+            // OAuth. The address was stored as the name and shown to others as such.
+            var displayName = parts.Length > 2 && !string.IsNullOrWhiteSpace(parts[2])
+                ? parts[2].Trim()
+                : GeneratedDisplayName.Create();
             var tier = parts.Length > 3 && !string.IsNullOrWhiteSpace(parts[3]) ? parts[3].Trim() : "Free";
             var expiresInDays = 7;
             if (parts.Length > 4 && int.TryParse(parts[4].Trim(), System.Globalization.CultureInfo.InvariantCulture, out var parsedDays) && parsedDays > 0)

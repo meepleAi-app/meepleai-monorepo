@@ -111,15 +111,22 @@ internal sealed class ProvisionAndInviteUserCommandHandler : ICommandHandler<Pro
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // 8. Try send email (fire-and-forget pattern): catch exceptions, log, set emailSent = false
+        // #5173: this invitation's user already exists (Pending), so its email links /setup-account, which activates
+        // that user. The base overload links /accept-invite, which creates a user — a second one with this email,
+        // refused by the unique index. The inviter is «Admin», as in the other two invitation emails; the invitee's
+        // own name is the greeting.
         var emailSent = true;
         try
         {
             await _emailService.SendInvitationEmailAsync(
-                normalizedEmail,
-                command.Role,
-                rawToken,
-                command.DisplayName,
-                cancellationToken).ConfigureAwait(false);
+                toEmail: normalizedEmail,
+                displayName: command.DisplayName,
+                role: command.Role,
+                token: rawToken,
+                invitedByName: "Admin",
+                customMessage: command.CustomMessage,
+                expiresAt: invitation.ExpiresAt,
+                ct: cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)

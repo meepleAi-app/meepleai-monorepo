@@ -11,6 +11,7 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -55,6 +56,7 @@ public sealed class DomainEventOutboxRowIsolationIntegrationTests : IAsyncLifeti
 
     private readonly SharedTestcontainersFixture _fixture;
     private readonly CommitRefusingInterceptor _commits = new();
+    private readonly TransientDatabaseFaults _faults = new();
     private readonly Mock<IDomainEventOutboxHealthTracker> _health = new();
     private string _databaseName = string.Empty;
     private ServiceProvider? _serviceProvider;
@@ -73,7 +75,8 @@ public sealed class DomainEventOutboxRowIsolationIntegrationTests : IAsyncLifeti
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
-        services.ConfigureDbContext<MeepleAiDbContext>(options => options.AddInterceptors(_commits));
+        // _faults is inert until a test arms it; CreateBase enables the retrying strategy, so a replay can be seen.
+        services.ConfigureDbContext<MeepleAiDbContext>(options => options.AddInterceptors(_commits, _faults.Save));
 
         services.RemoveAll<IMediator>();
         services.AddScoped<IMediator>(DelegatingMediator);
@@ -264,6 +267,31 @@ public sealed class DomainEventOutboxRowIsolationIntegrationTests : IAsyncLifeti
         rows[ids[2]].Status.Should().Be(DomainEventOutboxStatus.Sent);
         (await AuditRowExistsAsync(savedId)).Should().BeTrue(
             "a write the handler already saved is not rolled back by its row's failure");
+    }
+
+    /// <summary>
+    /// #5176 — a timeout of a row's save is not a residue its handlers left: it propagates, and the strategy replays the
+    /// batch, as before #5030. Npgsql reports it as a transient <c>NpgsqlException</c> around a <c>TimeoutException</c>;
+    /// read on the innermost exception alone it was not transient, and the row was rescheduled, spending an attempt of its
+    /// budget on a failure that was the database's.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5176")]
+    public async Task OneBatch_ATransientFailureOfARowsSave_ReplaysTheBatch_AndSpendsNoAttempt()
+    {
+        var ids = await EnqueueAsync(1, 2, 3);
+        _faults.Save.Armed = true;
+
+        var processed = await Processor().RunOnceAsync(batchSize: 100, cancellationToken: Ct);
+
+        _faults.Save.Tripped.Should().BeTrue("a fault that never fired proves nothing");
+        processed.Should().Be(3);
+        var rows = await ReadRowsAsync();
+        foreach (var id in ids)
+        {
+            rows[id].Status.Should().Be(DomainEventOutboxStatus.Sent, "the replayed batch delivers every row");
+            rows[id].Attempts.Should().Be(0, "the database's failure is not charged to the row");
+        }
     }
 
     /// <summary>

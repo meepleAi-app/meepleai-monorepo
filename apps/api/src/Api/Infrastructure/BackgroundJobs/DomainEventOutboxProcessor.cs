@@ -4,6 +4,7 @@ using Api.Infrastructure.Entities.DomainEventOutbox;
 using Api.Observability;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -471,11 +472,13 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
     }
 
     /// <summary>
-    /// A transient database error (deadlock, serialization failure, lost connection) is not a residue
+    /// A transient database error (deadlock, serialization failure, lost connection, timeout) is not a residue
     /// the handlers left: it propagates, and the execution strategy replays the batch as before #5030.
+    /// #5176: read on the whole chain (#4839). Npgsql reports a timeout or a lost connection as a transient
+    /// <see cref="NpgsqlException"/> around a <see cref="TimeoutException"/> or an <see cref="IOException"/>, so
+    /// the innermost exception alone is not transient, and the row was rescheduled instead.
     /// </summary>
-    private static bool IsTransient(Exception ex) =>
-        ex.GetBaseException() is NpgsqlException { IsTransient: true };
+    private static bool IsTransient(Exception ex) => PersistenceFailure.IsInfrastructure(ex);
 
     /// <summary>
     /// #5030 — refreshes the health snapshot after a batch failed as a whole. Best-effort: when the

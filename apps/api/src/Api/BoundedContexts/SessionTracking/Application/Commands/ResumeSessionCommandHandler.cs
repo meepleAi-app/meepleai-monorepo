@@ -81,16 +81,25 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
             }
 
             // Load this session's link row (may be null for unattached/solo sessions).
+            // #5165: tracked. Read with the context's NoTracking default (PERF-06), the assignment below that takes the
+            // slot back reached nothing: the session was Active again, its link stayed Pending, and the night had no game
+            // in progress.
             var ownLinkRow = await _db.GameNightSessions
+                .AsTracking()
                 .FirstOrDefaultAsync(gns => gns.SessionId == session.Id, ct)
                 .ConfigureAwait(false);
 
             Guid? gameNightId = ownLinkRow?.GameNightEventId;
+
+            // #5165: the slot is taken back only when the pause freed it. A draft never held it: resumed, it stays a
+            // draft, and the game the night has in progress is left alone.
+            var takesTheSlotBack = ownLinkRow is { ReleasedByPause: true }
+                && string.Equals(ownLinkRow.Status, nameof(GameNightSessionStatus.Pending), StringComparison.Ordinal);
             {
             // Invariant guard: free every other "InProgress" link slot in the same GameNight
             // BEFORE flipping our own row to InProgress, so the partial unique index from T1
             // never sees two InProgress rows at commit time.
-            if (gameNightId.HasValue)
+            if (takesTheSlotBack)
             {
                 // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
                 // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
@@ -98,7 +107,7 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
                 var otherInProgressLinks = await _db.GameNightSessions
                     .AsTracking()
                     .Where(gns =>
-                        gns.GameNightEventId == gameNightId.Value &&
+                        gns.GameNightEventId == gameNightId!.Value &&
                         gns.SessionId != session.Id &&
                         gns.Status == nameof(GameNightSessionStatus.InProgress))
                     .ToListAsync(cancellationToken)
@@ -110,6 +119,9 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
                     {
                         // Free the link slot first — the unique index is the hard invariant.
                         otherLink.Status = GameNightSessionStatus.Pending.ToString();
+                        // #5165: this pause freed the sibling's slot as much as a pause of its own: resumed later, it
+                        // takes it back.
+                        otherLink.ReleasedByPause = true;
 
                         var other = await _sessionRepository
                             .GetByIdAsync(otherLink.SessionId, cancellationToken)
@@ -149,10 +161,11 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
             session.Resume();
             await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
 
-            // Reclaim the link slot for the resumed session.
-            if (ownLinkRow is not null)
+            // Reclaim the link slot for the resumed session — only the slot its pause freed (#5165).
+            if (takesTheSlotBack)
             {
-                ownLinkRow.Status = GameNightSessionStatus.InProgress.ToString();
+                ownLinkRow!.Status = GameNightSessionStatus.InProgress.ToString();
+                ownLinkRow.ReleasedByPause = false;
             }
 
             var resumeDiary = new SessionEventEntity

@@ -79,6 +79,9 @@ internal sealed class PauseSessionCommandHandler : ICommandHandler<PauseSessionC
             if (string.Equals(linkRow.Status, GameNightSessionStatus.InProgress.ToString(), StringComparison.Ordinal))
             {
                 linkRow.Status = GameNightSessionStatus.Pending.ToString();
+                // #5165: the resume takes the slot back only when a pause freed it. A draft (Pending, never live)
+                // keeps the mark off, so its resume does not make it the night's game in progress.
+                linkRow.ReleasedByPause = true;
             }
         }
 

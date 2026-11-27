@@ -46,6 +46,8 @@ internal class GameNightSessionEntityConfiguration : IEntityTypeConfiguration<Ga
         builder.Property(s => s.WinnerId).HasColumnName("winner_id");
         builder.Property(s => s.StartedAt).HasColumnName("started_at");
         builder.Property(s => s.CompletedAt).HasColumnName("completed_at");
+        // #5165: written by the pause, read and cleared by the resume. Expand-only: every existing link starts false.
+        builder.Property(s => s.ReleasedByPause).HasColumnName("released_by_pause").IsRequired();
 
         builder.HasIndex(s => new { s.GameNightEventId, s.PlayOrder })
             .HasDatabaseName(PlayOrderIndexName)

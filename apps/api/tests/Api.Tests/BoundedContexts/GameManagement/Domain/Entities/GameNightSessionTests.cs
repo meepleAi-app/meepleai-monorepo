@@ -69,6 +69,38 @@ public class GameNightSessionTests
         Assert.Equal(completedAt, gns.CompletedAt);
     }
 
+    /// <summary>#5165: once the link leaves Pending, the mark of a pause means nothing and must not outlive it.</summary>
+    [Fact]
+    public void Start_ClearsTheMarkOfAPause()
+    {
+        var gns = PausedLink();
+
+        gns.Start();
+
+        Assert.False(gns.ReleasedByPause);
+    }
+
+    [Fact]
+    public void Skip_ClearsTheMarkOfAPause()
+    {
+        var gns = PausedLink();
+
+        gns.Skip();
+
+        Assert.False(gns.ReleasedByPause);
+    }
+
+    [Fact]
+    public void Reconstitute_KeepsTheMarkOfAPause()
+    {
+        Assert.True(PausedLink().ReleasedByPause);
+    }
+
+    private static GameNightSession PausedLink() => GameNightSession.Reconstitute(
+        Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Catan", 1,
+        GameNightSessionStatus.Pending, winnerId: null, startedAt: DateTimeOffset.UtcNow.AddMinutes(-30), completedAt: null,
+        releasedByPause: true);
+
     [Fact]
     public void Start_FromPending_TransitionsToInProgress()
     {

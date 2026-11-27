@@ -5983,6 +5983,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("play_order");
 
+                    b.Property<bool>("ReleasedByPause")
+                        .HasColumnType("boolean")
+                        .HasColumnName("released_by_pause");
+
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uuid")
                         .HasColumnName("session_id");

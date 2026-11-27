@@ -19,6 +19,14 @@ internal sealed class GameNightSession
     public DateTimeOffset? StartedAt { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
 
+    /// <summary>
+    /// #5165 — true when a pause took this link out of InProgress, freeing the night's single live slot: the resume of
+    /// its session takes the slot back. A draft (a link that was never InProgress) has it false, so its resume does not
+    /// make it the night's game in progress. Written by the pause and the resume (SessionTracking, on the row), cleared
+    /// here whenever the link leaves Pending.
+    /// </summary>
+    public bool ReleasedByPause { get; private set; }
+
     private GameNightSession() { }
 
     public static GameNightSession Create(
@@ -50,7 +58,8 @@ internal sealed class GameNightSession
     public static GameNightSession Reconstitute(
         Guid id, Guid gameNightEventId, Guid sessionId, Guid gameId,
         string gameTitle, int playOrder, GameNightSessionStatus status,
-        Guid? winnerId, DateTimeOffset? startedAt, DateTimeOffset? completedAt)
+        Guid? winnerId, DateTimeOffset? startedAt, DateTimeOffset? completedAt,
+        bool releasedByPause = false)
     {
         return new GameNightSession
         {
@@ -63,7 +72,8 @@ internal sealed class GameNightSession
             Status = status,
             WinnerId = winnerId,
             StartedAt = startedAt,
-            CompletedAt = completedAt
+            CompletedAt = completedAt,
+            ReleasedByPause = releasedByPause
         };
     }
 
@@ -73,6 +83,7 @@ internal sealed class GameNightSession
             throw new InvalidOperationException($"Cannot start session in {Status} status.");
         Status = GameNightSessionStatus.InProgress;
         StartedAt = DateTimeOffset.UtcNow;
+        ReleasedByPause = false;
     }
 
     internal void Complete(Guid? winnerId)
@@ -89,5 +100,6 @@ internal sealed class GameNightSession
         if (Status != GameNightSessionStatus.Pending)
             throw new InvalidOperationException($"Cannot skip session in {Status} status.");
         Status = GameNightSessionStatus.Skipped;
+        ReleasedByPause = false;
     }
 }

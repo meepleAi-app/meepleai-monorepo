@@ -12,13 +12,14 @@ internal class AuditLogEntityConfiguration : IEntityTypeConfiguration<AuditLogEn
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasMaxLength(64);
         builder.Property(e => e.UserId).HasMaxLength(64);
-        builder.Property(e => e.Action).IsRequired().HasMaxLength(64);
-        builder.Property(e => e.Resource).IsRequired().HasMaxLength(128);
-        builder.Property(e => e.ResourceId).HasMaxLength(64);
-        builder.Property(e => e.Result).IsRequired().HasMaxLength(32);
-        builder.Property(e => e.Details).HasMaxLength(1024);
-        builder.Property(e => e.IpAddress).HasMaxLength(64);
-        builder.Property(e => e.UserAgent).HasMaxLength(256);
+        // #5156: the writers cut their values to these lengths (AuditLogColumns.FitToColumns).
+        builder.Property(e => e.Action).IsRequired().HasMaxLength(AuditLogColumns.ActionLength);
+        builder.Property(e => e.Resource).IsRequired().HasMaxLength(AuditLogColumns.ResourceLength);
+        builder.Property(e => e.ResourceId).HasMaxLength(AuditLogColumns.ResourceIdLength);
+        builder.Property(e => e.Result).IsRequired().HasMaxLength(AuditLogColumns.ResultLength);
+        builder.Property(e => e.Details).HasMaxLength(AuditLogColumns.DetailsLength);
+        builder.Property(e => e.IpAddress).HasMaxLength(AuditLogColumns.IpAddressLength);
+        builder.Property(e => e.UserAgent).HasMaxLength(AuditLogColumns.UserAgentLength);
         builder.Property(e => e.CreatedAt).IsRequired();
         builder.HasIndex(e => e.CreatedAt);
         builder.HasIndex(e => e.UserId);

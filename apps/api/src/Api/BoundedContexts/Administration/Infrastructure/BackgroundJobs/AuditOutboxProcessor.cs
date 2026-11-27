@@ -3,6 +3,7 @@ using Api.BoundedContexts.Administration.Application;
 using Api.BoundedContexts.Administration.Infrastructure.Health;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs;
@@ -14,8 +15,9 @@ namespace Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs;
 /// final materialization from the request hot-path.
 ///
 /// Lifecycle (T4): poll every 5 seconds, drain up to 100 rows per batch in a single
-/// transaction. On per-row materialization failure, the row is marked Failed with the
-/// exception message (visible via the dashboard); successful rows are marked Sent.
+/// transaction, saving each row on its own (#5156). On per-row materialization failure, or
+/// when the database refuses the row, it is marked Failed with the exception message (visible
+/// via the dashboard); successful rows are marked Sent.
 /// Idempotency hardening (T4b — ON CONFLICT DO NOTHING + Prometheus metrics) lands next.
 ///
 /// SP5 Admin Security S1 — Task 4.
@@ -77,6 +79,8 @@ internal sealed class AuditOutboxProcessor : BackgroundService
     ///     and mark the source row Sent.
     ///   - On any per-row exception, mark Failed with the exception message (truncated to
     ///     2048 chars by <see cref="AuditOutboxEntity.MarkFailed"/>) so the batch continues.
+    ///   - Save the row. When the database refuses it, mark it Failed with the database's
+    ///     reason (#5156); a transient error propagates and the strategy replays the batch.
     ///
     /// All state changes (audit_logs INSERTs + outbox status transitions) commit in a single
     /// transaction. Returns the count of rows considered in this batch (Sent + Failed).
@@ -146,45 +150,23 @@ internal sealed class AuditOutboxProcessor : BackgroundService
 
             foreach (var row in pending)
             {
+                var auditLog = Settle(db, row, existingAuditIdSet, now);
+
+                // #5156: each row is saved on its own, as the domain-event outbox does since #5030. The batch used to
+                // be saved once, so a row the database refused failed every row of the batch: it stayed Pending at the
+                // head of the queue and held them all back again at the next pass.
                 try
                 {
-                    var payload = JsonSerializer.Deserialize<AuditOutboxPayload>(row.PayloadJson)
-                        ?? throw new InvalidOperationException("Deserialized payload is null.");
-
-                    if (payload.Oversize)
-                    {
-                        // T2b contract: rather than persist a truncated/inaccurate audit, mark the
-                        // row Failed so operators can investigate via the dashboard.
-                        row.MarkFailed(OversizeFailureReason, now);
-                        continue;
-                    }
-
-                    if (existingAuditIdSet.Contains(row.Id))
-                    {
-                        // T4b idempotency: the audit_logs row already exists for this id (the
-                        // outbox.Id == audit_logs.Id contract). Skip the INSERT to avoid a
-                        // duplicate-key violation, but still transition Pending → Sent so the
-                        // outbox is drained.
-                        row.MarkSent(now);
-                        continue;
-                    }
-
-                    var auditLog = MaterializeAuditLog(payload, row.Id);
-                    db.AuditLogs.Add(auditLog);
-                    row.MarkSent(now);
+                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 }
-#pragma warning disable CA1031 // Per-row resilience: poison-message must not stop the batch
-                catch (Exception ex)
+#pragma warning disable CA1031 // Per-row resilience: a row the database refuses must not fail the batch
+                catch (Exception saveEx) when (saveEx is not OperationCanceledException && !IsInfrastructure(saveEx))
 #pragma warning restore CA1031
                 {
-                    _logger.LogError(ex,
-                        "Failed to materialize audit_log from outbox row {OutboxId}; marking row Failed",
-                        row.Id);
-                    row.MarkFailed(ex.Message, now);
+                    await FailTheRefusedRowAsync(db, row, auditLog, saveEx, now, cancellationToken).ConfigureAwait(false);
                 }
             }
 
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
 
             // Refresh the health snapshot AFTER the commit so observers see the post-batch
@@ -194,6 +176,96 @@ internal sealed class AuditOutboxProcessor : BackgroundService
             return pending.Count;
         }).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Applies to the tracked <paramref name="row"/> the state its payload calls for, and adds its audit_logs row when
+    /// there is one to write. Nothing is saved here. Returns the added row, or null.
+    /// </summary>
+    private AuditLogEntity? Settle(
+        MeepleAiDbContext db, AuditOutboxEntity row, HashSet<Guid> existingAuditIds, DateTimeOffset now)
+    {
+        try
+        {
+            var payload = JsonSerializer.Deserialize<AuditOutboxPayload>(row.PayloadJson)
+                ?? throw new InvalidOperationException("Deserialized payload is null.");
+
+            if (payload.Oversize)
+            {
+                // T2b contract: rather than persist a truncated/inaccurate audit, mark the
+                // row Failed so operators can investigate via the dashboard.
+                row.MarkFailed(OversizeFailureReason, now);
+                return null;
+            }
+
+            if (existingAuditIds.Contains(row.Id))
+            {
+                // T4b idempotency: the audit_logs row already exists for this id (the
+                // outbox.Id == audit_logs.Id contract). Skip the INSERT to avoid a
+                // duplicate-key violation, but still transition Pending → Sent so the
+                // outbox is drained.
+                row.MarkSent(now);
+                return null;
+            }
+
+            var auditLog = MaterializeAuditLog(payload, row.Id);
+            db.AuditLogs.Add(auditLog);
+            row.MarkSent(now);
+            return auditLog;
+        }
+#pragma warning disable CA1031 // Per-row resilience: poison-message must not stop the batch
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(ex,
+                "Failed to materialize audit_log from outbox row {OutboxId}; marking row Failed",
+                row.Id);
+            row.MarkFailed(ex.Message, now);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// #5156 — the save of <paramref name="row"/> failed: the database refused what it was to write. The row is marked
+    /// Failed with the database's reason, so that it no longer sits Pending at the head of the queue.
+    /// <para>
+    /// Inside the batch's transaction EF Core wraps each <c>SaveChanges</c> in a savepoint of its own and rolls back to
+    /// it, so the transaction stays usable (#5030). The tracker does not: the refused audit_logs row is still Added, and
+    /// the outbox row still carries the Sent it was given. The first is dropped, the second read again.
+    /// </para>
+    /// </summary>
+    private async Task FailTheRefusedRowAsync(
+        MeepleAiDbContext db,
+        AuditOutboxEntity row,
+        AuditLogEntity? auditLog,
+        Exception saveEx,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogError(saveEx,
+            "The database refused the audit_log of outbox row {OutboxId}; marking row Failed", row.Id);
+
+        if (auditLog is not null)
+        {
+            db.Entry(auditLog).State = EntityState.Detached;
+        }
+
+        await db.Entry(row).ReloadAsync(cancellationToken).ConfigureAwait(false);
+
+        // Read again, a row that is no longer Pending was settled by someone else: it is left as it is.
+        if (row.Status == OutboxStatus.Pending)
+        {
+            row.MarkFailed(saveEx.GetBaseException().Message, now);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// A failure of the infrastructure (a timeout, a lost connection, a deadlock) is not a row the database refuses: it
+    /// propagates, and the execution strategy replays the batch. Read on the whole chain (#4839): Npgsql reports a
+    /// timeout as a transient <see cref="Npgsql.NpgsqlException"/> around a <see cref="TimeoutException"/>, so the
+    /// innermost exception alone is not transient, and the row would be marked Failed for good.
+    /// </summary>
+    private static bool IsInfrastructure(Exception ex) => PersistenceFailure.IsInfrastructure(ex);
 
     /// <summary>
     /// Queries audit_outbox aggregate counters and pushes them into the singleton
@@ -255,7 +327,7 @@ internal sealed class AuditOutboxProcessor : BackgroundService
             // audit_logs.created_at is DateTime (UTC) by convention; the outbox payload Timestamp
             // is a DateTimeOffset to preserve the originating offset across serialization.
             CreatedAt = payload.Timestamp.UtcDateTime,
-        };
+        }.FitToColumns(); // #5156: the payload keeps the whole values; the columns take what fits.
     }
 
     private static Guid? TryParseGuid(string? value)

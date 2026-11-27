@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.SecurityAudit.Application.Services;
 using Api.BoundedContexts.SecurityAudit.Infrastructure.Entities;
 using Api.Infrastructure;
+using Api.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.SecurityAudit.Infrastructure.Services;
 
@@ -78,8 +79,9 @@ internal sealed class AuditLogger : IAuditLogger
             ActorUserId = actorUserId,
             TargetUserId = targetUserId,
             EventType = eventType,
-            IpAddress = ipAddress,
-            UserAgent = userAgent,
+            // #5156: the values a request brings are cut to their columns: refused, the row of the event was lost.
+            IpAddress = ColumnText.Fit(ipAddress, SecurityAuditLogColumns.IpAddressLength),
+            UserAgent = ColumnText.Fit(userAgent, SecurityAuditLogColumns.UserAgentLength),
             Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
             Metadata = metadata,
             CorrelationId = correlationId,

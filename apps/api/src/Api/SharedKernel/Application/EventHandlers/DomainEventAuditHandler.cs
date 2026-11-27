@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.Administration.Application;
+using Api.Infrastructure.Entities;
+using Api.Infrastructure.Persistence;
 using Api.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
@@ -80,16 +82,13 @@ internal sealed class DomainEventAuditHandler<TEvent> : INotificationHandler<TEv
     }
 
     /// <summary>
-    /// <c>audit_logs.Details</c> is <c>varchar(1024)</c> (<c>AuditLogEntityConfiguration</c>) and nothing between
-    /// this handler and the column truncates it. An event with free text (a rejection reason, an errata
-    /// description) can serialize to more; <c>AuditOutboxProcessor</c> would then fail the whole batch on the
-    /// <c>SaveChanges</c>, leave the rows Pending, and block every audit behind the first one on each poll
-    /// (#4566). The cut keeps the start of the event and ends with an ellipsis, so it is visibly a cut.
+    /// <c>audit_logs.Details</c> is <c>varchar(1024)</c>, and an event with free text (a rejection reason, an errata
+    /// description) can serialize to more (#4566). The cut keeps the start of the event and ends with an ellipsis, so
+    /// it is visibly a cut. Since #5156 <c>AuditOutboxProcessor</c> cuts every column too, and saves each row on its
+    /// own; the cut stays here so that the outbox payload holds what the column will.
     /// </summary>
-    private const int MaxDetailsLength = 1024;
-
     private static string FitToTheColumn(string details) =>
-        details.Length <= MaxDetailsLength ? details : string.Concat(details.AsSpan(0, MaxDetailsLength - 3), "...");
+        ColumnText.Fit(details, AuditLogColumns.DetailsLength);
 
     /// <summary>
     /// Convention-based UserId extraction: probes a priority-ordered list of common actor

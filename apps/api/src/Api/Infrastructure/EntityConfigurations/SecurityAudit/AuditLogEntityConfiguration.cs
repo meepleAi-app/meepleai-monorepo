@@ -19,12 +19,12 @@ internal class AuditLogEntityConfiguration : IEntityTypeConfiguration<AuditLogEn
         builder.Property(e => e.Id).IsRequired();
         builder.Property(e => e.ActorUserId);
         builder.Property(e => e.TargetUserId);
-        builder.Property(e => e.EventType).IsRequired().HasMaxLength(128);
-        builder.Property(e => e.IpAddress).HasMaxLength(64);
-        builder.Property(e => e.UserAgent).HasMaxLength(512);
+        builder.Property(e => e.EventType).IsRequired().HasMaxLength(SecurityAuditLogColumns.EventTypeLength);
+        builder.Property(e => e.IpAddress).HasMaxLength(SecurityAuditLogColumns.IpAddressLength);
+        builder.Property(e => e.UserAgent).HasMaxLength(SecurityAuditLogColumns.UserAgentLength);
         builder.Property(e => e.Timestamp).IsRequired();
         builder.Property(e => e.Metadata);
-        builder.Property(e => e.CorrelationId).HasMaxLength(128);
+        builder.Property(e => e.CorrelationId).HasMaxLength(SecurityAuditLogColumns.CorrelationIdLength);
 
         // Query-pattern indexes (audit dashboards filter by actor/target/type with timestamp ordering)
         builder.HasIndex(e => new { e.ActorUserId, e.Timestamp })

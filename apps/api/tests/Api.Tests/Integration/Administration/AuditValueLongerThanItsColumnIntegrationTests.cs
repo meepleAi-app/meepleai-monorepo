@@ -14,6 +14,7 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -42,6 +43,7 @@ public sealed class AuditValueLongerThanItsColumnIntegrationTests : IAsyncLifeti
 {
     private readonly SharedTestcontainersFixture _fixture;
     private readonly SettableHttpContextAccessor _http = new();
+    private readonly TransientDatabaseFaults _faults = new();
     private string _databaseName = string.Empty;
     private ServiceProvider? _serviceProvider;
 
@@ -57,6 +59,8 @@ public sealed class AuditValueLongerThanItsColumnIntegrationTests : IAsyncLifeti
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
+        // Inert until a test arms one; CreateBase enables the retrying strategy, so a replay can be seen.
+        services.ConfigureDbContext<MeepleAiDbContext>(options => options.AddInterceptors(_faults.Save, _faults.Commit));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditLoggingBehavior<,>));
         services.AddScoped<IUserRepository, UserRepository>();
         // The identity handlers write to security_audit_logs through it; the test of that writer builds its own.
@@ -158,6 +162,45 @@ public sealed class AuditValueLongerThanItsColumnIntegrationTests : IAsyncLifeti
         outbox[refused].LastError.Should().Contain("23502", "the database's own reason, a not-null violation");
 
         (await processor.RunOnceAsync(100, Ct)).Should().Be(0, "the refused row no longer sits Pending at the head of the queue");
+    }
+
+    /// <summary>
+    /// A timeout of a row's save is not a row the database refuses. Npgsql reports it as a transient
+    /// <c>NpgsqlException</c> around a <c>TimeoutException</c>: read on the innermost exception alone it was not
+    /// transient, and the row was marked Failed for good. It propagates, and the strategy replays the batch.
+    /// </summary>
+    [Fact]
+    public async Task ATransientFailureOfARowsSave_ReplaysTheBatch_AndMarksNoRowFailed()
+    {
+        var now = DateTimeOffset.UtcNow;
+        Guid[] ids = [await SeedOutboxRowAsync(Payload(now)), await SeedOutboxRowAsync(Payload(now.AddSeconds(1)))];
+        _faults.Save.Armed = true;
+
+        var processed = await Services.GetRequiredService<AuditOutboxProcessor>().RunOnceAsync(100, Ct);
+
+        _faults.Save.Tripped.Should().BeTrue("a fault that never fired proves nothing");
+        processed.Should().Be(2);
+        (await ReadAuditLogsAsync()).Select(l => l.Id).Should().BeEquivalentTo(ids);
+        (await ReadOutboxAsync()).Should().OnlyContain(r => r.Status == OutboxStatus.Sent);
+    }
+
+    /// <summary>
+    /// The rows are saved one by one inside the batch's transaction: a transient failure of its commit rolls them all
+    /// back, and the replay writes each of them once.
+    /// </summary>
+    [Fact]
+    public async Task ATransientFailureOfTheBatchCommit_ReplaysTheBatch_WithoutDuplicates()
+    {
+        var now = DateTimeOffset.UtcNow;
+        Guid[] ids = [await SeedOutboxRowAsync(Payload(now)), await SeedOutboxRowAsync(Payload(now.AddSeconds(1)))];
+        _faults.Commit.Armed = true;
+
+        var processed = await Services.GetRequiredService<AuditOutboxProcessor>().RunOnceAsync(100, Ct);
+
+        _faults.Commit.Tripped.Should().BeTrue("a fault that never fired proves nothing");
+        processed.Should().Be(2);
+        (await ReadAuditLogsAsync()).Select(l => l.Id).Should().BeEquivalentTo(ids);
+        (await ReadOutboxAsync()).Should().OnlyContain(r => r.Status == OutboxStatus.Sent);
     }
 
     [Fact]

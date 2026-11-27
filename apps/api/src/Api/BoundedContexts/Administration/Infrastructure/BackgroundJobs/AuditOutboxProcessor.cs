@@ -3,8 +3,8 @@ using Api.BoundedContexts.Administration.Application;
 using Api.BoundedContexts.Administration.Infrastructure.Health;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs;
 
@@ -160,7 +160,7 @@ internal sealed class AuditOutboxProcessor : BackgroundService
                     await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 }
 #pragma warning disable CA1031 // Per-row resilience: a row the database refuses must not fail the batch
-                catch (Exception saveEx) when (saveEx is not OperationCanceledException && !IsTransient(saveEx))
+                catch (Exception saveEx) when (saveEx is not OperationCanceledException && !IsInfrastructure(saveEx))
 #pragma warning restore CA1031
                 {
                     await FailTheRefusedRowAsync(db, row, auditLog, saveEx, now, cancellationToken).ConfigureAwait(false);
@@ -260,11 +260,12 @@ internal sealed class AuditOutboxProcessor : BackgroundService
     }
 
     /// <summary>
-    /// A transient database error (deadlock, serialization failure, lost connection) is not a row the database refuses:
-    /// it propagates, and the execution strategy replays the batch.
+    /// A failure of the infrastructure (a timeout, a lost connection, a deadlock) is not a row the database refuses: it
+    /// propagates, and the execution strategy replays the batch. Read on the whole chain (#4839): Npgsql reports a
+    /// timeout as a transient <see cref="Npgsql.NpgsqlException"/> around a <see cref="TimeoutException"/>, so the
+    /// innermost exception alone is not transient, and the row would be marked Failed for good.
     /// </summary>
-    private static bool IsTransient(Exception ex) =>
-        ex.GetBaseException() is NpgsqlException { IsTransient: true };
+    private static bool IsInfrastructure(Exception ex) => PersistenceFailure.IsInfrastructure(ex);
 
     /// <summary>
     /// Queries audit_outbox aggregate counters and pushes them into the singleton

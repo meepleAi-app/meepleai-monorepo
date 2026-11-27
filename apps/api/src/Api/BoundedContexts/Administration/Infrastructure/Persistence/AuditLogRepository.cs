@@ -58,7 +58,8 @@ internal class AuditLogRepository : RepositoryBase, IAuditLogRepository
     public async Task AddAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(auditLog);
-        var entity = MapToPersistence(auditLog);
+        // #5156: the row is saved with the caller's changes, and a value longer than its column would fail them too.
+        var entity = Api.Infrastructure.Entities.AuditLogColumns.FitToColumns(MapToPersistence(auditLog));
         await DbContext.AuditLogs.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 

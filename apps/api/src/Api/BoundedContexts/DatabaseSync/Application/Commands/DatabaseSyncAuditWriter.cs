@@ -44,7 +44,7 @@ internal static class DatabaseSyncAuditWriter
             ResourceId = operationId.ToString(),
             Result = result,
             Details = details,
-        };
+        }.FitToColumns(); // #5156: the details carry the outcome's text, of any length
         dbContext.AuditLogs.Add(entry);
         try
         {

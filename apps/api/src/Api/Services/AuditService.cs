@@ -41,11 +41,13 @@ internal class AuditService
         string? userAgent = null,
         CancellationToken cancellationToken = default)
     {
+        AuditLogEntity? auditLog = null;
         try
         {
             var userGuid = !string.IsNullOrWhiteSpace(userId) && Guid.TryParse(userId, out var parsed) ? (Guid?)parsed : null;
 
-            var auditLog = new AuditLogEntity
+            // #5156: cut to the columns — the User-Agent, for one, is the client's header.
+            auditLog = new AuditLogEntity
             {
                 UserId = userGuid,
                 Action = action,
@@ -56,7 +58,7 @@ internal class AuditService
                 IpAddress = ipAddress,
                 UserAgent = userAgent,
                 CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
-            };
+            }.FitToColumns();
 
             _db.AuditLogs.Add(auditLog);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -65,6 +67,13 @@ internal class AuditService
         catch (Exception ex)
 #pragma warning restore CA1031
         {
+            // #5156: the context is the caller's. Left Added, the refused row would be written again by the caller's
+            // next SaveChanges, and fail it: the audit would break the business operation after all.
+            if (auditLog is not null)
+            {
+                _db.Entry(auditLog).State = EntityState.Detached;
+            }
+
             // RESILIENCE PATTERN: Audit logging must never fail business operations
             // Rationale: Auditing is a secondary concern - failing a user request because
             // we cannot write an audit log violates fail-safe principles. We log the error

@@ -562,7 +562,10 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
                 Status = session.Status.ToString(),
                 WinnerId = session.WinnerId,
                 StartedAt = session.StartedAt,
-                CompletedAt = session.CompletedAt
+                CompletedAt = session.CompletedAt,
+                // #5165: the reconcile writes every column of an existing link; left out, a save of the night
+                // for any other reason would clear the mark the pause left.
+                ReleasedByPause = session.ReleasedByPause
             });
         }
 
@@ -665,7 +668,8 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
                         nameof(s.Status)),
                     winnerId: s.WinnerId,
                     startedAt: s.StartedAt,
-                    completedAt: s.CompletedAt))
+                    completedAt: s.CompletedAt,
+                    releasedByPause: s.ReleasedByPause))
                 .ToList();
 
             evt.RestoreSessions(sessions);

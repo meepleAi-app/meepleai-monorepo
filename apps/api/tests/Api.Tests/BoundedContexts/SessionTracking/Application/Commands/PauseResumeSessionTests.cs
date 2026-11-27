@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
@@ -171,6 +172,11 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             BuildCreateCommand(userId, gameId1),
             TestCancellationToken);
 
+        // #5165: the first game holds the night's slot (as if it had gone live) before it is paused. A direct create is
+        // a draft, and since #5165 the resume of a draft leaves the night's game in progress alone: this test is about a
+        // resume that takes its slot back.
+        await PromoteLinkToInProgressAsync(first.SessionId);
+
         // Arrange — pause it through the production handler (also exercises the diary write).
         await _pauseHandler!.Handle(
             new PauseSessionCommand(first.SessionId, userId),
@@ -230,6 +236,145 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             .ToListAsync(TestCancellationToken);
         autoPauseEvents.Should().HaveCount(1);
         autoPauseEvents[0].Payload.Should().Contain("auto_pause_on_resume");
+
+        // #5165: the links say the same. The resumed game holds the slot again; the auto-paused one gave it up to a
+        // pause, so its own resume will take it back.
+        var firstLink = await ReadLinkAsync(first.SessionId);
+        firstLink.Status.Should().Be(nameof(GameNightSessionStatus.InProgress));
+        firstLink.ReleasedByPause.Should().BeFalse();
+        var secondLink = await ReadLinkAsync(secondSessionId);
+        secondLink.Status.Should().Be(nameof(GameNightSessionStatus.Pending));
+        secondLink.ReleasedByPause.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// #5165 — the link of the resumed session was read without tracking, and the assignment that takes the slot back
+    /// reached nothing: after pause and resume the session was Active, its link Pending, and the night had no game in
+    /// progress, so «Completa partita» answered 409 and another game of the night could go live.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5165")]
+    public async Task PauseThenResume_OfAGameThatHeldTheSlot_TakesTheSlotBack()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var created = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        await PromoteLinkToInProgressAsync(created.SessionId);
+
+        await _pauseHandler!.Handle(new PauseSessionCommand(created.SessionId, userId), TestCancellationToken);
+
+        var paused = await ReadLinkAsync(created.SessionId);
+        paused.Status.Should().Be(nameof(GameNightSessionStatus.Pending), "the pause frees the night's slot");
+        paused.ReleasedByPause.Should().BeTrue("and says it did");
+
+        _dbContext!.ChangeTracker.Clear();
+        await _resumeHandler!.Handle(new ResumeSessionCommand(created.SessionId, userId), TestCancellationToken);
+
+        var resumed = await ReadLinkAsync(created.SessionId);
+        resumed.Status.Should().Be(nameof(GameNightSessionStatus.InProgress), "the resume takes the slot back");
+        resumed.ReleasedByPause.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// #5165 — a draft (a link that was never InProgress) paused and resumed stays a draft. Taking the slot would have
+    /// made it the night's game in progress without a go-live, and paused the game that was really being played.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5165")]
+    public async Task PauseThenResume_OfADraft_LeavesItADraft_AndTheGameInProgressAlone()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var draft = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        await _pauseHandler!.Handle(new PauseSessionCommand(draft.SessionId, userId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+        var liveSessionId = await SeedAdditionalActiveSessionInNightAsync(userId, gameId, draft.GameNightEventId);
+        _dbContext.ChangeTracker.Clear();
+
+        await _resumeHandler!.Handle(new ResumeSessionCommand(draft.SessionId, userId), TestCancellationToken);
+
+        _dbContext.ChangeTracker.Clear();
+        (await _dbContext.SessionTrackingSessions.AsNoTracking().FirstAsync(s => s.Id == draft.SessionId, TestCancellationToken))
+            .Status.Should().Be(nameof(SessionStatus.Active), "the session itself is resumed");
+        var draftLink = await ReadLinkAsync(draft.SessionId);
+        draftLink.Status.Should().Be(nameof(GameNightSessionStatus.Pending), "a draft does not become the game in progress");
+        draftLink.ReleasedByPause.Should().BeFalse();
+
+        (await ReadLinkAsync(liveSessionId)).Status.Should().Be(nameof(GameNightSessionStatus.InProgress),
+            "the game the night has in progress keeps its slot");
+        (await _dbContext.SessionTrackingSessions.AsNoTracking().FirstAsync(s => s.Id == liveSessionId, TestCancellationToken))
+            .Status.Should().Be(nameof(SessionStatus.Active), "and is not paused for a draft");
+    }
+
+    /// <summary>
+    /// #5165 with #5158 — the first commit of the resume fails and the strategy replays it. The link the failed attempt
+    /// had already given the slot back is read again from the database, not taken from the tracker as the attempt left
+    /// it, so the replay still takes the slot back.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5165")]
+    public async Task Resume_WhoseFirstCommitFailed_StillTakesTheSlotBack()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var created = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        await PromoteLinkToInProgressAsync(created.SessionId);
+        await _pauseHandler!.Handle(new PauseSessionCommand(created.SessionId, userId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        _faults.Commit.Armed = true;
+        await _resumeHandler!.Handle(new ResumeSessionCommand(created.SessionId, userId), TestCancellationToken);
+
+        _faults.Commit.Tripped.Should().BeTrue("the first commit must have failed, or this proves nothing");
+        var link = await ReadLinkAsync(created.SessionId);
+        link.Status.Should().Be(nameof(GameNightSessionStatus.InProgress));
+        link.ReleasedByPause.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// #5165 — the night's repository writes every column of an existing link when it saves the night. Without the
+    /// mark in the aggregate and its mapping, a save of the night for any other reason between the pause and the resume
+    /// would clear it, and the resume would no longer take the slot back.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "5165")]
+    public async Task ASaveOfTheNightBetweenPauseAndResume_KeepsTheMark()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var created = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        await PromoteLinkToInProgressAsync(created.SessionId);
+        await _pauseHandler!.Handle(new PauseSessionCommand(created.SessionId, userId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        var nights = new Api.BoundedContexts.GameManagement.Infrastructure.Persistence.GameNightEventRepository(
+            _dbContext,
+            _serviceProvider!.GetRequiredService<IDomainEventCollector>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Api.BoundedContexts.GameManagement.Infrastructure.Persistence.GameNightEventRepository>.Instance);
+        var night = await nights.GetByIdAsync(created.GameNightEventId, TestCancellationToken);
+        night.Should().NotBeNull();
+        await nights.UpdateAsync(night!, TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        (await ReadLinkAsync(created.SessionId)).ReleasedByPause.Should().BeTrue();
+    }
+
+    /// <summary>Gives the session's link the night's slot, as a go-live does (#3866: set-based, the read is detached).</summary>
+    private async Task PromoteLinkToInProgressAsync(Guid sessionId)
+    {
+        var promoted = await _dbContext!.GameNightSessions
+            .Where(l => l.SessionId == sessionId)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(l => l.Status, nameof(GameNightSessionStatus.InProgress))
+                    .SetProperty(l => l.StartedAt, DateTimeOffset.UtcNow),
+                TestCancellationToken);
+        promoted.Should().Be(1, "the session's link must exist to hold the slot");
+        _dbContext.ChangeTracker.Clear();
+    }
+
+    private async Task<Api.Infrastructure.Entities.GameManagement.GameNightSessionEntity> ReadLinkAsync(Guid sessionId)
+    {
+        _dbContext!.ChangeTracker.Clear();
+        return await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .FirstAsync(l => l.SessionId == sessionId, TestCancellationToken);
     }
 
     /// <summary>

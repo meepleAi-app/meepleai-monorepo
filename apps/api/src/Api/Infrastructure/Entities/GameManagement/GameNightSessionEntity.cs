@@ -49,6 +49,10 @@ public class GameNightSessionEntity
     [Column("completed_at")]
     public DateTimeOffset? CompletedAt { get; set; }
 
+    /// <summary>#5165: a pause took the link out of InProgress; the resume takes the night's slot back.</summary>
+    [Column("released_by_pause")]
+    public bool ReleasedByPause { get; set; }
+
     /// <summary>Issue #1928 Task B (DEC-B-8) — E2E test seeding scope marker.</summary>
     [Column("test_run_id")]
     [MaxLength(64)]

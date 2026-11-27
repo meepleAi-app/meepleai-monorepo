@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -268,57 +267,41 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
             "Finding 1 in the security review is still open.");
     }
 
+    /// <summary>
+    /// #5178: a token of the same length with only the last character different is the case the length check does not
+    /// catch: only the comparison itself refuses it. It replaces a wall-clock test of the whole registration, which could
+    /// not see a variable-time comparison (nanoseconds) and failed on database noise. That the comparison is constant-time
+    /// is held by <c>ConstantTimeComparisonArchitectureTests</c>.
+    /// </summary>
     [Fact]
-    public async Task BootstrapAdminToken_ConstantTimeCompare_NoTimingLeak()
+    public async Task Register_WithANearMissBootstrapToken_IsAPlainUser_AndTheClaimStaysOpen()
     {
-        // Smoke test only. Construct a near-miss token (same length, last
-        // char different) and assert the wall-clock difference between a
-        // matching compare and a near-miss compare is small enough that an
-        // attacker can't trivially distinguish them by remote timing.
-        // Coarse threshold (75ms) absorbs HTTP + Mediator noise; a regression
-        // to plain-string compare would still register as 0ms vs ~PBKDF2-time
-        // because the bootstrap path runs first.
-        const int Iterations = 8;
-        var nearMiss = BootstrapToken[..^1] + "X"; // same length
+        var nearMiss = BootstrapToken[..^1] + "X";
+        nearMiss.Should().HaveLength(BootstrapToken.Length).And.NotBe(BootstrapToken);
 
-        var matchTimings = new List<long>(Iterations);
-        var missTimings = new List<long>(Iterations);
-
-        for (var i = 0; i < Iterations; i++)
+        var refused = await _client.PostAsJsonAsync(Endpoint, new
         {
-            var sw = Stopwatch.StartNew();
-            await _client.PostAsJsonAsync(Endpoint, new
-            {
-                Email = $"timing-match-{Guid.NewGuid():N}@test.local",
-                Password = "ValidUnusualPwd123!",
-                DisplayName = $"Match {i}",
-                BootstrapToken,
-                TermsAccepted = true
-            });
-            sw.Stop();
-            matchTimings.Add(sw.ElapsedMilliseconds);
+            Email = $"near-miss-{Guid.NewGuid():N}@test.local",
+            Password = "ValidUnusualPwd123!",
+            DisplayName = "Near Miss",
+            BootstrapToken = nearMiss,
+            TermsAccepted = true
+        });
 
-            sw.Restart();
-            await _client.PostAsJsonAsync(Endpoint, new
-            {
-                Email = $"timing-miss-{Guid.NewGuid():N}@test.local",
-                Password = "ValidUnusualPwd123!",
-                DisplayName = $"Miss {i}",
-                BootstrapToken = nearMiss,
-                TermsAccepted = true
-            });
-            sw.Stop();
-            missTimings.Add(sw.ElapsedMilliseconds);
-        }
+        refused.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadRoleAsync(refused)).Should().Be("user", "a token one character away must never escalate privileges");
 
-        var matchMedian = Median(matchTimings);
-        var missMedian = Median(missTimings);
-        var diff = Math.Abs(matchMedian - missMedian);
+        var claimed = await _client.PostAsJsonAsync(Endpoint, new
+        {
+            Email = $"after-near-miss-{Guid.NewGuid():N}@test.local",
+            Password = "ValidUnusualPwd123!",
+            DisplayName = "After Near Miss",
+            BootstrapToken,
+            TermsAccepted = true
+        });
 
-        diff.Should().BeLessThan(75,
-            $"match-median={matchMedian}ms vs miss-median={missMedian}ms — a >75ms " +
-            "delta hints the token comparison is not constant-time. " +
-            "Reach for CryptographicOperations.FixedTimeEquals.");
+        (await ReadRoleAsync(claimed)).Should().Be("admin",
+            "the refused token did not use up the single-use claim: the right one still makes the first admin");
     }
 
     private static async Task<string?> ReadRoleAsync(HttpResponseMessage response)
@@ -327,13 +310,5 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
         if (!body.TryGetProperty("user", out var user)) return null;
         if (!user.TryGetProperty("role", out var role)) return null;
         return role.GetString();
-    }
-
-    private static long Median(List<long> values)
-    {
-        values.Sort();
-        return values.Count % 2 == 1
-            ? values[values.Count / 2]
-            : (values[(values.Count / 2) - 1] + values[values.Count / 2]) / 2;
     }
 }

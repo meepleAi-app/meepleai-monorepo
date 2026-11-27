@@ -95,22 +95,12 @@ internal sealed class ProvisionAndInviteUserCommandHandler : ICommandHandler<Pro
             tokenHash,
             command.InvitedByUserId);
 
-        // 6. Add game suggestions to token
-        if (command.GameSuggestions is { Count: > 0 })
-        {
-            foreach (var suggestion in command.GameSuggestions)
-            {
-                var suggestionType = Enum.Parse<GameSuggestionType>(suggestion.Type, ignoreCase: true);
-                invitation.AddGameSuggestion(suggestion.GameId, suggestionType);
-            }
-        }
-
-        // 7. Save user + token via repositories + IUnitOfWork.SaveChangesAsync()
+        // 6. Save user + token via repositories + IUnitOfWork.SaveChangesAsync()
         await _userRepo.AddAsync(pendingUser, cancellationToken).ConfigureAwait(false);
         await _invitationRepo.AddAsync(invitation, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // 8. Try send email (fire-and-forget pattern): catch exceptions, log, set emailSent = false
+        // 7. Try send email (fire-and-forget pattern): catch exceptions, log, set emailSent = false
         // #5173: this invitation's user already exists (Pending), so its email links /setup-account, which activates
         // that user. The base overload links /accept-invite, which creates a user — a second one with this email,
         // refused by the unique index. The inviter is «Admin», as in the other two invitation emails; the invitee's
@@ -136,16 +126,12 @@ internal sealed class ProvisionAndInviteUserCommandHandler : ICommandHandler<Pro
         }
 #pragma warning restore CA1031
 
-        // 9. Return InvitationDto with EmailSent status
+        // 8. Return InvitationDto with EmailSent status
         return MapToDto(invitation, emailSent, rawToken);
     }
 
     private static InvitationDto MapToDto(InvitationToken invitation, bool emailSent, string? rawToken = null)
     {
-        var gameSuggestions = invitation.GameSuggestions
-            .Select(gs => new GameSuggestionDto(gs.GameId, gs.Type.ToString()))
-            .ToList();
-
         return new InvitationDto(
             Id: invitation.Id,
             Email: invitation.Email,
@@ -156,7 +142,6 @@ internal sealed class ProvisionAndInviteUserCommandHandler : ICommandHandler<Pro
             AcceptedAt: invitation.AcceptedAt,
             InvitedByUserId: invitation.InvitedByUserId,
             EmailSent: emailSent,
-            GameSuggestions: gameSuggestions,
             Token: rawToken);
     }
 }

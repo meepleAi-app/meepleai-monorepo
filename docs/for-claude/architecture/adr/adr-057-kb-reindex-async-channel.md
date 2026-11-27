@@ -84,5 +84,6 @@ This means the persistent-status decision is the durable architectural commitmen
 - PR #928 (the synchronous-pretending-async original — SG2 closes #903)
 - Pattern reference: `Api.BoundedContexts.Authentication.Infrastructure.Services.GameSuggestionChannel`
 - Background service reference: `Api.Infrastructure.BackgroundServices.GameSuggestionProcessorService`
+- **Nota del 2026-11-27 (#5174):** i due riferimenti qui sopra, e il pattern che l'ADR cita come precedente, non esistono più: sono stati tolti con i giochi suggeriti all'invito. Il pattern resta quello di `KbReindexChannel` e `KbReindexProcessorService`.
 - ADR-056 (UoW uniformity — the status row write follows the same pattern)
 - EPIC #906 (parent, closed)

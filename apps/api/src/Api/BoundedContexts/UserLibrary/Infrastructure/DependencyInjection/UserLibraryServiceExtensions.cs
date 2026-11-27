@@ -26,15 +26,12 @@ internal static class UserLibraryServiceExtensions
         services.AddScoped<IProposalMigrationRepository, ProposalMigrationRepository>(); // Issue #3666: Migration choice flow
         services.AddScoped<IWishlistRepository, WishlistRepository>(); // Issue #3917: Wishlist management
         services.AddScoped<IUserCollectionRepository, UserCollectionRepository>(); // Issue #4263: Generic user collections
-        services.AddScoped<IGameSuggestionRepository, GameSuggestionRepository>(); // Admin Invitation Flow: game suggestions
         services.AddScoped<IUserHandRepository, UserHandRepository>(); // La Mia Mano: hand slots
 
         // Register domain services
         services.AddScoped<IGameLibraryQuotaService, GameLibraryQuotaService>();
 
         // Register event handlers (consumed by background services via DI scope)
-        services.AddScoped<GamePreAddedHandler>(); // Admin Invitation Flow: pre-add games to library
-        services.AddScoped<GameSuggestedHandler>(); // Admin Invitation Flow: create game suggestions
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

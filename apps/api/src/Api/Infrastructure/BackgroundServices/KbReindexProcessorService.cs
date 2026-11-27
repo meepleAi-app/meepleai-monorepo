@@ -9,8 +9,8 @@ namespace Api.Infrastructure.BackgroundServices;
 
 /// <summary>
 /// Background service that consumes <see cref="KbReindexChannel"/> and runs the
-/// per-PDF reindex work asynchronously. Pattern mirrors
-/// <see cref="GameSuggestionProcessorService"/>.
+/// per-PDF reindex work asynchronously. It mirrored the invitation game-suggestion processor, removed with that
+/// feature (#5174).
 ///
 /// Issue #941 / ADR-057.
 /// </summary>

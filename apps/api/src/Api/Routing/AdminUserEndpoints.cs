@@ -78,8 +78,7 @@ internal record ProvisionAndInviteRequest(
     string Role,
     string? Tier = "free",
     string? CustomMessage = null,
-    int? ExpiresInDays = 7,
-    List<GameSuggestionDto>? GameSuggestions = null);
+    int? ExpiresInDays = 7);
 
 /// <summary>
 /// Request payload for changing a user's role (Issue #124).

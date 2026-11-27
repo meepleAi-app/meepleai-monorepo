@@ -635,7 +635,6 @@ internal static class InfrastructureServiceExtensions
 
         // Admin Invitation Flow: background services for invitation lifecycle
         services.AddHostedService<Infrastructure.BackgroundServices.InvitationCleanupService>();
-        services.AddHostedService<Infrastructure.BackgroundServices.GameSuggestionProcessorService>();
 
         // Issue #3695: Daily database metrics snapshots for growth tracking
         services.AddHostedService<Infrastructure.BackgroundServices.DatabaseMetricsSnapshotService>();

@@ -347,9 +347,12 @@ public class UserRepository : RepositoryBase, IUserRepository
             : PasswordHash.FromStored(entity.PasswordHash!);
         var role = Role.Parse(entity.Role);
         var tier = !string.IsNullOrWhiteSpace(entity.Tier) ? UserTier.Parse(entity.Tier) : UserTier.Free;
-        var displayName = string.IsNullOrWhiteSpace(entity.DisplayName)
-            ? entity.Email
-            : entity.DisplayName ?? entity.Email;
+        // #5160: never the email address. The column is NOT NULL with a generated default, and a migration gave a
+        // generated name to the rows that held nothing or an address: the generated names are made when a row is
+        // written, not here. A name that is still blank (an explicit "", or an entity built in memory without one)
+        // stays blank, so that the readers who show it to others put their neutral name in its place (#4780) — a name
+        // generated at each read would change at every request.
+        var displayName = entity.DisplayName ?? string.Empty;
 
         var user = new User(
             id: entity.Id,

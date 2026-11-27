@@ -12,7 +12,13 @@ internal class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasMaxLength(64);
         builder.Property(e => e.Email).IsRequired().HasMaxLength(256);
-        builder.Property(e => e.DisplayName).HasMaxLength(128);
+        // #5160: never NULL in the database. A row inserted without a name gets a generated one there (EF leaves a null
+        // string out of the INSERT when the column has a default), the same shape GeneratedDisplayName makes; the
+        // migration UsersDisplayNameNotNullWithGeneratedDefault sets the column NOT NULL. Not IsRequired() here: the
+        // InMemory provider would then refuse every test entity built without a name, since it knows no SQL default.
+        builder.Property(e => e.DisplayName)
+            .HasMaxLength(128)
+            .HasDefaultValueSql(Api.BoundedContexts.Authentication.Domain.Constants.GeneratedDisplayName.SqlExpression);
         builder.Property(e => e.PasswordHash).IsRequired(false); // Nullable for OAuth-only users
         builder.Property(e => e.Role)
             .HasConversion<string>()

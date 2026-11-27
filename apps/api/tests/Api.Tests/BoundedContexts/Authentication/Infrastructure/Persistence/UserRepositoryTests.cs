@@ -285,12 +285,14 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         persisted.TwoFactorEnabledAt.Should().NotBeNull();
     }
     /// <summary>
-    /// #4780 — <c>MapToDomain</c> fills a missing name with the address, because the domain needs one, and
+    /// #4780 — <c>MapToDomain</c> filled a missing name with the address, because the domain needs one, and
     /// <c>UpdateAsync</c> wrote the domain name back: any update of a user without a name stored the address as
-    /// their name, where every reader of the column shows it to other users.
+    /// their name, where every reader of the column shows it to other users. #5160: a user inserted without a name has
+    /// a generated one from the database, and an update keeps it.
     /// </summary>
     [Fact]
     [Trait("Issue", "4780")]
+    [Trait("Issue", "5160")]
     public async Task UpdateAsync_AUserWithoutAName_DoesNotStoreTheAddressAsTheName()
     {
         await ResetDatabaseAsync();
@@ -317,30 +319,9 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var stored = await DbContext.Users.AsNoTracking()
             .Where(u => u.Id == id).Select(u => new { u.DisplayName, u.Language }).SingleAsync(TestCancellationToken);
         stored.Language.Should().Be("it", "the update itself is saved");
-        stored.DisplayName.Should().BeNull("the address the domain was given in place of a name is not a name");
-    }
-
-    /// <summary>
-    /// #4780, review of #5161 — the user was read without a name, so with the address as one, and another request set
-    /// a real name before the update. The filler was left out only while the column was blank: it overwrote the name.
-    /// </summary>
-    [Fact]
-    [Trait("Issue", "4780")]
-    public async Task UpdateAsync_AStaleFiller_DoesNotOverwriteANameSetSince()
-    {
-        await ResetDatabaseAsync();
-        var id = await SeedUserWithoutANameAsync("stale@example.com");
-
-        var user = await Repository.GetByIdAsync(id, TestCancellationToken);
-        await DbContext.Users.Where(u => u.Id == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(u => u.DisplayName, "Marta"), TestCancellationToken);
-        user!.UpdatePreferences("it", "dark", emailNotifications: true, dataRetentionDays: 90);
-        await Repository.UpdateAsync(user, TestCancellationToken);
-        await DbContext.SaveChangesAsync(TestCancellationToken);
-        DbContext.ChangeTracker.Clear();
-
-        (await DbContext.Users.AsNoTracking().Where(u => u.Id == id).Select(u => u.DisplayName).SingleAsync(TestCancellationToken))
-            .Should().Be("Marta");
+        stored.DisplayName.Should().NotBe("noname@example.com", "an address is not a name");
+        Api.BoundedContexts.Authentication.Domain.Constants.GeneratedDisplayName.IsGenerated(stored.DisplayName).Should()
+            .BeTrue("the database gave the row a generated name, and the update kept it");
     }
 
     /// <summary>#4780 — the new address is not written as a name either, when the address changes with it.</summary>
@@ -366,24 +347,6 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
             .Where(u => u.Id == user.Id).Select(u => new { u.DisplayName, u.Email }).SingleAsync(TestCancellationToken);
         stored.Email.Should().Be("after@example.com", "the update itself is saved");
         stored.DisplayName.Should().Be("Marta");
-    }
-
-    private async Task<Guid> SeedUserWithoutANameAsync(string email)
-    {
-        var id = Guid.NewGuid();
-        DbContext.Users.Add(new Api.Infrastructure.Entities.UserEntity
-        {
-            Id = id,
-            Email = email,
-            PasswordHash = PasswordHash.Create("UnusualPwd123!").Value,
-            DisplayName = null,
-            Role = "user",
-            Tier = "free",
-            CreatedAt = DateTime.UtcNow,
-        });
-        await DbContext.SaveChangesAsync(TestCancellationToken);
-        DbContext.ChangeTracker.Clear();
-        return id;
     }
 
     [Fact]

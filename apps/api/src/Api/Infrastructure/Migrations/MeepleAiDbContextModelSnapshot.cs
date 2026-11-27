@@ -14985,8 +14985,10 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue(90);
 
                     b.Property<string>("DisplayName")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasColumnType("character varying(128)")
+                        .HasDefaultValueSql("'Player-' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 7)");
 
                     b.Property<string>("Email")
                         .IsRequired()

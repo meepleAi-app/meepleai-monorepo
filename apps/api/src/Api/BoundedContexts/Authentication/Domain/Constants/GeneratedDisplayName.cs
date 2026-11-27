@@ -22,6 +22,14 @@ internal static class GeneratedDisplayName
         string.Concat(Prefix, Guid.NewGuid().ToString("N").AsSpan(0, SuffixLength));
 
     /// <summary>
+    /// #5160 — the same name made by PostgreSQL: the default of <c>users."DisplayName"</c>, so that a row inserted
+    /// without a name gets one instead of a NULL every reader would have to replace with something (it used to be the
+    /// email address). <c>gen_random_uuid()</c> is lowercase hex, as <c>Guid.ToString("N")</c>; a test holds the two to
+    /// the same shape through <see cref="IsGenerated"/>.
+    /// </summary>
+    public const string SqlExpression = "'Player-' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 7)";
+
+    /// <summary>
     /// Whether <paramref name="displayName"/> is exactly the shape <see cref="Create"/> produces. Not trimmed and
     /// case-sensitive: it judges the stored value.
     /// </summary>

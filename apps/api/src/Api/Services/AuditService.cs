@@ -41,13 +41,13 @@ internal class AuditService
         string? userAgent = null,
         CancellationToken cancellationToken = default)
     {
-        AuditLogEntity? auditLog = null;
+        AuditLogEntity? added = null;
         try
         {
             var userGuid = !string.IsNullOrWhiteSpace(userId) && Guid.TryParse(userId, out var parsed) ? (Guid?)parsed : null;
 
             // #5156: cut to the columns — the User-Agent, for one, is the client's header.
-            auditLog = new AuditLogEntity
+            var auditLog = new AuditLogEntity
             {
                 UserId = userGuid,
                 Action = action,
@@ -61,6 +61,7 @@ internal class AuditService
             }.FitToColumns();
 
             _db.AuditLogs.Add(auditLog);
+            added = auditLog;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -68,10 +69,11 @@ internal class AuditService
 #pragma warning restore CA1031
         {
             // #5156: the context is the caller's. Left Added, the refused row would be written again by the caller's
-            // next SaveChanges, and fail it: the audit would break the business operation after all.
-            if (auditLog is not null)
+            // next SaveChanges, and fail it: the audit would break the business operation after all. Only a row that
+            // was added is detached, so that nothing here can throw when the add itself was what failed.
+            if (added is not null)
             {
-                _db.Entry(auditLog).State = EntityState.Detached;
+                _db.Entry(added).State = EntityState.Detached;
             }
 
             // RESILIENCE PATTERN: Audit logging must never fail business operations

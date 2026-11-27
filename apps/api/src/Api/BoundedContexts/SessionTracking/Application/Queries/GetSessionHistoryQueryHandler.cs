@@ -41,10 +41,13 @@ public class GetSessionHistoryQueryHandler : IRequestHandler<GetSessionHistoryQu
                 ParticipantsNames = string.Join(", ", s.Participants
                     .OrderBy(p => p.JoinOrder)
                     .Select(p => p.DisplayName)),
-                WinnerName = s.Participants
-                    .Where(p => p.FinalRank == 1)
-                    .Select(p => p.DisplayName)
-                    .FirstOrDefault(),
+                // #4780: a tie at the top (1, 1, 3) has no winner; FirstOrDefault named whichever of the two came first.
+                WinnerName = s.Participants.Count(p => p.FinalRank == 1) == 1
+                    ? s.Participants
+                        .Where(p => p.FinalRank == 1)
+                        .Select(p => p.DisplayName)
+                        .FirstOrDefault()
+                    : null,
                 DurationMinutes = s.FinalizedAt.HasValue
                     ? (int)(s.FinalizedAt.Value - s.SessionDate).TotalMinutes
                     : 0,

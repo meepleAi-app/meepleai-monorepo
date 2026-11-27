@@ -102,4 +102,39 @@ public class FinalizeSessionCommandValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(command.FinalRanks));
     }
+
+    /// <summary>
+    /// #4780 — the ranks of a live game are a competition ranking: players who tie share the rank, and the next rank
+    /// skips the places they took. «Consecutive from 1 to N» refused every tie, so the live ranks could not be kept.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData(new[] { 1, 1, 3 })]
+    [InlineData(new[] { 1, 2, 2 })]
+    [InlineData(new[] { 1, 1, 1 })]
+    [InlineData(new[] { 1, 2, 2, 4 })]
+    public void Validate_ACompetitionRankingWithTies_Passes(int[] ranks)
+    {
+        _validator.Validate(CommandWith(ranks)).IsValid.Should().BeTrue();
+    }
+
+    /// <summary>A tie does not open the door to gaps: after two players tied at 1, the next is 3, never 2 or 4.</summary>
+    [Theory]
+    [Trait("Issue", "4780")]
+    [InlineData(new[] { 1, 1, 2 })]
+    [InlineData(new[] { 1, 1, 4 })]
+    [InlineData(new[] { 2, 2 })]
+    [InlineData(new[] { 1, 2, 2, 3 })]
+    public void Validate_ARankingThatIsNotACompetitionRanking_Fails(int[] ranks)
+    {
+        var result = _validator.Validate(CommandWith(ranks));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(FinalizeSessionCommand.FinalRanks));
+    }
+
+    private static FinalizeSessionCommand CommandWith(int[] ranks) => new(
+        SessionId: Guid.NewGuid(),
+        FinalRanks: ranks.ToDictionary(_ => Guid.NewGuid(), rank => rank),
+        RequestedBy: Guid.NewGuid());
 }

@@ -432,6 +432,87 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
             .FinalizedAt.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// #4780 — the finalize never wrote the ranks on the tracking participants («known limitation»), and three readers
+    /// read that column: the history's winner (<c>FinalRank == 1</c>), the night recap's leaderboard and the export.
+    /// When the game ends from the live, the participants now keep the live ranks.
+    /// </summary>
+    [Fact(DisplayName = "Completing the live game keeps its ranks on the tracking participants, and the history names the winner")]
+    [Trait("Issue", "4780")]
+    public async Task CompletingTheLiveGame_KeepsTheLiveRanks_OnTheTrackingParticipants()
+    {
+        var (organizer, friend, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+        var liveId = started.LiveSessionId!.Value;
+        await RecordScoresAsync(liveId, (organizer, 3), (friend, 9), (_secondFriend, 1));
+
+        await SendAsync(new CompleteLiveSessionCommand(liveId));
+        await SendAsync(new CompleteNightLinkForLiveSessionCommand(liveId));
+
+        var participants = await TrackingParticipantsAsync(started.SessionId);
+        participants.ToDictionary(p => p.UserId!.Value, p => p.FinalRank).Should().BeEquivalentTo(
+            new Dictionary<Guid, int?> { [friend] = 1, [organizer] = 2, [_secondFriend] = 3 },
+            "the ranks the live game's scores decided");
+
+        var history = await SendAsync(new Api.BoundedContexts.SessionTracking.Application.Queries.GetSessionHistoryQuery(
+            organizer, GameId: null, Limit: 10, Offset: 0));
+        history.Single(h => h.Id == started.SessionId).WinnerName.Should()
+            .Be(participants.Single(p => p.UserId == friend).DisplayName);
+    }
+
+    /// <summary>
+    /// #4780 — a tie at the top is a competition ranking, 1, 1, 3, and gives no winner: not on the night's link, and
+    /// not in the history, which named whichever of the two it found first.
+    /// </summary>
+    [Fact(DisplayName = "A tie at the top keeps 1, 1, 3 on the tracking participants, and the history names no winner")]
+    [Trait("Issue", "4780")]
+    public async Task CompletingTheLiveGame_WithATie_KeepsTheSharedRank_AndNamesNoWinner()
+    {
+        var (organizer, friend, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+        var liveId = started.LiveSessionId!.Value;
+        await RecordScoresAsync(liveId, (organizer, 5), (friend, 5), (_secondFriend, 1));
+
+        await SendAsync(new CompleteLiveSessionCommand(liveId));
+        await SendAsync(new CompleteNightLinkForLiveSessionCommand(liveId));
+
+        var participants = await TrackingParticipantsAsync(started.SessionId);
+        participants.ToDictionary(p => p.UserId!.Value, p => p.FinalRank).Should().BeEquivalentTo(
+            new Dictionary<Guid, int?> { [organizer] = 1, [friend] = 1, [_secondFriend] = 3 });
+
+        var history = await SendAsync(new Api.BoundedContexts.SessionTracking.Application.Queries.GetSessionHistoryQuery(
+            organizer, GameId: null, Limit: 10, Offset: 0));
+        history.Single(h => h.Id == started.SessionId).WinnerName.Should().BeNull("two players share first place");
+    }
+
+    /// <summary>
+    /// #4780 — completing from the night with a chosen winner (no live ranks) keeps the ranks it always built: the
+    /// winner 1, the others in join order. They used not to be written at all.
+    /// </summary>
+    [Fact(DisplayName = "Completing from the night with a winner writes the winner as rank 1 on the tracking participants")]
+    [Trait("Issue", "4780")]
+    public async Task CompletingTheGameFromTheNight_WritesTheWinnersRank()
+    {
+        var (organizer, friend, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+        var friendParticipant = (await TrackingParticipantsAsync(started.SessionId)).Single(p => p.UserId == friend);
+
+        await SendAsync(new CompleteGameNightSessionCommand(nightId, friendParticipant.Id, organizer));
+
+        var participants = await TrackingParticipantsAsync(started.SessionId);
+        participants.Single(p => p.UserId == friend).FinalRank.Should().Be(1);
+        participants.Where(p => p.UserId != friend).Select(p => p.FinalRank).Should().BeEquivalentTo(new int?[] { 2, 3 });
+    }
+
+    private async Task<List<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity>> TrackingParticipantsAsync(Guid sessionId)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>().SessionTrackingParticipants
+            .AsNoTracking()
+            .Where(p => p.SessionId == sessionId)
+            .ToListAsync();
+    }
+
     [Fact(DisplayName = "Completing the game from the night with a winner works for three players (ranks must be 1..N)")]
     public async Task CompletingTheGameFromTheNight_WithAWinner_WorksForThreePlayers()
     {

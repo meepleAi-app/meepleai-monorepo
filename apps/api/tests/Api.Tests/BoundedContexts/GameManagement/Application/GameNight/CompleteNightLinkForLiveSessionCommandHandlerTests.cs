@@ -297,4 +297,94 @@ public sealed class CompleteNightLinkForLiveSessionCommandHandlerTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
+
+    // ── #4780: the live ranks, kept on the tracking participants ─────────────────────────────
+
+    private static ParticipantDto Participant(Guid? userId, string name, int joinOrder) =>
+        new() { Id = Guid.NewGuid(), UserId = userId, DisplayName = name, JoinOrder = joinOrder };
+
+    [Fact]
+    [Trait("Issue", "4780")]
+    public void LiveRanks_KeepTheLiveOrder_AndATieSharesTheRank()
+    {
+        Guid a = Guid.NewGuid(), b = Guid.NewGuid(), c = Guid.NewGuid();
+        var live = Live(Guid.NewGuid(), complete: true, (a, "A", 1), (b, "B", 5), (c, "C", 5));
+        var pa = Participant(a, "A", 1);
+        var pb = Participant(b, "B", 2);
+        var pc = Participant(c, "C", 3);
+
+        var ranks = CompleteNightLinkForLiveSessionCommandHandler.LiveRanks(live.Players.ToList(), [pa, pb, pc]);
+
+        ranks.Should().BeEquivalentTo(new Dictionary<Guid, int> { [pb.Id] = 1, [pc.Id] = 1, [pa.Id] = 3 },
+            "a competition ranking: the two tied at the top share 1, and the next is 3");
+    }
+
+    [Fact]
+    [Trait("Issue", "4780")]
+    public void LiveRanks_AGuestIsMatchedByName()
+    {
+        var marta = Guid.NewGuid();
+        var live = Live(Guid.NewGuid(), complete: true, (marta, "Marta", 3), ((Guid?)null, "Ospite", 9));
+        var pMarta = Participant(marta, "Marta", 1);
+        var pGuest = Participant(null, "Ospite", 2);
+
+        var ranks = CompleteNightLinkForLiveSessionCommandHandler.LiveRanks(live.Players.ToList(), [pMarta, pGuest]);
+
+        ranks.Should().BeEquivalentTo(new Dictionary<Guid, int> { [pGuest.Id] = 1, [pMarta.Id] = 2 });
+    }
+
+    /// <summary>The go-live can rename a duplicate guest « (2)»: no guess, the unmatched participant goes last.</summary>
+    [Fact]
+    [Trait("Issue", "4780")]
+    public void LiveRanks_AParticipantWithoutAMatch_GoesAfterTheOthers_InJoinOrder()
+    {
+        var marta = Guid.NewGuid();
+        var live = Live(Guid.NewGuid(), complete: true, (marta, "Marta", 1), ((Guid?)null, "Ospite (2)", 9));
+        var pGuest = Participant(null, "Ospite", 1);
+        var pMarta = Participant(marta, "Marta", 2);
+
+        var ranks = CompleteNightLinkForLiveSessionCommandHandler.LiveRanks(live.Players.ToList(), [pGuest, pMarta]);
+
+        ranks.Should().BeEquivalentTo(new Dictionary<Guid, int> { [pMarta.Id] = 1, [pGuest.Id] = 2 },
+            "the guest the live game knows as «Ospite (2)» is not guessed to be «Ospite», even though they joined first");
+    }
+
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task Handle_SendsTheLiveRanks_WithTheWinner()
+    {
+        var tracking = Guid.NewGuid();
+        Guid marta = Guid.NewGuid(), luca = Guid.NewGuid();
+        Guid martaParticipant = Guid.NewGuid(), lucaParticipant = Guid.NewGuid();
+        var live = Live(tracking, complete: true, (marta, "Marta", 3), (luca, "Luca", 9));
+        Arrange(live, NightWithInProgressLink(tracking), tracking);
+        ArrangeTrackingParticipants(tracking, (martaParticipant, marta), (lucaParticipant, luca));
+
+        await Handle(live.Id);
+
+        _mediator.Verify(m => m.Send(
+            It.Is<CompleteGameNightSessionCommand>(c =>
+                c.WinnerId == lucaParticipant
+                && c.FinalRanks != null
+                && c.FinalRanks.Count == 2
+                && c.FinalRanks[lucaParticipant] == 1
+                && c.FinalRanks[martaParticipant] == 2),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Issue", "4780")]
+    public async Task Handle_NoScoresRecorded_SendsNoLiveRanks()
+    {
+        var tracking = Guid.NewGuid();
+        var marta = Guid.NewGuid();
+        var live = Live(tracking, complete: true, (marta, "Marta", null), (Guid.NewGuid(), "Luca", null));
+        Arrange(live, NightWithInProgressLink(tracking), tracking);
+        ArrangeTrackingParticipants(tracking, (Guid.NewGuid(), marta));
+
+        await Handle(live.Id);
+
+        _mediator.Verify(m => m.Send(
+            It.Is<CompleteGameNightSessionCommand>(c => c.FinalRanks == null), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

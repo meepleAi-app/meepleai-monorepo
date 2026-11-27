@@ -3588,6 +3588,10 @@
         "title": "Live session — MeepleAI",
         "description": "Real-time game session."
       },
+      "nightStillOpen": {
+        "message": "The game is over, but the game night still shows it in progress.",
+        "cta": "Complete the game from the game night"
+      },
       "topBar": {
         "sessionTitleAriaLabel": "Session: {name}",
         "turnLabel": "{count, plural, =0 {Start} =1 {Turn 1/{total}} other {Turn #/{total}}}",

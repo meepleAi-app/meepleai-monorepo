@@ -1,6 +1,8 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -15,10 +17,12 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 internal class GetLiveSessionQueryHandler : IQueryHandler<GetLiveSessionQuery, LiveSessionDto>
 {
     private readonly ILiveSessionRepository _sessionRepository;
+    private readonly IGameNightEventRepository _gameNightRepository;
 
-    public GetLiveSessionQueryHandler(ILiveSessionRepository sessionRepository)
+    public GetLiveSessionQueryHandler(ILiveSessionRepository sessionRepository, IGameNightEventRepository gameNightRepository)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
     }
 
     public async Task<LiveSessionDto> Handle(GetLiveSessionQuery query, CancellationToken cancellationToken)
@@ -29,7 +33,23 @@ internal class GetLiveSessionQueryHandler : IQueryHandler<GetLiveSessionQuery, L
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", query.SessionId.ToString());
 
-        return MapToDto(session);
+        var dto = MapToDto(session);
+
+        // #4780: only a completed game can have a follow-up that did not reach the night, and only one with a
+        // companion can sit in a night — so the read of the night is paid by a completed game alone, not by every
+        // refresh of a game being played.
+        if (session.Status != LiveSessionStatus.Completed || session.TrackingSessionId is not { } trackingSessionId)
+            return dto;
+
+        var gameNight = await _gameNightRepository.GetByLinkedSessionIdAsync(trackingSessionId, cancellationToken)
+            .ConfigureAwait(false);
+        if (gameNight is null)
+            return dto;
+
+        // The criterion of CompleteNightLinkForLiveSessionCommandHandler: the night still holds the sitting open.
+        var sittingStillOpen = gameNight.Sessions
+            .Any(s => s.SessionId == trackingSessionId && s.Status == GameNightSessionStatus.InProgress);
+        return dto with { GameNightId = gameNight.Id, NightSittingStillOpen = sittingStillOpen };
     }
 
     internal static LiveSessionDto MapToDto(LiveGameSession session)

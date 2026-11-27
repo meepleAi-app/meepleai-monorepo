@@ -3665,6 +3665,10 @@
         "title": "Sessione live — MeepleAI",
         "description": "Sessione di gioco in tempo reale."
       },
+      "nightStillOpen": {
+        "message": "La partita è conclusa, ma la serata la segna ancora in corso.",
+        "cta": "Completa la partita dalla serata"
+      },
       "topBar": {
         "sessionTitleAriaLabel": "Sessione: {name}",
         "turnLabel": "{count, plural, =0 {Inizio} =1 {Turno 1/{total}} other {Turno #/{total}}}",

@@ -33,7 +33,12 @@ internal record LiveSessionDto(
     IReadOnlyList<LiveSessionPlayerDto> Players,
     IReadOnlyList<LiveSessionTeamDto> Teams,
     IReadOnlyList<LiveSessionRoundScoreDto> RoundScores,
-    LiveSessionScoringConfigDto ScoringConfig
+    LiveSessionScoringConfigDto ScoringConfig,
+    // #4780: a completed live game whose game night still holds its sitting in progress — «Termina partita» ran,
+    // its best-effort follow-up on the night did not. The page says so and links the night, where «Completa
+    // partita» closes the sitting. Filled only for a completed game (the only one the follow-up concerns).
+    Guid? GameNightId = null,
+    bool NightSittingStillOpen = false
 );
 
 /// <summary>

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
@@ -42,11 +43,26 @@ public class ConstantTimeComparisonArchitectureTests
     [
         ("Services/PasswordHashingService.cs", "hash PBKDF2 della password"),
         ("BoundedContexts/Authentication/Domain/ValueObjects/PasswordHash.cs", "hash PBKDF2 della password (value object)"),
-        ("BoundedContexts/Authentication/Application/Commands/Registration/RegisterCommandHandler.cs", "codice di invito"),
+        (RegisterHandlerPath, "token di bootstrap del primo amministratore"),
         ("BoundedContexts/UserNotifications/Infrastructure/Slack/SlackSignatureValidator.cs", "firma HMAC del webhook Slack"),
     ];
 
     private const string ConstantTimeCall = "CryptographicOperations.FixedTimeEquals";
+
+    private const string RegisterHandlerPath =
+        "BoundedContexts/Authentication/Application/Commands/Registration/RegisterCommandHandler.cs";
+
+    /// <summary>The two variables that hold the bootstrap token in <c>TryClaimBootstrapAdminAsync</c>.</summary>
+    private static readonly string[] BootstrapTokenVariables = ["providedToken", "configuredToken"];
+
+    /// <summary>A comparison of a token as a string: it ends at the first different character.</summary>
+    private static readonly Regex VariableTimeTokenCompare = new(
+        @"\b(providedToken|configuredToken)\b\s*(==|!=)"
+        + @"|(==|!=)\s*\b(providedToken|configuredToken)\b"
+        + @"|\b(providedToken|configuredToken)\s*\.\s*(Equals|CompareTo|StartsWith|EndsWith|SequenceEqual)\s*\("
+        + @"|\bstring\s*\.\s*(Equals|Compare|CompareOrdinal)\s*\([^)]*\b(providedToken|configuredToken)\b",
+        RegexOptions.Compiled,
+        TimeSpan.FromSeconds(2));
 
     [Fact]
     public void SecretComparisons_UseFixedTimeEquals()
@@ -92,6 +108,34 @@ public class ConstantTimeComparisonArchitectureTests
             "SequenceEqual esce al primo byte diverso: usato su un segreto reintroduce esattamente "
             + "la perdita di tempo che FixedTimeEquals esiste per evitare. Occorrenze:\n"
             + string.Join('\n', offenders));
+    }
+
+    /// <summary>
+    /// #5178 — the presence of <c>FixedTimeEquals</c> in the file does not stop a string comparison of the bootstrap
+    /// token placed before it, as a shortcut: the response time would tell again how much of the token's start is right.
+    /// This replaces the wall-clock test of the registration, which could not see that and failed on database noise.
+    /// </summary>
+    [Fact]
+    public void BootstrapAdminToken_IsNeverComparedAsAString()
+    {
+        var text = ReadSource(LocateApiSrc(), RegisterHandlerPath);
+
+        // A scan that no longer finds the variables would pass for nothing: renamed, they must be renamed here too.
+        foreach (var variable in BootstrapTokenVariables)
+        {
+            text.Should().Contain(variable,
+                $"the scan looks for comparisons of {variable}; if the variable was renamed, update {nameof(BootstrapTokenVariables)}");
+        }
+
+        var offenders = NumberedLines(text)
+            .Where(l => !l.Line.TrimStart().StartsWith("//", StringComparison.Ordinal))
+            .Where(l => VariableTimeTokenCompare.IsMatch(l.Line))
+            .Select(l => $"{RegisterHandlerPath}:{l.Number}  {l.Line.Trim()}")
+            .ToList();
+
+        offenders.Should().BeEmpty(
+            $"the bootstrap token is compared only through {ConstantTimeCall}, on its bytes, after the length check. "
+            + "Occurrences:\n" + string.Join('\n', offenders));
     }
 
     [Fact]

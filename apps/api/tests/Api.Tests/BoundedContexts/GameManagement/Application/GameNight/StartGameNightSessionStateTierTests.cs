@@ -28,6 +28,7 @@ public class StartGameNightSessionStateTierTests
     public StartGameNightSessionStateTierTests()
     {
         _mockRepository = new Mock<IGameNightEventRepository>();
+        _mockRepository.Setup(r => r.GetAcceptedEmailGuestUserIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(Array.Empty<Guid>()); // #4780: no email guests unless a test says so
         _mockMediator = new Mock<IMediator>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         // #3636: senza questo setup il mock non esegue il delegate della transazione.

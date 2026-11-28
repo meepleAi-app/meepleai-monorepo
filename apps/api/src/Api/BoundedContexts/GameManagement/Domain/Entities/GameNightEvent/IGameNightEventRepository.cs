@@ -42,6 +42,13 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     Task<bool> HasAcceptedEmailInvitationAsync(Guid gameNightId, Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #4780 PR 4: the accounts that sit at this night through an email invitation they accepted while logged in — the
+    /// rule of <see cref="HasAcceptedEmailInvitationAsync"/>, read for the whole night: accepted, answered by an
+    /// account, and addressed to that account's email (a forwarded link seats nobody). In the order they answered.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> GetAcceptedEmailGuestUserIdsAsync(Guid gameNightId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// #4921: the RSVP state an email guest reads as, per night, derived from the invitation they answered
     /// while logged in (same binding as <see cref="HasAcceptedEmailInvitationAsync"/>): <c>Accepted</c> or
     /// <c>Declined</c>. A night where the user answered none, or answered a link sent to another address,

@@ -127,10 +127,11 @@ describe('mapNightLiveToViewModel — header + progression', () => {
 
   // #4780 PR 4
   it('threads the guests who accepted without an account, and an older payload without them reads as none', () => {
+    const zia = { invitationId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', displayName: 'Zia Pina' };
     expect(
-      mapNightLiveToViewModel(live({ acceptedGuestsWithoutAccount: ['Zia Pina'] }), NOW)
+      mapNightLiveToViewModel(live({ acceptedGuestsWithoutAccount: [zia] }), NOW)
         .guestsWithoutAccount
-    ).toEqual(['Zia Pina']);
+    ).toEqual([zia]);
     expect(mapNightLiveToViewModel(live(), NOW).guestsWithoutAccount).toEqual([]);
   });
 

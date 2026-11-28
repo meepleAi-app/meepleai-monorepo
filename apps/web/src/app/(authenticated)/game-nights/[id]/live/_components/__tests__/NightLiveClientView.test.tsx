@@ -319,7 +319,10 @@ describe('NightLiveClientView — organizer interactive start (WS1 DEC-10)', () 
         isViewerOrganizer: true,
         nextGame: NEXT_GAME,
         status: 'transition',
-        guestsWithoutAccount: ['Zia Pina', 'Giocatore'],
+        guestsWithoutAccount: [
+          { invitationId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', displayName: 'Zia Pina' },
+          { invitationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', displayName: 'Giocatore' },
+        ],
       }),
     });
     render(<NightLiveClientView nightId={NIGHT_ID} />);

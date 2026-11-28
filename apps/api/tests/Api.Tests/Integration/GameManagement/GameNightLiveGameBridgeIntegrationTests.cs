@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
+using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.EventHandlers;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
@@ -787,11 +788,12 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
     public async Task TheLiveNight_ListsTheGuestsWhoAcceptedWithoutAnAccount_ToTheOrganizerOnly()
     {
         var (organizer, friend, _, nightId) = await SeedNightWithAcceptedFriendAsync();
+        GameNightInvitationEntity zia, nonno;
         await using (var scope = _factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            db.GameNightInvitations.Add(GuestInvitation(nightId, "zia@example.com", "Zia Pina", "Accepted", organizer, minutesAgo: 20));
-            db.GameNightInvitations.Add(GuestInvitation(nightId, "nonno@example.com", "nonno@example.com", "Accepted", organizer, minutesAgo: 10));
+            db.GameNightInvitations.Add(zia = GuestInvitation(nightId, "zia@example.com", "Zia Pina", "Accepted", organizer, minutesAgo: 20));
+            db.GameNightInvitations.Add(nonno = GuestInvitation(nightId, "nonno@example.com", "nonno@example.com", "Accepted", organizer, minutesAgo: 10));
             db.GameNightInvitations.Add(GuestInvitation(nightId, "no@example.com", "Chi Non Viene", "Declined", organizer, minutesAgo: 5));
             db.GameNightInvitations.Add(GuestInvitation(nightId, "forse@example.com", null, "Pending", organizer, minutesAgo: 1));
             await db.SaveChangesAsync();
@@ -801,7 +803,7 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         var forFriend = await SendAsync(new GetGameNightLiveQuery(nightId, friend));
 
         forOrganizer.AcceptedGuestsWithoutAccount.Should().Equal(
-            new[] { "Zia Pina", "Giocatore" },
+            new[] { new GameNightGuestWithoutAccountDto(zia.Id, "Zia Pina"), new GameNightGuestWithoutAccountDto(nonno.Id, "Giocatore") },
             "in the order they answered; an address typed as a name is never shown, and a decline or a pending invitation is not listed");
         forFriend.AcceptedGuestsWithoutAccount.Should().BeEmpty("the list is the organizer's");
     }

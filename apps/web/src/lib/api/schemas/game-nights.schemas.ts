@@ -165,8 +165,11 @@ export const GameNightLiveDtoSchema = z.object({
   // no game is live.
   currentSessionRoster: z.array(GameNightRosterMemberDtoSchema),
   // #4780 PR 4: for the organizer only, the names of who accepted an email invitation without an account — they
-  // take part in the night but «Avvia» cannot seat them. Optional: an older BE payload omits it.
-  acceptedGuestsWithoutAccount: z.array(z.string()).optional(),
+  // take part in the night but «Avvia» cannot seat them. Optional: an older BE payload omits it. The invitation id
+  // is what the organizer sends back to seat one of them as a guest.
+  acceptedGuestsWithoutAccount: z
+    .array(z.object({ invitationId: z.string().uuid(), displayName: z.string() }))
+    .optional(),
 });
 export type GameNightLiveDto = z.infer<typeof GameNightLiveDtoSchema>;
 

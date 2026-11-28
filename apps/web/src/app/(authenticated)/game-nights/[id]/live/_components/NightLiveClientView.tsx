@@ -262,7 +262,8 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
               className="max-w-md rounded-md border border-border bg-card px-3 py-1.5 text-center text-xs text-muted-foreground shadow"
             >
               Hanno accettato senza un account e non saranno al tavolo:{' '}
-              {guestsWithoutAccount.join(', ')}. Puoi aggiungerli come ospiti dalla partita.
+              {guestsWithoutAccount.map(g => g.displayName).join(', ')}. Puoi aggiungerli come
+              ospiti dalla partita.
             </p>
           ) : null}
           {startErrorMessage ? (

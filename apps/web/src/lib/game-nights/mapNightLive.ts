@@ -69,7 +69,13 @@ export interface NightLiveViewModel {
    * #4780 PR 4: who accepted an email invitation without an account — they will not be at the table «Avvia» seats.
    * The organizer's only; empty for everyone else, and when an older BE payload omits it.
    */
-  readonly guestsWithoutAccount?: readonly string[];
+  readonly guestsWithoutAccount?: readonly GuestWithoutAccount[];
+}
+
+/** #4780 PR 4: an email invitation accepted without an account — who will not be at the table «Avvia» seats. */
+export interface GuestWithoutAccount {
+  readonly invitationId: string;
+  readonly displayName: string;
 }
 
 /** #2634 C4: a candidate winner (a tracking-Session Participant) for the Completa picker. */

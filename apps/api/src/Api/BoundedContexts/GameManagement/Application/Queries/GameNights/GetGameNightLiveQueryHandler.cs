@@ -165,18 +165,19 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
         // #4780 PR 4: who accepted without an account, for the organizer only. The name is free text typed by someone
         // not logged in, so it goes through the same filter as the roster: never an address (the invitation's own, or
         // any other shape of one), a neutral name in its place.
-        IReadOnlyList<string> guestsWithoutAccount = [];
+        IReadOnlyList<GameNightGuestWithoutAccountDto> guestsWithoutAccount = [];
         if (isOrganizer)
         {
             var accepted = nameof(GameNightInvitationStatus.Accepted);
             var answers = await _db.GameNightInvitations.AsNoTracking()
                 .Where(i => i.GameNightId == gameNight.Id && i.Status == accepted && i.RespondedByUserId == null)
                 .OrderBy(i => i.RespondedAt)
-                .Select(i => new { i.RespondedByName, i.Email })
+                .Select(i => new { i.Id, i.RespondedByName, i.Email })
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
             guestsWithoutAccount = answers
-                .Select(a => RosterDisplayNames.Resolve(a.RespondedByName, a.Email, RosterDisplayNames.Player))
+                .Select(a => new GameNightGuestWithoutAccountDto(
+                    a.Id, RosterDisplayNames.Resolve(a.RespondedByName, a.Email, RosterDisplayNames.Player)))
                 .ToList();
         }
 

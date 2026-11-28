@@ -108,6 +108,19 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<AcceptedGuestWithoutAccount>> GetAcceptedGuestsWithoutAccountAsync(
+        Guid gameNightId, CancellationToken cancellationToken = default)
+    {
+        var accepted = nameof(GameNightInvitationStatus.Accepted);
+        return await DbContext.GameNightInvitations.AsNoTracking()
+            .Where(i => i.GameNightId == gameNightId && i.Status == accepted && i.RespondedByUserId == null)
+            .OrderBy(i => i.RespondedAt)
+            .ThenBy(i => i.Id)
+            .Select(i => new AcceptedGuestWithoutAccount(i.Id, i.RespondedByName, i.Email))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<Guid>> GetAcceptedEmailGuestUserIdsAsync(
         Guid gameNightId, CancellationToken cancellationToken = default)
     {

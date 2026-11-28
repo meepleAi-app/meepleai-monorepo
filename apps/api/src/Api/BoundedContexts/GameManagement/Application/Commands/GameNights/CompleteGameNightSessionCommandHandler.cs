@@ -70,8 +70,16 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
                 var session = await _sessionRepository.GetByIdAsync(trackingSessionId, ct).ConfigureAwait(false)
                     ?? throw new NotFoundException("Session", trackingSessionId.ToString());
 
-                if (command.WinnerId.HasValue && session.Participants.All(p => p.Id != command.WinnerId.Value))
-                    throw new ConflictException("Winner must be a participant of the session.");
+                if (command.WinnerId is { } winnerId)
+                {
+                    var winner = session.Participants.FirstOrDefault(p => p.Id == winnerId)
+                        ?? throw new ConflictException("Winner must be a participant of the session.");
+
+                    // #4780 PR 4: the winner of a night is a player with an account (decision of 2026-11-25). The close
+                    // from the live game already leaves a guest's first place without a winner; the hand-picked one did not.
+                    if (!winner.UserId.HasValue)
+                        throw new ConflictException("A guest cannot be the winner: the winner of a night is a player with an account.");
+                }
 
                 // #4780: from the live, the live ranks — when they still name exactly this session's participants (one
                 // could have joined since they were read). Otherwise, the ranks the night always built.

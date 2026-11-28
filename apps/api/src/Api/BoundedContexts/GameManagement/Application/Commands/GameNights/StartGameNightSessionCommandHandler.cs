@@ -247,13 +247,16 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
         var organizer = await _mediator.Send(new GetUserByIdQuery(command.UserId), cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("User", command.UserId.ToString());
 
+        // #4780 PR 4: every seat named by the live game's rule, so a guest's name is the same in both rosters.
+        var usedNames = new HashSet<string>(StringComparer.Ordinal);
         var participants = new List<ParticipantDto>
         {
             new()
             {
                 Id = Guid.NewGuid(),
                 UserId = command.UserId,
-                DisplayName = RosterDisplayNames.Resolve(organizer.DisplayName, organizer.Email, RosterDisplayNames.Organizer),
+                DisplayName = RosterDisplayNames.Unique(
+                    RosterDisplayNames.Resolve(organizer.DisplayName, organizer.Email, RosterDisplayNames.Organizer), usedNames),
                 IsOwner = true,
                 JoinOrder = 0
             }
@@ -283,10 +286,33 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                DisplayName = RosterDisplayNames.Resolve(player.DisplayName, player.Email, RosterDisplayNames.Player),
+                DisplayName = RosterDisplayNames.Unique(
+                    RosterDisplayNames.Resolve(player.DisplayName, player.Email, RosterDisplayNames.Player), usedNames),
                 IsOwner = false,
                 JoinOrder = joinOrder++
             });
+        }
+
+        // #4780 PR 4: the guests the organizer chose among who accepted without an account, in the order they answered.
+        // Nobody is seated on their own (decision of 2026-10-31): the organizer ticks each one. The name is the typed
+        // one through the roster's filter, never an address; and the live game names its seats with the same rule
+        // (RosterDisplayNames.Unique), so a guest is found again by name when the game closes.
+        if (command.GuestInvitationIds is { Count: > 0 } chosen)
+        {
+            var guests = await _repository.GetAcceptedGuestsWithoutAccountAsync(gameNight.Id, cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var guest in guests.Where(g => chosen.Contains(g.InvitationId)))
+            {
+                participants.Add(new ParticipantDto
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = null,
+                    DisplayName = RosterDisplayNames.Unique(
+                        RosterDisplayNames.Resolve(guest.RespondedByName, guest.Email, RosterDisplayNames.Player), usedNames),
+                    IsOwner = false,
+                    JoinOrder = joinOrder++
+                });
+            }
         }
 
         return participants;

@@ -9,7 +9,7 @@
  * and the real session jump (AC3).
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -313,21 +313,48 @@ describe('NightLiveClientView — organizer interactive start (WS1 DEC-10)', () 
   });
 
   // #4780 PR 4
-  it('names, next to «Avvia», who accepted without an account and will not be at the table', () => {
+  const ZIA = { invitationId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', displayName: 'Zia Pina' };
+  const NONNO = { invitationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', displayName: 'Giocatore' };
+
+  it('proposes, next to «Avvia», who accepted without an account, nobody ticked', () => {
     mockQuery({
       data: vm({
         isViewerOrganizer: true,
         nextGame: NEXT_GAME,
         status: 'transition',
-        guestsWithoutAccount: [
-          { invitationId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', displayName: 'Zia Pina' },
-          { invitationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', displayName: 'Giocatore' },
-        ],
+        guestsWithoutAccount: [ZIA, NONNO],
       }),
     });
     render(<NightLiveClientView nightId={NIGHT_ID} />);
-    expect(screen.getByTestId('guests-without-account')).toHaveTextContent(
-      'Hanno accettato senza un account e non saranno al tavolo: Zia Pina, Giocatore.'
+    const group = screen.getByRole('group', {
+      name: 'Hanno accettato senza un account. Spunta chi siede al tavolo come ospite:',
+    });
+    expect(within(group).getByRole('checkbox', { name: 'Zia Pina' })).not.toBeChecked();
+    expect(within(group).getByRole('checkbox', { name: 'Giocatore' })).not.toBeChecked();
+    expect(group).toHaveTextContent('non può essere il vincitore della serata');
+  });
+
+  it('starts the game with the guests the organizer ticked, and only those', async () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        nextGame: NEXT_GAME,
+        status: 'transition',
+        guestsWithoutAccount: [ZIA, NONNO],
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Zia Pina' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Giocatore' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Giocatore' }));
+    await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+    expect(startNextMutateMock).toHaveBeenCalledWith(
+      {
+        gameId: NEXT_GAME.gameId,
+        gameTitle: NEXT_GAME.gameTitle,
+        guestInvitationIds: [ZIA.invitationId],
+      },
+      expect.objectContaining({ onError: expect.any(Function) })
     );
   });
 

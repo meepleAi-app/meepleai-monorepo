@@ -49,6 +49,14 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     Task<IReadOnlyList<Guid>> GetAcceptedEmailGuestUserIdsAsync(Guid gameNightId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #4780 PR 4: the email invitations of this night accepted WITHOUT an account, in the order they answered — who
+    /// takes part in the night with no account «Avvia» could seat. The name is the one typed on the answer, raw: the
+    /// caller makes it a table name (<c>RosterDisplayNames</c>), never shown as it is.
+    /// </summary>
+    Task<IReadOnlyList<AcceptedGuestWithoutAccount>> GetAcceptedGuestsWithoutAccountAsync(
+        Guid gameNightId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// #4921: the RSVP state an email guest reads as, per night, derived from the invitation they answered
     /// while logged in (same binding as <see cref="HasAcceptedEmailInvitationAsync"/>): <c>Accepted</c> or
     /// <c>Declined</c>. A night where the user answered none, or answered a link sent to another address,

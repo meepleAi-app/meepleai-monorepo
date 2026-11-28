@@ -12,7 +12,6 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
@@ -22,10 +21,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 /// </summary>
 internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessionCommand, Guid>
 {
-    // The server compares display names after Trim().ToLowerInvariant() (LiveGameSession.AddPlayer)
-    // and caps a name at PlayerNameLimit (#5150); the roster seeding must agree with both.
-    private const int MaxDisplayNameLength = PlayerNameLimit.MaxLength;
-
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly TimeProvider _timeProvider;
     private readonly IUnitOfWork _unitOfWork;
@@ -205,7 +200,7 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
             if (player.UserId is { } userId && !seatedUsers.Add(userId))
                 continue;
 
-            var name = UniqueDisplayName(player.DisplayName, usedNames);
+            var name = RosterDisplayNames.Unique(player.DisplayName, usedNames);
             session.AddPlayer(player.UserId, name, colors[colorIndex++], _timeProvider);
         }
 
@@ -217,20 +212,4 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
         }
     }
 
-    private static string UniqueDisplayName(string? requested, HashSet<string> usedNames)
-    {
-        var baseName = RosterDisplayNames.Resolve(requested, RosterDisplayNames.Player).Trim();
-        var candidate = Truncate(baseName, MaxDisplayNameLength);
-        var suffix = 2;
-
-        while (!usedNames.Add(candidate.ToLowerInvariant()))
-        {
-            var tail = $" ({suffix++})";
-            candidate = Truncate(baseName, MaxDisplayNameLength - tail.Length) + tail;
-        }
-
-        return candidate;
-    }
-
-    private static string Truncate(string value, int maxLength) => PlayerNameLimit.Clamp(value, maxLength);
 }

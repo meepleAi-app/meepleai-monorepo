@@ -312,6 +312,31 @@ describe('NightLiveClientView — organizer interactive start (WS1 DEC-10)', () 
     expect(screen.queryByRole('button', { name: /Avvia:/i })).toBeNull();
   });
 
+  // #4780 PR 4
+  it('names, next to «Avvia», who accepted without an account and will not be at the table', () => {
+    mockQuery({
+      data: vm({
+        isViewerOrganizer: true,
+        nextGame: NEXT_GAME,
+        status: 'transition',
+        guestsWithoutAccount: [
+          { invitationId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', displayName: 'Zia Pina' },
+          { invitationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', displayName: 'Giocatore' },
+        ],
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.getByTestId('guests-without-account')).toHaveTextContent(
+      'Hanno accettato senza un account e non saranno al tavolo: Zia Pina, Giocatore.'
+    );
+  });
+
+  it('says nothing about guests when everyone who accepted has an account', () => {
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+    expect(screen.queryByTestId('guests-without-account')).not.toBeInTheDocument();
+  });
+
   it('renders the start CTA for the organizer when a next game is queued and no game is live', () => {
     mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
     render(<NightLiveClientView nightId={NIGHT_ID} />);

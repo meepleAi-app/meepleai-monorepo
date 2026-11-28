@@ -23,7 +23,15 @@ public sealed record GameNightLiveDto(
     // #2634 C4: the in-progress session's participants (Participant.Id + DisplayName), sourced from
     // this already-participant-guarded read so the winner picker never hits the unguarded
     // GET /game-sessions/{id} roster (IDOR). Empty when no game is live.
-    IReadOnlyList<GameNightRosterMemberDto> CurrentSessionRoster);
+    IReadOnlyList<GameNightRosterMemberDto> CurrentSessionRoster,
+    // #4780 PR 4: for the organizer only, the names of who accepted an email invitation WITHOUT an account. They take
+    // part in the night but «Avvia» cannot seat them (no account to seat): the organizer reads who is missing from the
+    // table. Names from responded_by_name, through RosterDisplayNames, so never an address. Empty for everyone else.
+    // The invitation id is what the organizer sends back to seat one of them as a guest.
+    IReadOnlyList<GameNightGuestWithoutAccountDto> AcceptedGuestsWithoutAccount);
+
+/// <summary>#4780 PR 4: an email invitation accepted without an account — the invitation, and the name to show.</summary>
+public sealed record GameNightGuestWithoutAccountDto(Guid InvitationId, string DisplayName);
 
 /// <summary>
 /// A planned game in the night's line-up that has not yet been started as a Session.

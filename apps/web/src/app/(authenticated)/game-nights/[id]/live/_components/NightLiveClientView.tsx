@@ -193,6 +193,8 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   // DEC-10: hidden when a game is already live (status==='live') — you can only start the
   // next game when the current one is over. The 409 modal is the backstop for races.
   const showStartCta = vm.isViewerOrganizer && nextGame !== null && vm.status !== 'live';
+  // #4780 PR 4: who accepted an email invitation without an account will not be at the table «Avvia» seats.
+  const guestsWithoutAccount = vm.guestsWithoutAccount ?? [];
   const startErrorMessage =
     startError && nextGame && startError.gameId === nextGame.gameId ? startError.message : null;
   // #2634 C4: the organizer completes the live game. Mutually exclusive with the start CTA above.
@@ -254,6 +256,16 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
 
       {showStartCta && nextGame ? (
         <div className="fixed inset-x-0 bottom-16 z-40 flex lg:bottom-0 flex-col items-center gap-2 p-4">
+          {guestsWithoutAccount.length > 0 ? (
+            <p
+              data-testid="guests-without-account"
+              className="max-w-md rounded-md border border-border bg-card px-3 py-1.5 text-center text-xs text-muted-foreground shadow"
+            >
+              Hanno accettato senza un account e non saranno al tavolo:{' '}
+              {guestsWithoutAccount.map(g => g.displayName).join(', ')}. Puoi aggiungerli come
+              ospiti dalla partita.
+            </p>
+          ) : null}
           {startErrorMessage ? (
             <p
               role="alert"

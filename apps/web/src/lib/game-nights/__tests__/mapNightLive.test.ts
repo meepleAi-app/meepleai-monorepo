@@ -125,6 +125,16 @@ describe('mapNightLiveToViewModel — header + progression', () => {
     expect(mapNightLiveToViewModel(live({ plannedLineup: [] }), NOW).nextGame).toBeNull();
   });
 
+  // #4780 PR 4
+  it('threads the guests who accepted without an account, and an older payload without them reads as none', () => {
+    const zia = { invitationId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', displayName: 'Zia Pina' };
+    expect(
+      mapNightLiveToViewModel(live({ acceptedGuestsWithoutAccount: [zia] }), NOW)
+        .guestsWithoutAccount
+    ).toEqual([zia]);
+    expect(mapNightLiveToViewModel(live(), NOW).guestsWithoutAccount).toEqual([]);
+  });
+
   it('threads isViewerOrganizer from the DTO (WS1 DEC-9)', () => {
     expect(mapNightLiveToViewModel(live({ isViewerOrganizer: true }), NOW).isViewerOrganizer).toBe(
       true

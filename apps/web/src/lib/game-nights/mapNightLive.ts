@@ -65,6 +65,11 @@ export interface NightLiveViewModel {
   readonly sessions: readonly NightSessionRef[];
   /** #2634 C4: the live session's participants — the "Completa" winner-picker candidates. */
   readonly winnerCandidates: readonly WinnerCandidate[];
+  /**
+   * #4780 PR 4: who accepted an email invitation without an account — they will not be at the table «Avvia» seats.
+   * The organizer's only; empty for everyone else, and when an older BE payload omits it.
+   */
+  readonly guestsWithoutAccount?: readonly string[];
 }
 
 /** #2634 C4: a candidate winner (a tracking-Session Participant) for the Completa picker. */
@@ -250,5 +255,6 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
       id: m.participantId,
       displayName: m.displayName,
     })),
+    guestsWithoutAccount: dto.acceptedGuestsWithoutAccount ?? [],
   };
 }

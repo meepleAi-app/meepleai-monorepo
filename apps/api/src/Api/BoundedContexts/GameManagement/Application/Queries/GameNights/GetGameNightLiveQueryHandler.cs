@@ -1,6 +1,8 @@
+using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -160,9 +162,27 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
             .Select(id => new GameNightLineupItemDto(id, titles.TryGetValue(id, out var t) ? t : "Gioco"))
             .ToList();
 
+        // #4780 PR 4: who accepted without an account, for the organizer only. The name is free text typed by someone
+        // not logged in, so it goes through the same filter as the roster: never an address (the invitation's own, or
+        // any other shape of one), a neutral name in its place.
+        IReadOnlyList<string> guestsWithoutAccount = [];
+        if (isOrganizer)
+        {
+            var accepted = nameof(GameNightInvitationStatus.Accepted);
+            var answers = await _db.GameNightInvitations.AsNoTracking()
+                .Where(i => i.GameNightId == gameNight.Id && i.Status == accepted && i.RespondedByUserId == null)
+                .OrderBy(i => i.RespondedAt)
+                .Select(i => new { i.RespondedByName, i.Email })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            guestsWithoutAccount = answers
+                .Select(a => RosterDisplayNames.Resolve(a.RespondedByName, a.Email, RosterDisplayNames.Player))
+                .ToList();
+        }
+
         return new GameNightLiveDto(
             gameNight.Id, gameNight.Title, gameNight.Status, sessions, isOrganizer, plannedLineup,
-            currentSessionRoster);
+            currentSessionRoster, guestsWithoutAccount);
     }
 
     /// <summary>A tracking-Session participant, flattened for the cross-BC roster read.</summary>

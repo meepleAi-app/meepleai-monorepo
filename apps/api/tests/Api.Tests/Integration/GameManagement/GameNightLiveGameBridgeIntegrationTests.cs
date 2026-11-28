@@ -776,6 +776,56 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         };
     }
 
+    /// <summary>
+    /// #4780 PR 4 — who accepted an email invitation without an account takes part in the night, but «Avvia» has no
+    /// account to seat: the organizer reads who will be missing from the table, next to «Avvia». The name is free text
+    /// typed by someone not logged in, so it goes through the roster's filter: an address becomes the neutral name.
+    /// Nobody but the organizer sees the list.
+    /// </summary>
+    [Fact(DisplayName = "The organizer reads who accepted an email invitation without an account; nobody else does")]
+    [Trait("Issue", "4780")]
+    public async Task TheLiveNight_ListsTheGuestsWhoAcceptedWithoutAnAccount_ToTheOrganizerOnly()
+    {
+        var (organizer, friend, _, nightId) = await SeedNightWithAcceptedFriendAsync();
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            db.GameNightInvitations.Add(GuestInvitation(nightId, "zia@example.com", "Zia Pina", "Accepted", organizer, minutesAgo: 20));
+            db.GameNightInvitations.Add(GuestInvitation(nightId, "nonno@example.com", "nonno@example.com", "Accepted", organizer, minutesAgo: 10));
+            db.GameNightInvitations.Add(GuestInvitation(nightId, "no@example.com", "Chi Non Viene", "Declined", organizer, minutesAgo: 5));
+            db.GameNightInvitations.Add(GuestInvitation(nightId, "forse@example.com", null, "Pending", organizer, minutesAgo: 1));
+            await db.SaveChangesAsync();
+        }
+
+        var forOrganizer = await SendAsync(new GetGameNightLiveQuery(nightId, organizer));
+        var forFriend = await SendAsync(new GetGameNightLiveQuery(nightId, friend));
+
+        forOrganizer.AcceptedGuestsWithoutAccount.Should().Equal(
+            new[] { "Zia Pina", "Giocatore" },
+            "in the order they answered; an address typed as a name is never shown, and a decline or a pending invitation is not listed");
+        forFriend.AcceptedGuestsWithoutAccount.Should().BeEmpty("the list is the organizer's");
+    }
+
+    private static GameNightInvitationEntity GuestInvitation(
+        Guid nightId, string email, string? respondedByName, string status, Guid createdBy, int minutesAgo)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new GameNightInvitationEntity
+        {
+            Id = Guid.NewGuid(),
+            Token = Guid.NewGuid().ToString("N"),
+            GameNightId = nightId,
+            Email = email,
+            Status = status,
+            RespondedByUserId = null,
+            RespondedByName = respondedByName,
+            RespondedAt = status == "Pending" ? null : now.AddMinutes(-minutesAgo),
+            ExpiresAt = now.AddDays(7),
+            CreatedAt = now.AddHours(-1),
+            CreatedBy = createdBy,
+        };
+    }
+
     // ── Which link a start promotes (#4780) ──────────────────────────────────
 
     // «Avvia» adds a link and then promoted it with StartCurrentSession, which takes the FIRST pending link

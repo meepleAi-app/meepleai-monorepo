@@ -108,6 +108,20 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<Guid>> GetAcceptedEmailGuestUserIdsAsync(
+        Guid gameNightId, CancellationToken cancellationToken = default)
+    {
+        var seats = await GameNightInvitationQueries
+            .AcceptedGuestSeatsAsync(DbContext, i => i.GameNightId == gameNightId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return seats
+            .OrderBy(s => s.RespondedAt)
+            .Select(s => s.UserId)
+            .Distinct()
+            .ToList();
+    }
+
     public async Task<IReadOnlyDictionary<Guid, RsvpStatus>> GetEmailGuestRsvpStatusesAsync(
         IReadOnlyCollection<Guid> gameNightIds, Guid userId, CancellationToken cancellationToken = default)
     {

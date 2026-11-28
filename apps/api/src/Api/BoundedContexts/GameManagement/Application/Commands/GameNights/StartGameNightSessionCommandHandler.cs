@@ -265,6 +265,14 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             .Distinct()
             .ToList();
 
+        // #4780 PR 4: and the accounts that accepted an EMAIL invitation while logged in. They sit at the night
+        // (#4759 — the lists, the detail and its gate already say so), but no RSVP row is written on that path, so
+        // this roster left them out. Same rule: addressed to that account, so a forwarded link seats nobody.
+        var emailGuestIds = await _repository.GetAcceptedEmailGuestUserIdsAsync(gameNight.Id, cancellationToken)
+            .ConfigureAwait(false);
+        var notSeatedYet = emailGuestIds.Where(id => id != command.UserId && !acceptedPlayerIds.Contains(id)).ToList();
+        acceptedPlayerIds.AddRange(notSeatedYet);
+
         var joinOrder = 1;
         foreach (var userId in acceptedPlayerIds)
         {

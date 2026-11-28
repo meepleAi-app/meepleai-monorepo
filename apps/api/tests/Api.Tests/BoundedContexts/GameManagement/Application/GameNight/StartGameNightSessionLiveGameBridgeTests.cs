@@ -40,6 +40,7 @@ public class StartGameNightSessionLiveGameBridgeTests
     public StartGameNightSessionLiveGameBridgeTests()
     {
         _unitOfWork.SetupExecuteInTransaction<StartGameNightSessionResult>();
+        _repository.Setup(r => r.GetAcceptedEmailGuestUserIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(Array.Empty<Guid>()); // #4780: no email guests unless a test says so
         _handler = new StartGameNightSessionCommandHandler(
             _repository.Object, _mediator.Object, _unitOfWork.Object, _autoSave.Object);
     }

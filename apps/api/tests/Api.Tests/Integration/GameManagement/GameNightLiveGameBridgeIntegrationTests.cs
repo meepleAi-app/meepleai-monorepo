@@ -719,6 +719,63 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         seated.Concat(tracked).Should().OnlyContain(name => !name.Contains('@') && !name.Contains("bridge-"));
     }
 
+    /// <summary>
+    /// #4780 PR 4 — an invitee who accepted an email invitation while logged in sits at the night (#4759, the same rule
+    /// as the lists and the detail), but no RSVP row is written on that path, and «Avvia» read only the RSVPs: they were
+    /// left out of the roster. A link forwarded to another account, and a decline, seat nobody.
+    /// </summary>
+    [Fact(DisplayName = "Starting a game seats the invitees who accepted an email invitation with their own account")]
+    [Trait("Issue", "4780")]
+    public async Task Start_SeatsTheEmailInviteesWhoAcceptedWithTheirOwnAccount()
+    {
+        var (organizer, friend, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        Guid emailGuest, forwardedTo, declined;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            emailGuest = SeedUser(db, "Paolo Ospite");
+            forwardedTo = SeedUser(db, "Chi Ha Il Link");
+            declined = SeedUser(db, "Rita Rinuncia");
+            db.GameNightInvitations.Add(EmailInvitation(nightId, $"bridge-{emailGuest:N}@test.local", emailGuest, "Accepted", organizer));
+            db.GameNightInvitations.Add(EmailInvitation(nightId, "someone-else@test.local", forwardedTo, "Accepted", organizer));
+            db.GameNightInvitations.Add(EmailInvitation(nightId, $"bridge-{declined:N}@test.local", declined, "Declined", organizer));
+            await db.SaveChangesAsync();
+        }
+
+        var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+
+        await using var verify = _factory.Services.CreateAsyncScope();
+        var live = await verify.ServiceProvider.GetRequiredService<ILiveSessionRepository>()
+            .GetByIdAsync(started.LiveSessionId!.Value);
+        live!.Players.Select(p => p.UserId).Should().BeEquivalentTo(
+            new Guid?[] { organizer, friend, _secondFriend, emailGuest },
+            "the email invitee who accepted with their own account sits; the forwarded link and the decline do not");
+        var tracked = await verify.ServiceProvider.GetRequiredService<MeepleAiDbContext>().SessionTrackingParticipants
+            .AsNoTracking()
+            .Where(p => p.SessionId == started.SessionId)
+            .ToListAsync();
+        tracked.Should().ContainSingle(p => p.UserId == emailGuest).Which.DisplayName.Should().Be("Paolo Ospite");
+    }
+
+    private static GameNightInvitationEntity EmailInvitation(
+        Guid nightId, string email, Guid respondedBy, string status, Guid createdBy)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new GameNightInvitationEntity
+        {
+            Id = Guid.NewGuid(),
+            Token = Guid.NewGuid().ToString("N"),
+            GameNightId = nightId,
+            Email = email,
+            Status = status,
+            RespondedByUserId = respondedBy,
+            RespondedAt = now,
+            ExpiresAt = now.AddDays(7),
+            CreatedAt = now,
+            CreatedBy = createdBy,
+        };
+    }
+
     // ── Which link a start promotes (#4780) ──────────────────────────────────
 
     // «Avvia» adds a link and then promoted it with StartCurrentSession, which takes the FIRST pending link

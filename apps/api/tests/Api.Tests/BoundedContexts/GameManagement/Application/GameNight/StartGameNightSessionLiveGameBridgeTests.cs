@@ -249,8 +249,9 @@ public class StartGameNightSessionLiveGameBridgeTests
             It.Is<CreateSessionCommand>(c =>
                 c.Participants != null
                 && c.Participants.Single(p => p.UserId == organizer).DisplayName == "Organizzatore"
-                && c.Participants.Single(p => p.UserId == anna).DisplayName == "Giocatore"
-                && c.Participants.Single(p => p.UserId == luca).DisplayName == "Giocatore"),
+                // #4780 PR 4: unique by the live game's rule, so the two rosters agree — the second «Giocatore (2)».
+                && c.Participants.Where(p => p.UserId == anna || p.UserId == luca).Select(p => p.DisplayName)
+                    .OrderBy(n => n, StringComparer.Ordinal).SequenceEqual(new[] { "Giocatore", "Giocatore (2)" })),
             It.IsAny<CancellationToken>()), Times.Once);
         _mediator.Verify(m => m.Send(
             It.Is<CreateLiveSessionCommand>(c =>
@@ -258,7 +259,7 @@ public class StartGameNightSessionLiveGameBridgeTests
                 && c.InitialPlayers.Count == 3
                 && c.InitialPlayers[0].UserId == organizer
                 && c.InitialPlayers[0].DisplayName == "Organizzatore"
-                && c.InitialPlayers.Skip(1).All(p => p.DisplayName == "Giocatore")
+                && c.InitialPlayers.Skip(1).All(p => p.DisplayName.StartsWith("Giocatore", StringComparison.Ordinal))
                 && c.InitialPlayers.All(p => !p.DisplayName.Contains('@'))),
             It.IsAny<CancellationToken>()), Times.Once);
     }

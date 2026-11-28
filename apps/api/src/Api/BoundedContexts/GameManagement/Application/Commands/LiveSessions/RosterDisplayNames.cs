@@ -39,6 +39,34 @@ internal static class RosterDisplayNames
     public static string Resolve(string? displayName, string? email, string fallback) =>
         PlayerDisplayNames.ForTheTable(displayName, email, fallback);
 
+    /// <summary>
+    /// #4780 PR 4 — the name a player takes at the table: <see cref="Resolve(string?, string)"/>, cut to
+    /// <see cref="PlayerNameLimit.MaxLength"/>, and made unique among <paramref name="usedNames"/> ignoring case with a
+    /// « (2)», « (3)»… suffix. The live game seats its players this way, and the night start names its tracking
+    /// participants this way too: a guest is matched to their live seat by name when the game closes
+    /// (<c>CompleteNightLinkForLiveSessionCommand.LiveRanks</c>), so the two must agree, also for two guests both
+    /// left with the neutral name. It agrees with <c>LiveGameSession.AddPlayer</c>, which compares names after
+    /// <c>Trim().ToLowerInvariant()</c> and caps them at <see cref="PlayerNameLimit"/> (#5150).
+    /// </summary>
+    /// <param name="requested">The name asked for.</param>
+    /// <param name="usedNames">The names already taken, lowercased; the chosen one is added.</param>
+    public static string Unique(string? requested, ISet<string> usedNames)
+    {
+        ArgumentNullException.ThrowIfNull(usedNames);
+
+        var baseName = Resolve(requested, Player).Trim();
+        var candidate = PlayerNameLimit.Clamp(baseName, PlayerNameLimit.MaxLength);
+        var suffix = 2;
+
+        while (!usedNames.Add(candidate.ToLowerInvariant()))
+        {
+            var tail = $" ({suffix++})";
+            candidate = PlayerNameLimit.Clamp(baseName, PlayerNameLimit.MaxLength - tail.Length) + tail;
+        }
+
+        return candidate;
+    }
+
     /// <summary>One «@» with something before it, a dot in the domain, no spaces: the shape of an address.</summary>
     internal static bool LooksLikeAnEmailAddress(string value) => PlayerDisplayNames.LooksLikeAnEmailAddress(value);
 }

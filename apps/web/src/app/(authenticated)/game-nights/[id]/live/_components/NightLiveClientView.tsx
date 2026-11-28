@@ -90,11 +90,25 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   // It belongs to the game whose start failed: shown for another game (the failed one went live elsewhere and
   // the night moved on) it would be a stale word under a button that has not failed.
   const [startError, setStartError] = useState<{ gameId: string; message: string } | null>(null);
+  // #4780 PR 4: the guests the organizer ticks among who accepted without an account. Nobody is ticked on their own
+  // (decision of 2026-10-31: no automatic seating); the ticks stay for the next game of the night.
+  const [seatedGuestIds, setSeatedGuestIds] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleSeatedGuest = useCallback((invitationId: string) => {
+    setSeatedGuestIds(current => {
+      const next = new Set(current);
+      if (!next.delete(invitationId)) next.add(invitationId);
+      return next;
+    });
+  }, []);
   const handleStartNext = useCallback(
-    (gameId: string, gameTitle: string) => {
+    (gameId: string, gameTitle: string, guestInvitationIds: readonly string[]) => {
       setStartError(null);
       startNextGame.mutate(
-        { gameId, gameTitle },
+        {
+          gameId,
+          gameTitle,
+          guestInvitationIds: guestInvitationIds.length > 0 ? guestInvitationIds : undefined,
+        },
         {
           // #4752: the game is played on its live page. A per-call callback is the right one here: it is
           // dropped if this page is left while the request runs, so it never brings someone back.
@@ -257,14 +271,33 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
       {showStartCta && nextGame ? (
         <div className="fixed inset-x-0 bottom-16 z-40 flex lg:bottom-0 flex-col items-center gap-2 p-4">
           {guestsWithoutAccount.length > 0 ? (
-            <p
+            <div
               data-testid="guests-without-account"
-              className="max-w-md rounded-md border border-border bg-card px-3 py-1.5 text-center text-xs text-muted-foreground shadow"
+              role="group"
+              aria-labelledby="guests-without-account-label"
+              className="max-w-md rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow"
             >
-              Hanno accettato senza un account e non saranno al tavolo:{' '}
-              {guestsWithoutAccount.map(g => g.displayName).join(', ')}. Puoi aggiungerli come
-              ospiti dalla partita.
-            </p>
+              <p id="guests-without-account-label">
+                Hanno accettato senza un account. Spunta chi siede al tavolo come ospite:
+              </p>
+              <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                {guestsWithoutAccount.map(g => (
+                  <li key={g.invitationId}>
+                    <label className="flex items-center gap-1.5 text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={seatedGuestIds.has(g.invitationId)}
+                        onChange={() => toggleSeatedGuest(g.invitationId)}
+                      />
+                      {g.displayName}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1">
+                Un ospite gioca e ha il suo punteggio, ma non può essere il vincitore della serata.
+              </p>
+            </div>
           ) : null}
           {startErrorMessage ? (
             <p
@@ -277,7 +310,15 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
           ) : null}
           <button
             type="button"
-            onClick={() => handleStartNext(nextGame.gameId, nextGame.gameTitle)}
+            onClick={() =>
+              handleStartNext(
+                nextGame.gameId,
+                nextGame.gameTitle,
+                guestsWithoutAccount
+                  .filter(g => seatedGuestIds.has(g.invitationId))
+                  .map(g => g.invitationId)
+              )
+            }
             disabled={startNextGame.isPending}
             className="flex items-center gap-2 rounded-full border border-entity-session/40 bg-entity-session px-5 py-2.5 font-display text-sm font-extrabold text-white shadow-lg transition hover:bg-entity-session/90 disabled:cursor-not-allowed disabled:opacity-60"
           >

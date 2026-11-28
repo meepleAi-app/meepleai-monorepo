@@ -109,6 +109,28 @@ describe('gameNightsClient.startNextGame (WS1 DEC-10)', () => {
     expect(result.playOrder).toBe(2);
   });
 
+  // #4780 PR 4: the guests ride along only when there are some, so the body stays the same without them.
+  it('sends the guests the organizer chose, and leaves them out when there are none', async () => {
+    const gameId = '22222222-2222-4222-8222-222222222222';
+    const guest = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    mockPost.mockResolvedValue({
+      sessionId: '33333333-3333-4333-8333-333333333333',
+      gameNightSessionId: '44444444-4444-4444-8444-444444444444',
+      sessionCode: 'ABC123',
+      playOrder: 2,
+    });
+
+    await client.startNextGame(GN_ID, gameId, 'Catan', [guest]);
+    await client.startNextGame(GN_ID, gameId, 'Catan', []);
+
+    expect(mockPost).toHaveBeenNthCalledWith(1, `/api/v1/game-nights/${GN_ID}/sessions`, {
+      gameId,
+      gameTitle: 'Catan',
+      guestInvitationIds: [guest],
+    });
+    expect(mockPost.mock.calls[1][1]).toStrictEqual({ gameId, gameTitle: 'Catan' });
+  });
+
   it('throws UnauthorizedError when the client returns null (401 path)', async () => {
     mockPost.mockResolvedValue(null);
     await expect(

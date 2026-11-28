@@ -50,10 +50,12 @@ export interface GameNightsClient {
   // #2633 Slice B: night-live read model (header + session progression).
   getLive(id: string): Promise<GameNightLiveDto>;
   // #2633 WS1 DEC-10: start the next planned game (throws ConflictError on 409 max-live).
+  // #4780 PR 4: guestInvitationIds — the email invitations accepted without an account the organizer seats as guests.
   startNextGame(
     gameNightId: string,
     gameId: string,
-    gameTitle: string
+    gameTitle: string,
+    guestInvitationIds?: readonly string[]
   ): Promise<StartGameNightSessionResult>;
   getRsvps(id: string): Promise<GameNightRsvpDto[]>;
   // #4706: guests invited by email, organizer only (403 for anyone else).
@@ -138,12 +140,14 @@ export function createGameNightsClient({
       return GameNightLiveDtoSchema.parse(data);
     },
 
-    async startNextGame(gameNightId, gameId, gameTitle) {
+    async startNextGame(gameNightId, gameId, gameTitle, guestInvitationIds) {
       // POST throws ConflictError (statusCode 409, code MAX_LIVE_SESSIONS_EXCEEDED) when a
       // session is already live — the caller discriminates on that to mount the blocked modal.
       const data = await httpClient.post<StartGameNightSessionResult>(
         `/api/v1/game-nights/${gameNightId}/sessions`,
-        { gameId, gameTitle }
+        guestInvitationIds && guestInvitationIds.length > 0
+          ? { gameId, gameTitle, guestInvitationIds }
+          : { gameId, gameTitle }
       );
       if (data === null) {
         throw new UnauthorizedError({ message: 'Authentication required to start a game.' });

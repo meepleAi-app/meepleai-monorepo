@@ -98,6 +98,22 @@ describe('useStartNextGame', () => {
     expect(startNextGameMock).toHaveBeenCalledWith(GN_ID, 'g1', 'Catan');
   });
 
+  // #4780 PR 4
+  it('passes on the guests the organizer chose to seat', async () => {
+    startNextGameMock.mockResolvedValue({
+      sessionId: 's1',
+      gameNightSessionId: 'gns1',
+      sessionCode: 'ABC',
+      playOrder: 2,
+    });
+
+    const { result } = renderHook(() => useStartNextGame(GN_ID), { wrapper: createWrapper() });
+    result.current.mutate({ gameId: 'g1', gameTitle: 'Catan', guestInvitationIds: ['inv1'] });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(startNextGameMock).toHaveBeenCalledWith(GN_ID, 'g1', 'Catan', ['inv1']);
+  });
+
   it('surfaces the ConflictError so the view can discriminate the max-live 409', async () => {
     startNextGameMock.mockRejectedValue(
       new ConflictError({ message: 'blocked', code: MAX_LIVE_SESSIONS_EXCEEDED })

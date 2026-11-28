@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.SharedKernel.Application.Interfaces;
@@ -16,7 +17,10 @@ internal record StartGameNightSessionCommand(
     string GameTitle,
     Guid UserId,
     IReadOnlyList<ParticipantDto>? Participants = null,
-    GameStateTier StateTier = GameStateTier.Minimal
+    GameStateTier StateTier = GameStateTier.Minimal,
+    // #4780 PR 4: the email invitations accepted without an account the organizer seats as guests. Only ids of this
+    // night's accepted invitations without an account seat anyone; any other id seats nobody.
+    IReadOnlyList<Guid>? GuestInvitationIds = null
 ) : ICommand<StartGameNightSessionResult>;
 
 /// <summary>
@@ -39,5 +43,11 @@ internal sealed class StartGameNightSessionCommandValidator : AbstractValidator<
         RuleFor(x => x.GameId).NotEmpty();
         RuleFor(x => x.GameTitle).NotEmpty().MaximumLength(200);
         RuleFor(x => x.UserId).NotEmpty();
+        // #4780 PR 4: a table has a seat per colour; more guests than that could never sit.
+        RuleFor(x => x.GuestInvitationIds)
+            .Must(ids => ids is null || ids.Count <= MaxGuests)
+            .WithMessage($"At most {MaxGuests} guests can be seated.");
     }
+
+    private static readonly int MaxGuests = Enum.GetValues<PlayerColor>().Length;
 }

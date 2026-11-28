@@ -837,7 +837,8 @@ internal static class GameNightEndpoints
             GameNightId: id,
             GameId: request.GameId,
             GameTitle: request.GameTitle,
-            UserId: userId);
+            UserId: userId,
+            GuestInvitationIds: request.GuestInvitationIds);
 
         var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Created($"/api/v1/game-nights/{id}/sessions/{result.GameNightSessionId}", result);
@@ -1097,7 +1098,8 @@ internal static class GameNightEndpoints
     private sealed record CastVoteRequest(Guid CandidateGameId);
     private sealed record ResolveVotingTieRequest(Guid WinningCandidateGameId);
     private sealed record SetGameNightArchivedRequest(bool Archived);
-    private sealed record StartGameNightSessionRequest(Guid GameId, string GameTitle);
+    // #4780 PR 4: GuestInvitationIds — the email invitations accepted without an account the organizer seats as guests.
+    private sealed record StartGameNightSessionRequest(Guid GameId, string GameTitle, IReadOnlyList<Guid>? GuestInvitationIds = null);
     private sealed record AttachGamebookCampaignRequest(Guid CampaignId);
     private sealed record CompleteGameNightSessionRequest(Guid? WinnerId);
 

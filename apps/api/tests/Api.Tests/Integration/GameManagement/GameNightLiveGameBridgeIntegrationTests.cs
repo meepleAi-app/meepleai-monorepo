@@ -828,6 +828,147 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         };
     }
 
+    /// <summary>
+    /// #4780 PR 4 — the organizer ticks, among who accepted an email invitation without an account, the guests who sit.
+    /// Nobody is seated on their own; the names are the typed ones through the roster's filter, made unique by the live
+    /// game's rule, and the two rosters agree. An id that is not this night's accepted invitation without an account —
+    /// a decline, an invitation answered by an account, another night's — seats nobody.
+    /// </summary>
+    [Fact(DisplayName = "Starting a game seats the guests the organizer chose, with the same names in both rosters")]
+    [Trait("Issue", "4780")]
+    public async Task Start_SeatsTheGuestsTheOrganizerChose_WithTheSameNamesInBothRosters()
+    {
+        var (organizer, _, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        GameNightInvitationEntity zia, nonno, nipote, declined, withAccount, otherNights;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var otherNight = Guid.NewGuid();
+            db.GameNightEvents.Add(NightEntity(otherNight, organizer, gameId, DateTimeOffset.UtcNow));
+            var someone = SeedUser(db, "Chi Ha Il Link");
+            db.GameNightInvitations.Add(zia = GuestInvitation(nightId, "zia@example.com", "Zia Pina", "Accepted", organizer, minutesAgo: 20));
+            db.GameNightInvitations.Add(nonno = GuestInvitation(nightId, "nonno@example.com", "nonno@example.com", "Accepted", organizer, minutesAgo: 10));
+            db.GameNightInvitations.Add(nipote = GuestInvitation(nightId, "nipote@example.com", null, "Accepted", organizer, minutesAgo: 5));
+            db.GameNightInvitations.Add(GuestInvitation(nightId, "altro@example.com", "Non Scelto", "Accepted", organizer, minutesAgo: 4));
+            db.GameNightInvitations.Add(declined = GuestInvitation(nightId, "no@example.com", "Chi Non Viene", "Declined", organizer, minutesAgo: 3));
+            db.GameNightInvitations.Add(withAccount = GuestInvitation(nightId, "inoltrato@example.com", "Con Account", "Accepted", organizer, minutesAgo: 2));
+            withAccount.RespondedByUserId = someone;
+            db.GameNightInvitations.Add(otherNights = GuestInvitation(otherNight, "altra@example.com", "Altra Serata", "Accepted", organizer, minutesAgo: 1));
+            await db.SaveChangesAsync();
+        }
+
+        var started = await SendAsync(new StartGameNightSessionCommand(
+            nightId, gameId, "Catan", organizer,
+            GuestInvitationIds: new[] { nipote.Id, declined.Id, withAccount.Id, otherNights.Id, nonno.Id, zia.Id }));
+
+        await using var verify = _factory.Services.CreateAsyncScope();
+        var live = await verify.ServiceProvider.GetRequiredService<ILiveSessionRepository>()
+            .GetByIdAsync(started.LiveSessionId!.Value);
+        var trackedGuests = (await TrackingParticipantsAsync(started.SessionId))
+            .Where(p => p.UserId is null)
+            .OrderBy(p => p.JoinOrder)
+            .Select(p => p.DisplayName)
+            .ToList();
+        trackedGuests.Should().Equal(
+            new[] { "Zia Pina", "Giocatore", "Giocatore (2)" },
+            "the chosen ones in the order they answered; an address typed as a name, or none, is the neutral name, made unique");
+        live!.Players.Where(p => p.UserId is null).Select(p => p.DisplayName).Should().BeEquivalentTo(
+            trackedGuests, "a guest is found again by name when the game closes");
+    }
+
+    /// <summary>
+    /// #4780 PR 4 — a seated guest plays and is ranked like everyone, also when two guests were both left with the neutral
+    /// name; but the winner of a night is a player with an account (decision of 2026-11-25), so a guest's first place
+    /// names no winner.
+    /// </summary>
+    [Fact(DisplayName = "Completing the live game ranks every guest, two with the same name too, and a guest first names no winner")]
+    [Trait("Issue", "4780")]
+    public async Task CompletingTheLiveGame_RanksEveryGuest_AndAGuestFirstNamesNoWinner()
+    {
+        var (organizer, friend, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        GameNightInvitationEntity nonno, nipote;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            db.GameNightInvitations.Add(nonno = GuestInvitation(nightId, "nonno@example.com", "nonno@example.com", "Accepted", organizer, minutesAgo: 10));
+            db.GameNightInvitations.Add(nipote = GuestInvitation(nightId, "nipote@example.com", null, "Accepted", organizer, minutesAgo: 5));
+            await db.SaveChangesAsync();
+        }
+
+        var started = await SendAsync(new StartGameNightSessionCommand(
+            nightId, gameId, "Catan", organizer, GuestInvitationIds: new[] { nonno.Id, nipote.Id }));
+        var liveId = started.LiveSessionId!.Value;
+        await RecordScoresByNameAsync(liveId, ("Giocatore (2)", 10), ("Giocatore", 5));
+        await RecordScoresAsync(liveId, (organizer, 7), (friend, 3), (_secondFriend, 1));
+
+        await SendAsync(new CompleteLiveSessionCommand(liveId));
+        await SendAsync(new CompleteNightLinkForLiveSessionCommand(liveId));
+
+        var participants = await TrackingParticipantsAsync(started.SessionId);
+        participants.ToDictionary(p => p.DisplayName, p => p.FinalRank).Should().Contain(new Dictionary<string, int?>
+        {
+            ["Giocatore (2)"] = 1,
+            ["Giocatore"] = 3,
+        });
+        participants.Where(p => p.UserId.HasValue).ToDictionary(p => p.UserId!.Value, p => p.FinalRank).Should().BeEquivalentTo(
+            new Dictionary<Guid, int?> { [organizer] = 2, [friend] = 4, [_secondFriend] = 5 },
+            "the ranks the live game's scores decided, a guest's included");
+
+        await using var verify = _factory.Services.CreateAsyncScope();
+        var link = await verify.ServiceProvider.GetRequiredService<MeepleAiDbContext>().GameNightSessions.AsNoTracking()
+            .SingleAsync(s => s.SessionId == started.SessionId);
+        link.WinnerId.Should().BeNull("a guest came first, and the winner of a night is a player with an account");
+    }
+
+    /// <summary>
+    /// #4780 PR 4 — the same rule on the hand-picked close: a guest is not a winner candidate, and a guest's id sent as
+    /// the winner is refused, leaving the game open.
+    /// </summary>
+    [Fact(DisplayName = "Completing from the night: a guest is not a winner candidate, and a guest sent as the winner is refused")]
+    [Trait("Issue", "4780")]
+    public async Task CompletingTheGameFromTheNight_AGuestIsNotAWinnerCandidate_AndIsRefusedAsTheWinner()
+    {
+        var (organizer, _, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        GameNightInvitationEntity zia;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            db.GameNightInvitations.Add(zia = GuestInvitation(nightId, "zia@example.com", "Zia Pina", "Accepted", organizer, minutesAgo: 20));
+            await db.SaveChangesAsync();
+        }
+
+        var started = await SendAsync(new StartGameNightSessionCommand(
+            nightId, gameId, "Catan", organizer, GuestInvitationIds: new[] { zia.Id }));
+        var participants = await TrackingParticipantsAsync(started.SessionId);
+        var guest = participants.Single(p => p.UserId is null);
+
+        var night = await SendAsync(new GetGameNightLiveQuery(nightId, organizer));
+        night.CurrentSessionRoster.Select(m => m.ParticipantId).Should().BeEquivalentTo(
+            participants.Where(p => p.UserId.HasValue).Select(p => p.Id),
+            "the candidates are the players with an account");
+
+        var completeWithTheGuest = () => SendAsync(new CompleteGameNightSessionCommand(nightId, guest.Id, organizer));
+        await completeWithTheGuest.Should().ThrowAsync<ConflictException>();
+
+        await using var verify = _factory.Services.CreateAsyncScope();
+        var link = await verify.ServiceProvider.GetRequiredService<MeepleAiDbContext>().GameNightSessions.AsNoTracking()
+            .SingleAsync(s => s.SessionId == started.SessionId);
+        link.Status.Should().Be(nameof(GameNightSessionStatus.InProgress), "the refused close leaves the game open");
+        link.WinnerId.Should().BeNull();
+    }
+
+    private async Task RecordScoresByNameAsync(Guid liveId, params (string DisplayName, int Score)[] scores)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var live = await scope.ServiceProvider.GetRequiredService<ILiveSessionRepository>().GetByIdAsync(liveId);
+        foreach (var (displayName, score) in scores)
+        {
+            var player = live!.Players.Single(p => p.UserId is null && p.DisplayName == displayName);
+            await scope.ServiceProvider.GetRequiredService<IMediator>().Send(
+                new RecordLiveSessionScoreCommand(liveId, player.Id, 1, "points", score));
+        }
+    }
+
     // ── Which link a start promotes (#4780) ──────────────────────────────────
 
     // «Avvia» adds a link and then promoted it with StartCurrentSession, which takes the FIRST pending link

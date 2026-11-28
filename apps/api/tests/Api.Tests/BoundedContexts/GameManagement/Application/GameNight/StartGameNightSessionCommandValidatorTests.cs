@@ -67,4 +67,17 @@ public class StartGameNightSessionCommandValidatorTests
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.UserId);
     }
+
+    // #4780 PR 4: a seat per colour, so no more guests than colours.
+    [Fact]
+    public void GuestInvitationIds_UpToOnePerColour_Pass_AndOneMore_Fails()
+    {
+        var colours = Enum.GetValues<Api.BoundedContexts.GameManagement.Domain.Enums.PlayerColor>().Length;
+        StartGameNightSessionCommand WithGuests(int count) => new(
+            Guid.NewGuid(), Guid.NewGuid(), "Catan", Guid.NewGuid(),
+            GuestInvitationIds: Enumerable.Range(0, count).Select(_ => Guid.NewGuid()).ToList());
+
+        _validator.TestValidate(WithGuests(colours)).ShouldNotHaveValidationErrorFor(x => x.GuestInvitationIds);
+        _validator.TestValidate(WithGuests(colours + 1)).ShouldHaveValidationErrorFor(x => x.GuestInvitationIds);
+    }
 }

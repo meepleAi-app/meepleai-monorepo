@@ -32,6 +32,8 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
             .Options;
         _db = new MeepleAiDbContext(
             options, new Mock<IMediator>().Object, new Mock<IDomainEventCollector>().Object);
+        _repo.Setup(r => r.GetAcceptedGuestsWithoutAccountAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<AcceptedGuestWithoutAccount>()); // #4780: no guests without an account unless a test says so
         _handler = new GetGameNightLiveQueryHandler(_repo.Object, _db);
     }
 
@@ -278,9 +280,9 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
         var result = await _handler.Handle(
             new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
 
-        result.CurrentSessionRoster.Should().HaveCount(2);
-        result.CurrentSessionRoster.Should().Contain(m => m.ParticipantId == p1 && m.DisplayName == "Host");
-        result.CurrentSessionRoster.Should().Contain(m => m.ParticipantId == p2 && m.DisplayName == "Guest Gina");
+        // #4780 PR 4: a guest plays, but the winner of a night is a player with an account — not a candidate.
+        result.CurrentSessionRoster.Should().ContainSingle(m => m.ParticipantId == p1 && m.DisplayName == "Host");
+        result.CurrentSessionRoster.Should().NotContain(m => m.ParticipantId == p2, "Guest Gina has no account");
         result.Sessions.Should().ContainSingle(s => s.SessionId == liveSessionId && s.IsLive);
     }
 
@@ -371,9 +373,9 @@ public class GetGameNightLiveQueryHandlerTests : IDisposable
         var result = await _handler.Handle(
             new GetGameNightLiveQuery(evt.Id, organizerId), TestContext.Current.CancellationToken);
 
-        result.CurrentSessionRoster.Should().HaveCount(2);
-        result.CurrentSessionRoster.Should().OnlyContain(m => m.ParticipantId == liveP1 || m.ParticipantId == liveP2);
-        result.CurrentSessionRoster.Should().NotContain(m => m.ParticipantId == pendingP);
+        // #4780 PR 4: the live session's guest (liveP2, no account) is not a winner candidate either.
+        result.CurrentSessionRoster.Should().ContainSingle(m => m.ParticipantId == liveP1);
+        result.CurrentSessionRoster.Should().NotContain(m => m.ParticipantId == liveP2 || m.ParticipantId == pendingP);
         // sanity: the InProgress + Pending mix is faithfully reflected in the projection.
         result.Sessions.Should().Contain(s => s.SessionId == liveSessionId && s.Status == GameNightSessionStatus.InProgress);
         result.Sessions.Should().Contain(s => s.SessionId == pendingSessionId && s.Status == GameNightSessionStatus.Pending);

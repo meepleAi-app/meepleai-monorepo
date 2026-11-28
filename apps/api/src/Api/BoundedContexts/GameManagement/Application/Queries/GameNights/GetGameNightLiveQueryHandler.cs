@@ -2,7 +2,6 @@ using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
-using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -50,7 +49,7 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
             ? new List<ParticipantRef>()
             : await _db.SessionTrackingParticipants.AsNoTracking()
                 .Where(p => sessionIds.Contains(p.SessionId))
-                .Select(p => new ParticipantRef(p.Id, p.SessionId, p.DisplayName))
+                .Select(p => new ParticipantRef(p.Id, p.SessionId, p.DisplayName, p.UserId))
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
 
@@ -141,9 +140,11 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
             .Where(IsLiveFor)
             .OrderBy(s => s.PlayOrder)
             .FirstOrDefault()?.SessionId;
+        // #4780 PR 4: a guest plays and is ranked, but the winner of a night is a player with an account (decision of
+        // 2026-11-25), so a guest is not a candidate. «Nessun vincitore» stays for a game a guest won.
         var currentSessionRoster = inProgressSessionId is { } liveId
             ? participants
-                .Where(p => p.SessionId == liveId)
+                .Where(p => p.SessionId == liveId && p.UserId.HasValue)
                 .Select(p => new GameNightRosterMemberDto(p.Id, p.DisplayName))
                 .ToList()
             : new List<GameNightRosterMemberDto>();
@@ -168,16 +169,11 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
         IReadOnlyList<GameNightGuestWithoutAccountDto> guestsWithoutAccount = [];
         if (isOrganizer)
         {
-            var accepted = nameof(GameNightInvitationStatus.Accepted);
-            var answers = await _db.GameNightInvitations.AsNoTracking()
-                .Where(i => i.GameNightId == gameNight.Id && i.Status == accepted && i.RespondedByUserId == null)
-                .OrderBy(i => i.RespondedAt)
-                .Select(i => new { i.Id, i.RespondedByName, i.Email })
-                .ToListAsync(cancellationToken)
+            var answers = await _repository.GetAcceptedGuestsWithoutAccountAsync(gameNight.Id, cancellationToken)
                 .ConfigureAwait(false);
             guestsWithoutAccount = answers
                 .Select(a => new GameNightGuestWithoutAccountDto(
-                    a.Id, RosterDisplayNames.Resolve(a.RespondedByName, a.Email, RosterDisplayNames.Player)))
+                    a.InvitationId, RosterDisplayNames.Resolve(a.RespondedByName, a.Email, RosterDisplayNames.Player)))
                 .ToList();
         }
 
@@ -187,5 +183,5 @@ internal sealed class GetGameNightLiveQueryHandler : IQueryHandler<GetGameNightL
     }
 
     /// <summary>A tracking-Session participant, flattened for the cross-BC roster read.</summary>
-    private sealed record ParticipantRef(Guid Id, Guid SessionId, string DisplayName);
+    private sealed record ParticipantRef(Guid Id, Guid SessionId, string DisplayName, Guid? UserId);
 }

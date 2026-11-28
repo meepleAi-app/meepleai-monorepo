@@ -104,6 +104,8 @@ function conflictMessage(serverMessage: string): string {
 export interface StartNextGameVars {
   readonly gameId: string;
   readonly gameTitle: string;
+  /** #4780 PR 4: the email invitations accepted without an account the organizer seats as guests. */
+  readonly guestInvitationIds?: readonly string[];
 }
 
 export interface UseStartNextGameOptions {
@@ -122,8 +124,11 @@ export function useStartNextGame(
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ gameId, gameTitle }: StartNextGameVars) =>
-      api.gameNights.startNextGame(gameNightId, gameId, gameTitle),
+    // #4780 PR 4: the guests only when there are some — the call is otherwise the one it always was.
+    mutationFn: ({ gameId, gameTitle, guestInvitationIds }: StartNextGameVars) =>
+      guestInvitationIds && guestInvitationIds.length > 0
+        ? api.gameNights.startNextGame(gameNightId, gameId, gameTitle, guestInvitationIds)
+        : api.gameNights.startNextGame(gameNightId, gameId, gameTitle),
     onSuccess: result => {
       // Refetch BOTH reads: the live sessions gain the new InProgress row AND the diary gains
       // its game_started event — invalidating only the live key would leave the diary mis-grouped

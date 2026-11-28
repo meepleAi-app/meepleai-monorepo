@@ -210,10 +210,15 @@ public sealed class TopUserContributorsEndpointIntegrationTests
         items[0].GetProperty("displayName").GetString().Should().Be("Alice");
     }
 
+    /// <summary>
+    /// Privacy guard: never an email-derived identifier. The test used to assert that a user with a NULL name was left
+    /// out; since #5160 no name is NULL — the database gives a generated one (<c>Player-</c> and seven hex digits),
+    /// which carries nothing of the address — so the user is listed under that name.
+    /// </summary>
     [Fact]
-    public async Task TopContributors_ExcludesUsersWithNullDisplayName()
+    [Trait("Issue", "5160")]
+    public async Task TopContributors_AUserWithoutAChosenName_IsListedUnderTheGeneratedName_NeverTheAddress()
     {
-        // Privacy guard: avoid surfacing email-derived identifiers.
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
@@ -233,8 +238,12 @@ public sealed class TopUserContributorsEndpointIntegrationTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         var items = body.GetProperty("items");
-        items.GetArrayLength().Should().Be(1);
-        items[0].GetProperty("displayName").GetString().Should().Be("Alice");
+        items.GetArrayLength().Should().Be(2);
+        var bobsName = items[0].GetProperty("displayName").GetString();
+        Api.BoundedContexts.Authentication.Domain.Constants.GeneratedDisplayName.IsGenerated(bobsName).Should()
+            .BeTrue($"Bob ranks first (10 uploads) under the name the database generated, not «{bobsName}»");
+        bobsName.Should().NotContain("@");
+        items[1].GetProperty("displayName").GetString().Should().Be("Alice");
     }
 
     [Fact]
